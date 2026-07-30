@@ -1,10 +1,6 @@
-const CACHE = 'yupixi-v1'
-const ASSETS = ['/', '/offline']
+const CACHE = 'yupixi-v2'
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
-  )
   self.skipWaiting()
 })
 

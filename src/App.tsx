@@ -36,15 +36,27 @@ export default function App() {
   const [selectedSellerId, setSelectedSellerId] = useState('s1')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [showInstallBanner, setShowInstallBanner] = useState(false)
+  const [showInstallGuide, setShowInstallGuide] = useState(false)
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e)
+      setShowInstallBanner(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
-    const installed = () => setDeferredPrompt(null)
+    const installed = () => { setDeferredPrompt(null); setShowInstallBanner(false); setShowInstallGuide(false) }
     window.addEventListener('appinstalled', installed)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    if (!isStandalone) {
+      const timer = setTimeout(() => setShowInstallBanner(true), 5000)
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('beforeinstallprompt', handler)
+        window.removeEventListener('appinstalled', installed)
+      }
+    }
     return () => {
       window.removeEventListener('beforeinstallprompt', handler)
       window.removeEventListener('appinstalled', installed)
@@ -52,12 +64,18 @@ export default function App() {
   }, [])
 
   const handleInstall = () => {
-    if (!deferredPrompt) return
-    deferredPrompt.prompt()
-    deferredPrompt.userChoice.then(() => setDeferredPrompt(null))
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      deferredPrompt.userChoice.then(() => { setDeferredPrompt(null); setShowInstallBanner(false) })
+    } else {
+      setShowInstallGuide(true)
+    }
   }
 
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  const handleDismiss = () => {
+    setShowInstallBanner(false)
+    setShowInstallGuide(false)
+  }
 
   const navigateToCategory = (cat: string) => {
     setCategoryFilter(cat)
@@ -171,7 +189,7 @@ export default function App() {
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         {sellerContent}
-        <InstallBanner show={!!deferredPrompt && !isStandalone} onInstall={handleInstall} onDismiss={() => setDeferredPrompt(null)} />
+        <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
   }
@@ -197,7 +215,7 @@ export default function App() {
           </button>
         </div>
         <BuyerMessages onNavigate={navigate} />
-        <InstallBanner show={!!deferredPrompt && !isStandalone} onInstall={handleInstall} onDismiss={() => setDeferredPrompt(null)} />
+        <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
   }
@@ -216,37 +234,73 @@ export default function App() {
       >
         {renderPage()}
       </Layout>
-      <InstallBanner show={!!deferredPrompt && !isStandalone} onInstall={handleInstall} onDismiss={() => setDeferredPrompt(null)} />
+      <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
     </div>
   )
 }
 
-function InstallBanner({ show, onInstall, onDismiss }: { show: boolean; onInstall: () => void; onDismiss: () => void }) {
+function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; guide: boolean; onInstall: () => void; onDismiss: () => void }) {
   if (!show) return null
+  const isSafari = /iphone|ipad|ipod/i.test(navigator.userAgent)
+  const isChrome = /chrome|crios/i.test(navigator.userAgent)
   return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-      background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
-      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-      fontFamily: "'Outfit', 'Nunito', sans-serif",
-    }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
-          <path d="M14 28 C14 36, 34 36, 34 28" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-          <circle cx="18" cy="19" r="2.5" fill="white" />
-          <circle cx="30" cy="19" r="2.5" fill="white" />
-          <line x1="24" y1="14" x2="24" y2="22" stroke="white" strokeWidth="3" strokeLinecap="round" />
-        </svg>
+    <>
+      {guide && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          fontFamily: "'Outfit', 'Nunito', sans-serif",
+        }} onClick={onDismiss}>
+          <div style={{
+            background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 420,
+            padding: '2rem 1.5rem', textAlign: 'center',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+              <svg width="30" height="30" viewBox="0 0 48 48" fill="none">
+                <path d="M14 28 C14 36, 34 36, 34 28" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+                <circle cx="18" cy="19" r="2.5" fill="white" />
+                <circle cx="30" cy="19" r="2.5" fill="white" />
+                <line x1="24" y1="14" x2="24" y2="22" stroke="white" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Yüpixi</h3>
+            <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+              {isSafari
+                ? 'Appuyez sur le bouton Partager <span style="font-size:1.2rem">⬆️</span> puis choisissez "Sur l\'écran d\'accueil".'
+                : isChrome
+                  ? 'Appuyez sur le menu ⋮ puis choisissez "Ajouter à l\'écran d\'accueil".'
+                  : 'Utilisez le menu du navigateur pour ajouter à l\'écran d\'accueil.'}
+            </p>
+            <button onClick={onDismiss} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', width: '100%' }}>
+              J'ai compris
+            </button>
+          </div>
+        </div>
+      )}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+        background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
+        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+        fontFamily: "'Outfit', 'Nunito', sans-serif",
+      }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+            <path d="M14 28 C14 36, 34 36, 34 28" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+            <circle cx="18" cy="19" r="2.5" fill="white" />
+            <circle cx="30" cy="19" r="2.5" fill="white" />
+            <line x1="24" y1="14" x2="24" y2="22" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Yüpixi</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>sur l'écran d'accueil</div>
+        </div>
+        <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.85rem', fontWeight: 600 }}>Plus tard</button>
+        <button onClick={onInstall} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+          Installer
+        </button>
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Yüpixi</div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>sur l'écran d'accueil</div>
-      </div>
-      <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.85rem', fontWeight: 600 }}>Plus tard</button>
-      <button onClick={onInstall} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-        Installer
-      </button>
-    </div>
+    </>
   )
 }
