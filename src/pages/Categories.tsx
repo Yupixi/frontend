@@ -33,33 +33,32 @@ export default function Categories({ onNavigate, onCategorySelect }: CategoriesP
         {categories.map(cat => {
           const IconComp = iconMap[cat.id] || Building2
           return (
-            <div key={cat.id} onClick={() => onCategorySelect?.(cat.id)} style={{ padding: '1.25rem', borderRadius: 'var(--radius)', cursor: 'pointer', background: cat.color, transition: 'transform 0.15s', border: 'none' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}>
+            <div key={cat.id} className="card card-hover" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => onCategorySelect?.(cat.id)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#FFF' }}>
-                  <IconComp size={20} />
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: cat.color }}>
+                  <IconComp size={22} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1rem', margin: '0 0 2px', color: '#FFF' }}>{cat.name}</h2>
-                  <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.8)', fontWeight: 700 }}>{cat.count.toLocaleString('fr')} annonces</span>
+                  <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: 'var(--fg)' }}>{cat.name}</h2>
+                  <span style={{ fontSize: '0.8rem', color: cat.color, fontWeight: 700 }}>{cat.count.toLocaleString('fr')} annonces</span>
                 </div>
-                <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                <ChevronRight size={18} style={{ color: 'var(--fg-subtle)' }} />
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                 {cat.subcategories.map(sub => (
                   <button
                     key={sub}
                     onClick={e => { e.stopPropagation(); onCategorySelect?.(cat.id) }}
                     style={{
                       cursor: 'pointer', border: 'none', borderRadius: 999,
-                      padding: '3px 10px', fontSize: '0.75rem', fontWeight: 800,
+                      padding: '4px 12px', fontSize: '0.78rem', fontWeight: 700,
                       fontFamily: 'Outfit, sans-serif',
-                      background: 'rgba(255,255,255,0.2)', color: '#FFF',
+                      background: cat.color + '12', color: cat.color,
+                      transition: 'background 0.15s',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.35)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = cat.color + '25' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = cat.color + '12' }}
                   >
                     {sub}
                   </button>
