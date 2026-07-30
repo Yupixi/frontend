@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Heart, Share2, MapPin, Shield, Star, MessageCircle, Phone,
   ChevronLeft, ChevronRight, Eye, Tag, Truck, CheckCircle,
-  Award, Calendar, ArrowLeft, Flag,
+  Award, Calendar, ArrowLeft, Flag, ExternalLink,
 } from 'lucide-react'
 import { listings, formatPrice } from '../data/mockData'
 
