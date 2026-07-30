@@ -81,16 +81,15 @@ export default function Layout({
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--fg)', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Subtle Top Bar */}
+      {/* Top Banner */}
       <div style={{
-        background: 'var(--border-subtle)',
-        color: 'var(--fg-muted)',
-        padding: '5px 16px',
-        fontSize: '0.75rem',
-        fontWeight: 700,
+        background: '#FFDD21',
+        color: '#0F172A',
+        padding: '6px 16px',
+        fontSize: '0.8rem',
+        fontWeight: 800,
         fontFamily: "'Outfit', sans-serif",
         textAlign: 'center',
-        borderBottom: '1px solid var(--border)',
         letterSpacing: '0.01em'
       }}>
         Yüpixi Côte d'Ivoire — Achetez, vendez et payez par Mobile Money (Wave, Orange Money, MTN MoMo, Moov)
