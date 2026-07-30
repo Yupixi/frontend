@@ -35,6 +35,29 @@ export default function App() {
   const [selectedListingId, setSelectedListingId] = useState('l1')
   const [selectedSellerId, setSelectedSellerId] = useState('s1')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    const installed = () => setDeferredPrompt(null)
+    window.addEventListener('appinstalled', installed)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      window.removeEventListener('appinstalled', installed)
+    }
+  }, [])
+
+  const handleInstall = () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    deferredPrompt.userChoice.then(() => setDeferredPrompt(null))
+  }
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
   const navigateToCategory = (cat: string) => {
     setCategoryFilter(cat)
@@ -148,6 +171,7 @@ export default function App() {
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         {sellerContent}
+        <InstallBanner show={!!deferredPrompt && !isStandalone} onInstall={handleInstall} onDismiss={() => setDeferredPrompt(null)} />
       </div>
     )
   }
@@ -173,6 +197,7 @@ export default function App() {
           </button>
         </div>
         <BuyerMessages onNavigate={navigate} />
+        <InstallBanner show={!!deferredPrompt && !isStandalone} onInstall={handleInstall} onDismiss={() => setDeferredPrompt(null)} />
       </div>
     )
   }
@@ -191,6 +216,37 @@ export default function App() {
       >
         {renderPage()}
       </Layout>
+      <InstallBanner show={!!deferredPrompt && !isStandalone} onInstall={handleInstall} onDismiss={() => setDeferredPrompt(null)} />
+    </div>
+  )
+}
+
+function InstallBanner({ show, onInstall, onDismiss }: { show: boolean; onInstall: () => void; onDismiss: () => void }) {
+  if (!show) return null
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+      background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
+      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+      fontFamily: "'Outfit', 'Nunito', sans-serif",
+    }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+          <path d="M14 28 C14 36, 34 36, 34 28" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+          <circle cx="18" cy="19" r="2.5" fill="white" />
+          <circle cx="30" cy="19" r="2.5" fill="white" />
+          <line x1="24" y1="14" x2="24" y2="22" stroke="white" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Yüpixi</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>sur l'écran d'accueil</div>
+      </div>
+      <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.85rem', fontWeight: 600 }}>Plus tard</button>
+      <button onClick={onInstall} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+        Installer
+      </button>
     </div>
   )
 }
