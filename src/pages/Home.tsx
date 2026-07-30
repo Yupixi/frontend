@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package } from 'lucide-react'
 import { listings, categories, formatPrice } from '../data/mockData'
 
@@ -10,62 +10,70 @@ type HomeProps = {
   onCategorySelect?: (categoryId: string) => void
 }
 
-// Synchronized Hero showcase items matching the animated rotating text
-const heroShowcaseItems = [
+// Hero mosaic card data for the right column floating cards
+const heroMosaicCards = [
   {
-    id: 'l1',
-    text: "un iPhone 15 Pro",
-    title: "iPhone 15 Pro Max 256Go Titan Natural",
-    category: "Électronique & Phones",
-    price: "720 000 FCFA",
-    location: "Abidjan, Cocody",
-    image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&h=450&fit=crop",
-    sellerName: "Yao Telecom Pro",
-    badge: "Populaire"
+    id: 'h1', isMain: true,
+    title: 'Villa Duplex 5 Pièces - Piscine',
+    category: 'Immobilier',
+    price: '185 000 000 FCFA',
+    location: 'Cocody, Abidjan',
+    image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=600&h=450&fit=crop',
+    verified: true,
   },
   {
-    id: 'l2',
-    text: "une Villa à Cocody",
-    title: "Superbe Villa Duplex 5 Pièces avec Piscine",
-    category: "Immobilier",
-    price: "185 000 000 FCFA",
-    location: "Abidjan, Cocody Riviera 3",
-    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=600&h=450&fit=crop",
-    sellerName: "Immo Luxe Abidjan",
-    badge: "Haut Standing"
+    id: 'h2',
+    title: 'iPhone 15 Pro Max 256Go',
+    category: 'Électronique',
+    price: '720 000 FCFA',
+    location: 'Abidjan',
+    image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&h=450&fit=crop',
+    verified: true,
   },
   {
-    id: 'l3',
-    text: "une Toyota Hilux",
-    title: "Toyota Hilux Revo 4x4 Double Cabine 2023",
-    category: "Véhicules",
-    price: "24 500 000 FCFA",
-    location: "Abidjan, Marcory",
-    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&h=450&fit=crop",
-    sellerName: "Auto Prestige CI",
-    badge: "Certifié 4x4"
+    id: 'h3',
+    title: 'Toyota Hilux Revo 4x4',
+    category: 'Véhicules',
+    price: '24 500 000 FCFA',
+    location: 'Marcory',
+    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&h=450&fit=crop',
+    verified: true,
   },
   {
-    id: 'l4',
-    text: "des Baskets de Marque",
-    title: "Nike Air Force 1 '07 Edition Limitée Neuf",
-    category: "Mode & Beauté",
-    price: "45 000 FCFA",
-    location: "Abidjan, Yopougon",
-    image: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&h=450&fit=crop",
-    sellerName: "Koffi Sneakers Shop",
-    badge: "Offre Flash"
+    id: 'h4',
+    title: 'Nike Air Force 1 Édition Limitée',
+    category: 'Mode & Beauté',
+    price: '45 000 FCFA',
+    location: 'Yopougon',
+    image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&h=450&fit=crop',
+    verified: false,
   },
   {
-    id: 'l5',
-    text: "un Appartement Meublé",
-    title: "Appartement Meublé 3 Pièces Haut Standing",
-    category: "Immobilier",
-    price: "450 000 FCFA / mois",
-    location: "Abidjan, Zone 4",
-    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=450&fit=crop",
-    sellerName: "Residence Serenite",
-    badge: "Meublé Luxe"
+    id: 'h5',
+    title: 'Appartement Meublé 3 Pièces',
+    category: 'Immobilier',
+    price: '450 000 FCFA / mois',
+    location: 'Zone 4, Abidjan',
+    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=450&fit=crop',
+    verified: true,
+  },
+  {
+    id: 'h6',
+    title: 'Canapé Design Cuir Premium',
+    category: 'Maison & Meubles',
+    price: '350 000 FCFA',
+    location: 'Cocody',
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=450&fit=crop',
+    verified: false,
+  },
+  {
+    id: 'h7',
+    title: 'Service Traiteur Mariage',
+    category: 'Services',
+    price: 'À partir de 150 000 FCFA',
+    location: 'Abidjan',
+    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=600&h=450&fit=crop',
+    verified: true,
   },
 ]
 
@@ -177,288 +185,115 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   const featured = listings.filter(l => l.sponsored)
   const recent = listings.slice(0, 8)
 
-  const [idx, setIdx] = useState(0)
-  const [isHovered, setIsHovered] = useState(false)
 
-  useEffect(() => {
-    if (isHovered) return // Pause auto-rotation when user hovers over the 3D fan cards
-    const timer = setInterval(() => {
-      setIdx(prev => (prev + 1) % heroShowcaseItems.length)
-    }, 2800)
-    return () => clearInterval(timer)
-  }, [isHovered])
-
-  const currentShowcase = heroShowcaseItems[idx]
-
-  // Indices for 3D Fan Stack (Active item + 2 stacked items behind)
-  const nextIdx1 = (idx + 1) % heroShowcaseItems.length
-  const nextIdx2 = (idx + 2) % heroShowcaseItems.length
-
-  const stackCards = [
-    { item: heroShowcaseItems[idx], realIdx: idx, position: 'front' },
-    { item: heroShowcaseItems[nextIdx1], realIdx: nextIdx1, position: 'middle' },
-    { item: heroShowcaseItems[nextIdx2], realIdx: nextIdx2, position: 'back' },
-  ]
 
   return (
     <div>
 
-      {/* Official Yüpixi Hero Section with 3D FAN STACKED CARDS */}
-      <section className="pattern-yupixi" style={{
-        padding: '3.5rem 1rem 4rem',
-        position: 'relative',
-        color: '#FFFFFF',
-        overflow: 'hidden'
-      }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative' }}>
+      {/* Premium Hero Section — Two-Column with Floating Card Mosaic */}
+      <section className="hero-premium" style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Subtle gradient overlay */}
+        <div className="hero-premium-glow" />
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '3rem',
-            alignItems: 'center'
-          }}>
+        <div className="hero-premium-inner">
+          <div className="hero-grid">
 
-            {/* Left Column: Headline & Controls */}
-            <div>
-              {/* Official Tagline */}
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                background: '#FFDD21',
-                color: '#0F172A',
-                padding: '6px 14px',
-                borderRadius: 999,
-                fontSize: '0.85rem',
-                fontWeight: 900,
-                fontFamily: "'Outfit', sans-serif",
-                marginBottom: '1.25rem',
-                border: '1px solid rgba(255, 221, 33, 0.9)'
-              }}>
-                <CheckCircle size={14} style={{ color: '#FE0000' }} />
-                <span>Trouver ce que l'on cherche se fait toujours avec le sourire !</span>
+            {/* === Left Column: Text, CTA, Stats === */}
+            <div className="hero-left">
+              <div className="hero-badge">
+                <Sparkles size={14} />
+                La marketplace nouvelle génération
               </div>
 
-              {/* Headline with ANIMATED ROTATING TEXT */}
-              <h1 style={{
-                color: '#FFFFFF',
-                fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)',
-                margin: '0 0 1.25rem',
-                lineHeight: 1.15,
-                fontFamily: "'Outfit', sans-serif",
-                fontWeight: 900,
-                letterSpacing: '-0.03em',
-              }}>
-                Trouvez & Achetez{' '}
-                <span key={idx} className="animated-word">
-                  {currentShowcase.text}
-                </span>{' '}
+              <h1 className="hero-title">
+                Trouvez, <span className="hero-title-accent">Achetez</span> & Vendez<br />
                 en Côte d'Ivoire
               </h1>
 
-              <p style={{
-                color: 'rgba(255,255,255,0.92)',
-                fontSize: '1.15rem',
-                margin: '0 0 2.25rem',
-                lineHeight: 1.6,
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontWeight: 600
-              }}>
-                Parcourez les meilleures annonces certifiées et payez en toute sécurité par Wave, Orange Money ou MTN MoMo.
+              <p className="hero-subtitle">
+                La plus grande plateforme de petites annonces certifiées en Côte d'Ivoire.
+                Parcourez des milliers d'offres et payez en toute sécurité par Mobile Money.
               </p>
 
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-                <button
-                  className="btn-secondary"
-                  style={{ fontSize: '1rem', padding: '0.85rem 2rem' }}
-                  onClick={() => onNavigate('search')}
-                >
-                  Parcourir les annonces <ArrowRight size={18} />
+              <div className="hero-buttons">
+                <button className="hero-btn hero-btn-primary" onClick={() => onNavigate('search')}>
+                  Explorer les annonces <ArrowRight size={18} />
                 </button>
-
-                <button
-                  className="btn-outline"
-                  style={{ border: '2px solid #FFFFFF', color: '#FFFFFF', fontSize: '1rem', padding: '0.85rem 2rem', background: 'rgba(255,255,255,0.08)' }}
-                  onClick={() => onNavigate('seller-post')}
-                >
+                <button className="hero-btn hero-btn-outline" onClick={() => onNavigate('seller-post')}>
                   + Publier une annonce
                 </button>
               </div>
 
-              {/* Key Platform Stats Counter */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-                gap: '0.75rem',
-                background: 'rgba(0,0,0,0.25)',
-                padding: '1rem 1.25rem',
-                borderRadius: 'var(--radius)',
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}>
+              {/* Stats */}
+              <div className="hero-stats">
                 {[
                   { value: '85 000+', label: 'Annonces Actives' },
                   { value: '42 000+', label: 'Vendeurs Vérifiés' },
-                  { value: '100% Sécurisé', label: 'Wave & Orange' },
+                  { value: '100%', label: 'Paiement Sécurisé' },
                 ].map(s => (
-                  <div key={s.label}>
-                    <div style={{ color: '#FFDD21', fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.3rem' }}>{s.value}</div>
-                    <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.775rem', marginTop: 2, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600 }}>{s.label}</div>
+                  <div key={s.label} className="hero-stat-item">
+                    <div className="hero-stat-value">{s.value}</div>
+                    <div className="hero-stat-label">{s.label}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Right Column: 3D FAN STACKED PRODUCT CARDS (ÉVENTAIL D'ILLUSTRATIONS ANIMÉ AU SURVOL) */}
-            <div
-              style={{
-                display: 'flex',
-                justify: 'center',
-                alignItems: 'center',
-                minHeight: 440,
-                position: 'relative',
-                userSelect: 'none'
-              }}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              {/* Stacked Fan Container */}
-              <div style={{ position: 'relative', width: '100%', maxWidth: 340, height: 420 }}>
-                {stackCards.map((cardObj, i) => {
-                  const card = cardObj.item
-                  const isFront = i === 0
-                  const isMiddle = i === 1
-                  const isBack = i === 2
-
-                  // Fan Transform calculations on normal vs hover state
-                  let transformStyle = ''
-                  let zIndexValue = 1
-                  let opacityValue = 1
-
-                  if (isFront) {
-                    zIndexValue = 10
-                    opacityValue = 1
-                    transformStyle = isHovered
-                      ? 'rotate(-6deg) translateX(-35px) translateY(-10px) scale(1.02)'
-                      : 'rotate(0deg) translateX(0) translateY(0) scale(1)'
-                  } else if (isMiddle) {
-                    zIndexValue = 5
-                    opacityValue = 0.95
-                    transformStyle = isHovered
-                      ? 'rotate(10deg) translateX(55px) translateY(12px) scale(0.98)'
-                      : 'rotate(5deg) translateX(20px) translateY(-10px) scale(0.95)'
-                  } else if (isBack) {
-                    zIndexValue = 2
-                    opacityValue = 0.88
-                    transformStyle = isHovered
-                      ? 'rotate(-16deg) translateX(-95px) translateY(25px) scale(0.92)'
-                      : 'rotate(-6deg) translateX(-20px) translateY(-18px) scale(0.9)'
-                  }
-
+            {/* === Right Column: Floating Card Mosaic === */}
+            <div className="hero-right">
+              <div className="hero-mosaic">
+                {heroMosaicCards.map((card, i) => {
+                  const isMain = card.isMain
                   return (
                     <div
-                      key={card.id + '_' + i}
-                      onClick={() => {
-                        setIdx(cardObj.realIdx)
-                        onSelectListing(card.id)
-                      }}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        background: '#FFFFFF',
-                        color: '#0F172A',
-                        borderRadius: 'var(--radius-lg)',
-                        border: isFront ? '3px solid #FFDD21' : '2px solid #E2E8F0',
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        transform: transformStyle,
-                        zIndex: zIndexValue,
-                        opacity: opacityValue,
-                        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                      }}
+                      key={card.id}
+                      className={`hero-mosaic-card${isMain ? ' hero-mosaic-card-main' : ''}`}
+                      style={{ animationDelay: `${i * 0.15}s` }}
+
+                      onClick={() => onSelectListing(card.id)}
                     >
-                      {/* Card Image */}
-                      <div style={{ height: 230, position: 'relative', overflow: 'hidden', background: '#F1F5F9' }}>
-                        <img
-                          src={card.image}
-                          alt={card.title}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                        <div style={{
-                          position: 'absolute',
-                          top: 10,
-                          left: 10,
-                          background: '#FFDD21',
-                          color: '#0F172A',
-                          fontFamily: "'Outfit', sans-serif",
-                          fontWeight: 900,
-                          fontSize: '0.725rem',
-                          padding: '3px 10px',
-                          borderRadius: 999,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4
-                        }}>
-                          <Sparkles size={11} style={{ color: '#FE0000' }} />
+                      <div className="hero-mosaic-img-wrap">
+                        <img src={card.image} alt={card.title} className="hero-mosaic-img" />
+                        {/* Gradient overlay at bottom */}
+                        <div className="hero-mosaic-overlay" />
+
+                        {/* Category badge */}
+                        <div className="hero-mosaic-category">
                           {card.category}
                         </div>
 
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 10,
-                          right: 10,
-                          background: '#FE0000',
-                          color: '#FFFFFF',
-                          fontFamily: "'Outfit', sans-serif",
-                          fontWeight: 900,
-                          fontSize: '0.725rem',
-                          padding: '3px 10px',
-                          borderRadius: 8
-                        }}>
-                          {card.badge}
-                        </div>
-                      </div>
+                        {/* Verified badge */}
+                        {card.verified && (
+                          <div className="hero-mosaic-verified">
+                            <CheckCircle size={isMain ? 16 : 12} />
+                          </div>
+                        )}
 
-                      {/* Card Info Body */}
-                      <div style={{ padding: '1rem 1.15rem' }}>
-                        <div style={{
-                          color: '#FE0000',
-                          fontFamily: "'Outfit', sans-serif",
-                          fontWeight: 900,
-                          fontSize: '1.3rem',
-                          marginBottom: 2
-                        }}>
+                        {/* Price */}
+                        <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
                           {card.price}
                         </div>
+                      </div>
 
-                        <h3 style={{
-                          margin: '0 0 8px',
-                          fontSize: '0.95rem',
-                          fontWeight: 800,
-                          fontFamily: "'Outfit', sans-serif",
-                          color: '#0F172A',
-                          lineHeight: 1.25,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {card.title}
-                        </h3>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.775rem', color: '#64748B', fontWeight: 600 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <MapPin size={13} style={{ color: '#FE0000' }} />
-                            <span>{card.location}</span>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#00A3E0', fontWeight: 800 }}>
-                            <ShieldCheck size={13} />
-                            <span>Vendeur Certifié</span>
+                      {/* Card body (only shown on main card desktop) */}
+                      {isMain && (
+                        <div className="hero-mosaic-body">
+                          <h3 className="hero-mosaic-title">{card.title}</h3>
+                          <div className="hero-mosaic-location">
+                            <MapPin size={13} />
+                            {card.location}
                           </div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* Heart icon */}
+                      <button
+                        className="hero-mosaic-fav"
+                        onClick={e => { e.stopPropagation(); onToggleFavorite(card.id) }}
+                        style={{ color: card.verified ? 'var(--primary)' : 'var(--fg-subtle)' }}
+                      >
+                        <Heart size={isMain ? 16 : 12} fill={card.verified ? 'var(--primary)' : 'none'} />
+                      </button>
                     </div>
                   )
                 })}
@@ -466,7 +301,6 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </div>
 
           </div>
-
         </div>
       </section>
 
