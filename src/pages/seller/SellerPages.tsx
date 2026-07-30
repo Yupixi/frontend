@@ -358,18 +358,23 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Publier une annonce</h1>
 
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', alignItems: 'center', background: 'var(--border-subtle)', borderRadius: 12, padding: '0.75rem 1rem' }}>
+        <div className="seller-steps-desktop" style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', alignItems: 'center', background: 'var(--border-subtle)', borderRadius: 12, padding: '0.75rem 1rem' }}>
           {steps.map((s, i) => (
             <React.Fragment key={s}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                 <div style={{ width: 34, height: 34, borderRadius: '50%', background: step > i + 1 ? '#10B981' : step === i + 1 ? 'var(--primary)' : 'var(--border)', color: step >= i + 1 ? '#fff' : 'var(--fg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800, flexShrink: 0 }}>
                   {step > i + 1 ? '✓' : i + 1}
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: step === i + 1 ? 700 : 500, color: step === i + 1 ? 'var(--fg)' : 'var(--fg-muted)', whiteSpace: 'nowrap' }}>{s}</span>
+                <span className="seller-step-label" style={{ fontSize: '0.85rem', fontWeight: step === i + 1 ? 700 : 500, color: step === i + 1 ? 'var(--fg)' : 'var(--fg-muted)', whiteSpace: 'nowrap' }}>{s}</span>
               </div>
-              {i < steps.length - 1 && <div style={{ width: 24, height: 2, background: step > i + 1 ? '#10B981' : 'var(--border)', borderRadius: 1, flexShrink: 0 }} />}
+              {i < steps.length - 1 && <div className="seller-step-line" style={{ width: 24, height: 2, background: step > i + 1 ? '#10B981' : 'var(--border)', borderRadius: 1, flexShrink: 0 }} />}
             </React.Fragment>
           ))}
+        </div>
+        <div className="seller-steps-mobile" style={{ display: 'none', marginBottom: '1.25rem', background: 'var(--border-subtle)', borderRadius: 10, padding: '0.6rem 1rem', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800, flexShrink: 0 }}>{step}</div>
+          <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', color: 'var(--fg)' }}>Étape {step} sur {stepsCount}</span>
+          <span style={{ color: 'var(--fg-muted)', fontSize: '0.82rem', marginLeft: 'auto' }}>{steps[step - 1]}</span>
         </div>
 
         <div className="card" style={{ padding: '2rem' }}>

@@ -477,12 +477,17 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .buyer-sidebar-overlay { display: none !important; }
   .buyer-mobile-menu-btn { display: none !important; }
   .buyer-msg-back { display: none !important; }
-}
-
-@media (min-width: 769px) {
   .mobile-menu-btn { display: none !important; }
   .mobile-search-btn { display: none !important; }
   .mobile-drawer { display: none !important; }
+  .seller-steps-mobile { display: none !important; }
+}
+
+@media (max-width: 768px) {
+  .seller-steps-desktop { display: none !important; }
+  .seller-steps-mobile { display: flex !important; }
+  .seller-step-label { display: none !important; }
+  .seller-step-line { display: none !important; }
 }
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
