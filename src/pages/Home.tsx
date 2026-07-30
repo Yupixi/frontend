@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowRight, Star, Zap, MapPin, Heart, Eye, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory } from 'lucide-react'
+import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory } from 'lucide-react'
 import { listings, categories, formatPrice } from '../data/mockData'
 
 type HomeProps = {
