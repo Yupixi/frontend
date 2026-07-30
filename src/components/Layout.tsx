@@ -518,7 +518,9 @@ export default function Layout({
                   onMouseEnter={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'var(--border-subtle)' }}
                   onMouseLeave={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'transparent' }}
                 >
-                  <IconComp size={item.highlight ? 18 : 15} className={item.highlight ? 'flash-icon' : ''} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
+                  <span className={item.highlight ? 'flash-icon' : ''} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <IconComp size={item.highlight ? 18 : 15} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
+                  </span>
                   <span className={item.highlight ? 'flash-btn-text' : ''} key={flashIdx}>{item.highlight ? flashTexts[flashIdx] : item.label}</span>
                 </button>
               )
@@ -573,7 +575,9 @@ export default function Layout({
                     textAlign: 'left'
                   }}
                 >
-                  <IconComp size={22} style={{ color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg-muted)' }} />
+                  <span className={item.page === 'flash-offers' ? 'flash-icon' : ''} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <IconComp size={item.page === 'flash-offers' ? 22 : 18} style={{ color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg-muted)' }} />
+                  </span>
                   <span key={item.page === 'flash-offers' ? flashIdx : undefined}>{item.page === 'flash-offers' ? flashTexts[flashIdx] : item.label}</span>
                 </button>
               )
