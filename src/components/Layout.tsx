@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
   Sun, Moon, LogOut, Settings, Package, BarChart2, Shield,
@@ -51,6 +51,13 @@ export default function Layout({
   const [notifOpen, setNotifOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('Accueil')
+  const flashTexts = ['Offres Flash', 'Jusqu\'à -50%', 'Livraison Offerte', 'Stock Limitė']
+  const [flashIdx, setFlashIdx] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setFlashIdx(i => (i + 1) % flashTexts.length), 4000)
+    return () => clearInterval(t)
+  }, [])
 
   const unreadNotifs = notifications.filter(n => !n.read).length
 
@@ -468,7 +475,7 @@ export default function Layout({
           {/* Sub Navbar with Clean Lucide SVG Icons (No AI emojis!) */}
           <nav style={{ display: 'flex', gap: '0.35rem', padding: '0.4rem 0 0.8rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {[
-              { label: 'Offres Flash', icon: Zap, page: 'flash-offers' as Page, catId: '', highlight: true },
+              { label: 'Offres Flash', icon: Zap, page: 'flash-offers' as Page, catId: '', highlight: true, flash: true },
               { label: 'Accueil', icon: Home, page: 'home' as Page, catId: '', highlight: false },
               { label: 'Véhicules', icon: Car, page: 'search' as Page, catId: 'vehicules', highlight: false },
               { label: 'Immobilier', icon: HomeIcon, page: 'search' as Page, catId: 'immobilier', highlight: false },
@@ -491,24 +498,28 @@ export default function Layout({
                     }
                   }}
                   style={{
-                    border: item.highlight ? '1px solid rgba(255,221,33,0.8)' : isActive ? '1px solid var(--primary)' : '1px solid transparent',
+                    border: 'none',
                     cursor: 'pointer',
                     padding: '6px 14px',
                     borderRadius: 999,
                     fontSize: '0.825rem',
                     fontFamily: "'Outfit', sans-serif",
                     fontWeight: 800,
-                    color: item.highlight ? '#0F172A' : isActive ? 'var(--primary)' : 'var(--fg-muted)',
-                    background: item.highlight ? '#FFDD21' : isActive ? 'rgba(254,0,0,0.08)' : 'transparent',
+                    color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)',
+                    background: item.highlight ? 'var(--primary)' : isActive ? 'rgba(254,0,0,0.08)' : 'transparent',
                     whiteSpace: 'nowrap',
                     transition: 'all 0.15s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 6
+                    gap: 6,
+                    ...(item.highlight ? { boxShadow: '0 0 16px rgba(254,0,0,0.4)' } : {}),
                   }}
+                  className={item.highlight ? 'flash-btn' : ''}
+                  onMouseEnter={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'var(--border-subtle)' }}
+                  onMouseLeave={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'transparent' }}
                 >
-                  <IconComp size={15} style={{ color: item.highlight ? '#0F172A' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
-                  {item.label}
+                  <IconComp size={15} className={item.highlight ? 'flash-icon' : ''} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
+                  <span className={item.highlight ? 'flash-btn-text' : ''} key={flashIdx}>{item.highlight ? flashTexts[flashIdx] : item.label}</span>
                 </button>
               )
             })}
@@ -554,14 +565,16 @@ export default function Layout({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     width: '100%', padding: '0.85rem 0.75rem',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--fg)', fontFamily: 'Outfit, sans-serif',
+                    background: item.page === 'flash-offers' ? 'var(--primary)' : 'none',
+                    border: 'none', cursor: 'pointer',
+                    color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg)',
+                    fontFamily: 'Outfit, sans-serif',
                     fontWeight: 700, fontSize: '0.9rem', borderRadius: 8,
                     textAlign: 'left'
                   }}
                 >
-                  <IconComp size={18} style={{ color: 'var(--fg-muted)' }} />
-                  {item.label}
+                  <IconComp size={18} style={{ color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg-muted)' }} />
+                  <span key={item.page === 'flash-offers' ? flashIdx : undefined}>{item.page === 'flash-offers' ? flashTexts[flashIdx] : item.label}</span>
                 </button>
               )
             })}

@@ -518,6 +518,46 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   to { transform: translateY(0); }
 }
 
+@keyframes flashPulse {
+  0%, 100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+  50% { opacity: 0.85; transform: scale(1.15); filter: brightness(1.3); }
+}
+
+@keyframes flashShine {
+  0% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); }
+  50% { box-shadow: inset 0 0 12px 2px rgba(255,255,255,0.2); }
+  100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); }
+}
+
+@keyframes flashText {
+  0%, 100% { opacity: 1; }
+  10% { opacity: 0; }
+  20% { opacity: 1; }
+}
+
+@keyframes textSlideFade2 {
+  0% { opacity: 0; transform: translateY(6px); }
+  10% { opacity: 1; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(0); }
+  50% { opacity: 0; transform: translateY(-6px); }
+  55% { opacity: 0; transform: translateY(6px); }
+  65% { opacity: 1; transform: translateY(0); }
+  95% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+
+.flash-icon {
+  animation: flashPulse 0.8s ease-in-out infinite;
+}
+
+.flash-btn {
+  animation: flashShine 1.6s ease-in-out infinite;
+}
+
+.flash-btn-text {
+  animation: textSlideFade2 4s ease-in-out infinite;
+}
+
 @media (min-width: 769px) {
   .mobile-contact-bar { display: none !important; }
 }
