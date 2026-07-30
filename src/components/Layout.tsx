@@ -512,9 +512,7 @@ export default function Layout({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    ...(item.highlight ? { boxShadow: '0 0 20px rgba(254,0,0,0.5)' } : {}),
                   }}
-                  className={item.highlight ? 'flash-btn' : ''}
                   onMouseEnter={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'var(--border-subtle)' }}
                   onMouseLeave={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'transparent' }}
                 >
