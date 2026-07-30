@@ -7,24 +7,46 @@ type SearchProps = {
   onSelectListing: (id: string) => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
+  categoryFilter?: string
+  onClearCategoryFilter?: () => void
 }
 
-export default function SearchPage({ onNavigate, onSelectListing, favorites, onToggleFavorite }: SearchProps) {
+export default function SearchPage({ onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter }: SearchProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortBy, setSortBy] = useState('recent')
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
   const [selectedCity, setSelectedCity] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState(categoryFilter || '')
   const [condition, setCondition] = useState('')
 
+  const filtered = listings.filter(l => {
+    if (categoryFilter && l.category !== categoryFilter) return false
+    if (selectedCity && l.city !== selectedCity) return false
+    if (condition && l.condition !== condition) return false
+    if (priceMin && l.price < Number(priceMin)) return false
+    if (priceMax && l.price > Number(priceMax)) return false
+    return true
+  })
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'price-asc') return a.price - b.price
+    if (sortBy === 'price-desc') return b.price - a.price
+    if (sortBy === 'popular') return b.views - a.views
+    return 0
+  })
+
   const activeFilters = [
+    categoryFilter && categories.find(c => c.id === categoryFilter)?.name,
     selectedCity && selectedCity,
-    selectedCategory && categories.find(c => c.id === selectedCategory)?.name,
     condition && condition,
     (priceMin || priceMax) && `${priceMin || '0'} – ${priceMax || '∞'} FCFA`,
   ].filter(Boolean) as string[]
+
+  const headerTitle = categoryFilter
+    ? categories.find(c => c.id === categoryFilter)?.name || 'Annonces'
+    : 'Toutes les annonces'
 
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -32,9 +54,9 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
-            Toutes les annonces
+            {headerTitle}
           </h1>
-          <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', margin: '4px 0 0' }}>{listings.length} résultats trouvés</p>
+          <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', margin: '4px 0 0' }}>{sorted.length} résultat{sorted.length > 1 ? 's' : ''} trouvé{sorted.length > 1 ? 's' : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {/* Sort */}
@@ -92,10 +114,11 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
               <X size={12} style={{ cursor: 'pointer' }} onClick={() => {
                 if (f === selectedCity) setSelectedCity('')
                 if (f === condition) setCondition('')
+                if (categoryFilter && f === categories.find(c => c.id === categoryFilter)?.name) onClearCategoryFilter?.()
               }} />
             </span>
           ))}
-          <button onClick={() => { setSelectedCity(''); setSelectedCategory(''); setCondition(''); setPriceMin(''); setPriceMax('') }}
+          <button onClick={() => { setSelectedCity(''); setSelectedCategory(''); setCondition(''); setPriceMin(''); setPriceMax(''); onClearCategoryFilter?.() }}
             style={{ color: 'var(--fg-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
             Tout effacer
           </button>
@@ -184,7 +207,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
         <div style={{ flex: 1 }}>
           {viewMode === 'grid' ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-              {listings.map(l => (
+              {sorted.map(l => (
                 <div
                   key={l.id}
                   className="card card-hover"
@@ -221,7 +244,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {listings.map(l => (
+              {sorted.map(l => (
                 <div
                   key={l.id}
                   className="card card-hover"

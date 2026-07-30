@@ -3,9 +3,10 @@ import { categories } from '../data/mockData'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
+  onCategorySelect?: (categoryId: string) => void
 }
 
-export default function Categories({ onNavigate }: CategoriesProps) {
+export default function Categories({ onNavigate, onCategorySelect }: CategoriesProps) {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem' }}>
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -23,7 +24,7 @@ export default function Categories({ onNavigate }: CategoriesProps) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
         {categories.map(cat => (
-          <div key={cat.id} className="card card-hover" style={{ padding: '1.5rem', cursor: 'pointer' }} onClick={() => onNavigate('search')}>
+          <div key={cat.id} className="card card-hover" style={{ padding: '1.5rem', cursor: 'pointer' }}               onClick={() => onCategorySelect?.(cat.id)}>
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
               <div style={{ width: 56, height: 56, borderRadius: 14, background: cat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', flexShrink: 0 }}>
                 {cat.icon}
@@ -42,7 +43,7 @@ export default function Categories({ onNavigate }: CategoriesProps) {
               {cat.subcategories.map(sub => (
                 <button
                   key={sub}
-                  onClick={e => { e.stopPropagation(); onNavigate('search') }}
+                  onClick={e => { e.stopPropagation(); onCategorySelect?.(cat.id) }}
                   className="badge badge-gray"
                   style={{ cursor: 'pointer', border: 'none', background: 'var(--border-subtle)', transition: 'background 0.15s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = cat.color + '20')}

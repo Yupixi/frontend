@@ -6,6 +6,7 @@ import ListingDetail from './pages/ListingDetail'
 import SellerProfile from './pages/SellerProfile'
 import Categories from './pages/Categories'
 import Auth from './pages/Auth'
+import FlashOffers from './pages/FlashOffers'
 import {
   BuyerDashboard, BuyerFavorites, BuyerMessages,
   BuyerNotifications, BuyerHistory, BuyerSettings,
@@ -20,7 +21,7 @@ import {
 } from './pages/admin/AdminPages'
 
 type Page =
-  | 'home' | 'search' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
+  | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-payments' | 'seller-premium'
   | 'admin-dashboard' | 'admin-users' | 'admin-listings' | 'admin-categories' | 'admin-reports' | 'admin-stats' | 'admin-config'
@@ -33,6 +34,12 @@ export default function App() {
   const [favorites, setFavorites] = useState<string[]>(['l1', 'l3'])
   const [selectedListingId, setSelectedListingId] = useState('l1')
   const [selectedSellerId, setSelectedSellerId] = useState('s1')
+  const [categoryFilter, setCategoryFilter] = useState('')
+
+  const navigateToCategory = (cat: string) => {
+    setCategoryFilter(cat)
+    setPage('search')
+  }
 
   // Apply dark mode to document
   useEffect(() => {
@@ -72,13 +79,15 @@ export default function App() {
       case 'home':
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'seller-profile':
         return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} />
       case 'categories':
-        return <Categories onNavigate={navigate} />
+        return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} />
+      case 'flash-offers':
+        return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'auth':
         return <Auth onNavigate={navigate} onLogin={() => setIsLoggedIn(true)} />
 
@@ -162,6 +171,7 @@ export default function App() {
       <Layout
         currentPage={page}
         onNavigate={navigate}
+        onNavigateCategory={navigateToCategory}
         dark={dark}
         onToggleDark={() => setDark(d => !d)}
         isLoggedIn={isLoggedIn}

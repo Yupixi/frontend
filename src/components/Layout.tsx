@@ -17,6 +17,7 @@ type Page =
 type LayoutProps = {
   currentPage: Page
   onNavigate: (page: Page) => void
+  onNavigateCategory: (categoryId: string) => void
   dark: boolean
   onToggleDark: () => void
   children: React.ReactNode
@@ -29,6 +30,7 @@ type LayoutProps = {
 export default function Layout({
   currentPage,
   onNavigate,
+  onNavigateCategory,
   dark,
   onToggleDark,
   children,
@@ -482,21 +484,28 @@ export default function Layout({
           {/* Sub Navbar with Clean Lucide SVG Icons (No AI emojis!) */}
           <nav style={{ display: 'flex', gap: '0.35rem', padding: '0.4rem 0 0.8rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {[
-              { label: 'Offres Flash', icon: Zap, page: 'search' as Page, highlight: true },
-              { label: 'Accueil', icon: Home, page: 'home' as Page },
-              { label: 'Véhicules', icon: Car, page: 'search' as Page },
-              { label: 'Immobilier', icon: HomeIcon, page: 'search' as Page },
-              { label: 'Électronique & Phones', icon: Smartphone, page: 'search' as Page },
-              { label: 'Mode & Beauté', icon: Shirt, page: 'search' as Page },
-              { label: 'Services & Emploi', icon: Wrench, page: 'search' as Page },
-              { label: 'Toutes les Catégories', icon: Grid, page: 'categories' as Page },
+              { label: 'Offres Flash', icon: Zap, page: 'flash-offers' as Page, catId: '', highlight: true },
+              { label: 'Accueil', icon: Home, page: 'home' as Page, catId: '', highlight: false },
+              { label: 'Véhicules', icon: Car, page: 'search' as Page, catId: 'vehicules', highlight: false },
+              { label: 'Immobilier', icon: HomeIcon, page: 'search' as Page, catId: 'immobilier', highlight: false },
+              { label: 'Électronique & Phones', icon: Smartphone, page: 'search' as Page, catId: 'electronique', highlight: false },
+              { label: 'Mode & Beauté', icon: Shirt, page: 'search' as Page, catId: 'mode', highlight: false },
+              { label: 'Services & Emploi', icon: Wrench, page: 'search' as Page, catId: 'services', highlight: false },
+              { label: 'Toutes les Catégories', icon: Grid, page: 'categories' as Page, catId: '', highlight: false },
             ].map(item => {
               const IconComp = item.icon
               const isActive = item.highlight ? false : activeCategory === item.label
               return (
                 <button
                   key={item.label}
-                  onClick={() => { setActiveCategory(item.label); onNavigate(item.page) }}
+                  onClick={() => {
+                    setActiveCategory(item.label)
+                    if (item.page === 'flash-offers' || item.page === 'categories' || item.page === 'home') {
+                      onNavigate(item.page)
+                    } else {
+                      onNavigateCategory(item.catId)
+                    }
+                  }}
                   style={{
                     border: item.highlight ? '1px solid rgba(255,221,33,0.8)' : isActive ? '1px solid var(--primary)' : '1px solid transparent',
                     cursor: 'pointer',
