@@ -83,10 +83,10 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
   const [imgError, setImgError] = useState(false)
 
   return (
-    <div className="card card-hover" style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative', background: 'var(--bg-card)' }} onClick={onSelect}>
+    <div className="card card-hover listing-card" style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative', background: 'var(--bg-card)' }} onClick={onSelect}>
 
       {/* Badges Overlay */}
-      <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="listing-card-badges" style={{ position: 'absolute', top: 12, left: 12, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {listing.sponsored && (
           <span className="badge badge-yellow">
             <Sparkles size={11} /> Sponsorisé
@@ -101,6 +101,7 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
 
       {/* Heart Favorite Button */}
       <button
+        className="listing-card-fav"
         onClick={e => { e.stopPropagation(); onToggleFav() }}
         style={{
           position: 'absolute', top: 12, right: 12, zIndex: 2,
@@ -114,7 +115,7 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
       </button>
 
       {/* Image Preview Container */}
-      <div style={{ height: 190, background: 'var(--border-subtle)', overflow: 'hidden', position: 'relative' }}>
+      <div className="listing-card-img" style={{ height: 190, background: 'var(--border-subtle)', overflow: 'hidden', position: 'relative' }}>
         {!imgError ? (
           <img
             src={listing.image}
@@ -130,7 +131,7 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
       </div>
 
       {/* Card Content Details */}
-      <div style={{ padding: '14px 16px' }}>
+      <div className="listing-card-body" style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
           <div className="price-tag">{formatPrice(listing.price)}</div>
         </div>
@@ -150,13 +151,13 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
           {listing.title}
         </h3>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--fg-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
+        <div className="listing-card-location" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--fg-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
           <MapPin size={13} style={{ color: 'var(--primary)' }} />
           <span>{listing.location}, {listing.city}</span>
         </div>
 
         {/* Card Footer Info */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
+        <div className="listing-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {listing.seller.verified ? (
               <span className="badge badge-blue" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
