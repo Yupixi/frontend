@@ -105,7 +105,7 @@ function SidebarNav({ active, onNavigate, onClose }: { active: string; onNavigat
   )
 }
 
-function DashboardSidebar({ active, onNavigate, sidebarOpen }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean }) {
+function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void }) {
   return (
     <>
       {/* Desktop sidebar */}
@@ -138,7 +138,7 @@ function DashboardSidebar({ active, onNavigate, sidebarOpen }: { active: string;
           position: 'fixed', inset: 0, zIndex: 9999,
           animation: 'fadeIn 0.15s ease-out',
         }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onNavigate(active)} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onClose?.()} />
           <aside style={{
             position: 'relative', width: 280, height: '100%', background: 'var(--bg-card)',
             display: 'flex', flexDirection: 'column',
@@ -149,13 +149,13 @@ function DashboardSidebar({ active, onNavigate, sidebarOpen }: { active: string;
                 <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 28 }} />
                 <span className="badge" style={{ background: '#FE0000', color: '#fff', fontSize: '0.65rem', padding: '2px 8px' }}>Vendeur</span>
               </div>
-              <button onClick={() => onNavigate(active)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
+              <button onClick={() => onClose?.()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-              <SidebarNav active={active} onNavigate={onNavigate} onClose={() => onNavigate(active)} />
+              <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} />
             </div>
             <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-              <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
+              <button onClick={() => { onNavigate('home'); onClose?.() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
                 <LogOut size={16} />
                 <span>Retour au site</span>
               </button>
@@ -180,7 +180,7 @@ function DashboardLayout({ active, onNavigate, children }: { active: string, onN
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
-      <DashboardSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} />
+      <DashboardSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <DashboardHeader activeLabel={labels[active] || active} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <main className="dashboard-main" style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
