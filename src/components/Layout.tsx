@@ -214,25 +214,26 @@ export default function Layout({
                 <Search size={18} />
               </button>
 
-              {/* Dark mode toggle */}
-              <button
-                onClick={onToggleDark}
-                style={{
-                  background: 'var(--border-subtle)',
-                  border: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  width: 38,
-                  height: 38,
-                  color: 'var(--fg-muted)',
-                  borderRadius: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                title="Changer le thème"
-              >
-                {dark ? <Sun size={18} style={{ color: '#FFDD21' }} /> : <Moon size={18} />}
-              </button>
+              <div className="desktop-only">
+                <button
+                  onClick={onToggleDark}
+                  style={{
+                    background: 'var(--border-subtle)',
+                    border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                    width: 38,
+                    height: 38,
+                    color: 'var(--fg-muted)',
+                    borderRadius: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="Changer le thème"
+                >
+                  {dark ? <Sun size={18} style={{ color: '#FFDD21' }} /> : <Moon size={18} />}
+                </button>
+              </div>
 
               {isLoggedIn ? (
                 <>

@@ -429,6 +429,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .mobile-search-btn { display: none !important; }
   .mobile-drawer { display: none !important; }
 }
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+}
 
 @media (min-width: 769px) {
   .mobile-menu-btn { display: none !important; }
