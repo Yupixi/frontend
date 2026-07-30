@@ -406,7 +406,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
+          <div className="listing-grid">
             {featured.map(l => (
               <ListingCard
                 key={l.id}
@@ -434,7 +434,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
+          <div className="listing-grid">
             {recent.map(l => (
               <ListingCard
                 key={l.id}
