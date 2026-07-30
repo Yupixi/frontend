@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Logo from './Logo'
 import SearchOverlay from './SearchOverlay'
+import FlashIcon from './FlashIcon'
 import { notifications } from '../data/mockData'
 
 type Page =
@@ -517,7 +518,7 @@ export default function Layout({
                   onMouseLeave={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'transparent' }}
                 >
                   <span className={item.highlight ? 'flash-icon' : ''} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                    <IconComp size={item.highlight ? 18 : 15} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
+                    {item.highlight ? <FlashIcon size={18} /> : <IconComp size={15} style={{ color: isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />}
                   </span>
                   <span className={item.highlight ? 'flash-btn-text' : ''} key={flashIdx}>{item.highlight ? flashTexts[flashIdx] : item.label}</span>
                 </button>
@@ -574,7 +575,7 @@ export default function Layout({
                   }}
                 >
                   <span className={item.page === 'flash-offers' ? 'flash-icon' : ''} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                    <IconComp size={item.page === 'flash-offers' ? 22 : 18} style={{ color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg-muted)' }} />
+                    {item.page === 'flash-offers' ? <FlashIcon size={22} /> : <IconComp size={18} style={{ color: 'var(--fg-muted)' }} />}
                   </span>
                   <span key={item.page === 'flash-offers' ? flashIdx : undefined}>{item.page === 'flash-offers' ? flashTexts[flashIdx] : item.label}</span>
                 </button>
