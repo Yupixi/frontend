@@ -491,3 +491,12 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
 }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (min-width: 769px) {
+  .mobile-contact-bar { display: none !important; }
+}
