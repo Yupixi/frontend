@@ -500,9 +500,9 @@ export default function Layout({
                   style={{
                     border: 'none',
                     cursor: 'pointer',
-                    padding: '6px 14px',
+                    padding: '8px 18px',
                     borderRadius: 999,
-                    fontSize: '0.825rem',
+                    fontSize: '0.9rem',
                     fontFamily: "'Outfit', sans-serif",
                     fontWeight: 800,
                     color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)',
@@ -512,13 +512,13 @@ export default function Layout({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    ...(item.highlight ? { boxShadow: '0 0 16px rgba(254,0,0,0.4)' } : {}),
+                    ...(item.highlight ? { boxShadow: '0 0 20px rgba(254,0,0,0.5)' } : {}),
                   }}
                   className={item.highlight ? 'flash-btn' : ''}
                   onMouseEnter={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'var(--border-subtle)' }}
                   onMouseLeave={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'transparent' }}
                 >
-                  <IconComp size={15} className={item.highlight ? 'flash-icon' : ''} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
+                  <IconComp size={18} className={item.highlight ? 'flash-icon' : ''} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
                   <span className={item.highlight ? 'flash-btn-text' : ''} key={flashIdx}>{item.highlight ? flashTexts[flashIdx] : item.label}</span>
                 </button>
               )
@@ -573,7 +573,7 @@ export default function Layout({
                     textAlign: 'left'
                   }}
                 >
-                  <IconComp size={18} style={{ color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg-muted)' }} />
+                  <IconComp size={22} style={{ color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg-muted)' }} />
                   <span key={item.page === 'flash-offers' ? flashIdx : undefined}>{item.page === 'flash-offers' ? flashTexts[flashIdx] : item.label}</span>
                 </button>
               )
