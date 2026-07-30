@@ -5,7 +5,7 @@ import {
   Trash2, ChevronRight, Upload, MapPin, Tag, Image, Star, ArrowUp,
   DollarSign, Users, AlertCircle, Building2, Car, Smartphone as SmartphoneIcon,
   Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby,
-  Factory, Bell, LogOut, Search, ChevronDown, Menu,
+  Factory, Bell, LogOut, Search, ChevronDown, Menu, X,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { listings, viewStats, formatPrice, categories, cities } from '../../data/mockData'
