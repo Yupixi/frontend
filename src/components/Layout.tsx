@@ -43,6 +43,7 @@ export default function Layout({
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState<string>('Accueil')
 
   const unreadNotifs = notifications.filter(n => !n.read).length
 
@@ -491,29 +492,29 @@ export default function Layout({
               { label: 'Toutes les Catégories', icon: Grid, page: 'categories' as Page },
             ].map(item => {
               const IconComp = item.icon
+              const isActive = item.highlight ? false : activeCategory === item.label
               return (
                 <button
                   key={item.label}
-                  onClick={() => onNavigate(item.page)}
+                  onClick={() => { setActiveCategory(item.label); onNavigate(item.page) }}
                   style={{
-                    border: 'none',
+                    border: item.highlight ? '1px solid rgba(255,221,33,0.8)' : isActive ? '1px solid var(--primary)' : '1px solid transparent',
                     cursor: 'pointer',
                     padding: '6px 14px',
                     borderRadius: 999,
                     fontSize: '0.825rem',
                     fontFamily: "'Outfit', sans-serif",
                     fontWeight: 800,
-                    color: item.highlight ? '#0F172A' : currentPage === item.page && item.label === 'Accueil' ? 'var(--primary)' : 'var(--fg-muted)',
-                    background: item.highlight ? '#FFDD21' : currentPage === item.page && item.label === 'Accueil' ? 'rgba(254,0,0,0.08)' : 'transparent',
+                    color: item.highlight ? '#0F172A' : isActive ? 'var(--primary)' : 'var(--fg-muted)',
+                    background: item.highlight ? '#FFDD21' : isActive ? 'rgba(254,0,0,0.08)' : 'transparent',
                     whiteSpace: 'nowrap',
                     transition: 'all 0.15s ease',
-                    border: item.highlight ? '1px solid rgba(255,221,33,0.8)' : '1px solid transparent',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6
                   }}
                 >
-                  <IconComp size={15} style={{ color: item.highlight ? '#0F172A' : currentPage === item.page && item.label === 'Accueil' ? 'var(--primary)' : 'var(--fg-muted)' }} />
+                  <IconComp size={15} style={{ color: item.highlight ? '#0F172A' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
                   {item.label}
                 </button>
               )
