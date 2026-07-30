@@ -549,7 +549,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .flash-icon {
-  animation: flashPulse 1.4s ease-in-out infinite;
+  animation: flashPulse 2.8s ease-in-out infinite;
   position: relative;
   display: inline-flex;
 }
@@ -560,7 +560,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   inset: -6px;
   border-radius: 50%;
   pointer-events: none;
-  animation: thunderBurst 1.4s ease-in-out infinite;
+  animation: thunderBurst 2.8s ease-in-out infinite;
 }
 
 @keyframes thunderBurst {
@@ -576,7 +576,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .flash-btn-text {
-  animation: textSlideFade2 4s ease-in-out infinite;
+  animation: textSlideFade2 5s ease-in-out infinite;
 }
 
 @media (min-width: 769px) {

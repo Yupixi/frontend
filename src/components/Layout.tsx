@@ -55,7 +55,7 @@ export default function Layout({
   const [flashIdx, setFlashIdx] = useState(0)
 
   useEffect(() => {
-    const t = setInterval(() => setFlashIdx(i => (i + 1) % flashTexts.length), 4000)
+    const t = setInterval(() => setFlashIdx(i => (i + 1) % flashTexts.length), 5000)
     return () => clearInterval(t)
   }, [])
 
