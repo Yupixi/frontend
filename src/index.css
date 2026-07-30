@@ -75,6 +75,7 @@ body {
   -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6, .font-brand {
@@ -411,7 +412,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 @media (max-width: 768px) {
   .mobile-menu-btn { display: flex !important; }
   .mobile-search-btn { display: flex !important; }
-  .glass-header > div > div > div > form { display: none !important; }
+  .glass-header > div > div > form { display: none !important; }
   .glass-header .role-switcher { display: none !important; }
   .glass-header .btn-outline,
   .glass-header .btn-primary span { display: none !important; }

@@ -323,7 +323,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               onMouseLeave={() => setIsHovered(false)}
             >
               {/* Stacked Fan Container */}
-              <div style={{ position: 'relative', width: 340, height: 420 }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: 340, height: 420 }}>
                 {stackCards.map((cardObj, i) => {
                   const card = cardObj.item
                   const isFront = i === 0
