@@ -556,11 +556,32 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 .flash-icon {
   animation: flashPulse 1.4s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(255, 221, 33, 0.8)) drop-shadow(0 0 12px rgba(255, 221, 33, 0.4));
 }
 
 .flash-btn {
   animation: flashShine 1.6s ease-in-out infinite;
+  position: relative;
+}
+
+.flash-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  pointer-events: none;
+  animation: thunderBurst 1.4s ease-in-out infinite;
+}
+
+@keyframes thunderBurst {
+  0%, 100% { box-shadow: 0 0 4px 2px rgba(255, 221, 33, 0); }
+  5% { box-shadow: 0 0 8px 4px rgba(255, 221, 33, 0.7), 0 0 20px 8px rgba(255, 221, 33, 0.3); }
+  7% { box-shadow: 0 0 4px 2px rgba(255, 221, 33, 0); }
+  9% { box-shadow: 0 0 10px 5px rgba(255, 221, 33, 0.8), 0 0 25px 10px rgba(255, 221, 33, 0.4); }
+  11% { box-shadow: 0 0 4px 2px rgba(255, 221, 33, 0.2); }
+  30% { box-shadow: 0 0 4px 2px rgba(255, 221, 33, 0); }
+  33% { box-shadow: 0 0 6px 3px rgba(255, 221, 33, 0.5), 0 0 15px 6px rgba(255, 221, 33, 0.2); }
+  35% { box-shadow: 0 0 4px 2px rgba(255, 221, 33, 0); }
+  50% { box-shadow: 0 0 4px 2px rgba(255, 221, 33, 0); }
 }
 
 .flash-btn-text {
