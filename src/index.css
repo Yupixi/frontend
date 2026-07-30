@@ -555,7 +555,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .flash-icon {
-  animation: flashPulse 0.8s ease-in-out infinite;
+  animation: flashPulse 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 221, 33, 0.8)) drop-shadow(0 0 12px rgba(255, 221, 33, 0.4));
 }
 
 .flash-btn {
