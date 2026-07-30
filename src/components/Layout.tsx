@@ -500,9 +500,9 @@ export default function Layout({
                   style={{
                     border: 'none',
                     cursor: 'pointer',
-                    padding: '8px 18px',
+                    padding: item.highlight ? '8px 18px' : '6px 14px',
                     borderRadius: 999,
-                    fontSize: '0.9rem',
+                    fontSize: item.highlight ? '0.9rem' : '0.825rem',
                     fontFamily: "'Outfit', sans-serif",
                     fontWeight: 800,
                     color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)',
@@ -518,7 +518,7 @@ export default function Layout({
                   onMouseEnter={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'var(--border-subtle)' }}
                   onMouseLeave={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'transparent' }}
                 >
-                  <IconComp size={18} className={item.highlight ? 'flash-icon' : ''} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
+                  <IconComp size={item.highlight ? 18 : 15} className={item.highlight ? 'flash-icon' : ''} style={{ color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />
                   <span className={item.highlight ? 'flash-btn-text' : ''} key={flashIdx}>{item.highlight ? flashTexts[flashIdx] : item.label}</span>
                 </button>
               )
