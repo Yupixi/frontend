@@ -1,50 +1,146 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   LayoutDashboard, Plus, Package, BarChart2, CreditCard, Award, Eye, Heart,
   MessageCircle, TrendingUp, TrendingDown, CheckCircle, XCircle, Edit3,
   Trash2, ChevronRight, Upload, MapPin, Tag, Image, Star, ArrowUp,
-  DollarSign, Users, AlertCircle, Smartphone,
+  DollarSign, Users, AlertCircle, Building2, Car, Smartphone as SmartphoneIcon,
+  Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby,
+  Factory, Bell, LogOut, Search, ChevronDown, Menu,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { listings, viewStats, formatPrice } from '../../data/mockData'
+import { listings, viewStats, formatPrice, categories, cities } from '../../data/mockData'
+import RichTextEditor from '../../components/RichTextEditor'
 
-type SellerSidebarProps = { active: string; onNavigate: (page: any) => void }
+// ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────
 
-function SellerSidebar({ active, onNavigate }: SellerSidebarProps) {
+function DashboardHeader({ activeLabel, onBack }: { activeLabel: string; onBack: () => void }) {
+  return (
+    <header style={{
+      height: 60, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
+      display: 'flex', alignItems: 'center', padding: '0 1.25rem', gap: '0.75rem',
+      flexShrink: 0,
+    }}>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '0.85rem', fontWeight: 600, padding: '4px 10px', borderRadius: 8, transition: 'all 0.12s' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        ← Retour
+      </button>
+      <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+      <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 34 }} />
+      <span className="badge" style={{ background: '#FE0000', color: '#fff', fontSize: '0.7rem', padding: '2px 10px' }}>Vendeur</span>
+      <div style={{ flex: 1 }} />
+      <div style={{ fontSize: '0.82rem', color: 'var(--fg-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'var(--border-subtle)', padding: '4px 12px', borderRadius: 6 }}>
+          <span style={{ color: 'var(--fg-subtle)' }}>/</span> {activeLabel}
+        </span>
+      </div>
+      <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+      <button style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <Bell size={18} />
+        <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: '50%', background: '#FE0000' }} />
+      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', transition: 'all 0.12s' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif" }}>K</div>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>Kouamé J-B.</div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>Vendeur</div>
+        </div>
+        <ChevronDown size={14} style={{ color: 'var(--fg-subtle)' }} />
+      </div>
+    </header>
+  )
+}
+
+function DashboardSidebar({ active, onNavigate }: { active: string; onNavigate: (p: any) => void }) {
   const items = [
     { key: 'seller-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
     { key: 'seller-post', icon: Plus, label: 'Publier une annonce' },
     { key: 'seller-listings', icon: Package, label: 'Mes annonces', badge: 8 },
     { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
-    { key: 'seller-payments', icon: CreditCard, label: 'Paiements' },
+    { key: 'seller-payments', icon: CreditCard, label: 'Paiements & Transactions' },
     { key: 'seller-premium', icon: Award, label: 'Abonnement Premium' },
   ]
+
   return (
-    <aside className="sidebar" style={{ position: 'sticky', top: 64, height: 'calc(100vh - 64px)', overflowY: 'auto', paddingTop: '0.75rem' }}>
-      <div style={{ padding: '0.5rem 1rem 0.25rem', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fg-subtle)' }}>
-        Espace Vendeur
+    <aside style={{
+      width: 230, background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
+      display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
+    }}>
+      <div style={{ padding: '1rem 1rem 0.5rem', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 30, alignSelf: 'flex-start' }} />
+        <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)', fontWeight: 600, paddingLeft: 2 }}>Espace Vendeur</div>
       </div>
-      {items.map(item => (
-        <button
-          key={item.key}
-          onClick={() => onNavigate(item.key)}
-          className={`sidebar-item ${active === item.key ? 'active' : ''}`}
-          style={{ width: '100%', border: 'none', position: 'relative' }}
+      <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem 0.75rem' }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--fg-subtle)', padding: '0.5rem 0.75rem', marginBottom: 4 }}>Navigation</div>
+        {items.map(item => (
+          <button
+            key={item.key}
+            onClick={() => onNavigate(item.key)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
+              cursor: 'pointer', marginBottom: 2,
+              background: active === item.key ? 'rgba(254,0,0,0.07)' : 'transparent',
+              color: active === item.key ? '#FE0000' : 'var(--fg-muted)',
+              fontFamily: "'Outfit', 'Nunito', sans-serif",
+              fontWeight: active === item.key ? 800 : 600,
+              fontSize: '0.85rem',
+              transition: 'all 0.12s',
+              position: 'relative',
+            }}
+            onMouseEnter={e => { if (active !== item.key) e.currentTarget.style.background = 'var(--border-subtle)' }}
+            onMouseLeave={e => { if (active !== item.key) e.currentTarget.style.background = 'transparent' }}
+          >
+            <item.icon size={18} strokeWidth={active === item.key ? 2.5 : 1.8} />
+            <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+            {item.badge && (
+              <span style={{
+                background: active === item.key ? '#FE0000' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
+                borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
+              }}>{item.badge}</span>
+            )}
+          </button>
+        ))}
+      </div>
+      <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
+        <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-          <item.icon size={18} />
-          <span style={{ flex: 1 }}>{item.label}</span>
-          {item.badge && <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: 999, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 800 }}>{item.badge}</span>}
+          <LogOut size={16} />
+          <span>Retour au site</span>
         </button>
-      ))}
+      </div>
     </aside>
   )
 }
 
-function PageLayout({ active, onNavigate, children }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode }) {
+function DashboardLayout({ active, onNavigate, children }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode }) {
+  const labels: Record<string, string> = {
+    'seller-dashboard': 'Tableau de bord',
+    'seller-post': 'Publier une annonce',
+    'seller-listings': 'Mes annonces',
+    'seller-stats': 'Statistiques',
+    'seller-payments': 'Paiements',
+    'seller-premium': 'Abonnement Premium',
+  }
+
   return (
-    <div style={{ display: 'flex', maxWidth: 1280, margin: '0 auto' }}>
-      <SellerSidebar active={active} onNavigate={onNavigate} />
-      <div style={{ flex: 1, padding: '2rem', minWidth: 0 }}>{children}</div>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
+      <DashboardSidebar active={active} onNavigate={onNavigate} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <DashboardHeader activeLabel={labels[active] || active} onBack={() => onNavigate('home')} />
+        <main style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
@@ -61,69 +157,66 @@ export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }
   const topListings = listings.slice(0, 4).map((l, i) => ({ ...l, rank: i + 1 }))
 
   return (
-    <PageLayout active="seller-dashboard" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-dashboard" onNavigate={onNavigate}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Tableau de bord vendeur</h1>
+        <div>
+          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Tableau de bord</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Bienvenue sur votre espace vendeur</p>
+        </div>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => onNavigate('seller-post')}>
           <Plus size={16} /> Nouvelle annonce
         </button>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {stats.map(s => (
-          <div key={s.label} className="stat-card">
-            <div className="stat-icon" style={{ background: s.bg }}>
-              <s.icon size={22} color={s.color} />
-            </div>
-            <div>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.75rem' }}>{s.value}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>{s.label}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
-                {s.up ? <TrendingUp size={12} color="#10B981" /> : <TrendingDown size={12} color="#EF4444" />}
-                <span style={{ fontSize: '0.75rem', color: s.up ? '#10B981' : '#EF4444', fontWeight: 700 }}>{s.trend}</span>
+          <div key={s.label} className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <s.icon size={20} color={s.color} />
               </div>
+              {s.up ? <TrendingUp size={16} color="#10B981" /> : <TrendingDown size={16} color="#EF4444" />}
             </div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{s.value}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Views chart */}
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues des 7 derniers jours</h2>
-        <ResponsiveContainer width="100%" height={200}>
+        <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues des 7 derniers jours</h2>
+        <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={viewStats}>
             <defs>
               <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#FE0000" stopOpacity={0.15} />
+                <stop offset="5%" stopColor="#FE0000" stopOpacity={0.12} />
                 <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'Nunito, sans-serif' }} />
+            <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: "'Outfit', sans-serif" }} />
             <Area type="monotone" dataKey="views" stroke="#FE0000" strokeWidth={2.5} fill="url(#colorViews)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Top listings */}
       <div className="card" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Meilleures annonces</h2>
-          <button onClick={() => onNavigate('seller-listings')} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: 0, fontSize: '1rem' }}>Meilleures annonces</h2>
+          <button onClick={() => onNavigate('seller-listings')} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 4 }}>
             Voir tout <ChevronRight size={15} />
           </button>
         </div>
         {topListings.map((l, i) => (
           <div key={l.id} style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem 1.25rem', borderBottom: i < topListings.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
-            <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1rem', color: l.rank <= 3 ? 'var(--primary)' : 'var(--fg-muted)', width: 20, textAlign: 'center' }}>#{l.rank}</span>
-            <div style={{ width: 48, height: 40, borderRadius: 6, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: l.rank <= 3 ? 'var(--primary)' : 'var(--fg-muted)', width: 22, textAlign: 'center' }}>#{l.rank}</span>
+            <div style={{ width: 48, height: 40, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
               <img src={l.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.title}</p>
+              <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.title}</p>
               <span style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{formatPrice(l.price)}</span>
             </div>
             <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--fg-muted)' }}>
@@ -133,7 +226,7 @@ export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }
           </div>
         ))}
       </div>
-    </PageLayout>
+    </DashboardLayout>
   )
 }
 
@@ -141,191 +234,305 @@ export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }
 export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
   const [step, setStep] = useState(1)
   const [category, setCategory] = useState('')
+  const [subcategory, setSubcategory] = useState('')
   const [title, setTitle] = useState('')
   const [price, setPrice] = useState('')
   const [description, setDescription] = useState('')
   const [city, setCity] = useState('Abidjan')
-  const [condition, setCondition] = useState('')
   const [images, setImages] = useState<string[]>([])
+  const [customFields, setCustomFields] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
 
-  const steps = ['Catégorie', 'Informations', 'Photos', 'Aperçu']
+  const steps = ['Catégorie', 'Sous-catégorie', 'Informations', 'Photos', 'Aperçu']
+
+  const catData = categories.find(c => c.id === category)
+  const stepsCount = steps.length
+
+  const iconMap: Record<string, typeof Building2> = {
+    immobilier: Building2, vehicules: Car, electronique: SmartphoneIcon,
+    mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
+    loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
+    famille: Baby, 'materiel-pro': Factory, divers: Package,
+  }
 
   if (success) {
     return (
-      <PageLayout active="seller-post" onNavigate={onNavigate}>
+      <DashboardLayout active="seller-post" onNavigate={onNavigate}>
         <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <CheckCircle size={40} color="#10B981" />
           </div>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>Annonce publiée !</h2>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>Annonce publiée !</h2>
           <p style={{ color: 'var(--fg-muted)', marginBottom: '2rem' }}>Votre annonce est en ligne et visible par des milliers d'acheteurs.</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => onNavigate('seller-listings')}>Voir mes annonces</button>
-            <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1) }}>Publier une autre annonce</button>
+            <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1); setCategory(''); setSubcategory(''); setCustomFields({}) }}>Publier une autre annonce</button>
           </div>
         </div>
-      </PageLayout>
+      </DashboardLayout>
     )
   }
 
+  const noPriceCats = ['emploi', 'services', 'animaux', 'divers']
+
+  const canGoNext = () => {
+    if (step === 1) return !!category
+    if (step === 2) return !!subcategory
+    if (step === 3) {
+      if (!title.trim() || !description.trim()) return false
+      if (!noPriceCats.includes(category) && !price) return false
+      return true
+    }
+    if (step === 4) return true
+    return true
+  }
+
+  const titlePlaceholders: Record<string, string> = {
+    emploi: 'Ex: Chef de projet IT confirmé - Abidjan',
+    vehicules: 'Ex: Toyota RAV4 2021 - Full options',
+    immobilier: 'Ex: Villa F4 à louer - Cocody',
+    mode: 'Ex: Robe été taille 38 - Très bon état',
+    loisirs: 'Ex: Vélo VTT Giant 26 pouces',
+    animaux: 'Ex: Chiot berger allemand à donner',
+    electronique: 'Ex: iPhone 15 Pro 256Go - Très bon état',
+    services: 'Ex: Cours de maths niveau collège et lycée',
+    famille: 'Ex: Lit bébé avec matelas - Bon état',
+    maison: 'Ex: Canapé d\'angle cuir cognac',
+    'materiel-pro': 'Ex: Tracteur John Deere 2022',
+    agriculture: 'Ex: Plants de tomates cerises bio',
+    divers: 'Ex: Lot de livres à vendre',
+  }
+
+  const setCustomField = (key: string, value: string) => {
+    setCustomFields(prev => ({ ...prev, [key]: value }))
+  }
+
   return (
-    <PageLayout active="seller-post" onNavigate={onNavigate}>
-      <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Publier une annonce</h1>
+    <DashboardLayout active="seller-post" onNavigate={onNavigate}>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Publier une annonce</h1>
 
-      {/* Step indicator */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', alignItems: 'center' }}>
-        {steps.map((s, i) => (
-          <>
-            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: step > i + 1 ? '#10B981' : step === i + 1 ? 'var(--primary)' : 'var(--border)', color: step >= i + 1 ? '#fff' : 'var(--fg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800, flexShrink: 0 }}>
-                {step > i + 1 ? '✓' : i + 1}
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', alignItems: 'center', background: 'var(--border-subtle)', borderRadius: 12, padding: '0.75rem 1rem' }}>
+          {steps.map((s, i) => (
+            <React.Fragment key={s}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', background: step > i + 1 ? '#10B981' : step === i + 1 ? 'var(--primary)' : 'var(--border)', color: step >= i + 1 ? '#fff' : 'var(--fg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800, flexShrink: 0 }}>
+                  {step > i + 1 ? '✓' : i + 1}
+                </div>
+                <span style={{ fontSize: '0.85rem', fontWeight: step === i + 1 ? 700 : 500, color: step === i + 1 ? 'var(--fg)' : 'var(--fg-muted)', whiteSpace: 'nowrap' }}>{s}</span>
               </div>
-              <span style={{ fontSize: '0.82rem', fontWeight: step === i + 1 ? 700 : 500, color: step === i + 1 ? 'var(--fg)' : 'var(--fg-muted)' }}>{s}</span>
-            </div>
-            {i < steps.length - 1 && <div style={{ flex: 1, height: 2, background: step > i + 1 ? '#10B981' : 'var(--border)', borderRadius: 1, maxWidth: 60 }} />}
-          </>
-        ))}
-      </div>
+              {i < steps.length - 1 && <div style={{ width: 24, height: 2, background: step > i + 1 ? '#10B981' : 'var(--border)', borderRadius: 1, flexShrink: 0 }} />}
+            </React.Fragment>
+          ))}
+        </div>
 
-      <div className="card" style={{ padding: '2rem', maxWidth: 680 }}>
-        {step === 1 && (
-          <div>
-            <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
-              {[
-                { id: 'immobilier', name: 'Immobilier', icon: '🏠' },
-                { id: 'vehicules', name: 'Véhicules', icon: '🚗' },
-                { id: 'electronique', name: 'Électronique', icon: '📱' },
-                { id: 'mode', name: 'Mode & Beauté', icon: '👗' },
-                { id: 'maison', name: 'Maison', icon: '🛋️' },
-                { id: 'emploi', name: 'Emploi', icon: '💼' },
-                { id: 'services', name: 'Services', icon: '🔧' },
-                { id: 'loisirs', name: 'Loisirs', icon: '⚽' },
-              ].map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.id)}
-                  style={{ padding: '1rem', border: '2px solid', borderColor: category === cat.id ? 'var(--primary)' : 'var(--border)', borderRadius: 'var(--radius-sm)', background: category === cat.id ? 'rgba(254,0,0,0.04)' : 'var(--bg-card)', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}
-                >
-                  <div style={{ fontSize: '1.75rem', marginBottom: 6 }}>{cat.icon}</div>
-                  <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', color: 'var(--fg)' }}>{cat.name}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1.1rem' }}>Détails de l'annonce</h2>
+        <div className="card" style={{ padding: '2rem' }}>
+          {step === 1 && (
             <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
-              <input className="input" placeholder="Ex: iPhone 15 Pro 256Go - Très bon état" value={title} onChange={e => setTitle(e.target.value)} />
-              <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>{title.length}/100 caractères</div>
-            </div>
-            <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix (FCFA) *</label>
-              <div style={{ position: 'relative' }}>
-                <Tag size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
-                <input className="input" style={{ paddingLeft: 36 }} placeholder="Ex: 150 000" value={price} onChange={e => setPrice(e.target.value)} type="number" />
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
+                {categories.map(cat => {
+                  const CatIcon = iconMap[cat.id] || Package
+                  const selected = category === cat.id
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => { setCategory(cat.id); setSubcategory(''); setStep(2) }}
+                      style={{
+                        border: 'none', cursor: 'pointer', borderRadius: 'var(--radius)', overflow: 'hidden',
+                        background: selected ? cat.color + '15' : 'transparent',
+                        outline: selected ? `2px solid ${cat.color}` : '1.5px solid var(--border)',
+                        outlineOffset: -1, transition: 'all 0.12s',
+                      }}
+                      onMouseEnter={e => { if (!selected) e.currentTarget.style.outlineColor = cat.color + '60' }}
+                      onMouseLeave={e => { if (!selected) e.currentTarget.style.outlineColor = 'var(--border)' }}
+                    >
+                      <div style={{ padding: '1.25rem 0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cat.color }}>
+                          <CatIcon size={22} />
+                        </div>
+                        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem', color: selected ? cat.color : 'var(--fg)', textAlign: 'center', lineHeight: 1.2 }}>{cat.name}</span>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg-muted)' }}>
-                <input type="checkbox" style={{ accentColor: 'var(--primary)' }} /> Prix négociable
-              </label>
             </div>
+          )}
+
+          {step === 2 && catData && (
             <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>État</label>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {['Neuf', 'Comme neuf', 'Très bon état', 'Bon état', 'Passable'].map(c => (
-                  <button key={c} onClick={() => setCondition(c)} style={{ padding: '6px 14px', border: '1.5px solid', borderColor: condition === c ? 'var(--primary)' : 'var(--border)', borderRadius: 999, background: condition === c ? 'rgba(254,0,0,0.05)' : 'var(--bg-card)', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', color: condition === c ? 'var(--primary)' : 'var(--fg-muted)' }}>
-                    {c}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem' }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: catData.color }}>
+                  {React.createElement(iconMap[catData.id] || Package, { size: 20 })}
+                </div>
+                <div>
+                  <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{catData.name}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>Choisissez une sous-catégorie</div>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                {catData.subcategories.map(sub => (
+                  <button
+                    key={sub}
+                    onClick={() => { setSubcategory(sub); setStep(3) }}
+                    style={{
+                      padding: '0.85rem 1.25rem', border: '1.5px solid', cursor: 'pointer', textAlign: 'left',
+                      borderColor: subcategory === sub ? catData.color : 'var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      background: subcategory === sub ? catData.color + '0A' : 'var(--bg-card)',
+                      fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', color: subcategory === sub ? catData.color : 'var(--fg)',
+                      transition: 'all 0.12s',
+                    }}
+                    onMouseEnter={e => { if (subcategory !== sub) e.currentTarget.style.borderColor = catData.color + '60' }}
+                    onMouseLeave={e => { if (subcategory !== sub) e.currentTarget.style.borderColor = 'var(--border)' }}
+                  >
+                    {sub}
                   </button>
                 ))}
               </div>
+              <button className="btn-outline" style={{ marginTop: '1.25rem' }} onClick={() => setStep(1)}>← Changer de catégorie</button>
             </div>
-            <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Description *</label>
-              <textarea className="input" style={{ minHeight: 120, resize: 'vertical' }} placeholder="Décrivez votre article en détail..." value={description} onChange={e => setDescription(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
-              <div style={{ position: 'relative' }}>
-                <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
-                <select className="input" style={{ paddingLeft: 34 }} value={city} onChange={e => setCity(e.target.value)}>
-                  {['Abidjan', 'Bouaké', 'Daloa', 'Korhogo', 'Yamoussoukro', 'San-Pédro'].map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
 
-        {step === 3 && (
-          <div>
-            <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 0.5rem', fontSize: '1.1rem' }}>Ajoutez vos photos</h2>
-            <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>La première photo sera la photo principale. Maximum 8 photos.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-              <div style={{ aspectRatio: '1', border: '2px dashed var(--primary)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', background: 'rgba(254,0,0,0.02)' }}>
-                <Upload size={24} color="var(--primary)" />
-                <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>Photo 1</span>
-              </div>
-              {[2,3,4,5,6,7,8].map(n => (
-                <div key={n} style={{ aspectRatio: '1', border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', background: 'var(--border-subtle)' }}>
-                  <Image size={18} color="var(--fg-subtle)" />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--fg-subtle)' }}>{n}</span>
+          {step === 3 && catData && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: catData.color }}>
+                  {React.createElement(iconMap[catData.id] || Package, { size: 18 })}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div>
-            <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1.1rem' }}>Aperçu de votre annonce</h2>
-            <div className="card" style={{ overflow: 'hidden', marginBottom: '1.25rem' }}>
-              <div style={{ height: 200, background: 'linear-gradient(135deg, var(--border-subtle) 0%, var(--border) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image size={40} color="var(--fg-subtle)" />
-              </div>
-              <div style={{ padding: '1rem' }}>
-                <div className="price-tag">{price ? `${parseInt(price).toLocaleString('fr')} FCFA` : '0 FCFA'}</div>
-                <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '6px 0 8px', fontSize: '1rem' }}>{title || 'Titre de votre annonce'}</h3>
-                <div style={{ fontSize: '0.82rem', color: 'var(--fg-muted)', display: 'flex', gap: 12 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><MapPin size={12} />{city}</span>
-                  <span className="badge badge-gray">{condition || 'État'}</span>
-                </div>
-                <p style={{ marginTop: 8, fontSize: '0.875rem', color: 'var(--fg)', lineHeight: 1.5 }}>{description || 'Description de votre annonce...'}</p>
-              </div>
-            </div>
-            <div className="card" style={{ padding: '1rem', background: 'rgba(254,0,0,0.03)', border: '1px solid rgba(254,0,0,0.15)' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                <AlertCircle size={18} color="var(--primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', marginBottom: 4 }}>Avant de publier</div>
-                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.82rem', color: 'var(--fg-muted)', lineHeight: 1.7 }}>
-                    <li>Votre annonce sera examinée par notre équipe</li>
-                    <li>Elle sera visible dans les prochaines 2 heures</li>
-                    <li>Respectez nos conditions d'utilisation</li>
-                  </ul>
+                  <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1.05rem' }}>{catData.name}</div>
+                  <div style={{ fontSize: '0.78rem', color: catData.color, fontWeight: 600 }}>{subcategory}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
+                  <input className="input" placeholder={titlePlaceholders[category] || 'Ex: Titre de votre annonce'} value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>{title.length}/100 caractères</div>
+                </div>
+
+                {!noPriceCats.includes(category) && (
+                  <div>
+                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix (FCFA) *</label>
+                    <div style={{ position: 'relative' }}>
+                      <Tag size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
+                      <input className="input" style={{ paddingLeft: 40 }} placeholder="Ex: 150 000" value={price} onChange={e => setPrice(e.target.value)} type="number" />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg-muted)' }}>
+                      <input type="checkbox" style={{ accentColor: 'var(--primary)', width: 16, height: 16 }} /> Prix négociable
+                    </label>
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
+                  <div style={{ position: 'relative' }}>
+                    <MapPin size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: catData.color }} />
+                    <select className="input" style={{ paddingLeft: 40 }} value={city} onChange={e => setCity(e.target.value)}>
+                      {cities.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {catData.fields?.map(field => (
+                  <div key={field.key}>
+                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>
+                      {field.label}{field.required ? ' *' : ''}
+                    </label>
+                    {field.type === 'select' && field.options ? (
+                      <select className="input" value={customFields[field.key] || ''} onChange={e => setCustomField(field.key, e.target.value)}>
+                        <option value="">Sélectionnez...</option>
+                        {field.options.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input className="input" type={field.type === 'number' ? 'number' : 'text'} placeholder={field.label} value={customFields[field.key] || ''} onChange={e => setCustomField(field.key, e.target.value)} />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: '1.5rem' }}>
+                <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Description *</label>
+                <RichTextEditor content={description} onChange={onChange => setDescription(onChange)} placeholder="Décrivez votre article en détail... (gras, titres, listes, liens...)" />
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 0.5rem', fontSize: '1.1rem' }}>Ajoutez vos photos</h2>
+              <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>La première photo sera la photo principale. Maximum 8 photos.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
+                <div style={{ aspectRatio: '1', border: '2px dashed var(--primary)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', background: 'rgba(254,0,0,0.02)' }}>
+                  <Upload size={28} color="var(--primary)" />
+                  <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>Photo 1</span>
+                </div>
+                {[2,3,4,5,6,7,8].map(n => (
+                  <div key={n} style={{ aspectRatio: '1', border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', background: 'var(--border-subtle)' }}>
+                    <Upload size={20} color="var(--fg-subtle)" />
+                    <span style={{ fontSize: '0.78rem', color: 'var(--fg-subtle)' }}>{n}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 5 && catData && (
+            <div>
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Aperçu de votre annonce</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                <div className="card" style={{ overflow: 'hidden' }}>
+                  <div style={{ height: 220, background: `linear-gradient(135deg, ${catData.color}10 0%, var(--border) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Image size={48} color="var(--fg-subtle)" />
+                  </div>
+                  <div style={{ padding: '1.25rem' }}>
+                    {!noPriceCats.includes(category) && <div className="price-tag" style={{ fontSize: '1.1rem' }}>{price ? `${parseInt(price).toLocaleString('fr')} FCFA` : '0 FCFA'}</div>}
+                    {noPriceCats.includes(category) && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}>{customFields.salaire} FCFA/mois</div>}
+                    <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '8px 0 10px', fontSize: '1.1rem' }}>{title || 'Titre de votre annonce'}</h3>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} />{city}</span>
+                      <span className="badge" style={{ background: catData.color + '15', color: catData.color }}>{catData.name}</span>
+                    </div>
+                    <div style={{ marginTop: 12, fontSize: '0.875rem', color: 'var(--fg)', lineHeight: 1.7, maxHeight: 200, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: description || '<em>Aucune description</em>' }} />
+                  </div>
+                </div>
+                <div className="card" style={{ padding: '1.25rem', background: 'rgba(254,0,0,0.03)', border: '1px solid rgba(254,0,0,0.15)', alignSelf: 'start' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <AlertCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.95rem', marginBottom: 8 }}>Avant de publier</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem', color: 'var(--fg-muted)', lineHeight: 1.8 }}>
+                        <li>Votre annonce sera examinée par notre équipe</li>
+                        <li>Elle sera visible dans les prochaines 2 heures</li>
+                        <li>Respectez nos conditions d'utilisation</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-          {step > 1 && (
-            <button className="btn-outline" onClick={() => setStep(s => s - 1)}>← Précédent</button>
-          )}
-          {step < 4 ? (
-            <button className="btn-primary" onClick={() => setStep(s => s + 1)}>Suivant →</button>
-          ) : (
-            <button className="btn-primary" style={{ background: '#10B981', borderColor: '#10B981' }} onClick={() => setSuccess(true)}>
-              ✓ Publier l'annonce
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+            {step > 1 && (
+              <button className="btn-outline" onClick={() => setStep(s => s - 1)}>← Précédent</button>
+            )}
+            {step < stepsCount ? (
+              <button className="btn-primary" onClick={() => canGoNext() && setStep(s => s + 1)} disabled={!canGoNext()} style={{ opacity: canGoNext() ? 1 : 0.5 }}>Suivant →</button>
+            ) : (
+              <button className="btn-primary" style={{ background: '#10B981', borderColor: '#10B981' }} onClick={() => setSuccess(true)}>
+                ✓ Publier l'annonce
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </PageLayout>
+    </DashboardLayout>
   )
 }
 
@@ -346,15 +553,17 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
   const filtered = filter === 'all' ? myListings : myListings.filter(l => l.status === filter)
 
   return (
-    <PageLayout active="seller-listings" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-listings" onNavigate={onNavigate}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
+        <div>
+          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos annonces en ligne</p>
+        </div>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => onNavigate('seller-post')}>
           <Plus size={16} /> Nouvelle annonce
         </button>
       </div>
 
-      {/* Filter tabs */}
       <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'var(--border-subtle)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
         {[
           { key: 'all', label: `Toutes (${myListings.length})` },
@@ -362,7 +571,7 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
           { key: 'paused', label: `En pause (${myListings.filter(l => l.status === 'paused').length})` },
           { key: 'expired', label: `Expirées (${myListings.filter(l => l.status === 'expired').length})` },
         ].map(t => (
-          <button key={t.key} onClick={() => setFilter(t.key)} style={{ padding: '0.55rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', background: filter === t.key ? 'var(--bg-card)' : 'transparent', color: filter === t.key ? 'var(--primary)' : 'var(--fg-muted)', boxShadow: filter === t.key ? 'var(--shadow-sm)' : 'none' }}>
+          <button key={t.key} onClick={() => setFilter(t.key)} style={{ padding: '0.55rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.82rem', background: filter === t.key ? 'var(--bg-card)' : 'transparent', color: filter === t.key ? 'var(--primary)' : 'var(--fg-muted)', boxShadow: filter === t.key ? '0 1px 3px rgba(0,0,0,0.06)' : 'none' }}>
             {t.label}
           </button>
         ))}
@@ -378,7 +587,7 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3 }}>
-                  <p style={{ margin: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
+                  <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
                   <span className="badge" style={{ background: s.bg, color: s.color, flexShrink: 0, fontSize: '0.72rem' }}>{s.label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
@@ -389,14 +598,14 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => onNavigate('seller-edit')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: 'var(--fg-muted)' }}>
+                <button onClick={() => onNavigate('seller-edit')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Edit3 size={14} /> Modifier
                 </button>
                 <button style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444' }}>
                   <Trash2 size={15} />
                 </button>
                 {l.status === 'active' && (
-                  <button style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: 'var(--primary)' }}>
+                  <button style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
                     <ArrowUp size={14} /> Booster
                   </button>
                 )}
@@ -405,15 +614,16 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
           )
         })}
       </div>
-    </PageLayout>
+    </DashboardLayout>
   )
 }
 
 // ─── STATISTICS ────────────────────────────────────────────────────────────
 export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
   return (
-    <PageLayout active="seller-stats" onNavigate={onNavigate}>
-      <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Statistiques</h1>
+    <DashboardLayout active="seller-stats" onNavigate={onNavigate}>
+      <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Statistiques</h1>
+      <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Analysez les performances de vos annonces</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
@@ -422,17 +632,15 @@ export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
           { label: 'Favoris', value: 568, trend: '+12%', icon: Heart, color: '#EC4899' },
           { label: 'Taux de contact', value: '2.7%', trend: '+0.3%', icon: Users, color: '#10B981' },
         ].map(s => (
-          <div key={s.label} className="stat-card">
-            <div className="stat-icon" style={{ background: s.color + '15' }}>
+          <div key={s.label} className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: s.color + '12', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
               <s.icon size={20} color={s.color} />
             </div>
-            <div>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.6rem' }}>{s.value}</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{s.label}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
-                <TrendingUp size={11} color="#10B981" />
-                <span style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 700 }}>{s.trend} ce mois</span>
-              </div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{s.value}</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{s.label}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
+              <TrendingUp size={12} color="#10B981" />
+              <span style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 700 }}>{s.trend} ce mois</span>
             </div>
           </div>
         ))}
@@ -440,12 +648,12 @@ export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues quotidiennes</h2>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues quotidiennes</h2>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={viewStats}>
               <defs>
                 <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FE0000" stopOpacity={0.15} />
+                  <stop offset="5%" stopColor="#FE0000" stopOpacity={0.12} />
                   <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -458,7 +666,7 @@ export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
           </ResponsiveContainer>
         </div>
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacts reçus</h2>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacts reçus</h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={viewStats}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -470,7 +678,7 @@ export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
           </ResponsiveContainer>
         </div>
       </div>
-    </PageLayout>
+    </DashboardLayout>
   )
 }
 
@@ -485,12 +693,12 @@ export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void })
   ]
 
   return (
-    <PageLayout active="seller-payments" onNavigate={onNavigate}>
-      <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Paiements & Transactions</h1>
+    <DashboardLayout active="seller-payments" onNavigate={onNavigate}>
+      <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Paiements & Transactions</h1>
+      <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos méthodes de paiement et suivez vos transactions</p>
 
-      {/* Mobile money methods */}
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Méthodes de paiement</h2>
+        <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Méthodes de paiement</h2>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           {[
             { name: 'Orange Money', num: '+225 07 12 34 56', emoji: '🟠', active: true },
@@ -502,7 +710,7 @@ export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void })
                 <span style={{ fontSize: '1.25rem' }}>{mm.emoji}</span>
                 {mm.active ? <CheckCircle size={16} color="#10B981" /> : <XCircle size={16} color="var(--fg-subtle)" />}
               </div>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{mm.name}</div>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem' }}>{mm.name}</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{mm.num}</div>
               {!mm.active && <button style={{ marginTop: 8, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>+ Ajouter</button>}
             </div>
@@ -510,10 +718,9 @@ export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void })
         </div>
       </div>
 
-      {/* Transactions */}
       <div className="card" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Historique des transactions</h2>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: 0, fontSize: '1rem' }}>Historique des transactions</h2>
         </div>
         {transactions.map((t, i) => (
           <div key={t.id} style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem 1.25rem', borderBottom: i < transactions.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
@@ -521,11 +728,11 @@ export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void })
               {t.amount > 0 ? <ArrowUp size={18} color="#10B981" /> : <DollarSign size={18} color="#EF4444" />}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{t.type}</div>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem' }}>{t.type}</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{t.method} · {t.date}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '0.95rem', color: t.amount > 0 ? '#10B981' : 'var(--fg)' }}>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '0.95rem', color: t.amount > 0 ? '#10B981' : 'var(--fg)' }}>
                 {t.amount > 0 ? '+' : ''}{t.amount.toLocaleString('fr')} FCFA
               </div>
               <span className="badge" style={{ fontSize: '0.7rem', background: t.status === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: t.status === 'success' ? '#10B981' : '#EF4444' }}>
@@ -535,7 +742,7 @@ export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void })
           </div>
         ))}
       </div>
-    </PageLayout>
+    </DashboardLayout>
   )
 }
 
@@ -567,38 +774,25 @@ export function SellerPremium({ onNavigate }: { onNavigate: (p: any) => void }) 
   ]
 
   return (
-    <PageLayout active="seller-premium" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-premium" onNavigate={onNavigate}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div className="badge badge-orange" style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>⭐ Plans Premium</div>
-        <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>
+        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>
         <p style={{ color: 'var(--fg-muted)', fontSize: '1rem' }}>Choisissez le plan qui correspond à vos besoins</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
         {plans.map(plan => (
-          <div
-            key={plan.name}
-            className="card"
-            style={{
-              padding: '1.75rem',
-              border: plan.highlight ? `2px solid var(--primary)` : '1px solid var(--border)',
-              position: 'relative',
-              transform: plan.highlight ? 'scale(1.02)' : 'none',
-            }}
-          >
+          <div key={plan.name} className="card" style={{ padding: '1.75rem', border: plan.highlight ? `2px solid var(--primary)` : '1px solid var(--border)', position: 'relative', transform: plan.highlight ? 'scale(1.02)' : 'none' }}>
             {plan.highlight && (
-              <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>
-                ⭐ Le plus populaire
-              </div>
+              <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>⭐ Le plus populaire</div>
             )}
             {plan.current && (
-              <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#6B7280', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>
-                Plan actuel
-              </div>
+              <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#6B7280', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>Plan actuel</div>
             )}
-            <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.2rem', color: plan.color, margin: '0 0 0.75rem' }}>{plan.name}</h2>
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', color: plan.color, margin: '0 0 0.75rem' }}>{plan.name}</h2>
             <div style={{ marginBottom: '1.25rem' }}>
-              <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: plan.price === 0 ? '1.5rem' : '2rem' }}>
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: plan.price === 0 ? '1.5rem' : '2rem' }}>
                 {plan.price === 0 ? 'Gratuit' : plan.price.toLocaleString('fr') + ' FCFA'}
               </span>
               {plan.price > 0 && <span style={{ color: 'var(--fg-muted)', fontSize: '0.875rem' }}> / mois</span>}
@@ -611,20 +805,15 @@ export function SellerPremium({ onNavigate }: { onNavigate: (p: any) => void }) 
                 </li>
               ))}
             </ul>
-            <button
-              className={plan.current ? 'btn-outline' : 'btn-primary'}
-              style={{ width: '100%', padding: '0.75rem', background: plan.current ? undefined : plan.color, borderColor: plan.color, color: plan.current ? plan.color : '#fff' }}
-              disabled={plan.current}
-            >
+            <button className={plan.current ? 'btn-outline' : 'btn-primary'} style={{ width: '100%', padding: '0.75rem', background: plan.current ? undefined : plan.color, borderColor: plan.color, color: plan.current ? plan.color : '#fff' }} disabled={plan.current}>
               {plan.current ? 'Plan actuel' : `Choisir ${plan.name}`}
             </button>
           </div>
         ))}
       </div>
 
-      {/* Mobile money payment */}
       <div className="card" style={{ padding: '1.5rem' }}>
-        <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1rem', fontSize: '1rem' }}>💳 Paiement sécurisé via Mobile Money</h3>
+        <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1rem', fontSize: '1rem' }}>💳 Paiement sécurisé via Mobile Money</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {[
             { name: 'Orange Money', emoji: '🟠', color: '#FF6600' },
@@ -632,12 +821,10 @@ export function SellerPremium({ onNavigate }: { onNavigate: (p: any) => void }) 
             { name: 'Wave', emoji: '🔵', color: '#009EFF' },
             { name: 'Carte bancaire', emoji: '💳', color: '#1A1A1A' },
           ].map(mm => (
-            <div key={mm.name} className="mobile-money-badge">
-              {mm.emoji} {mm.name}
-            </div>
+            <div key={mm.name} className="mobile-money-badge">{mm.emoji} {mm.name}</div>
           ))}
         </div>
       </div>
-    </PageLayout>
+    </DashboardLayout>
   )
 }

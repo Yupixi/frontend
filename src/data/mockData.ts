@@ -1,3 +1,11 @@
+export type CategoryField = {
+  key: string
+  label: string
+  type: 'text' | 'number' | 'select'
+  options?: string[]
+  required?: boolean
+}
+
 export type Category = {
   id: string
   name: string
@@ -5,6 +13,7 @@ export type Category = {
   count: number
   color: string
   subcategories: string[]
+  fields?: CategoryField[]
 }
 
 export type Listing = {
@@ -74,18 +83,177 @@ export type Notification = {
 }
 
 export const categories: Category[] = [
-  { id: 'immobilier', name: 'Immobilier', icon: '🏠', count: 12450, color: '#3B82F6', subcategories: ['Appartements', 'Maisons', 'Terrains', 'Bureaux', 'Magasins', 'Villas'] },
-  { id: 'vehicules', name: 'Véhicules', icon: '🚗', count: 8320, color: '#F59E0B', subcategories: ['Voitures', 'Motos', 'Camions', 'Bateaux', 'Engins', 'Pièces détachées'] },
-  { id: 'electronique', name: 'Électronique', icon: '📱', count: 15680, color: '#8B5CF6', subcategories: ['Téléphones', 'Ordinateurs', 'TV & Audio', 'Appareils photo', 'Accessoires', 'Jeux vidéo'] },
-  { id: 'mode', name: 'Mode & Beauté', icon: '👗', count: 9870, color: '#EC4899', subcategories: ['Vêtements femme', 'Vêtements homme', 'Chaussures', 'Sacs', 'Bijoux', 'Cosmétiques'] },
-  { id: 'maison', name: 'Maison & Jardin', icon: '🛋️', count: 6540, color: '#10B981', subcategories: ['Meubles', 'Électroménager', 'Décoration', 'Jardinage', 'Bricolage', 'Literie'] },
-  { id: 'emploi', name: 'Emploi', icon: '💼', count: 4230, color: '#6366F1', subcategories: ['CDI', 'CDD', 'Stage', 'Freelance', 'Formation', 'Apprentissage'] },
-  { id: 'services', name: 'Services', icon: '🔧', count: 7650, color: '#EF4444', subcategories: ['Plomberie', 'Électricité', 'Nettoyage', 'Coiffure', 'Cuisine', 'Informatique'] },
-  { id: 'loisirs', name: 'Loisirs & Sports', icon: '⚽', count: 5120, color: '#F97316', subcategories: ['Sports', 'Musique', 'Livres', 'Jeux', 'Voyages', 'Collection'] },
-  { id: 'animaux', name: 'Animaux', icon: '🐕', count: 2890, color: '#84CC16', subcategories: ['Chiens', 'Chats', 'Oiseaux', 'Poissons', 'Accessoires', 'Alimentation'] },
-  { id: 'agriculture', name: 'Agriculture', icon: '🌿', count: 3450, color: '#22C55E', subcategories: ['Plants', 'Équipements', 'Semences', 'Engrais', 'Animaux de ferme', 'Produits frais'] },
-  { id: 'enfants', name: 'Enfants & Bébés', icon: '🧸', count: 4670, color: '#FB923C', subcategories: ['Vêtements', 'Jouets', 'Puériculture', 'Scolaire', 'Lit & Chambre', 'Activités'] },
-  { id: 'materiel-pro', name: 'Matériel Pro', icon: '🏭', count: 2340, color: '#64748B', subcategories: ['BTP', 'Industrie', 'Restauration', 'Agriculture', 'Médical', 'Commerce'] },
+  {
+    id: 'emploi',
+    name: 'Emploi',
+    icon: '💼',
+    count: 4230,
+    color: '#6366F1',
+    subcategories: ['Offres d\'emploi', 'Formations professionnelles'],
+    fields: [
+      { key: 'contrat', label: 'Type de contrat', type: 'select', options: ['CDI', 'CDD', 'Stage', 'Freelance', 'Apprentissage', 'CDI - Cadre', 'CDD - Cadre', 'Indépendant'], required: true },
+      { key: 'secteur', label: 'Secteur d\'activité', type: 'select', options: ['Informatique', 'Commerce', 'Finance', 'Santé', 'Éducation', 'Industrie', 'Agriculture', 'Tourisme', 'Transport', 'BTP', 'Services', 'Autre'] },
+      { key: 'niveauEtude', label: 'Niveau d\'étude requis', type: 'select', options: ['Aucun', 'CEP', 'BEPC', 'BAC', 'BAC+2', 'BAC+3', 'BAC+5', 'BAC+8 et plus'] },
+      { key: 'experience', label: 'Expérience requise', type: 'select', options: ['Débutant', '1-2 ans', '3-5 ans', '5-10 ans', 'Plus de 10 ans'] },
+      { key: 'salaire', label: 'Salaire proposé (FCFA)', type: 'text' },
+    ],
+  },
+  {
+    id: 'vehicules',
+    name: 'Véhicules',
+    icon: '🚗',
+    count: 8320,
+    color: '#F59E0B',
+    subcategories: ['Voitures', 'Motos', 'Caravaning', 'Utilitaires', 'Camions', 'Nautisme', 'Équipement auto', 'Équipement moto'],
+    fields: [
+      { key: 'marque', label: 'Marque', type: 'text', required: true },
+      { key: 'modele', label: 'Modèle', type: 'text', required: true },
+      { key: 'annee', label: 'Année', type: 'number', required: true },
+      { key: 'kilometrage', label: 'Kilométrage', type: 'number' },
+      { key: 'carburant', label: 'Carburant', type: 'select', options: ['Essence', 'Diesel', 'Électrique', 'Hybride', 'GPL', 'Autre'] },
+      { key: 'boite', label: 'Boîte de vitesse', type: 'select', options: ['Manuelle', 'Automatique', 'Séquentielle'] },
+      { key: 'couleur', label: 'Couleur extérieure', type: 'text' },
+    ],
+  },
+  {
+    id: 'immobilier',
+    name: 'Immobilier',
+    icon: '🏠',
+    count: 12450,
+    color: '#3B82F6',
+    subcategories: ['Ventes immobilières', 'Locations', 'Colocations', 'Bureaux & Commerces', 'Locations saisonnières'],
+    fields: [
+      { key: 'surface', label: 'Surface (m²)', type: 'number', required: true },
+      { key: 'pieces', label: 'Nombre de pièces', type: 'select', options: ['Studio', '1', '2', '3', '4', '5', '6+'] },
+      { key: 'etage', label: 'Étage', type: 'text' },
+      { key: 'meuble', label: 'Meublé', type: 'select', options: ['Non meublé', 'Meublé', 'Semi-meublé'] },
+    ],
+  },
+  {
+    id: 'mode',
+    name: 'Mode',
+    icon: '👗',
+    count: 9870,
+    color: '#EC4899',
+    subcategories: ['Vêtements', 'Chaussures', 'Accessoires & Bagagerie', 'Montres & Bijoux'],
+    fields: [
+      { key: 'taille', label: 'Taille', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', 'Taille unique'] },
+      { key: 'marque', label: 'Marque', type: 'text' },
+      { key: 'etat', label: 'État', type: 'select', options: ['Neuf avec étiquette', 'Neuf sans étiquette', 'Très bon état', 'Bon état', 'Satisfaisant'], required: true },
+    ],
+  },
+  {
+    id: 'loisirs',
+    name: 'Loisirs',
+    icon: '⚽',
+    count: 5120,
+    color: '#F97316',
+    subcategories: ['Sport & Plein air', 'Vélos', 'Livres', 'CD - Musique', 'DVD - Films', 'Jeux & Jouets', 'Instruments de musique', 'Collection', 'Antiquités', 'Vins & Gastronomie', 'Loisirs créatifs', 'Modélisme'],
+    fields: [
+      { key: 'marque', label: 'Marque', type: 'text' },
+      { key: 'etat', label: 'État', type: 'select', options: ['Neuf', 'Très bon état', 'Bon état', 'Satisfaisant'], required: true },
+    ],
+  },
+  {
+    id: 'animaux',
+    name: 'Animaux',
+    icon: '🐕',
+    count: 2890,
+    color: '#84CC16',
+    subcategories: ['Animaux', 'Accessoires animaux'],
+    fields: [
+      { key: 'type', label: 'Type d\'animal', type: 'select', options: ['Chien', 'Chat', 'Oiseau', 'Poisson', 'Rongeur', 'Reptile', 'Cheval', 'Autre'], required: true },
+      { key: 'race', label: 'Race', type: 'text' },
+      { key: 'age', label: 'Âge', type: 'select', options: ['Bébé (0-6 mois)', 'Jeune (6-24 mois)', 'Adulte (2-7 ans)', 'Senior (7+ ans)'] },
+      { key: 'sexe', label: 'Sexe', type: 'select', options: ['Mâle', 'Femelle'] },
+    ],
+  },
+  {
+    id: 'electronique',
+    name: 'Électronique',
+    icon: '📱',
+    count: 15680,
+    color: '#8B5CF6',
+    subcategories: ['Ordinateurs', 'Accessoires informatique', 'Tablettes & Liseuses', 'Photo, audio & vidéo', 'Téléphones & Objets connectés', 'Accessoires téléphone', 'Consoles', 'Jeux vidéo'],
+    fields: [
+      { key: 'marque', label: 'Marque', type: 'text', required: true },
+      { key: 'modele', label: 'Modèle', type: 'text', required: true },
+      { key: 'etat', label: 'État', type: 'select', options: ['Neuf scellé', 'Neuf', 'Très bon état', 'Bon état', 'Pour pièces'], required: true },
+      { key: 'stockage', label: 'Capacité de stockage', type: 'text' },
+    ],
+  },
+  {
+    id: 'services',
+    name: 'Services',
+    icon: '🔧',
+    count: 7650,
+    color: '#EF4444',
+    subcategories: ['Cours particuliers', 'Services à la personne', 'Services de réparations', 'Services évènementiels', 'Baby-Sitting', 'Covoiturage', 'Billetterie', 'Artistes & Musiciens', 'Services de déménagement', 'Services aux animaux', 'Autres services'],
+    fields: [
+      { key: 'disponibilite', label: 'Disponibilité', type: 'select', options: ['Immédiate', 'Sur rendez-vous', 'Week-ends', 'Soirées', 'À définir'] },
+      { key: 'tarif', label: 'Type de tarif', type: 'select', options: ['Forfait', 'À l\'heure', 'Au projet', 'Gratuit', 'À discuter'] },
+    ],
+  },
+  {
+    id: 'famille',
+    name: 'Famille',
+    icon: '🧸',
+    count: 4670,
+    color: '#FB923C',
+    subcategories: ['Équipement bébé', 'Mobilier enfant', 'Vêtements bébé'],
+    fields: [
+      { key: 'age', label: 'Âge recommandé', type: 'select', options: ['0-3 mois', '3-6 mois', '6-12 mois', '12-24 mois', '2-4 ans', '4-8 ans', '8-12 ans', '12+ ans'] },
+      { key: 'marque', label: 'Marque', type: 'text' },
+      { key: 'etat', label: 'État', type: 'select', options: ['Neuf', 'Très bon état', 'Bon état', 'Satisfaisant'], required: true },
+    ],
+  },
+  {
+    id: 'maison',
+    name: 'Maison & Jardin',
+    icon: '🛋️',
+    count: 6540,
+    color: '#10B981',
+    subcategories: ['Ameublement', 'Électroménager', 'Décoration', 'Arts de la table', 'Linge de maison', 'Papeterie', 'Bricolage', 'Jardin & Plantes'],
+    fields: [
+      { key: 'marque', label: 'Marque', type: 'text' },
+      { key: 'etat', label: 'État', type: 'select', options: ['Neuf', 'Très bon état', 'Bon état', 'Satisfaisant'], required: true },
+      { key: 'dimensions', label: 'Dimensions', type: 'text' },
+    ],
+  },
+  {
+    id: 'materiel-pro',
+    name: 'Matériel Professionnel',
+    icon: '🏭',
+    count: 2340,
+    color: '#64748B',
+    subcategories: ['Tracteurs', 'Matériel agricole', 'BTP - Chantier', 'Poids lourds', 'Manutention', 'Équipements industriels', 'Équipements restauration & hôtels', 'Équipements de bureau', 'Matériel médical'],
+    fields: [
+      { key: 'marque', label: 'Marque', type: 'text', required: true },
+      { key: 'modele', label: 'Modèle', type: 'text', required: true },
+      { key: 'annee', label: 'Année', type: 'number' },
+      { key: 'etat', label: 'État', type: 'select', options: ['Neuf', 'Très bon état', 'Bon état', 'Pour pièces'], required: true },
+    ],
+  },
+  {
+    id: 'agriculture',
+    name: 'Agriculture',
+    icon: '🌿',
+    count: 3450,
+    color: '#22C55E',
+    subcategories: ['Plants & Semences', 'Équipements agricoles', 'Engrais & Fertilisants', 'Animaux de ferme', 'Produits frais', 'Terrains agricoles'],
+    fields: [
+      { key: 'type', label: 'Type', type: 'select', options: ['Vente', 'Recherche', 'Service', 'Conseil'] },
+    ],
+  },
+  {
+    id: 'divers',
+    name: 'Divers',
+    icon: '📦',
+    count: 1200,
+    color: '#94A3B8',
+    subcategories: ['Autres'],
+    fields: [],
+  },
 ]
 
 export const sellers: Seller[] = [
@@ -295,7 +463,7 @@ export const listings: Listing[] = [
     title: 'Canapé d\'angle en cuir - Salon luxe',
     price: 850000,
     category: 'maison',
-    subcategory: 'Meubles',
+    subcategory: 'Ameublement',
     location: 'Treichville',
     city: 'Abidjan',
     image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=280&fit=crop&auto=format',
@@ -389,8 +557,42 @@ export const formatPrice = (price: number): string => {
 }
 
 export const cities = [
-  'Abidjan', 'Bouaké', 'Daloa', 'Korhogo', 'Yamoussoukro', 'San-Pédro',
-  'Man', 'Divo', 'Gagnoa', 'Abengourou', 'Anyama', 'Agboville',
+  'Abidjan',
+  'Abengourou',
+  'Abobo',
+  'Adjamé',
+  'Adzopé',
+  'Agboville',
+  'Anyama',
+  'Attécoubé',
+  'Bingerville',
+  'Bondoukou',
+  'Bouaké',
+  'Cocody',
+  'Dabou',
+  'Daloa',
+  'Daoukro',
+  'Divo',
+  'Ferkessédougou',
+  'Gagnoa',
+  'Grand-Bassam',
+  'Issia',
+  'Korhogo',
+  'Koumassi',
+  'Man',
+  'Marcory',
+  'Odienné',
+  'Plateau',
+  'Port-Bouët',
+  'San-Pédro',
+  'Sassandra',
+  'Séguéla',
+  'Soubré',
+  'Tiassalé',
+  'Toumodi',
+  'Treichville',
+  'Yamoussoukro',
+  'Yopougon',
 ]
 
 export const viewStats = [

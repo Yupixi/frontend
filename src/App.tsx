@@ -105,21 +105,6 @@ export default function App() {
       case 'buyer-settings':
         return <BuyerSettings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} />
 
-      // Seller pages
-      case 'seller-dashboard':
-        return <SellerDashboard onNavigate={navigate} />
-      case 'seller-post':
-      case 'seller-edit':
-        return <PostListing onNavigate={navigate} />
-      case 'seller-listings':
-        return <SellerListings onNavigate={navigate} onSelectListing={selectListing} />
-      case 'seller-stats':
-        return <SellerStats onNavigate={navigate} />
-      case 'seller-payments':
-        return <SellerPayments onNavigate={navigate} />
-      case 'seller-premium':
-        return <SellerPremium onNavigate={navigate} />
-
       // Admin pages
       case 'admin-dashboard':
         return <AdminDashboard onNavigate={navigate} />
@@ -139,6 +124,32 @@ export default function App() {
       default:
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
     }
+  }
+
+  // Seller dashboard gets full viewport layout (standalone)
+  if (page.startsWith('seller-')) {
+    const sellerContent = (() => {
+      switch (page) {
+        case 'seller-dashboard':
+          return <SellerDashboard onNavigate={navigate} />
+        case 'seller-post':
+        case 'seller-edit':
+          return <PostListing onNavigate={navigate} />
+        case 'seller-listings':
+          return <SellerListings onNavigate={navigate} onSelectListing={selectListing} />
+        case 'seller-stats':
+          return <SellerStats onNavigate={navigate} />
+        case 'seller-payments':
+          return <SellerPayments onNavigate={navigate} />
+        case 'seller-premium':
+          return <SellerPremium onNavigate={navigate} />
+      }
+    })()
+    return (
+      <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
+        {sellerContent}
+      </div>
+    )
   }
 
   // Messages page gets full-height special layout

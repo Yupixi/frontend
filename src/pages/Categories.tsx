@@ -1,11 +1,11 @@
-import { Search, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, ChevronRight } from 'lucide-react'
+import { Search, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package, ChevronRight } from 'lucide-react'
 import { categories } from '../data/mockData'
 
 const iconMap: Record<string, typeof Building2> = {
   immobilier: Building2, vehicules: Car, electronique: Smartphone,
   mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
   loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
-  enfants: Baby, 'materiel-pro': Factory,
+  famille: Baby, 'materiel-pro': Factory, divers: Package,
 }
 
 type CategoriesProps = {

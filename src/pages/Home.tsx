@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory } from 'lucide-react'
+import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package } from 'lucide-react'
 import { listings, categories, formatPrice } from '../data/mockData'
 
 type HomeProps = {
@@ -513,7 +513,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 immobilier: Building2, vehicules: Car, electronique: Smartphone,
                 mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
                 loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
-                enfants: Baby, 'materiel-pro': Factory,
+                famille: Baby, 'materiel-pro': Factory, divers: Package,
               }
               const IconComp = iconMap[cat.id] || Building2
               return (
