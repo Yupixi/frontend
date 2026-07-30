@@ -49,7 +49,7 @@ function BuyerSidebarContent({ active, onNavigate, onClose }: { active: string; 
   )
 }
 
-function BuyerSidebar({ active, onNavigate, sidebarOpen }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean }) {
+function BuyerSidebar({ active, onNavigate, sidebarOpen, onClose }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void }) {
   return (
     <>
       <aside className="buyer-sidebar-desktop" style={{ position: 'sticky', top: 64, height: 'calc(100vh - 64px)', overflowY: 'auto', paddingTop: '0.75rem', flexShrink: 0, width: 220 }}>
@@ -57,14 +57,14 @@ function BuyerSidebar({ active, onNavigate, sidebarOpen }: { active: string; onN
       </aside>
       {sidebarOpen && (
         <div className="buyer-sidebar-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onNavigate(active)} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onClose?.()} />
           <aside style={{ position: 'relative', width: 280, height: '100%', background: 'var(--bg-card)', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.2s ease-out' }}>
             <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
               <span style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1rem' }}>Menu</span>
-              <button onClick={() => onNavigate(active)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
+              <button onClick={() => onClose?.()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
             </div>
             <div style={{ flex: 1, overflow: 'auto' }}>
-              <BuyerSidebarContent active={active} onNavigate={onNavigate} onClose={() => onNavigate(active)} />
+              <BuyerSidebarContent active={active} onNavigate={onNavigate} onClose={onClose} />
             </div>
           </aside>
         </div>
@@ -78,7 +78,7 @@ function PageLayout({ active, onNavigate, children }: { active: string, onNaviga
 
   return (
     <div style={{ display: 'flex', maxWidth: 1280, margin: '0 auto' }}>
-      <BuyerSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} />
+      <BuyerSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="buyer-main" style={{ flex: 1, padding: '2rem', minWidth: 0 }}>
         <button
           className="buyer-mobile-menu-btn"
