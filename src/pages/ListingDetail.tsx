@@ -48,12 +48,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
         <span style={{ color: 'var(--fg)' }}>{listing.title}</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem' }}>
+      <div className="listing-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem' }}>
         {/* Left: images + description */}
         <div>
           {/* Image gallery */}
           <div className="card" style={{ overflow: 'hidden', marginBottom: '1.25rem' }}>
-            <div style={{ position: 'relative', height: 420, background: 'var(--border-subtle)' }}>
+            <div className="listing-detail-image" style={{ position: 'relative', height: 420, background: 'var(--border-subtle)' }}>
               <img
                 src={images[imgIdx]}
                 alt={listing.title}
@@ -76,7 +76,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
               {listing.sponsored && <span className="badge badge-yellow" style={{ position: 'absolute', top: 14, left: 14, zIndex: 2 }}>Sponsorisé</span>}
             </div>
             {images.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: 'var(--bg-card)' }}>
+              <div className="listing-thumbnails" style={{ display: 'flex', gap: 8, padding: '10px 14px', background: 'var(--bg-card)' }}>
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -185,7 +185,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
         {/* Right: seller card + contact */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Contact card */}
-          <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
+          <div className="card listing-detail-sticky" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
             <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacter le vendeur</h3>
 
             <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }}
@@ -245,7 +245,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
                 </div>
               </button>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '1rem' }}>
+              <div className="listing-detail-seller-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '1rem' }}>
                 {[
                   { label: 'Note', value: <><Stars rating={listing.seller.rating} /> <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{listing.seller.rating}/5</span></> },
                   { label: 'Avis', value: `${listing.seller.reviews} avis` },

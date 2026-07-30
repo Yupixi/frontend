@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search as SearchIcon, SlidersHorizontal, Grid, List, MapPin, Heart, Eye, Shield, ChevronDown, X, Star } from 'lucide-react'
 import { listings, categories, formatPrice, cities } from '../data/mockData'
 
@@ -9,16 +9,22 @@ type SearchProps = {
   onToggleFavorite: (id: string) => void
   categoryFilter?: string
   onClearCategoryFilter?: () => void
+  searchTerm?: string
+  onSearchTermChange?: (term: string) => void
+  selectedCity?: string
+  onCityChange?: (city: string) => void
 }
 
-export default function SearchPage({ onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter }: SearchProps) {
+export default function SearchPage({ onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity, onCityChange }: SearchProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortBy, setSortBy] = useState('recent')
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
-  const [selectedCity, setSelectedCity] = useState('')
+  const [selectedCity, setSelectedCity] = useState(externalCity || '')
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || '')
+
+  useEffect(() => { setSelectedCity(externalCity || '') }, [externalCity])
   const [condition, setCondition] = useState('')
 
   const filtered = listings.filter(l => {
@@ -27,6 +33,14 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
     if (condition && l.condition !== condition) return false
     if (priceMin && l.price < Number(priceMin)) return false
     if (priceMax && l.price > Number(priceMax)) return false
+    if (externalSearchTerm) {
+      const q = externalSearchTerm.toLowerCase()
+      const match = l.title.toLowerCase().includes(q) ||
+        (l.description && l.description.toLowerCase().includes(q)) ||
+        l.category.toLowerCase().includes(q) ||
+        l.city.toLowerCase().includes(q)
+      if (!match) return false
+    }
     return true
   })
 
@@ -50,6 +64,20 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
 
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.5rem 1rem' }}>
+      {/* Search input */}
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <SearchIcon size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
+          <input
+            className="input"
+            style={{ paddingLeft: 42, width: '100%' }}
+            placeholder="Rechercher dans les annonces..."
+            value={externalSearchTerm || ''}
+            onChange={e => onSearchTermChange?.(e.target.value)}
+          />
+        </div>
+      </div>
+
       {/* Results header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>

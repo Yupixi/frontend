@@ -13,13 +13,16 @@ import RichTextEditor from '../../components/RichTextEditor'
 
 // ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────
 
-function DashboardHeader({ activeLabel, onBack }: { activeLabel: string; onBack: () => void }) {
+function DashboardHeader({ activeLabel, onBack, onToggleSidebar }: { activeLabel: string; onBack: () => void; onToggleSidebar?: () => void }) {
   return (
-    <header style={{
+    <header className="dashboard-header" style={{
       height: 60, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
       display: 'flex', alignItems: 'center', padding: '0 1.25rem', gap: '0.75rem',
       flexShrink: 0,
     }}>
+      <button className="dashboard-sidebar-mobile-btn" onClick={onToggleSidebar} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)' }}>
+        <Menu size={20} />
+      </button>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '0.85rem', fontWeight: 600, padding: '4px 10px', borderRadius: 8, transition: 'all 0.12s' }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -30,7 +33,7 @@ function DashboardHeader({ activeLabel, onBack }: { activeLabel: string; onBack:
       <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 34 }} />
       <span className="badge" style={{ background: '#FE0000', color: '#fff', fontSize: '0.7rem', padding: '2px 10px' }}>Vendeur</span>
       <div style={{ flex: 1 }} />
-      <div style={{ fontSize: '0.82rem', color: 'var(--fg-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="desktop-only" style={{ fontSize: '0.82rem', color: 'var(--fg-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'var(--border-subtle)', padding: '4px 12px', borderRadius: 6 }}>
           <span style={{ color: 'var(--fg-subtle)' }}>/</span> {activeLabel}
         </span>
@@ -48,7 +51,7 @@ function DashboardHeader({ activeLabel, onBack }: { activeLabel: string; onBack:
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
         <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif" }}>K</div>
-        <div style={{ textAlign: 'left' }}>
+        <div className="desktop-only" style={{ textAlign: 'left' }}>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>Kouamé J-B.</div>
           <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>Vendeur</div>
         </div>
@@ -58,86 +61,129 @@ function DashboardHeader({ activeLabel, onBack }: { activeLabel: string; onBack:
   )
 }
 
-function DashboardSidebar({ active, onNavigate }: { active: string; onNavigate: (p: any) => void }) {
-  const items = [
-    { key: 'seller-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-    { key: 'seller-post', icon: Plus, label: 'Publier une annonce' },
-    { key: 'seller-listings', icon: Package, label: 'Mes annonces', badge: 8 },
-    { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
-    { key: 'seller-payments', icon: CreditCard, label: 'Paiements & Transactions' },
-    { key: 'seller-premium', icon: Award, label: 'Abonnement Premium' },
-  ]
+const sidebarItems = [
+  { key: 'seller-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
+  { key: 'seller-post', icon: Plus, label: 'Publier une annonce' },
+  { key: 'seller-listings', icon: Package, label: 'Mes annonces', badge: 8 },
+  { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
+  { key: 'seller-payments', icon: CreditCard, label: 'Paiements & Transactions' },
+  { key: 'seller-premium', icon: Award, label: 'Abonnement Premium' },
+]
 
+function SidebarNav({ active, onNavigate, onClose }: { active: string; onNavigate: (p: any) => void; onClose?: () => void }) {
   return (
-    <aside style={{
-      width: 230, background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
-    }}>
-      <div style={{ padding: '1rem 1rem 0.5rem', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 30, alignSelf: 'flex-start' }} />
-        <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)', fontWeight: 600, paddingLeft: 2 }}>Espace Vendeur</div>
-      </div>
-      <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem 0.75rem' }}>
-        <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--fg-subtle)', padding: '0.5rem 0.75rem', marginBottom: 4 }}>Navigation</div>
-        {items.map(item => (
-          <button
-            key={item.key}
-            onClick={() => onNavigate(item.key)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
-              cursor: 'pointer', marginBottom: 2,
-              background: active === item.key ? 'rgba(254,0,0,0.07)' : 'transparent',
-              color: active === item.key ? '#FE0000' : 'var(--fg-muted)',
-              fontFamily: "'Outfit', 'Nunito', sans-serif",
-              fontWeight: active === item.key ? 800 : 600,
-              fontSize: '0.85rem',
-              transition: 'all 0.12s',
-              position: 'relative',
-            }}
-            onMouseEnter={e => { if (active !== item.key) e.currentTarget.style.background = 'var(--border-subtle)' }}
-            onMouseLeave={e => { if (active !== item.key) e.currentTarget.style.background = 'transparent' }}
-          >
-            <item.icon size={18} strokeWidth={active === item.key ? 2.5 : 1.8} />
-            <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-            {item.badge && (
-              <span style={{
-                background: active === item.key ? '#FE0000' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
-                borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
-              }}>{item.badge}</span>
-            )}
-          </button>
-        ))}
-      </div>
-      <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-        <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    <>
+      {items.map(item => (
+        <button
+          key={item.key}
+          onClick={() => { onNavigate(item.key); onClose?.() }}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+            padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
+            cursor: 'pointer', marginBottom: 2,
+            background: active === item.key ? 'rgba(254,0,0,0.07)' : 'transparent',
+            color: active === item.key ? '#FE0000' : 'var(--fg-muted)',
+            fontFamily: "'Outfit', 'Nunito', sans-serif",
+            fontWeight: active === item.key ? 800 : 600,
+            fontSize: '0.85rem',
+            transition: 'all 0.12s',
+          }}
+          onMouseEnter={e => { if (active !== item.key) e.currentTarget.style.background = 'var(--border-subtle)' }}
+          onMouseLeave={e => { if (active !== item.key) e.currentTarget.style.background = 'transparent' }}
         >
-          <LogOut size={16} />
-          <span>Retour au site</span>
+          <item.icon size={18} strokeWidth={active === item.key ? 2.5 : 1.8} />
+          <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+          {item.badge && (
+            <span style={{
+              background: active === item.key ? '#FE0000' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
+              borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
+            }}>{item.badge}</span>
+          )}
         </button>
-      </div>
-    </aside>
+      ))}
+    </>
+  )
+}
+
+function DashboardSidebar({ active, onNavigate, sidebarOpen }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean }) {
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="dashboard-sidebar-desktop" style={{
+        width: 230, background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
+      }}>
+        <div style={{ padding: '1rem 1rem 0.5rem', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 30, alignSelf: 'flex-start' }} />
+          <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)', fontWeight: 600, paddingLeft: 2 }}>Espace Vendeur</div>
+        </div>
+        <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem 0.75rem' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--fg-subtle)', padding: '0.5rem 0.75rem', marginBottom: 4 }}>Navigation</div>
+          <SidebarNav active={active} onNavigate={onNavigate} />
+        </div>
+        <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
+          <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            <LogOut size={16} />
+            <span>Retour au site</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="dashboard-sidebar-overlay" style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          animation: 'fadeIn 0.15s ease-out',
+        }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onNavigate(active)} />
+          <aside style={{
+            position: 'relative', width: 280, height: '100%', background: 'var(--bg-card)',
+            display: 'flex', flexDirection: 'column',
+            animation: 'slideIn 0.2s ease-out',
+          }}>
+            <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 28 }} />
+                <span className="badge" style={{ background: '#FE0000', color: '#fff', fontSize: '0.65rem', padding: '2px 8px' }}>Vendeur</span>
+              </div>
+              <button onClick={() => onNavigate(active)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
+              <SidebarNav active={active} onNavigate={onNavigate} onClose={() => onNavigate(active)} />
+            </div>
+            <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
+                <LogOut size={16} />
+                <span>Retour au site</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   )
 }
 
 function DashboardLayout({ active, onNavigate, children }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const labels: Record<string, string> = {
     'seller-dashboard': 'Tableau de bord',
     'seller-post': 'Publier une annonce',
     'seller-listings': 'Mes annonces',
     'seller-stats': 'Statistiques',
-    'seller-payments': 'Paiements',
     'seller-premium': 'Abonnement Premium',
+    'seller-payments': 'Paiements',
   }
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
-      <DashboardSidebar active={active} onNavigate={onNavigate} />
+      <DashboardSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <DashboardHeader activeLabel={labels[active] || active} onBack={() => onNavigate('home')} />
-        <main style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
+        <DashboardHeader activeLabel={labels[active] || active} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <main className="dashboard-main" style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
           {children}
         </main>
       </div>
@@ -168,7 +214,7 @@ export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="dashboard-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {stats.map(s => (
           <div key={s.label} className="card" style={{ padding: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -407,7 +453,7 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+              <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
                   <input className="input" placeholder={titlePlaceholders[category] || 'Ex: Titre de votre annonce'} value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
@@ -485,7 +531,7 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
           {step === 5 && catData && (
             <div>
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Aperçu de votre annonce</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div className="card" style={{ overflow: 'hidden' }}>
                   <div style={{ height: 220, background: `linear-gradient(135deg, ${catData.color}10 0%, var(--border) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Image size={48} color="var(--fg-subtle)" />
@@ -625,7 +671,7 @@ export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
       <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Statistiques</h1>
       <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Analysez les performances de vos annonces</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="dashboard-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
           { label: 'Vues totales', value: '12 457', trend: '+18%', icon: Eye, color: '#3B82F6' },
           { label: 'Contacts', value: 342, trend: '+24%', icon: MessageCircle, color: '#8B5CF6' },
@@ -646,7 +692,7 @@ export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+      <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
         <div className="card" style={{ padding: '1.5rem' }}>
           <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues quotidiennes</h2>
           <ResponsiveContainer width="100%" height={200}>

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import {
-  Search, MapPin, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
+  Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
   Sun, Moon, LogOut, Settings, Package, BarChart2, Shield,
   Plus, Home, Sparkles, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
   Shirt, Wrench, Grid
 } from 'lucide-react'
 import Logo from './Logo'
+import SearchOverlay from './SearchOverlay'
 import { notifications } from '../data/mockData'
 
 type Page =
@@ -25,6 +26,8 @@ type LayoutProps = {
   userRole: 'buyer' | 'seller' | 'admin'
   onToggleLogin: () => void
   onSelectRole?: (role: 'buyer' | 'seller' | 'admin') => void
+  onSelectListing?: (id: string) => void
+  onSetSearchTerm?: (term: string) => void
 }
 
 export default function Layout({
@@ -37,10 +40,12 @@ export default function Layout({
   isLoggedIn,
   userRole,
   onToggleLogin,
-  onSelectRole
+  onSelectRole,
+  onSelectListing,
+  onSetSearchTerm
 }: LayoutProps) {
   const [search, setSearch] = useState('')
-  const [city, setCity] = useState('Abidjan')
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -54,8 +59,14 @@ export default function Layout({
     setTimeout(() => setToastMessage(null), 3000)
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+  const openSearchOverlay = () => {
+    setSearch('')
+    setSearchOverlayOpen(true)
+  }
+
+  const handleSearchSubmit = () => {
+    onSetSearchTerm?.(search)
+    setSearchOverlayOpen(false)
     onNavigate('search')
   }
 
@@ -121,81 +132,32 @@ export default function Layout({
               </button>
             </div>
 
-            {/* Search bar desktop */}
-            <form onSubmit={handleSearch} style={{ flex: 1, display: 'flex', gap: 0, maxWidth: 600 }}>
-              <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
-                <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
-                <input
-                  className="input"
-                  style={{
-                    paddingLeft: 42,
-                    borderRadius: '12px 0 0 12px',
-                    borderRight: 'none',
-                    background: 'var(--bg-card)',
-                    fontSize: '0.9rem'
-                  }}
-                  placeholder="Rechercher... iPhone 15, Toyota, Villa Cocody..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-              </div>
-
-              {/* City selector */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                background: 'var(--bg-card)',
-                border: '1.5px solid var(--border)',
-                borderLeft: 'none',
-                borderRight: 'none',
-                padding: '0 10px',
-                minWidth: 130
-              }}>
-                <MapPin size={15} style={{ color: 'var(--primary)', marginRight: 6, flexShrink: 0 }} />
-                <select
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--fg)',
-                    fontSize: '0.85rem',
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    fontWeight: 700,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    width: '100%'
-                  }}
-                >
-                  {['Abidjan', 'Bouaké', 'Daloa', 'Korhogo', 'Yamoussoukro', 'San-Pédro', 'Grand-Bassam'].map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Search button */}
-              <button
-                type="submit"
-                className="btn-primary"
-                style={{
-                  borderRadius: '0 12px 12px 0',
-                  padding: '0 24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8
-                }}
-              >
-                <Search size={16} />
-                <span style={{ fontSize: '0.9rem' }}>Trouver</span>
-              </button>
-            </form>
+            {/* Search button — opens overlay */}
+            <div onClick={openSearchOverlay} className="desktop-only" style={{
+              background: 'var(--bg-card)',
+              border: '1.5px solid var(--border)',
+              borderRadius: 12,
+              padding: '0 16px',
+              height: 42,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              color: 'var(--fg-subtle)',
+              fontSize: '0.85rem',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              minWidth: 240,
+            }}>
+              <Search size={16} />
+              <span>Rechercher sur Yüpixi...</span>
+            </div>
 
             {/* Right Header Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
 
               {/* Mobile search icon */}
               <button
-                onClick={() => onNavigate('search')}
+                onClick={openSearchOverlay}
                 className="mobile-search-btn"
                 style={{
                   background: 'var(--border-subtle)',
@@ -685,6 +647,18 @@ export default function Layout({
           </div>
         </div>
       </footer>
+
+      {/* Search Overlay */}
+      {searchOverlayOpen && (
+        <SearchOverlay
+          query={search}
+          onQueryChange={setSearch}
+          onSearch={handleSearchSubmit}
+          onSelectListing={onSelectListing || onNavigate}
+          onClose={() => setSearchOverlayOpen(false)}
+          onNavigate={onNavigate}
+        />
+      )}
     </div>
   )
 }

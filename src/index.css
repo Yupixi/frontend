@@ -104,6 +104,27 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* Search overlay glass backdrop */
+.search-overlay-bg {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.dark .search-overlay-bg {
+  background: rgba(18, 24, 38, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.search-overlay-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.dark .search-overlay-panel {
+  background: rgba(18, 24, 38, 0.95);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -422,6 +443,24 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .section-title { font-size: 1.25rem !important; }
   .toast-container { right: 12px !important; bottom: 12px !important; }
   .toast-container .toast { font-size: 0.8rem !important; padding: 10px 14px !important; }
+
+  .dashboard-sidebar-desktop { display: none !important; }
+  .dashboard-sidebar-mobile-btn { display: flex !important; }
+  .dashboard-main { padding: 1rem !important; }
+  .dashboard-main h1 { font-size: 1.25rem !important; }
+  .dashboard-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .dashboard-two-col { grid-template-columns: 1fr !important; }
+
+  .listing-detail-grid { grid-template-columns: 1fr !important; }
+  .listing-detail-image { height: 260px !important; }
+  .listing-detail-sticky { position: static !important; }
+  .listing-detail-seller-grid { grid-template-columns: 1fr 1fr !important; }
+  .listing-thumbnails { display: none !important; }
+}
+
+@media (min-width: 769px) {
+  .dashboard-sidebar-mobile-btn { display: none !important; }
+  .dashboard-sidebar-overlay { display: none !important; }
 }
 
 @media (min-width: 769px) {
@@ -441,6 +480,11 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideIn {

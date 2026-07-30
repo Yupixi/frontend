@@ -33,23 +33,32 @@ export default function App() {
   const [userRole] = useState<'buyer' | 'seller' | 'admin'>('seller')
   const [favorites, setFavorites] = useState<string[]>(['l1', 'l3'])
   const [selectedListingId, setSelectedListingId] = useState('l1')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchCity, setSearchCity] = useState('Abidjan')
   const [selectedSellerId, setSelectedSellerId] = useState('s1')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e)
-      setShowInstallBanner(true)
+      if (isMobile) setShowInstallBanner(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
     const installed = () => { setDeferredPrompt(null); setShowInstallBanner(false); setShowInstallGuide(false) }
     window.addEventListener('appinstalled', installed)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    if (!isStandalone) {
+    if (isMobile && !isStandalone) {
       const timer = setTimeout(() => setShowInstallBanner(true), 5000)
       return () => {
         clearTimeout(timer)
@@ -61,7 +70,7 @@ export default function App() {
       window.removeEventListener('beforeinstallprompt', handler)
       window.removeEventListener('appinstalled', installed)
     }
-  }, [])
+  }, [isMobile])
 
   const handleInstall = () => {
     if (deferredPrompt) {
@@ -120,7 +129,7 @@ export default function App() {
       case 'home':
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'seller-profile':
@@ -231,6 +240,8 @@ export default function App() {
         isLoggedIn={isLoggedIn}
         userRole={userRole}
         onToggleLogin={toggleLogin}
+        onSelectListing={selectListing}
+        onSetSearchTerm={setSearchTerm}
       >
         {renderPage()}
       </Layout>
@@ -256,12 +267,7 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
             padding: '2rem 1.5rem', textAlign: 'center',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 52, height: 52, borderRadius: 14, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-              <svg width="30" height="30" viewBox="0 0 48 48" fill="none">
-                <path d="M14 28 C14 36, 34 36, 34 28" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-                <circle cx="18" cy="19" r="2.5" fill="white" />
-                <circle cx="30" cy="19" r="2.5" fill="white" />
-                <line x1="24" y1="14" x2="24" y2="22" stroke="white" strokeWidth="3" strokeLinecap="round" />
-              </svg>
+              <img src="/icon-yupixi-white.svg" alt="Yüpixi" style={{ width: 36, height: 36 }} />
             </div>
             <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Yüpixi</h3>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
@@ -285,12 +291,7 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
         fontFamily: "'Outfit', 'Nunito', sans-serif",
       }}>
         <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
-            <path d="M14 28 C14 36, 34 36, 34 28" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-            <circle cx="18" cy="19" r="2.5" fill="white" />
-            <circle cx="30" cy="19" r="2.5" fill="white" />
-            <line x1="24" y1="14" x2="24" y2="22" stroke="white" strokeWidth="3" strokeLinecap="round" />
-          </svg>
+          <img src="/icon-yupixi-white.svg" alt="Yüpixi" style={{ width: 30, height: 30 }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Yüpixi</div>
