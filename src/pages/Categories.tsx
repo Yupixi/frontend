@@ -1,5 +1,12 @@
-import { ChevronRight, Search } from 'lucide-react'
+import { Search, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, ChevronRight } from 'lucide-react'
 import { categories } from '../data/mockData'
+
+const iconMap: Record<string, typeof Building2> = {
+  immobilier: Building2, vehicules: Car, electronique: Smartphone,
+  mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
+  loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
+  enfants: Baby, 'materiel-pro': Factory,
+}
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -22,39 +29,44 @@ export default function Categories({ onNavigate, onCategorySelect }: CategoriesP
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
-        {categories.map(cat => (
-          <div key={cat.id} className="card card-hover" style={{ padding: '1.5rem', cursor: 'pointer' }}               onClick={() => onCategorySelect?.(cat.id)}>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-              <div style={{ width: 56, height: 56, borderRadius: 14, background: cat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', flexShrink: 0 }}>
-                {cat.icon}
-              </div>
-              <div>
-                <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 4px' }}>{cat.name}</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: cat.color }} />
-                  <span style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>{cat.count.toLocaleString('fr')} annonces</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+        {categories.map(cat => {
+          const IconComp = iconMap[cat.id] || Building2
+          return (
+            <div key={cat.id} className="card card-hover" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => onCategorySelect?.(cat.id)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: cat.color }}>
+                  <IconComp size={22} />
                 </div>
+                <div style={{ flex: 1 }}>
+                  <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 2px' }}>{cat.name}</h2>
+                  <span style={{ fontSize: '0.8rem', color: cat.color, fontWeight: 700 }}>{cat.count.toLocaleString('fr')} annonces</span>
+                </div>
+                <ChevronRight size={18} style={{ color: 'var(--fg-subtle)' }} />
               </div>
-              <ChevronRight size={18} style={{ color: 'var(--fg-subtle)', marginLeft: 'auto', alignSelf: 'center' }} />
-            </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {cat.subcategories.map(sub => (
-                <button
-                  key={sub}
-                  onClick={e => { e.stopPropagation(); onCategorySelect?.(cat.id) }}
-                  className="badge badge-gray"
-                  style={{ cursor: 'pointer', border: 'none', background: 'var(--border-subtle)', transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = cat.color + '20')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '')}
-                >
-                  {sub}
-                </button>
-              ))}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {cat.subcategories.map(sub => (
+                  <button
+                    key={sub}
+                    onClick={e => { e.stopPropagation(); onCategorySelect?.(cat.id) }}
+                    style={{
+                      cursor: 'pointer', border: 'none', borderRadius: 999,
+                      padding: '4px 12px', fontSize: '0.78rem', fontWeight: 700,
+                      fontFamily: 'Outfit, sans-serif',
+                      background: cat.color + '12', color: cat.color,
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = cat.color + '25' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = cat.color + '12' }}
+                  >
+                    {sub}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

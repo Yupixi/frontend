@@ -7,6 +7,7 @@ type HomeProps = {
   onSelectListing: (id: string) => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
+  onCategorySelect?: (categoryId: string) => void
 }
 
 // Synchronized Hero showcase items matching the animated rotating text
@@ -518,7 +519,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               return (
                 <button
                   key={cat.id}
-                  onClick={() => onNavigate('search')}
+                  onClick={() => onCategorySelect?.(cat.id)}
                   style={{
                     border: 'none',
                     cursor: 'pointer',
