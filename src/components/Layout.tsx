@@ -193,6 +193,27 @@ export default function Layout({
             {/* Right Header Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
 
+              {/* Mobile search icon */}
+              <button
+                onClick={() => onNavigate('search')}
+                className="mobile-search-btn"
+                style={{
+                  background: 'var(--border-subtle)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                  width: 38,
+                  height: 38,
+                  color: 'var(--fg-muted)',
+                  borderRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="Rechercher"
+              >
+                <Search size={18} />
+              </button>
+
               {/* Dark mode toggle */}
               <button
                 onClick={onToggleDark}
@@ -531,6 +552,59 @@ export default function Layout({
           </nav>
         </div>
       </header>
+
+      {/* Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, top: 71, zIndex: 99,
+          background: 'rgba(0,0,0,0.4)', animation: 'fadeIn 0.15s ease'
+        }} onClick={() => setMobileMenuOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--bg-card)', width: '85%', maxWidth: 320,
+            height: '100%', padding: '1rem', overflowY: 'auto',
+            borderRight: '1px solid var(--border)', animation: 'slideIn 0.2s ease'
+          }}>
+            {isLoggedIn && (
+              <div style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 900, fontSize: '0.9rem' }}>K</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', fontFamily: 'Outfit, sans-serif' }}>Kouamé Jean-Baptiste</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>kouame@yupixi.ci</div>
+                </div>
+              </div>
+            )}
+            {[
+              { label: 'Accueil', icon: Home, page: 'home' as Page },
+              { label: 'Offres Flash', icon: Zap, page: 'flash-offers' as Page },
+              { label: 'Toutes les Catégories', icon: Grid, page: 'categories' as Page },
+              { label: 'Publier une annonce', icon: Plus, page: 'seller-post' as Page },
+              ...(isLoggedIn ? [
+                { label: 'Mes Favoris', icon: Heart, page: 'buyer-favorites' as Page },
+                { label: 'Messages', icon: MessageCircle, page: 'buyer-messages' as Page },
+              ] : []),
+            ].map(item => {
+              const IconComp = item.icon
+              return (
+                <button
+                  key={item.page}
+                  onClick={() => { onNavigate(item.page); setMobileMenuOpen(false) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    width: '100%', padding: '0.85rem 0.75rem',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--fg)', fontFamily: 'Outfit, sans-serif',
+                    fontWeight: 700, fontSize: '0.9rem', borderRadius: 8,
+                    textAlign: 'left'
+                  }}
+                >
+                  <IconComp size={18} style={{ color: 'var(--fg-muted)' }} />
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Main Content View */}
       <main className="page-enter" style={{ flex: 1 }}>

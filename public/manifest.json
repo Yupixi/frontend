@@ -1,0 +1,15 @@
+{
+  "name": "Yüpixi — Marketplace Côte d'Ivoire",
+  "short_name": "Yüpixi",
+  "description": "Achetez et vendez en Côte d'Ivoire avec Yüpixi. Petites annonces, Mobile Money, Marketplace.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAFC",
+  "theme_color": "#FE0000",
+  "orientation": "portrait-primary",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-yupixi.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

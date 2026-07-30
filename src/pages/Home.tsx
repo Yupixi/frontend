@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard } from 'lucide-react'
+import { ArrowRight, Star, Zap, MapPin, Heart, Eye, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory } from 'lucide-react'
 import { listings, categories, formatPrice } from '../data/mockData'
 
 type HomeProps = {
@@ -506,41 +506,54 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => onNavigate('search')}
-                className="card card-hover"
-                style={{
-                  border: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  padding: '1.25rem 1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: 'var(--bg-card)',
-                  borderRadius: 'var(--radius)'
-                }}
-              >
-                <div style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 14,
-                  background: 'rgba(254,0,0,0.06)',
-                  border: '1px solid rgba(254,0,0,0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--primary)'
-                }}>
-                  <Tag size={24} />
-                </div>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.9rem', color: 'var(--fg)', textAlign: 'center', lineHeight: 1.2 }}>{cat.name}</span>
-                <span className="badge badge-gray" style={{ fontSize: '0.7rem' }}>{cat.count.toLocaleString('fr')} annonces</span>
-              </button>
-            ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
+            {categories.map(cat => {
+              const iconMap: Record<string, typeof Building2> = {
+                immobilier: Building2, vehicules: Car, electronique: Smartphone,
+                mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
+                loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
+                enfants: Baby, 'materiel-pro': Factory,
+              }
+              const IconComp = iconMap[cat.id] || Building2
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => onNavigate('search')}
+                  style={{
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0',
+                    borderRadius: 'var(--radius)',
+                    background: 'transparent',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{
+                    background: cat.color + '12',
+                    padding: '1rem 0.75rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.15s ease',
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = cat.color + '20' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = cat.color + '12' }}
+                  >
+                    <div style={{
+                      width: 42, height: 42, borderRadius: 12,
+                      background: cat.color + '20',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: cat.color,
+                    }}>
+                      <IconComp size={20} />
+                    </div>
+                    <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', color: 'var(--fg)', textAlign: 'center', lineHeight: 1.15 }}>{cat.name}</span>
+                    <span style={{ fontSize: '0.65rem', color: cat.color, fontWeight: 700 }}>{cat.count.toLocaleString('fr')}</span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </section>
 
