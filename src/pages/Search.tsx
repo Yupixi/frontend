@@ -214,7 +214,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
                   style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
                   onClick={() => onSelectListing(l.id)}
                 >
-                  {l.sponsored && <div className="sponsored-badge" style={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>Sponsorisé</div>}
+                  {l.sponsored && <span className="badge badge-yellow" style={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>Sponsorisé</span>}
                   <button
                     onClick={e => { e.stopPropagation(); onToggleFavorite(l.id) }}
                     style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}

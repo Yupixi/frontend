@@ -73,7 +73,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
                   </div>
                 </>
               )}
-              {listing.sponsored && <div className="sponsored-badge" style={{ position: 'absolute', top: 14, left: 14 }}>⭐ Sponsorisé</div>}
+              {listing.sponsored && <span className="badge badge-yellow" style={{ position: 'absolute', top: 14, left: 14, zIndex: 2 }}>Sponsorisé</span>}
             </div>
             {images.length > 1 && (
               <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: 'var(--bg-card)' }}>
