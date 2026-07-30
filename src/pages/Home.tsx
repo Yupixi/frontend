@@ -304,20 +304,23 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
         </div>
       </section>
 
-      {/* Guarantee Bar */}
-      <section style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', padding: '1.25rem 1rem' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+      {/* Trust Bar */}
+      <section className="trust-bar">
+        <div className="trust-bar-inner">
           {[
-            { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID' },
-            { icon: CreditCard, text: 'Paiement Wave & Orange Money' },
-            { icon: Star, text: 'Avis Clients Certifiés' },
-            { icon: Award, text: 'Support 7j/7 en Côte d\'Ivoire' },
-          ].map(item => (
-            <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--fg)', fontSize: '0.9rem', fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(254,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <item.icon size={18} color="#FE0000" />
+            { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID', desc: 'Identité certifiée' },
+            { icon: CreditCard, text: 'Paiement Wave & Orange Money', desc: 'Transaction sécurisée' },
+            { icon: Star, text: 'Avis Clients Certifiés', desc: 'Recommandations vérifiées' },
+            { icon: Award, text: 'Support 7j/7 en Côte d\'Ivoire', desc: 'Assistance dédiée' },
+          ].map((item, i) => (
+            <div key={item.text} className="trust-bar-item">
+              <div className="trust-bar-icon">
+                <item.icon size={20} />
               </div>
-              {item.text}
+              <div>
+                <div className="trust-bar-text">{item.text}</div>
+                <div className="trust-bar-desc">{item.desc}</div>
+              </div>
             </div>
           ))}
         </div>
