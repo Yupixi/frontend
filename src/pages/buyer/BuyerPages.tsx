@@ -3,7 +3,7 @@ import {
   Heart, MessageCircle, Bell, History, Settings, LayoutDashboard,
   Eye, MapPin, Star, Shield, Send, Search, Trash2, CheckCheck,
   Smartphone, Moon, Sun, Lock, User, Globe, BellRing, Package,
-  LogOut, ChevronRight, TrendingUp, Clock, ArrowLeft,
+  LogOut, ChevronRight, TrendingUp, Clock, ArrowLeft, Menu, X,
 } from 'lucide-react'
 import { listings, conversations, notifications, formatPrice, sellers } from '../../data/mockData'
 
@@ -12,7 +12,7 @@ type BuyerSidebarProps = {
   onNavigate: (page: any) => void
 }
 
-function BuyerSidebar({ active, onNavigate }: BuyerSidebarProps) {
+function BuyerSidebarContent({ active, onNavigate, onClose }: { active: string; onNavigate: (p: any) => void; onClose?: () => void }) {
   const items = [
     { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
     { key: 'buyer-favorites', icon: Heart, label: 'Mes favoris' },
@@ -22,14 +22,14 @@ function BuyerSidebar({ active, onNavigate }: BuyerSidebarProps) {
     { key: 'buyer-settings', icon: Settings, label: 'Paramètres' },
   ]
   return (
-    <aside className="sidebar" style={{ position: 'sticky', top: 64, height: 'calc(100vh - 64px)', overflowY: 'auto', paddingTop: '0.75rem' }}>
+    <>
       <div style={{ padding: '0.5rem 1rem 0.25rem', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fg-subtle)' }}>
         Espace Acheteur
       </div>
       {items.map(item => (
         <button
           key={item.key}
-          onClick={() => onNavigate(item.key)}
+          onClick={() => { onNavigate(item.key); onClose?.() }}
           className={`sidebar-item ${active === item.key ? 'active' : ''}`}
           style={{ width: '100%', border: 'none', position: 'relative' }}
         >
@@ -41,19 +41,54 @@ function BuyerSidebar({ active, onNavigate }: BuyerSidebarProps) {
         </button>
       ))}
       <div style={{ margin: '1rem 8px 0', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-        <button onClick={() => onNavigate('seller-dashboard')} className="sidebar-item" style={{ width: '100%', border: 'none', color: 'var(--primary)' }}>
+        <button onClick={() => { onNavigate('seller-dashboard'); onClose?.() }} className="sidebar-item" style={{ width: '100%', border: 'none', color: 'var(--primary)' }}>
           <Package size={18} /> Espace Vendeur
         </button>
       </div>
-    </aside>
+    </>
+  )
+}
+
+function BuyerSidebar({ active, onNavigate, sidebarOpen }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean }) {
+  return (
+    <>
+      <aside className="buyer-sidebar-desktop" style={{ position: 'sticky', top: 64, height: 'calc(100vh - 64px)', overflowY: 'auto', paddingTop: '0.75rem', flexShrink: 0, width: 220 }}>
+        <BuyerSidebarContent active={active} onNavigate={onNavigate} />
+      </aside>
+      {sidebarOpen && (
+        <div className="buyer-sidebar-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, animation: 'fadeIn 0.15s ease-out' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onNavigate(active)} />
+          <aside style={{ position: 'relative', width: 280, height: '100%', background: 'var(--bg-card)', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.2s ease-out' }}>
+            <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1rem' }}>Menu</span>
+              <button onClick={() => onNavigate(active)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <BuyerSidebarContent active={active} onNavigate={onNavigate} onClose={() => onNavigate(active)} />
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   )
 }
 
 function PageLayout({ active, onNavigate, children }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <div style={{ display: 'flex', maxWidth: 1280, margin: '0 auto' }}>
-      <BuyerSidebar active={active} onNavigate={onNavigate} />
-      <div style={{ flex: 1, padding: '2rem', minWidth: 0 }}>{children}</div>
+      <BuyerSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} />
+      <div className="buyer-main" style={{ flex: 1, padding: '2rem', minWidth: 0 }}>
+        <button
+          className="buyer-mobile-menu-btn"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: 8, display: 'none', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', marginBottom: '0.75rem' }}
+        >
+          <Menu size={20} />
+        </button>
+        {children}
+      </div>
     </div>
   )
 }
@@ -70,26 +105,26 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onN
 
   return (
     <PageLayout active="buyer-dashboard" onNavigate={onNavigate}>
-      <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>
+      <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>
         Bonjour, Kouamé 👋
       </h1>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="buyer-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {stats.map(s => (
-          <div key={s.label} className="stat-card">
-            <div className="stat-icon" style={{ background: s.bg }}>
-              <s.icon size={22} color={s.color} />
-            </div>
-            <div>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.75rem', color: 'var(--fg)' }}>{s.value}</div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--fg-muted)' }}>{s.label}</div>
+          <div key={s.label} className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <s.icon size={22} color={s.color} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', color: 'var(--fg)' }}>{s.value}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>{s.label}</div>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Recent favorites */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Annonces sauvegardées</h2>
@@ -97,7 +132,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onN
             Voir tout <ChevronRight size={15} />
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+        <div className="buyer-fav-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
           {recentListings.map(l => (
             <div key={l.id} className="card card-hover" style={{ display: 'flex', gap: '0.75rem', padding: '0.75rem', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
               <div style={{ width: 64, height: 64, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
@@ -115,7 +150,6 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onN
         </div>
       </div>
 
-      {/* Recent messages */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Messages récents</h2>
@@ -159,7 +193,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, favorites, onToggl
   return (
     <PageLayout active="buyer-favorites" onNavigate={onNavigate}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
+        <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
           Mes favoris <span style={{ color: 'var(--fg-muted)', fontSize: '1rem', fontWeight: 600 }}>({favListings.length})</span>
         </h1>
       </div>
@@ -172,7 +206,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, favorites, onToggl
           <button className="btn-primary" onClick={() => onNavigate('search')}>Parcourir les annonces</button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+        <div className="buyer-fav-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
           {favListings.map(l => (
             <div key={l.id} className="card card-hover" style={{ overflow: 'hidden', position: 'relative' }}>
               <button
@@ -205,15 +239,16 @@ export function BuyerFavorites({ onNavigate, onSelectListing, favorites, onToggl
 
 // ─── MESSAGES ───────────────────────────────────────────────────────────────
 export function BuyerMessages({ onNavigate }: { onNavigate: (p: any) => void }) {
-  const [active, setActive] = useState(conversations[0])
+  const [activeConv, setActiveConv] = useState(conversations[0])
   const [msg, setMsg] = useState('')
+  const [showList, setShowList] = useState(true)
 
   return (
-    <div style={{ display: 'flex', maxWidth: 1280, margin: '0 auto', height: 'calc(100vh - 120px)' }}>
+    <div style={{ display: 'flex', maxWidth: 1280, margin: '0 auto', height: 'calc(100vh - 120px)', position: 'relative' }}>
       <BuyerSidebar active="buyer-messages" onNavigate={onNavigate} />
 
       {/* Conversation list */}
-      <div style={{ width: 280, borderRight: '1px solid var(--border)', background: 'var(--bg-card)', flexShrink: 0, overflowY: 'auto' }}>
+      <div className={`buyer-msg-list ${showList ? '' : 'buyer-msg-list-hidden'}`} style={{ width: 280, borderRight: '1px solid var(--border)', background: 'var(--bg-card)', flexShrink: 0, overflowY: 'auto' }}>
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 0.75rem', fontSize: '1rem' }}>Messages</h2>
           <div style={{ position: 'relative' }}>
@@ -224,8 +259,8 @@ export function BuyerMessages({ onNavigate }: { onNavigate: (p: any) => void }) 
         {conversations.map(conv => (
           <div
             key={conv.id}
-            onClick={() => setActive(conv)}
-            style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: active.id === conv.id ? 'rgba(254,0,0,0.04)' : 'transparent', borderLeft: active.id === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
+            onClick={() => { setActiveConv(conv); setShowList(false) }}
+            style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: activeConv.id === conv.id ? 'rgba(254,0,0,0.04)' : 'transparent', borderLeft: activeConv.id === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
           >
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <img src={conv.seller.avatar} alt={conv.seller.name} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }} />
@@ -245,24 +280,25 @@ export function BuyerMessages({ onNavigate }: { onNavigate: (p: any) => void }) 
       </div>
 
       {/* Chat view */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-        {/* Chat header */}
+      <div className={`buyer-msg-chat ${showList ? 'buyer-msg-chat-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <img src={active.seller.avatar} alt={active.seller.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+          <button className="buyer-msg-back" onClick={() => setShowList(true)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 0, marginRight: 4 }}>
+            <ArrowLeft size={20} />
+          </button>
+          <img src={activeConv.seller.avatar} alt={activeConv.seller.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
           <div>
-            <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{active.seller.name}</div>
+            <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.seller.name}</div>
             <div style={{ fontSize: '0.75rem', color: '#10B981', display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> En ligne
             </div>
           </div>
           <div style={{ marginLeft: 'auto', background: 'var(--border-subtle)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.78rem', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: 'var(--fg-muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            📌 {active.listing.title}
+            📌 {activeConv.listing.title}
           </div>
         </div>
 
-        {/* Messages */}
         <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {active.messages.map(m => (
+          {activeConv.messages.map(m => (
             <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'me' ? 'flex-end' : 'flex-start' }}>
               <div>
                 <div className={`chat-bubble ${m.sender === 'me' ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
@@ -277,7 +313,6 @@ export function BuyerMessages({ onNavigate }: { onNavigate: (p: any) => void }) 
           ))}
         </div>
 
-        {/* Input */}
         <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <input
             className="input"
@@ -304,7 +339,7 @@ export function BuyerNotifications({ onNavigate }: { onNavigate: (p: any) => voi
   return (
     <PageLayout active="buyer-notifications" onNavigate={onNavigate}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
+        <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
           Notifications <span style={{ color: 'var(--fg-muted)', fontSize: '1rem', fontWeight: 600 }}>({items.filter(n => !n.read).length} non lues)</span>
         </h1>
         <button onClick={markAll} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>
@@ -350,7 +385,7 @@ export function BuyerHistory({ onNavigate, onSelectListing }: { onNavigate: (p: 
   return (
     <PageLayout active="buyer-history" onNavigate={onNavigate}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Historique de navigation</h1>
+        <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Historique de navigation</h1>
         <button style={{ color: 'var(--fg-muted)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}>
           <Trash2 size={15} /> Effacer
         </button>
@@ -404,7 +439,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark }: { onNavigate: 
             <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', flexShrink: 0 }}>K</div>
             <button className="btn-outline" style={{ fontSize: '0.875rem' }}>Changer la photo</button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="buyer-settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Nom complet</label>
               <input className="input" value={name} onChange={e => setName(e.target.value)} />
@@ -491,7 +526,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark }: { onNavigate: 
 
   return (
     <PageLayout active="buyer-settings" onNavigate={onNavigate}>
-      <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Paramètres</h1>
+      <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Paramètres</h1>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {settingSections.map(section => (
           <div key={section.title} className="card" style={{ padding: '1.5rem' }}>

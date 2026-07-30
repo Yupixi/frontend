@@ -73,7 +73,7 @@ const sidebarItems = [
 function SidebarNav({ active, onNavigate, onClose }: { active: string; onNavigate: (p: any) => void; onClose?: () => void }) {
   return (
     <>
-      {items.map(item => (
+      {sidebarItems.map(item => (
         <button
           key={item.key}
           onClick={() => { onNavigate(item.key); onClose?.() }}

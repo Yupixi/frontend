@@ -456,11 +456,27 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .listing-detail-sticky { position: static !important; }
   .listing-detail-seller-grid { grid-template-columns: 1fr 1fr !important; }
   .listing-thumbnails { display: none !important; }
+
+  .buyer-sidebar-desktop { display: none !important; }
+  .buyer-mobile-menu-btn { display: flex !important; }
+  .buyer-main { padding: 1rem !important; }
+  .buyer-main h1 { font-size: 1.25rem !important; }
+  .buyer-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .buyer-fav-grid { grid-template-columns: 1fr !important; }
+  .buyer-settings-grid { grid-template-columns: 1fr !important; }
+  .buyer-msg-list { position: absolute !important; inset: 0; width: 100% !important; z-index: 10; background: var(--bg-card); }
+  .buyer-msg-list-hidden { display: none !important; }
+  .buyer-msg-chat-hidden { display: none !important; }
+  .buyer-msg-chat { width: 100% !important; }
+  .buyer-msg-back { display: flex !important; }
 }
 
 @media (min-width: 769px) {
   .dashboard-sidebar-mobile-btn { display: none !important; }
   .dashboard-sidebar-overlay { display: none !important; }
+  .buyer-sidebar-overlay { display: none !important; }
+  .buyer-mobile-menu-btn { display: none !important; }
+  .buyer-msg-back { display: none !important; }
 }
 
 @media (min-width: 769px) {
