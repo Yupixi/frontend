@@ -117,11 +117,15 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .search-overlay-panel {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .dark .search-overlay-panel {
-  background: rgba(18, 24, 38, 0.95);
+  background: rgba(18, 24, 38, 0.8);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
