@@ -104,28 +104,20 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Search overlay glass backdrop */
+/* Search overlay backdrop */
 .search-overlay-bg {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(15, 23, 42, 0.45);
 }
 .dark .search-overlay-bg {
-  background: rgba(18, 24, 38, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .search-overlay-panel {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: #FFFFFF;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
 .dark .search-overlay-panel {
-  background: rgba(18, 24, 38, 0.8);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  background: #121826;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
