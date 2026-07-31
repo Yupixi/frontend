@@ -104,23 +104,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Search overlay backdrop */
-.search-overlay-bg {
-  background: rgba(15, 23, 42, 0.45);
-}
-.dark .search-overlay-bg {
-  background: rgba(0, 0, 0, 0.6);
-}
-
-.search-overlay-panel {
-  background: #FFFFFF;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
-}
-.dark .search-overlay-panel {
-  background: #121826;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -105,16 +105,15 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         display: 'flex', flexDirection: 'column',
+        background: 'var(--bg)',
         animation: 'fadeIn 0.15s ease-out',
       }}
     >
-      <div className="search-overlay-bg" style={{
-        position: 'absolute', inset: 0,
-      }} onClick={onClose} />
-
-      <div className="search-overlay-panel" style={{
+      {/* Header with search input */}
+      <div style={{
+        background: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border)',
         position: 'relative', zIndex: 1,
-        animation: 'slideDown 0.18s ease-out',
       }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '1rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} role="none">
@@ -123,7 +122,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
               <input
                 ref={inputRef}
                 className="input"
-                style={{ paddingLeft: 48, paddingRight: 48, fontSize: '1rem', height: 52, borderRadius: 14 }}
+                style={{ paddingLeft: 48, paddingRight: 48, fontSize: '1rem', height: 52, borderRadius: 14, background: 'var(--bg)', borderColor: 'var(--border)' }}
                 placeholder="Rechercher sur Yüpixi..."
                 value={query}
                 onChange={e => { onQueryChange(e.target.value); setSelectedIdx(-1) }}
@@ -154,8 +153,10 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
         </div>
       </div>
 
+      {/* Results area */}
       <div style={{
         position: 'relative', zIndex: 1, flex: 1, overflow: 'auto',
+        background: 'var(--bg)',
         animation: 'slideDown 0.2s ease-out',
       }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '0.75rem 1.25rem 2rem' }}>
