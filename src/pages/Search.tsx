@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Search as SearchIcon, SlidersHorizontal, Grid, List, MapPin, Heart, Eye, Shield, ChevronDown, X, Star } from 'lucide-react'
+import { Search as SearchIcon, SlidersHorizontal, MapPin, Heart, Eye, Shield, ChevronDown, X, Star } from 'lucide-react'
 import { listings, categories, formatPrice, cities } from '../data/mockData'
 import BottomSheet from '../components/BottomSheet'
+import ViewToggle from '../components/ViewToggle'
 
 type SearchProps = {
   onNavigate: (page: any) => void
@@ -205,7 +206,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
           </h1>
           <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', margin: '4px 0 0' }}>{sorted.length} résultat{sorted.length > 1 ? 's' : ''} trouvé{sorted.length > 1 ? 's' : ''}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Sort */}
           <div style={{ position: 'relative' }}>
             <select
@@ -238,17 +239,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
           </button>
 
           {/* View mode */}
-          <div style={{ display: 'flex', background: 'var(--border-subtle)', borderRadius: 8, padding: 3 }}>
-            {[{ mode: 'grid', icon: Grid }, { mode: 'list', icon: List }].map(({ mode, icon: Icon }) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode as any)}
-                style={{ padding: '5px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', background: viewMode === mode ? 'var(--bg-card)' : 'transparent', color: viewMode === mode ? 'var(--primary)' : 'var(--fg-muted)', boxShadow: viewMode === mode ? 'var(--shadow-sm)' : 'none' }}
-              >
-                <Icon size={16} />
-              </button>
-            ))}
-          </div>
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
         </div>
       </div>
 
@@ -330,32 +321,29 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
               {sorted.map(l => (
                 <div
                   key={l.id}
-                  className="card card-hover"
-                  style={{ display: 'flex', gap: '1rem', cursor: 'pointer', overflow: 'hidden', padding: '1rem' }}
+                  className="card card-hover listing-list-card"
                   onClick={() => onSelectListing(l.id)}
                 >
-                  <div style={{ width: 150, height: 110, background: 'var(--border-subtle)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
-                    <img src={l.image} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  <div className="listing-list-thumb">
+                    <img src={l.image} alt={l.title}
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.95rem', margin: '0 0 4px' }}>{l.title}</h3>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <h3 className="listing-list-title">{l.title}</h3>
                         <div className="price-tag">{formatPrice(l.price)}</div>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); onToggleFavorite(l.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                      <button onClick={e => { e.stopPropagation(); onToggleFavorite(l.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                         <Heart size={18} fill={favorites.includes(l.id) ? '#FE0000' : 'none'} color={favorites.includes(l.id) ? '#FE0000' : '#999'} />
                       </button>
                     </div>
-                    <p style={{ color: 'var(--fg-muted)', fontSize: '0.82rem', margin: '6px 0', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {l.description}
-                    </p>
-                    <div style={{ display: 'flex', gap: 12, fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><MapPin size={12} />{l.location}, {l.city}</span>
+                    <p className="listing-list-desc">{l.description}</p>
+                    <div className="listing-list-meta">
+                      <span><MapPin size={12} />{l.location}, {l.city}</span>
                       <span>{l.date}</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={12} />{l.views}</span>
-                      {l.seller.verified && <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#3B82F6' }}><Shield size={12} />Vérifié</span>}
+                      <span><Eye size={12} />{l.views}</span>
+                      {l.seller.verified && <span style={{ color: '#3B82F6' }}><Shield size={12} />Vérifié</span>}
                     </div>
                   </div>
                 </div>

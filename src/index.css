@@ -1117,6 +1117,100 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: var(--primary);
 }
 
+/* --- View toggle (grid / list) --- */
+.view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--border-subtle);
+  border-radius: 10px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--fg-muted);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+.view-toggle-btn:hover { color: var(--fg); }
+.view-toggle-btn.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+@media (max-width: 480px) {
+  .view-toggle-btn { padding: 7px 10px; }
+  .view-toggle-label { display: none; }
+}
+
+/* --- List view cards (search + home) --- */
+.listing-list-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  cursor: pointer;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.listing-list-card:hover { background: var(--bg-card-hover, var(--bg-card)); }
+.listing-list-thumb {
+  width: 150px;
+  height: 110px;
+  flex-shrink: 0;
+  background: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.listing-list-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.listing-list-title {
+  margin: 0 0 4px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--fg);
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.listing-list-desc {
+  margin: 6px 0 0;
+  color: var(--fg-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.listing-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  align-items: center;
+}
+.listing-list-meta span { display: inline-flex; align-items: center; gap: 3px; }
+@media (max-width: 640px) {
+  .listing-list-card { gap: 0.65rem; padding: 0.6rem; }
+  .listing-list-thumb { width: 96px !important; height: 88px !important; }
+  .listing-list-desc { display: none; }
+  .listing-list-title { font-size: 0.85rem; -webkit-line-clamp: 2; }
+}
+
 .listing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));

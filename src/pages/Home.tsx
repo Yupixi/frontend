@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package } from 'lucide-react'
 import { listings, categories, formatPrice } from '../data/mockData'
+import ViewToggle from '../components/ViewToggle'
 
 type HomeProps = {
   onNavigate: (page: any) => void
@@ -118,9 +119,74 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
   )
 }
 
+function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
+  listing: typeof listings[0], onSelect: () => void, onToggleFav: () => void, isFav: boolean
+}) {
+  const [imgError, setImgError] = useState(false)
+
+  return (
+    <div className="card card-hover listing-list-card" onClick={onSelect}>
+      <div className="listing-list-thumb">
+        {!imgError ? (
+          <img src={listing.image} alt={listing.title} onError={() => setImgError(true)} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
+            <Tag size={28} />
+          </div>
+        )}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="listing-list-meta" style={{ marginTop: 0, color: 'var(--primary)' }}>
+              {listing.sponsored && <span><Sparkles size={12} /> Sponsorisé</span>}
+              {listing.negotiable && <span>Négociable</span>}
+            </div>
+            <h3 className="listing-list-title">{listing.title}</h3>
+            <div className="price-tag">{formatPrice(listing.price)}</div>
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFav() }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, color: isFav ? 'var(--primary)' : 'var(--fg-muted)' }}
+            title="Ajouter aux favoris"
+          >
+            <Heart size={18} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : '#999'} />
+          </button>
+        </div>
+
+        <p className="listing-list-desc">{listing.description}</p>
+
+        <div className="listing-list-meta">
+          <span><MapPin size={12} />{listing.location}, {listing.city}</span>
+          <span>{listing.date}</span>
+          <span><Eye size={12} />{listing.views}</span>
+          <span><Heart size={12} />{listing.favorites}</span>
+          {listing.seller.verified && <span style={{ color: '#00A3E0' }}><ShieldCheck size={12} />Vérifié</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite }: HomeProps) {
   const featured = listings.filter(l => l.sponsored)
   const recent = listings.slice(0, 8)
+  const [homeViewMode, setHomeViewMode] = useState<'grid' | 'list'>('grid')
+
+  const renderListings = (items: typeof listings) =>
+    homeViewMode === 'grid'
+      ? items.map(l => (
+        <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} />
+      ))
+      : items.map(l => (
+        <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} />
+      ))
+
+  const renderListingsContainer = (items: typeof listings) =>
+    homeViewMode === 'grid'
+      ? <div className="listing-grid">{renderListings(items)}</div>
+      : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>{renderListings(items)}</div>
 
 
 
@@ -345,54 +411,38 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
         {/* Featured Sponsored Section */}
         <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <h2 className="section-title" style={{ margin: 0 }}>Annonces en Vedette</h2>
               <span className="badge badge-yellow" style={{ fontSize: '0.8rem', padding: '4px 12px' }}>
                 <Sparkles size={13} /> Sponsorisées
               </span>
             </div>
+            <ViewToggle viewMode={homeViewMode} onChange={setHomeViewMode} />
           </div>
 
-          <div className="listing-grid">
-            {featured.map(l => (
-              <ListingCard
-                key={l.id}
-                listing={l}
-                onSelect={() => onSelectListing(l.id)}
-                onToggleFav={() => onToggleFavorite(l.id)}
-                isFav={favorites.includes(l.id)}
-              />
-            ))}
-          </div>
+          {renderListingsContainer(featured)}
         </section>
 
         {/* Recent Listings */}
         <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h2 className="section-title" style={{ margin: 0 }}>Récemment Publiées</h2>
               <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les dernières opportunités ajoutées à Abidjan & villes de Côte d'Ivoire</p>
             </div>
-            <button
-              onClick={() => onNavigate('search')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.9rem' }}
-            >
-              Voir toutes les annonces <ChevronRight size={18} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <ViewToggle viewMode={homeViewMode} onChange={setHomeViewMode} />
+              <button
+                onClick={() => onNavigate('search')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.9rem' }}
+              >
+                Voir toutes les annonces <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
 
-          <div className="listing-grid">
-            {recent.map(l => (
-              <ListingCard
-                key={l.id}
-                listing={l}
-                onSelect={() => onSelectListing(l.id)}
-                onToggleFav={() => onToggleFavorite(l.id)}
-                isFav={favorites.includes(l.id)}
-              />
-            ))}
-          </div>
+          {renderListingsContainer(recent)}
         </section>
 
         {/* Mobile Money Safety Section */}
