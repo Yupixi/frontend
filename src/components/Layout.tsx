@@ -3,7 +3,7 @@ import {
   Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
   Sun, Moon, LogOut, Settings, Package, BarChart2, Shield,
   Plus, Home, Sparkles, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
-  Shirt, Wrench, Grid
+  Shirt, Wrench, Grid, User
 } from 'lucide-react'
 import Logo from './Logo'
 import SearchOverlay from './SearchOverlay'
@@ -49,6 +49,7 @@ export default function Layout({
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [notifOpen, setNotifOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('Accueil')
@@ -58,6 +59,12 @@ export default function Layout({
   useEffect(() => {
     const t = setInterval(() => setFlashIdx(i => (i + 1) % flashTexts.length), 5000)
     return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
   }, [])
 
   const unreadNotifs = notifications.filter(n => !n.read).length
@@ -596,7 +603,7 @@ export default function Layout({
       )}
 
       {/* Official Footer */}
-      <footer style={{ background: '#090D16', color: '#FFFFFF', padding: '3.5rem 1rem 2rem', marginTop: '4rem', borderTop: '3px solid #FE0000' }}>
+      <footer style={{ background: '#090D16', color: '#FFFFFF', padding: `3.5rem 1rem ${isMobile ? '5.5rem' : '2rem'}`, marginTop: '4rem', borderTop: '3px solid #FE0000' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2.5rem', marginBottom: '2.5rem' }}>
             <div>
@@ -669,6 +676,60 @@ export default function Layout({
           onClose={() => setSearchOverlayOpen(false)}
           onNavigate={onNavigate}
         />
+      )}
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile && (
+        <nav
+          aria-label="Navigation principale"
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 300,
+            background: 'var(--bg-card)',
+            borderTop: '1px solid var(--border)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+          }}
+        >
+          {[
+            { label: 'Accueil', icon: Home, page: 'home' as Page },
+            { label: 'Recherche', icon: Search, page: 'search' as Page },
+            { label: 'Catégories', icon: Grid, page: 'categories' as Page },
+            { label: 'Favoris', icon: Heart, page: 'buyer-favorites' as Page },
+            { label: 'Profil', icon: User, page: (isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
+          ].map(item => {
+            const IconComp = item.icon
+            const isActive = currentPage === item.page
+            return (
+              <button
+                key={item.label}
+                onClick={() => onNavigate(item.page)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 3,
+                  padding: '8px 0 6px',
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontFamily: "'Outfit', sans-serif",
+                  fontWeight: isActive ? 800 : 600,
+                  fontSize: '0.62rem',
+                  color: isActive ? 'var(--primary)' : 'var(--fg-muted)',
+                }}
+              >
+                <IconComp size={20} strokeWidth={isActive ? 2.4 : 2} />
+                {item.label}
+              </button>
+            )
+          })}
+        </nav>
       )}
     </div>
   )

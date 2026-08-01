@@ -88,7 +88,7 @@ export default function App() {
 
   const navigateToCategory = (cat: string) => {
     setCategoryFilter(cat)
-    setPage('search')
+    navigate('search')
   }
 
   // Apply dark mode to document
@@ -96,21 +96,38 @@ export default function App() {
     document.documentElement.classList.toggle('dark', dark)
   }, [dark])
 
+  // Native back/forward navigation through the browser history
+  useEffect(() => {
+    const onPop = () => {
+      const st = window.history.state
+      if (st && typeof st.__yupixiPage === 'string') {
+        setPage(st.__yupixiPage)
+      } else {
+        setPage('home')
+      }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   // Scroll to top on page change
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [page])
 
-  const navigate = (p: Page) => setPage(p)
+  const navigate = (p: Page) => {
+    setPage(p)
+    window.history.pushState({ __yupixiPage: p }, '')
+  }
 
   const selectListing = (id: string) => {
     setSelectedListingId(id)
-    setPage('listing-detail')
+    navigate('listing-detail')
   }
 
   const selectSeller = (id: string) => {
     setSelectedSellerId(id)
-    setPage('seller-profile')
+    navigate('seller-profile')
   }
 
   const toggleFavorite = (id: string) => {

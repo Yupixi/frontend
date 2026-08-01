@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search as SearchIcon, SlidersHorizontal, Grid, List, MapPin, Heart, Eye, Shield, ChevronDown, X, Star } from 'lucide-react'
 import { listings, categories, formatPrice, cities } from '../data/mockData'
+import BottomSheet from '../components/BottomSheet'
 
 type SearchProps = {
   onNavigate: (page: any) => void
@@ -18,6 +19,7 @@ type SearchProps = {
 export default function SearchPage({ onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity, onCityChange }: SearchProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [sortBy, setSortBy] = useState('recent')
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
@@ -26,6 +28,12 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
 
   useEffect(() => { setSelectedCity(externalCity || '') }, [externalCity])
   const [condition, setCondition] = useState('')
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const filtered = listings.filter(l => {
     if (categoryFilter && l.category !== categoryFilter) return false
@@ -61,6 +69,75 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
   const headerTitle = categoryFilter
     ? categories.find(c => c.id === categoryFilter)?.name || 'Annonces'
     : 'Toutes les annonces'
+
+  const filterFields = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Category */}
+      <div>
+        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Catégorie</label>
+        <select className="input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+          <option value="">Toutes catégories</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+        </select>
+      </div>
+
+      {/* City */}
+      <div>
+        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Ville</label>
+        <select className="input" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+          <option value="">Toutes villes</option>
+          {cities.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
+      {/* Price range */}
+      <div>
+        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Prix (FCFA)</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input className="input" placeholder="Min" value={priceMin} onChange={e => setPriceMin(e.target.value)} style={{ width: '50%' }} />
+          <input className="input" placeholder="Max" value={priceMax} onChange={e => setPriceMax(e.target.value)} style={{ width: '50%' }} />
+        </div>
+      </div>
+
+      {/* Condition */}
+      <div>
+        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>État</label>
+        {['Neuf', 'Comme neuf', 'Très bon état', 'Bon état', 'Passable'].map(c => (
+          <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg)' }}>
+            <input type="radio" name="condition" value={c} checked={condition === c} onChange={() => setCondition(c)} style={{ accentColor: 'var(--primary)' }} />
+            {c}
+          </label>
+        ))}
+      </div>
+
+      {/* Options */}
+      <div>
+        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Options</label>
+        {['Négociable', 'Livraison possible', 'Vendeur vérifié', 'Annonces avec photos'].map(opt => (
+          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg)' }}>
+            <input type="checkbox" style={{ accentColor: 'var(--primary)' }} />
+            {opt}
+          </label>
+        ))}
+      </div>
+
+      {/* Seller rating */}
+      <div>
+        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Note vendeur minimum</label>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[1,2,3,4,5].map(r => (
+            <button key={r} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
+              <Star size={18} fill="#F59E0B" color="#F59E0B" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button className="btn-primary" style={{ width: '100%', padding: '0.7rem', fontSize: '0.9rem' }} onClick={() => setFiltersOpen(false)}>
+        Appliquer les filtres
+      </button>
+    </div>
+  )
 
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.5rem 1rem' }}>
@@ -154,81 +231,21 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
       )}
 
       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
-        {/* Filters sidebar */}
-        {filtersOpen && (
-          <aside className="card" style={{ width: 260, flexShrink: 0, padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Filtrer les résultats</h3>
-              <button onClick={() => setFiltersOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Category */}
-              <div>
-                <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Catégorie</label>
-                <select className="input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-                  <option value="">Toutes catégories</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-                </select>
+        {/* Filters sidebar (desktop) / bottom sheet (mobile) */}
+        {isMobile ? (
+          <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtrer les résultats">
+            {filterFields}
+          </BottomSheet>
+        ) : (
+          filtersOpen && (
+            <aside className="card" style={{ width: 260, flexShrink: 0, padding: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Filtrer les résultats</h3>
+                <button onClick={() => setFiltersOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
               </div>
-
-              {/* City */}
-              <div>
-                <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Ville</label>
-                <select className="input" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
-                  <option value="">Toutes villes</option>
-                  {cities.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-
-              {/* Price range */}
-              <div>
-                <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Prix (FCFA)</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input className="input" placeholder="Min" value={priceMin} onChange={e => setPriceMin(e.target.value)} style={{ width: '50%' }} />
-                  <input className="input" placeholder="Max" value={priceMax} onChange={e => setPriceMax(e.target.value)} style={{ width: '50%' }} />
-                </div>
-              </div>
-
-              {/* Condition */}
-              <div>
-                <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>État</label>
-                {['Neuf', 'Comme neuf', 'Très bon état', 'Bon état', 'Passable'].map(c => (
-                  <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg)' }}>
-                    <input type="radio" name="condition" value={c} checked={condition === c} onChange={() => setCondition(c)} style={{ accentColor: 'var(--primary)' }} />
-                    {c}
-                  </label>
-                ))}
-              </div>
-
-              {/* Options */}
-              <div>
-                <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Options</label>
-                {['Négociable', 'Livraison possible', 'Vendeur vérifié', 'Annonces avec photos'].map(opt => (
-                  <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg)' }}>
-                    <input type="checkbox" style={{ accentColor: 'var(--primary)' }} />
-                    {opt}
-                  </label>
-                ))}
-              </div>
-
-              {/* Seller rating */}
-              <div>
-                <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Note vendeur minimum</label>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {[1,2,3,4,5].map(r => (
-                    <button key={r} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
-                      <Star size={18} fill="#F59E0B" color="#F59E0B" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button className="btn-primary" style={{ width: '100%', padding: '0.7rem', fontSize: '0.9rem' }}>
-                Appliquer les filtres
-              </button>
-            </div>
-          </aside>
+              {filterFields}
+            </aside>
+          )
         )}
 
         {/* Results */}
