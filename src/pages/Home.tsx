@@ -10,72 +10,8 @@ type HomeProps = {
   onCategorySelect?: (categoryId: string) => void
 }
 
-// Hero mosaic card data for the right column floating cards
-const heroMosaicCards = [
-  {
-    id: 'h1', isMain: true,
-    title: 'Villa Duplex 5 Pièces - Piscine',
-    category: 'Immobilier',
-    price: '185 000 000 FCFA',
-    location: 'Cocody, Abidjan',
-    image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=600&h=450&fit=crop',
-    verified: true,
-  },
-  {
-    id: 'h2',
-    title: 'iPhone 15 Pro Max 256Go',
-    category: 'Électronique',
-    price: '720 000 FCFA',
-    location: 'Abidjan',
-    image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&h=450&fit=crop',
-    verified: true,
-  },
-  {
-    id: 'h3',
-    title: 'Toyota Hilux Revo 4x4',
-    category: 'Véhicules',
-    price: '24 500 000 FCFA',
-    location: 'Marcory',
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&h=450&fit=crop',
-    verified: true,
-  },
-  {
-    id: 'h4',
-    title: 'Nike Air Force 1 Édition Limitée',
-    category: 'Mode & Beauté',
-    price: '45 000 FCFA',
-    location: 'Yopougon',
-    image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&h=450&fit=crop',
-    verified: false,
-  },
-  {
-    id: 'h5',
-    title: 'Appartement Meublé 3 Pièces',
-    category: 'Immobilier',
-    price: '450 000 FCFA / mois',
-    location: 'Zone 4, Abidjan',
-    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=450&fit=crop',
-    verified: true,
-  },
-  {
-    id: 'h6',
-    title: 'Canapé Design Cuir Premium',
-    category: 'Maison & Meubles',
-    price: '350 000 FCFA',
-    location: 'Cocody',
-    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=450&fit=crop',
-    verified: false,
-  },
-  {
-    id: 'h7',
-    title: 'Service Traiteur Mariage',
-    category: 'Services',
-    price: 'À partir de 150 000 FCFA',
-    location: 'Abidjan',
-    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=600&h=450&fit=crop',
-    verified: true,
-  },
-]
+// Boosted listings = the ads placed in the hero "Espace Boost" (sponsored)
+const heroBoosted = listings.filter(l => l.sponsored)
 
 function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
   listing: typeof listings[0], onSelect: () => void, onToggleFav: () => void, isFav: boolean
@@ -240,17 +176,25 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               </div>
             </div>
 
-            {/* === Right Column: Floating Card Mosaic === */}
+            {/* === Right Column: Espace Boost (boosted listings) === */}
             <div className="hero-right">
+              <div className="hero-boost-header">
+                <span className="hero-boost-pill">
+                  <Zap size={13} fill="#0F172A" /> Espace Boost
+                </span>
+                <span className="hero-boost-note">Annonces mises en avant par nos vendeurs</span>
+                <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
+              </div>
+
               <div className="hero-mosaic">
-                {heroMosaicCards.map((card, i) => {
-                  const isMain = card.isMain
+                {heroBoosted.map((card, i) => {
+                  const isMain = i === 0
+                  const isFav = favorites.includes(card.id)
                   return (
                     <div
                       key={card.id}
                       className={`hero-mosaic-card${isMain ? ' hero-mosaic-card-main' : ''}`}
                       style={{ animationDelay: `${i * 0.15}s` }}
-
                       onClick={() => onSelectListing(card.id)}
                     >
                       <div className="hero-mosaic-img-wrap">
@@ -258,13 +202,18 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                         {/* Gradient overlay at bottom */}
                         <div className="hero-mosaic-overlay" />
 
+                        {/* Boost badge */}
+                        <div className="hero-mosaic-boost">
+                          <Zap size={10} fill="#0F172A" /> BOOST
+                        </div>
+
                         {/* Category badge */}
                         <div className="hero-mosaic-category">
-                          {card.category}
+                          {categories.find(c => c.id === card.category)?.name || card.category}
                         </div>
 
                         {/* Verified badge */}
-                        {card.verified && (
+                        {card.seller.verified && (
                           <div className="hero-mosaic-verified">
                             <CheckCircle size={isMain ? 16 : 12} />
                           </div>
@@ -272,28 +221,26 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
                         {/* Price */}
                         <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-                          {card.price}
+                          {formatPrice(card.price)}
                         </div>
                       </div>
 
-                      {/* Card body (only shown on main card desktop) */}
-                      {isMain && (
-                        <div className="hero-mosaic-body">
-                          <h3 className="hero-mosaic-title">{card.title}</h3>
-                          <div className="hero-mosaic-location">
-                            <MapPin size={13} />
-                            {card.location}
-                          </div>
+                      {/* Card body (title + location) */}
+                      <div className="hero-mosaic-body">
+                        <h3 className="hero-mosaic-title">{card.title}</h3>
+                        <div className="hero-mosaic-location">
+                          <MapPin size={13} />
+                          {card.location}, {card.city}
                         </div>
-                      )}
+                      </div>
 
                       {/* Heart icon */}
                       <button
                         className="hero-mosaic-fav"
                         onClick={e => { e.stopPropagation(); onToggleFavorite(card.id) }}
-                        style={{ color: card.verified ? 'var(--primary)' : 'var(--fg-subtle)' }}
+                        style={{ color: isFav ? 'var(--primary)' : 'var(--fg-subtle)' }}
                       >
-                        <Heart size={isMain ? 16 : 12} fill={card.verified ? 'var(--primary)' : 'none'} />
+                        <Heart size={isMain ? 16 : 12} fill={isFav ? 'var(--primary)' : 'none'} />
                       </button>
                     </div>
                   )
