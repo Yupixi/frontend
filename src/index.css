@@ -939,21 +939,23 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .hero-mosaic-card {
     grid-column: auto !important;
     grid-row: auto !important;
-    flex: 0 0 62%;
+    flex: 0 0 72%;
     min-height: 0;
-    height: 290px;
+    height: auto;
     scroll-snap-align: start;
     animation: none;
     border: 1.5px solid var(--border);
   }
   .hero-mosaic-card-main {
-    flex-basis: 84%;
+    flex-basis: 72%;
   }
   .hero-mosaic-card:hover {
     transform: none;
   }
   .hero-mosaic-img-wrap {
-    flex: 1;
+    flex: none;
+    width: 100%;
+    aspect-ratio: 16 / 9;
   }
   .hero-mosaic-card .hero-mosaic-body {
     display: block;
@@ -1080,6 +1082,41 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .dark .trust-bar-item:nth-child(4) { border-top-color: #3A2727; }
 }
 
+/* --- Filter chips & labels (search) --- */
+.filter-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--fg);
+  margin: 0 0 8px;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--fg-muted);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.filter-chip:hover {
+  border-color: var(--fg-muted);
+  color: var(--fg);
+}
+.filter-chip.active {
+  border-color: var(--primary);
+  background: rgba(254,0,0,0.08);
+  color: var(--primary);
+}
+
 .listing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1087,6 +1124,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 @media (max-width: 640px) {
+  .trust-bar { display: none; }
   .listing-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.6rem;

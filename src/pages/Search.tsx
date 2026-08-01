@@ -25,9 +25,15 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
   const [priceMax, setPriceMax] = useState('')
   const [selectedCity, setSelectedCity] = useState(externalCity || '')
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || '')
+  const [condition, setCondition] = useState('')
+  const [negotiable, setNegotiable] = useState(false)
+  const [delivery, setDelivery] = useState(false)
+  const [verified, setVerified] = useState(false)
+  const [hasPhotos, setHasPhotos] = useState(false)
+  const [minRating, setMinRating] = useState(0)
 
   useEffect(() => { setSelectedCity(externalCity || '') }, [externalCity])
-  const [condition, setCondition] = useState('')
+  useEffect(() => { setSelectedCategory(categoryFilter || '') }, [categoryFilter])
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
@@ -35,12 +41,37 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  const clearFilter = (key: string) => {
+    if (key === 'category') { setSelectedCategory(''); onClearCategoryFilter?.() }
+    if (key === 'city') setSelectedCity('')
+    if (key === 'condition') setCondition('')
+    if (key === 'price') { setPriceMin(''); setPriceMax('') }
+    if (key === 'negotiable') setNegotiable(false)
+    if (key === 'delivery') setDelivery(false)
+    if (key === 'verified') setVerified(false)
+    if (key === 'photos') setHasPhotos(false)
+    if (key === 'rating') setMinRating(0)
+  }
+
+  const resetAll = () => {
+    setSelectedCity(''); setSelectedCategory(''); setCondition('')
+    setPriceMin(''); setPriceMax('')
+    setNegotiable(false); setDelivery(false); setVerified(false); setHasPhotos(false)
+    setMinRating(0)
+    onClearCategoryFilter?.()
+  }
+
   const filtered = listings.filter(l => {
-    if (categoryFilter && l.category !== categoryFilter) return false
+    if (selectedCategory && l.category !== selectedCategory) return false
     if (selectedCity && l.city !== selectedCity) return false
     if (condition && l.condition !== condition) return false
     if (priceMin && l.price < Number(priceMin)) return false
     if (priceMax && l.price > Number(priceMax)) return false
+    if (negotiable && !l.negotiable) return false
+    if (delivery && !l.delivery) return false
+    if (verified && !l.seller.verified) return false
+    if (hasPhotos && (!l.images || l.images.length === 0)) return false
+    if (minRating > 0 && (l.seller.rating || 0) < minRating) return false
     if (externalSearchTerm) {
       const q = externalSearchTerm.toLowerCase()
       const match = l.title.toLowerCase().includes(q) ||
@@ -59,83 +90,94 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
     return 0
   })
 
+  const activeCategoryName = categories.find(c => c.id === (selectedCategory || categoryFilter))?.name
   const activeFilters = [
-    categoryFilter && categories.find(c => c.id === categoryFilter)?.name,
-    selectedCity && selectedCity,
-    condition && condition,
-    (priceMin || priceMax) && `${priceMin || '0'} – ${priceMax || '∞'} FCFA`,
-  ].filter(Boolean) as string[]
+    { key: 'category', label: activeCategoryName || '' },
+    { key: 'city', label: selectedCity },
+    { key: 'condition', label: condition },
+    { key: 'price', label: (priceMin || priceMax) ? `${priceMin || '0'} – ${priceMax || '∞'} FCFA` : '' },
+    { key: 'negotiable', label: negotiable ? 'Négociable' : '' },
+    { key: 'delivery', label: delivery ? 'Livraison possible' : '' },
+    { key: 'verified', label: verified ? 'Vendeur vérifié' : '' },
+    { key: 'photos', label: hasPhotos ? 'Avec photos' : '' },
+    { key: 'rating', label: minRating > 0 ? `Note ≥ ${minRating} ★` : '' },
+  ].filter(f => f.label) as { key: string; label: string }[]
 
-  const headerTitle = categoryFilter
-    ? categories.find(c => c.id === categoryFilter)?.name || 'Annonces'
+  const headerTitle = (selectedCategory || categoryFilter)
+    ? activeCategoryName || 'Annonces'
     : 'Toutes les annonces'
 
   const filterFields = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* Category */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Prix */}
       <div>
-        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Catégorie</label>
-        <select className="input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-          <option value="">Toutes catégories</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-        </select>
-      </div>
-
-      {/* City */}
-      <div>
-        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Ville</label>
-        <select className="input" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
-          <option value="">Toutes villes</option>
-          {cities.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-
-      {/* Price range */}
-      <div>
-        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Prix (FCFA)</label>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input className="input" placeholder="Min" value={priceMin} onChange={e => setPriceMin(e.target.value)} style={{ width: '50%' }} />
-          <input className="input" placeholder="Max" value={priceMax} onChange={e => setPriceMax(e.target.value)} style={{ width: '50%' }} />
+        <p className="filter-label">Prix (FCFA)</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <input className="input" type="number" min={0} step={500} placeholder="Min" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
+          <input className="input" type="number" min={0} step={500} placeholder="Max" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
         </div>
       </div>
 
-      {/* Condition */}
+      {/* Catégorie + Ville */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div>
+          <p className="filter-label">Catégorie</p>
+          <select className="input" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); if (e.target.value !== categoryFilter) onClearCategoryFilter?.() }}>
+            <option value="">Toutes</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <p className="filter-label">Ville</p>
+          <select className="input" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+            <option value="">Toutes</option>
+            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* État */}
       <div>
-        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>État</label>
-        {['Neuf', 'Comme neuf', 'Très bon état', 'Bon état', 'Passable'].map(c => (
-          <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg)' }}>
-            <input type="radio" name="condition" value={c} checked={condition === c} onChange={() => setCondition(c)} style={{ accentColor: 'var(--primary)' }} />
-            {c}
-          </label>
-        ))}
+        <p className="filter-label">État</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {['Neuf', 'Comme neuf', 'Très bon état', 'Bon état', 'Passable'].map(c => (
+            <button key={c} className={`filter-chip${condition === c ? ' active' : ''}`} onClick={() => setCondition(condition === c ? '' : c)}>{c}</button>
+          ))}
+        </div>
       </div>
 
       {/* Options */}
       <div>
-        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Options</label>
-        {['Négociable', 'Livraison possible', 'Vendeur vérifié', 'Annonces avec photos'].map(opt => (
-          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg)' }}>
-            <input type="checkbox" style={{ accentColor: 'var(--primary)' }} />
-            {opt}
-          </label>
-        ))}
+        <p className="filter-label">Options</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <button className={`filter-chip${negotiable ? ' active' : ''}`} onClick={() => setNegotiable(!negotiable)}>Négociable</button>
+          <button className={`filter-chip${delivery ? ' active' : ''}`} onClick={() => setDelivery(!delivery)}>Livraison possible</button>
+          <button className={`filter-chip${verified ? ' active' : ''}`} onClick={() => setVerified(!verified)}>Vendeur vérifié</button>
+          <button className={`filter-chip${hasPhotos ? ' active' : ''}`} onClick={() => setHasPhotos(!hasPhotos)}>Avec photos</button>
+        </div>
       </div>
 
-      {/* Seller rating */}
+      {/* Note vendeur minimum */}
       <div>
-        <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 8 }}>Note vendeur minimum</label>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[1,2,3,4,5].map(r => (
-            <button key={r} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
-              <Star size={18} fill="#F59E0B" color="#F59E0B" />
+        <p className="filter-label">Note vendeur minimum</p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[3, 4, 5].map(r => (
+            <button key={r} className={`filter-chip${minRating === r ? ' active' : ''}`} onClick={() => setMinRating(minRating === r ? 0 : r)}>
+              {r} <Star size={13} fill={minRating === r ? 'currentColor' : 'none'} />
             </button>
           ))}
         </div>
       </div>
 
-      <button className="btn-primary" style={{ width: '100%', padding: '0.7rem', fontSize: '0.9rem' }} onClick={() => setFiltersOpen(false)}>
-        Appliquer les filtres
-      </button>
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+        <button className="btn-outline" style={{ flex: 1, fontSize: '0.9rem', padding: '0.7rem' }} onClick={resetAll}>
+          Réinitialiser
+        </button>
+        <button className="btn-primary" style={{ flex: 1.4, fontSize: '0.9rem', padding: '0.7rem' }} onClick={() => setFiltersOpen(false)}>
+          Voir les résultats
+        </button>
+      </div>
     </div>
   )
 
@@ -214,16 +256,12 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
       {activeFilters.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1rem' }}>
           {activeFilters.map(f => (
-            <span key={f} className="badge badge-red" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {f}
-              <X size={12} style={{ cursor: 'pointer' }} onClick={() => {
-                if (f === selectedCity) setSelectedCity('')
-                if (f === condition) setCondition('')
-                if (categoryFilter && f === categories.find(c => c.id === categoryFilter)?.name) onClearCategoryFilter?.()
-              }} />
+            <span key={f.key} className="badge badge-red" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {f.label}
+              <X size={12} style={{ cursor: 'pointer' }} onClick={() => clearFilter(f.key)} />
             </span>
           ))}
-          <button onClick={() => { setSelectedCity(''); setSelectedCategory(''); setCondition(''); setPriceMin(''); setPriceMax(''); onClearCategoryFilter?.() }}
+          <button onClick={resetAll}
             style={{ color: 'var(--fg-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
             Tout effacer
           </button>
