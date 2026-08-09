@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "pnpm@10.24.0",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
@@ -10,6 +11,7 @@
     "format": "oxfmt"
   },
   "dependencies": {
+    "@apollo/client": "^4.2.10",
     "@tiptap/extension-image": "^3.29.2",
     "@tiptap/extension-link": "^3.29.2",
     "@tiptap/extension-placeholder": "^3.29.2",
@@ -17,6 +19,7 @@
     "@tiptap/extension-underline": "^3.29.2",
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
+    "graphql": "^17.0.2",
     "lucide-react": "^1.27.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
