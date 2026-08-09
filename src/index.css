@@ -1392,3 +1392,28 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   35% { stroke: #FFFFFF; }
   50% { stroke: #FFFFFF; }
 }
+
+/* ========== AUTH PAGE ========== */
+.auth-shell-brand {
+  display: none;
+}
+.auth-shell-brand-inner {
+  max-width: 420px;
+  padding: 3rem 2.5rem;
+}
+
+@media (min-width: 1024px) {
+  .auth-shell {
+    grid-template-columns: 1.05fr 1fr !important;
+    min-height: calc(100vh - 64px);
+  }
+  .auth-shell-brand {
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .auth-shell-form {
+    padding: 3rem 2.5rem !important;
+  }
+}
