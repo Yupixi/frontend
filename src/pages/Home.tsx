@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useQuery } from '@apollo/client/react'
 import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package } from 'lucide-react'
-import { listings, categories, formatPrice } from '../data/mockData'
+import { listings, formatPrice } from '../data/mockData'
 import ViewToggle from '../components/ViewToggle'
+import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 
 type HomeProps = {
   onNavigate: (page: any) => void
@@ -169,10 +171,12 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
   )
 }
 
-export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite }: HomeProps) {
+export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect }: HomeProps) {
   const featured = listings.filter(l => l.sponsored)
   const recent = listings.slice(0, 8)
   const [homeViewMode, setHomeViewMode] = useState<'grid' | 'list'>('grid')
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const categories = categoriesData?.categories ?? []
 
   const renderListings = (items: typeof listings) =>
     homeViewMode === 'grid'
@@ -275,7 +279,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
                         {/* Category badge */}
                         <div className="hero-mosaic-category">
-                          {categories.find(c => c.id === card.category)?.name || card.category}
+                          {categories.find(c => c.slug === card.category)?.name || card.category}
                         </div>
 
                         {/* Verified badge */}
@@ -366,11 +370,11 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
                 famille: Baby, 'materiel-pro': Factory, divers: Package,
               }
-              const IconComp = iconMap[cat.id] || Building2
+              const IconComp = iconMap[cat.slug] || Building2
               return (
                 <button
                   key={cat.id}
-                  onClick={() => onCategorySelect?.(cat.id)}
+                  onClick={() => onCategorySelect?.(cat.slug)}
                   style={{
                     border: 'none',
                     cursor: 'pointer',
@@ -401,7 +405,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                       <IconComp size={20} />
                     </div>
                     <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', color: 'var(--fg)', textAlign: 'center', lineHeight: 1.15 }}>{cat.name}</span>
-                    <span style={{ fontSize: '0.65rem', color: cat.color, fontWeight: 700 }}>{cat.count.toLocaleString('fr')}</span>
+                    <span style={{ fontSize: '0.65rem', color: cat.color, fontWeight: 700 }}>{cat.subcategories.length} sous-catégories</span>
                   </div>
                 </button>
               )
