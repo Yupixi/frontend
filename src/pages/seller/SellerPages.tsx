@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useMutation, useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, Plus, Package, BarChart2, CreditCard, Award, Eye, Heart,
   MessageCircle, TrendingUp, TrendingDown, CheckCircle, XCircle, Edit3,
@@ -8,8 +9,16 @@ import {
   Factory, Bell, LogOut, Search, ChevronDown, Menu, X,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { listings, viewStats, formatPrice, categories, cities } from '../../data/mockData'
+import { listings, viewStats, formatPrice, cities } from '../../data/mockData'
 import RichTextEditor from '../../components/RichTextEditor'
+import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
+import {
+  ATTACH_LISTING_MEDIA_MUTATION,
+  CREATE_LISTING_MUTATION,
+  SUBMIT_LISTING_FOR_REVIEW_MUTATION,
+} from '../../graphql/listings'
+import { getAccessToken } from '../../lib/auth'
+import { uploadImages } from '../../lib/upload'
 
 // ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────
 
@@ -278,20 +287,36 @@ export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }
 
 // ─── POST LISTING ────────────────────────────────────────────────────────────
 export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
+  useEffect(() => {
+    if (!getAccessToken()) onNavigate('auth')
+  }, [onNavigate])
+
   const [step, setStep] = useState(1)
-  const [category, setCategory] = useState('')
-  const [subcategory, setSubcategory] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [subcategoryId, setSubcategoryId] = useState('')
   const [title, setTitle] = useState('')
   const [price, setPrice] = useState('')
+  const [negotiable, setNegotiable] = useState(false)
   const [description, setDescription] = useState('')
   const [city, setCity] = useState('Abidjan')
-  const [images, setImages] = useState<string[]>([])
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [customFields, setCustomFields] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const categories = categoriesData?.categories ?? []
+  const [createListing, { loading: creating }] = useMutation<{ createListing: { id: string; status: string } }>(CREATE_LISTING_MUTATION)
+  const [attachListingMedia, { loading: attaching }] = useMutation(ATTACH_LISTING_MEDIA_MUTATION)
+  const [submitListingForReview, { loading: submittingReview }] = useMutation(SUBMIT_LISTING_FOR_REVIEW_MUTATION)
+  const [uploading, setUploading] = useState(false)
+  const publishing = creating || uploading || attaching || submittingReview
 
   const steps = ['Catégorie', 'Sous-catégorie', 'Informations', 'Photos', 'Aperçu']
 
-  const catData = categories.find(c => c.id === category)
+  const catData = categories.find(c => c.id === categoryId)
+  const subData = catData?.subcategories.find(s => s.id === subcategoryId)
   const stepsCount = steps.length
 
   const iconMap: Record<string, typeof Building2> = {
@@ -312,7 +337,7 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
           <p style={{ color: 'var(--fg-muted)', marginBottom: '2rem' }}>Votre annonce est en ligne et visible par des milliers d'acheteurs.</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => onNavigate('seller-listings')}>Voir mes annonces</button>
-            <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1); setCategory(''); setSubcategory(''); setCustomFields({}) }}>Publier une autre annonce</button>
+            <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1); setCategoryId(''); setSubcategoryId(''); setCustomFields({}); setImageFiles([]); setImagePreviews([]) }}>Publier une autre annonce</button>
           </div>
         </div>
       </DashboardLayout>
@@ -320,13 +345,14 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
   }
 
   const noPriceCats = ['emploi', 'services', 'animaux', 'divers']
+  const catSlug = catData?.slug ?? ''
 
   const canGoNext = () => {
-    if (step === 1) return !!category
-    if (step === 2) return !!subcategory
+    if (step === 1) return !!categoryId
+    if (step === 2) return !!subcategoryId
     if (step === 3) {
       if (!title.trim() || !description.trim()) return false
-      if (!noPriceCats.includes(category) && !price) return false
+      if (!noPriceCats.includes(catSlug) && !price) return false
       return true
     }
     if (step === 4) return true
@@ -351,6 +377,55 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
 
   const setCustomField = (key: string, value: string) => {
     setCustomFields(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleFilesSelected = (files: FileList | null) => {
+    if (!files) return
+    const remaining = 8 - imageFiles.length
+    const picked = Array.from(files).slice(0, remaining)
+    setImageFiles(prev => [...prev, ...picked])
+    setImagePreviews(prev => [...prev, ...picked.map(f => URL.createObjectURL(f))])
+  }
+
+  const removeImage = (i: number) => {
+    setImageFiles(prev => prev.filter((_, idx) => idx !== i))
+    setImagePreviews(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  const handlePublish = async () => {
+    if (!catData) return
+    setSubmitError(null)
+    try {
+      const { data: createData } = await createListing({
+        variables: {
+          input: {
+            categoryId: catData.id,
+            subcategoryId: subcategoryId || undefined,
+            title: title.trim(),
+            description,
+            price: noPriceCats.includes(catSlug) ? undefined : (price ? Number(price) : undefined),
+            city,
+            negotiable,
+            attributes: customFields,
+          },
+        },
+      })
+      const listingId = createData?.createListing?.id
+      if (!listingId) throw new Error('La création a échoué')
+
+      if (imageFiles.length > 0) {
+        setUploading(true)
+        const urls = await uploadImages(imageFiles)
+        setUploading(false)
+        await attachListingMedia({ variables: { listingId, urls } })
+      }
+
+      await submitListingForReview({ variables: { id: listingId } })
+      setSuccess(true)
+    } catch (err) {
+      setUploading(false)
+      setSubmitError(err instanceof Error ? err.message : 'La publication a échoué. Réessayez.')
+    }
   }
 
   return (
@@ -383,12 +458,12 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
                 {categories.map(cat => {
-                  const CatIcon = iconMap[cat.id] || Package
-                  const selected = category === cat.id
+                  const CatIcon = iconMap[cat.slug] || Package
+                  const selected = categoryId === cat.id
                   return (
                     <button
                       key={cat.id}
-                      onClick={() => { setCategory(cat.id); setSubcategory(''); setStep(2) }}
+                      onClick={() => { setCategoryId(cat.id); setSubcategoryId(''); setStep(2) }}
                       style={{
                         border: 'none', cursor: 'pointer', borderRadius: 'var(--radius)', overflow: 'hidden',
                         background: selected ? cat.color + '15' : 'transparent',
@@ -415,7 +490,7 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem' }}>
                 <div style={{ width: 42, height: 42, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: catData.color }}>
-                  {React.createElement(iconMap[catData.id] || Package, { size: 20 })}
+                  {React.createElement(iconMap[catData.slug] || Package, { size: 20 })}
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{catData.name}</div>
@@ -425,20 +500,20 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 {catData.subcategories.map(sub => (
                   <button
-                    key={sub}
-                    onClick={() => { setSubcategory(sub); setStep(3) }}
+                    key={sub.id}
+                    onClick={() => { setSubcategoryId(sub.id); setStep(3) }}
                     style={{
                       padding: '0.85rem 1.25rem', border: '1.5px solid', cursor: 'pointer', textAlign: 'left',
-                      borderColor: subcategory === sub ? catData.color : 'var(--border)',
+                      borderColor: subcategoryId === sub.id ? catData.color : 'var(--border)',
                       borderRadius: 'var(--radius-sm)',
-                      background: subcategory === sub ? catData.color + '0A' : 'var(--bg-card)',
-                      fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', color: subcategory === sub ? catData.color : 'var(--fg)',
+                      background: subcategoryId === sub.id ? catData.color + '0A' : 'var(--bg-card)',
+                      fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', color: subcategoryId === sub.id ? catData.color : 'var(--fg)',
                       transition: 'all 0.12s',
                     }}
-                    onMouseEnter={e => { if (subcategory !== sub) e.currentTarget.style.borderColor = catData.color + '60' }}
-                    onMouseLeave={e => { if (subcategory !== sub) e.currentTarget.style.borderColor = 'var(--border)' }}
+                    onMouseEnter={e => { if (subcategoryId !== sub.id) e.currentTarget.style.borderColor = catData.color + '60' }}
+                    onMouseLeave={e => { if (subcategoryId !== sub.id) e.currentTarget.style.borderColor = 'var(--border)' }}
                   >
-                    {sub}
+                    {sub.name}
                   </button>
                 ))}
               </div>
@@ -450,22 +525,22 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: catData.color }}>
-                  {React.createElement(iconMap[catData.id] || Package, { size: 18 })}
+                  {React.createElement(iconMap[catData.slug] || Package, { size: 18 })}
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1.05rem' }}>{catData.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: catData.color, fontWeight: 600 }}>{subcategory}</div>
+                  <div style={{ fontSize: '0.78rem', color: catData.color, fontWeight: 600 }}>{subData?.name}</div>
                 </div>
               </div>
 
               <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
-                  <input className="input" placeholder={titlePlaceholders[category] || 'Ex: Titre de votre annonce'} value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
+                  <input className="input" placeholder={titlePlaceholders[catSlug] || 'Ex: Titre de votre annonce'} value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
                   <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>{title.length}/100 caractères</div>
                 </div>
 
-                {!noPriceCats.includes(category) && (
+                {!noPriceCats.includes(catSlug) && (
                   <div>
                     <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix (FCFA) *</label>
                     <div style={{ position: 'relative' }}>
@@ -473,7 +548,7 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
                       <input className="input" style={{ paddingLeft: 40 }} placeholder="Ex: 150 000" value={price} onChange={e => setPrice(e.target.value)} type="number" />
                     </div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer', fontSize: '0.875rem', color: 'var(--fg-muted)' }}>
-                      <input type="checkbox" style={{ accentColor: 'var(--primary)', width: 16, height: 16 }} /> Prix négociable
+                      <input type="checkbox" checked={negotiable} onChange={e => setNegotiable(e.target.checked)} style={{ accentColor: 'var(--primary)', width: 16, height: 16 }} /> Prix négociable
                     </label>
                   </div>
                 )}
@@ -488,12 +563,12 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
                   </div>
                 </div>
 
-                {catData.fields?.map(field => (
+                {catData.attributes.map(field => (
                   <div key={field.key}>
                     <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>
                       {field.label}{field.required ? ' *' : ''}
                     </label>
-                    {field.type === 'select' && field.options ? (
+                    {field.type === 'SELECT' && field.options.length > 0 ? (
                       <select className="input" value={customFields[field.key] || ''} onChange={e => setCustomField(field.key, e.target.value)}>
                         <option value="">Sélectionnez...</option>
                         {field.options.map(opt => (
@@ -501,7 +576,7 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
                         ))}
                       </select>
                     ) : (
-                      <input className="input" type={field.type === 'number' ? 'number' : 'text'} placeholder={field.label} value={customFields[field.key] || ''} onChange={e => setCustomField(field.key, e.target.value)} />
+                      <input className="input" type={field.type === 'NUMBER' ? 'number' : 'text'} placeholder={field.label} value={customFields[field.key] || ''} onChange={e => setCustomField(field.key, e.target.value)} />
                     )}
                   </div>
                 ))}
@@ -519,16 +594,33 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 0.5rem', fontSize: '1.1rem' }}>Ajoutez vos photos</h2>
               <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>La première photo sera la photo principale. Maximum 8 photos.</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
-                <div style={{ aspectRatio: '1', border: '2px dashed var(--primary)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', background: 'rgba(254,0,0,0.02)' }}>
-                  <Upload size={28} color="var(--primary)" />
-                  <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>Photo 1</span>
-                </div>
-                {[2,3,4,5,6,7,8].map(n => (
-                  <div key={n} style={{ aspectRatio: '1', border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', background: 'var(--border-subtle)' }}>
-                    <Upload size={20} color="var(--fg-subtle)" />
-                    <span style={{ fontSize: '0.78rem', color: 'var(--fg-subtle)' }}>{n}</span>
+                {imagePreviews.map((src, i) => (
+                  <div key={src} style={{ aspectRatio: '1', borderRadius: 'var(--radius-sm)', overflow: 'hidden', position: 'relative' }}>
+                    <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {i === 0 && (
+                      <span style={{ position: 'absolute', top: 6, left: 6, background: 'var(--primary)', color: '#fff', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: 6 }}>Principale</span>
+                    )}
+                    <button
+                      onClick={() => removeImage(i)}
+                      style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
                 ))}
+                {imageFiles.length < 8 && (
+                  <label style={{ aspectRatio: '1', border: '2px dashed var(--primary)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', background: 'rgba(254,0,0,0.02)' }}>
+                    <Upload size={28} color="var(--primary)" />
+                    <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>Ajouter</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      style={{ display: 'none' }}
+                      onChange={e => { handleFilesSelected(e.target.files); e.target.value = '' }}
+                    />
+                  </label>
+                )}
               </div>
             </div>
           )}
@@ -538,12 +630,16 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Aperçu de votre annonce</h2>
               <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div className="card" style={{ overflow: 'hidden' }}>
-                  <div style={{ height: 220, background: `linear-gradient(135deg, ${catData.color}10 0%, var(--border) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Image size={48} color="var(--fg-subtle)" />
+                  <div style={{ height: 220, background: `linear-gradient(135deg, ${catData.color}10 0%, var(--border) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {imagePreviews[0] ? (
+                      <img src={imagePreviews[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Image size={48} color="var(--fg-subtle)" />
+                    )}
                   </div>
                   <div style={{ padding: '1.25rem' }}>
-                    {!noPriceCats.includes(category) && <div className="price-tag" style={{ fontSize: '1.1rem' }}>{price ? `${parseInt(price).toLocaleString('fr')} FCFA` : '0 FCFA'}</div>}
-                    {noPriceCats.includes(category) && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}>{customFields.salaire} FCFA/mois</div>}
+                    {!noPriceCats.includes(catSlug) && <div className="price-tag" style={{ fontSize: '1.1rem' }}>{price ? `${parseInt(price).toLocaleString('fr')} FCFA` : '0 FCFA'}</div>}
+                    {noPriceCats.includes(catSlug) && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}>{customFields.salaire} FCFA/mois</div>}
                     <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '8px 0 10px', fontSize: '1.1rem' }}>{title || 'Titre de votre annonce'}</h3>
                     <div style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} />{city}</span>
@@ -553,13 +649,18 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
                   </div>
                 </div>
                 <div className="card" style={{ padding: '1.25rem', background: 'rgba(254,0,0,0.03)', border: '1px solid rgba(254,0,0,0.15)', alignSelf: 'start' }}>
+                  {submitError && (
+                    <div style={{ marginBottom: 12, padding: '0.6rem 0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontSize: '0.85rem', fontWeight: 600 }}>
+                      {submitError}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <AlertCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                     <div>
                       <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.95rem', marginBottom: 8 }}>Avant de publier</div>
                       <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem', color: 'var(--fg-muted)', lineHeight: 1.8 }}>
-                        <li>Votre annonce sera examinée par notre équipe</li>
-                        <li>Elle sera visible dans les prochaines 2 heures</li>
+                        <li>Votre annonce sera publiée immédiatement</li>
+                        <li>Elle sera visible dans les résultats de recherche</li>
                         <li>Respectez nos conditions d'utilisation</li>
                       </ul>
                     </div>
@@ -576,8 +677,8 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
             {step < stepsCount ? (
               <button className="btn-primary" onClick={() => canGoNext() && setStep(s => s + 1)} disabled={!canGoNext()} style={{ opacity: canGoNext() ? 1 : 0.5 }}>Suivant →</button>
             ) : (
-              <button className="btn-primary" style={{ background: '#10B981', borderColor: '#10B981' }} onClick={() => setSuccess(true)}>
-                ✓ Publier l'annonce
+              <button className="btn-primary" style={{ background: '#10B981', borderColor: '#10B981', opacity: publishing ? 0.7 : 1 }} onClick={handlePublish} disabled={publishing}>
+                {publishing ? 'Publication...' : "✓ Publier l'annonce"}
               </button>
             )}
           </div>

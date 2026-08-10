@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useLazyQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
+import { ME_QUERY, type AuthUser } from './graphql/auth'
+import { clearTokens, getAccessToken } from './lib/auth'
 import Home from './pages/Home'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
@@ -29,7 +32,8 @@ type Page =
 export default function App() {
   const [page, setPage] = useState<Page>('home')
   const [dark, setDark] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [userRole] = useState<'buyer' | 'seller' | 'admin'>('seller')
   const [favorites, setFavorites] = useState<string[]>(['l1', 'l3'])
   const [selectedListingId, setSelectedListingId] = useState('l1')
@@ -46,6 +50,37 @@ export default function App() {
     const onResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  const [fetchMe] = useLazyQuery<{ me: AuthUser }>(ME_QUERY)
+
+  // Restore the session on load: a stored access token doesn't mean it's
+  // still valid, so confirm with `me` (the Apollo error link transparently
+  // refreshes an expired token before this rejects).
+  useEffect(() => {
+    if (!getAccessToken()) return
+    let cancelled = false
+    fetchMe()
+      .then(({ data }) => {
+        if (cancelled) return
+        if (data?.me) {
+          setCurrentUser(data.me)
+          setIsLoggedIn(true)
+        } else {
+          clearTokens()
+          setIsLoggedIn(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          clearTokens()
+          setIsLoggedIn(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -134,11 +169,11 @@ export default function App() {
     setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
   }
 
-  const toggleLogin = () => {
-    setIsLoggedIn(prev => !prev)
-    if (isLoggedIn) {
-      setPage('home')
-    }
+  const logout = () => {
+    clearTokens()
+    setIsLoggedIn(false)
+    setCurrentUser(null)
+    setPage('home')
   }
 
   const renderPage = () => {
@@ -156,7 +191,7 @@ export default function App() {
       case 'flash-offers':
         return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'auth':
-        return <Auth onNavigate={navigate} onLogin={() => setIsLoggedIn(true)} />
+        return <Auth onNavigate={navigate} onLogin={() => { setIsLoggedIn(true); void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me)) }} />
 
       // Buyer pages
       case 'buyer-dashboard':
@@ -255,8 +290,9 @@ export default function App() {
         dark={dark}
         onToggleDark={() => setDark(d => !d)}
         isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
         userRole={userRole}
-        onToggleLogin={toggleLogin}
+        onToggleLogin={logout}
         onSelectListing={selectListing}
         onSetSearchTerm={setSearchTerm}
       >
