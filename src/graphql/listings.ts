@@ -112,6 +112,43 @@ export const SUBMIT_LISTING_FOR_REVIEW_MUTATION = gql`
   }
 `
 
+export const MY_LISTINGS_QUERY = gql`
+  query MyListings($page: Float, $pageSize: Float) {
+    myListings(page: $page, pageSize: $pageSize) {
+      totalCount
+      items {
+        id
+        title
+        price
+        currency
+        status
+        viewsCount
+        favoritesCount
+        createdAt
+        coverImageUrl
+      }
+    }
+  }
+`
+
+export const DELETE_LISTING_MUTATION = gql`
+  mutation DeleteListing($id: String!) {
+    deleteListing(id: $id)
+  }
+`
+
+export type MyListingRow = {
+  id: string
+  title: string
+  price: number | null
+  currency: string
+  status: string
+  viewsCount: number
+  favoritesCount: number
+  createdAt: string
+  coverImageUrl: string | null
+}
+
 export type CreateListingInput = {
   categoryId: string
   subcategoryId?: string

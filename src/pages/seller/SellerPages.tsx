@@ -15,7 +15,10 @@ import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
 import {
   ATTACH_LISTING_MEDIA_MUTATION,
   CREATE_LISTING_MUTATION,
+  DELETE_LISTING_MUTATION,
+  MY_LISTINGS_QUERY,
   SUBMIT_LISTING_FOR_REVIEW_MUTATION,
+  type MyListingRow,
 } from '../../graphql/listings'
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
@@ -333,8 +336,8 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <CheckCircle size={40} color="#10B981" />
           </div>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>Annonce publiée !</h2>
-          <p style={{ color: 'var(--fg-muted)', marginBottom: '2rem' }}>Votre annonce est en ligne et visible par des milliers d'acheteurs.</p>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>Annonce soumise !</h2>
+          <p style={{ color: 'var(--fg-muted)', marginBottom: '2rem' }}>Votre annonce est en attente de validation par notre équipe. Elle sera visible par les acheteurs dès son approbation.</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => onNavigate('seller-listings')}>Voir mes annonces</button>
             <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1); setCategoryId(''); setSubcategoryId(''); setCustomFields({}); setImageFiles([]); setImagePreviews([]) }}>Publier une autre annonce</button>
@@ -689,40 +692,54 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
 }
 
 // ─── MY LISTINGS ─────────────────────────────────────────────────────────────
+const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: string }> = {
+  DRAFT: { bg: 'rgba(100,116,139,0.1)', color: '#64748B', label: 'Brouillon' },
+  PENDING_REVIEW: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En attente de validation' },
+  APPROVED: { bg: 'rgba(16,185,129,0.1)', color: '#10B981', label: 'En ligne' },
+  REJECTED: { bg: 'rgba(239,68,68,0.1)', color: '#EF4444', label: 'Rejetée' },
+  EXPIRED: { bg: 'rgba(100,116,139,0.1)', color: '#64748B', label: 'Expirée' },
+  SOLD: { bg: 'rgba(59,130,246,0.1)', color: '#3B82F6', label: 'Vendue' },
+  PAUSED: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
+}
+
 export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void }) {
   const [filter, setFilter] = useState('all')
-  const myListings = listings.map(l => ({
-    ...l,
-    status: ['active', 'active', 'active', 'paused', 'expired', 'active', 'active', 'active'][listings.indexOf(l) % 8] as 'active' | 'paused' | 'expired',
-  }))
+  const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
+    MY_LISTINGS_QUERY,
+    { variables: { page: 1, pageSize: 100 } },
+  )
+  const [deleteListing] = useMutation(DELETE_LISTING_MUTATION)
 
-  const statusColors: Record<string, { bg: string, color: string, label: string }> = {
-    active: { bg: 'rgba(16,185,129,0.1)', color: '#10B981', label: 'Active' },
-    paused: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
-    expired: { bg: 'rgba(239,68,68,0.1)', color: '#EF4444', label: 'Expirée' },
+  const myListings = data?.myListings.items ?? []
+  const filtered = filter === 'all' ? myListings : myListings.filter(l => l.status === filter)
+
+  const handleDelete = (id: string, title: string) => {
+    if (!window.confirm(`Supprimer "${title}" ? Cette action est irréversible.`)) return
+    void deleteListing({ variables: { id } }).then(() => refetch())
   }
 
-  const filtered = filter === 'all' ? myListings : myListings.filter(l => l.status === filter)
+  const filterTabs = [
+    { key: 'all', label: `Toutes (${myListings.length})` },
+    { key: 'PENDING_REVIEW', label: `En attente (${myListings.filter(l => l.status === 'PENDING_REVIEW').length})` },
+    { key: 'APPROVED', label: `En ligne (${myListings.filter(l => l.status === 'APPROVED').length})` },
+    { key: 'PAUSED', label: `En pause (${myListings.filter(l => l.status === 'PAUSED').length})` },
+    { key: 'REJECTED', label: `Rejetées (${myListings.filter(l => l.status === 'REJECTED').length})` },
+  ]
 
   return (
     <DashboardLayout active="seller-listings" onNavigate={onNavigate}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos annonces en ligne</p>
+          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos annonces</p>
         </div>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => onNavigate('seller-post')}>
           <Plus size={16} /> Nouvelle annonce
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'var(--border-subtle)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
-        {[
-          { key: 'all', label: `Toutes (${myListings.length})` },
-          { key: 'active', label: `Actives (${myListings.filter(l => l.status === 'active').length})` },
-          { key: 'paused', label: `En pause (${myListings.filter(l => l.status === 'paused').length})` },
-          { key: 'expired', label: `Expirées (${myListings.filter(l => l.status === 'expired').length})` },
-        ].map(t => (
+      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'var(--border-subtle)', borderRadius: 10, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
+        {filterTabs.map(t => (
           <button key={t.key} onClick={() => setFilter(t.key)} style={{ padding: '0.55rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.82rem', background: filter === t.key ? 'var(--bg-card)' : 'transparent', color: filter === t.key ? 'var(--primary)' : 'var(--fg-muted)', boxShadow: filter === t.key ? '0 1px 3px rgba(0,0,0,0.06)' : 'none' }}>
             {t.label}
           </button>
@@ -730,33 +747,42 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
+        {loading && <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--fg-muted)' }}>Chargement...</div>}
+        {!loading && filtered.length === 0 && (
+          <div style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+            <p style={{ color: 'var(--fg-muted)', marginBottom: '1rem' }}>Aucune annonce dans cette catégorie.</p>
+            <button className="btn-primary" onClick={() => onNavigate('seller-post')}>Publier une annonce</button>
+          </div>
+        )}
         {filtered.map((l, i) => {
-          const s = statusColors[l.status]
+          const s = LISTING_STATUS_META[l.status] ?? LISTING_STATUS_META.DRAFT
           return (
             <div key={l.id} style={{ display: 'flex', gap: '0.875rem', padding: '1rem', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
               <div style={{ width: 72, height: 56, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0, cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
-                <img src={l.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                {l.coverImageUrl && (
+                  <img src={l.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3, flexWrap: 'wrap' }}>
                   <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
                   <span className="badge" style={{ background: s.bg, color: s.color, flexShrink: 0, fontSize: '0.72rem' }}>{s.label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
-                  <span className="price-tag" style={{ fontSize: '0.9rem' }}>{formatPrice(l.price)}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={12} />{l.views}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={12} />{l.favorites}</span>
-                  <span>{l.date}</span>
+                  <span className="price-tag" style={{ fontSize: '0.9rem' }}>{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={12} />{l.viewsCount}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={12} />{l.favoritesCount}</span>
+                  <span>{new Date(l.createdAt).toLocaleDateString('fr-FR')}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 <button onClick={() => onNavigate('seller-edit')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Edit3 size={14} /> Modifier
                 </button>
-                <button style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444' }}>
+                <button onClick={() => handleDelete(l.id, l.title)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444' }}>
                   <Trash2 size={15} />
                 </button>
-                {l.status === 'active' && (
+                {l.status === 'APPROVED' && (
                   <button style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
                     <ArrowUp size={14} /> Booster
                   </button>
