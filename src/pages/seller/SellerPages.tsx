@@ -4,9 +4,8 @@ import {
   LayoutDashboard, Plus, Package, BarChart2, CreditCard, Award, Eye, Heart,
   MessageCircle, TrendingUp, TrendingDown, CheckCircle, XCircle, Edit3,
   Trash2, ChevronRight, Upload, MapPin, Tag, Image, Star, ArrowUp,
-  DollarSign, Users, AlertCircle, Building2, Car, Smartphone as SmartphoneIcon,
-  Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby,
-  Factory, Bell, LogOut, Search, ChevronDown, Menu, X,
+  DollarSign, Users, AlertCircle,
+  Bell, LogOut, Search, ChevronDown, Menu, X,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { listings, viewStats, formatPrice, cities } from '../../data/mockData'
@@ -22,10 +21,13 @@ import {
 } from '../../graphql/listings'
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
+import type { AuthUser } from '../../graphql/auth'
 
 // ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────
 
-function DashboardHeader({ activeLabel, onBack, onToggleSidebar }: { activeLabel: string; onBack: () => void; onToggleSidebar?: () => void }) {
+function DashboardHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNavigate }: { activeLabel: string; currentUser?: AuthUser | null; onBack: () => void; onToggleSidebar?: () => void; onNavigate: (p: any) => void }) {
+  const displayName = currentUser?.fullName || 'Mon compte'
+  const displayInitial = displayName.charAt(0).toUpperCase()
   return (
     <header className="dashboard-header" style={{
       height: 60, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
@@ -51,20 +53,19 @@ function DashboardHeader({ activeLabel, onBack, onToggleSidebar }: { activeLabel
         </span>
       </div>
       <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
-      <button style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
+      <button onClick={() => onNavigate('buyer-notifications')} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
         <Bell size={18} />
-        <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: '50%', background: '#FE0000' }} />
       </button>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', transition: 'all 0.12s' }}
+      <div onClick={() => onNavigate('buyer-settings')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', transition: 'all 0.12s' }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
-        <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif" }}>K</div>
+        <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif" }}>{displayInitial}</div>
         <div className="desktop-only" style={{ textAlign: 'left' }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>Kouamé J-B.</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>{displayName}</div>
           <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>Vendeur</div>
         </div>
         <ChevronDown size={14} style={{ color: 'var(--fg-subtle)' }} />
@@ -76,48 +77,51 @@ function DashboardHeader({ activeLabel, onBack, onToggleSidebar }: { activeLabel
 const sidebarItems = [
   { key: 'seller-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
   { key: 'seller-post', icon: Plus, label: 'Publier une annonce' },
-  { key: 'seller-listings', icon: Package, label: 'Mes annonces', badge: 8 },
+  { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
   { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
   { key: 'seller-payments', icon: CreditCard, label: 'Paiements & Transactions' },
   { key: 'seller-premium', icon: Award, label: 'Abonnement Premium' },
 ]
 
-function SidebarNav({ active, onNavigate, onClose }: { active: string; onNavigate: (p: any) => void; onClose?: () => void }) {
+function SidebarNav({ active, onNavigate, onClose, listingsCount }: { active: string; onNavigate: (p: any) => void; onClose?: () => void; listingsCount?: number }) {
   return (
     <>
-      {sidebarItems.map(item => (
-        <button
-          key={item.key}
-          onClick={() => { onNavigate(item.key); onClose?.() }}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
-            cursor: 'pointer', marginBottom: 2,
-            background: active === item.key ? 'rgba(254,0,0,0.07)' : 'transparent',
-            color: active === item.key ? '#FE0000' : 'var(--fg-muted)',
-            fontFamily: "'Outfit', 'Nunito', sans-serif",
-            fontWeight: active === item.key ? 800 : 600,
-            fontSize: '0.85rem',
-            transition: 'all 0.12s',
-          }}
-          onMouseEnter={e => { if (active !== item.key) e.currentTarget.style.background = 'var(--border-subtle)' }}
-          onMouseLeave={e => { if (active !== item.key) e.currentTarget.style.background = 'transparent' }}
-        >
-          <item.icon size={18} strokeWidth={active === item.key ? 2.5 : 1.8} />
-          <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-          {item.badge && (
-            <span style={{
-              background: active === item.key ? '#FE0000' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
-              borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
-            }}>{item.badge}</span>
-          )}
-        </button>
-      ))}
+      {sidebarItems.map(item => {
+        const badge = item.key === 'seller-listings' ? listingsCount : undefined
+        return (
+          <button
+            key={item.key}
+            onClick={() => { onNavigate(item.key); onClose?.() }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
+              cursor: 'pointer', marginBottom: 2,
+              background: active === item.key ? 'rgba(254,0,0,0.07)' : 'transparent',
+              color: active === item.key ? '#FE0000' : 'var(--fg-muted)',
+              fontFamily: "'Outfit', 'Nunito', sans-serif",
+              fontWeight: active === item.key ? 800 : 600,
+              fontSize: '0.85rem',
+              transition: 'all 0.12s',
+            }}
+            onMouseEnter={e => { if (active !== item.key) e.currentTarget.style.background = 'var(--border-subtle)' }}
+            onMouseLeave={e => { if (active !== item.key) e.currentTarget.style.background = 'transparent' }}
+          >
+            <item.icon size={18} strokeWidth={active === item.key ? 2.5 : 1.8} />
+            <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+            {!!badge && (
+              <span style={{
+                background: active === item.key ? '#FE0000' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
+                borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
+              }}>{badge}</span>
+            )}
+          </button>
+        )
+      })}
     </>
   )
 }
 
-function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void }) {
+function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCount }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void; listingsCount?: number }) {
   return (
     <>
       {/* Desktop sidebar */}
@@ -131,7 +135,7 @@ function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose }: { active
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem 0.75rem' }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--fg-subtle)', padding: '0.5rem 0.75rem', marginBottom: 4 }}>Navigation</div>
-          <SidebarNav active={active} onNavigate={onNavigate} />
+          <SidebarNav active={active} onNavigate={onNavigate} listingsCount={listingsCount} />
         </div>
         <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
           <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
@@ -164,7 +168,7 @@ function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose }: { active
               <button onClick={() => onClose?.()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-              <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} />
+              <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} listingsCount={listingsCount} />
             </div>
             <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
               <button onClick={() => { onNavigate('home'); onClose?.() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
@@ -179,8 +183,9 @@ function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose }: { active
   )
 }
 
-function DashboardLayout({ active, onNavigate, children }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode }) {
+function DashboardLayout({ active, onNavigate, children, currentUser }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { data: listingsData } = useQuery<{ myListings: { totalCount: number } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 1 } })
   const labels: Record<string, string> = {
     'seller-dashboard': 'Tableau de bord',
     'seller-post': 'Publier une annonce',
@@ -192,9 +197,9 @@ function DashboardLayout({ active, onNavigate, children }: { active: string, onN
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
-      <DashboardSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <DashboardSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} listingsCount={listingsData?.myListings.totalCount} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <DashboardHeader activeLabel={labels[active] || active} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <DashboardHeader activeLabel={labels[active] || active} currentUser={currentUser} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} onNavigate={onNavigate} />
         <main className="dashboard-main" style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
           {children}
         </main>
@@ -204,7 +209,7 @@ function DashboardLayout({ active, onNavigate, children }: { active: string, onN
 }
 
 // ─── SELLER DASHBOARD ───────────────────────────────────────────────────────
-export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }) {
+export function SellerDashboard({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
   const stats = [
     { label: 'Annonces actives', value: 8, icon: Package, color: '#FE0000', bg: 'rgba(254,0,0,0.08)', trend: '+2', up: true },
     { label: 'Vues ce mois', value: '2 457', icon: Eye, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)', trend: '+18%', up: true },
@@ -215,7 +220,7 @@ export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }
   const topListings = listings.slice(0, 4).map((l, i) => ({ ...l, rank: i + 1 }))
 
   return (
-    <DashboardLayout active="seller-dashboard" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-dashboard" onNavigate={onNavigate} currentUser={currentUser}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Tableau de bord</h1>
@@ -289,7 +294,7 @@ export function SellerDashboard({ onNavigate }: { onNavigate: (p: any) => void }
 }
 
 // ─── POST LISTING ────────────────────────────────────────────────────────────
-export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
+export function PostListing({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
   useEffect(() => {
     if (!getAccessToken()) onNavigate('auth')
   }, [onNavigate])
@@ -322,16 +327,9 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
   const subData = catData?.subcategories.find(s => s.id === subcategoryId)
   const stepsCount = steps.length
 
-  const iconMap: Record<string, typeof Building2> = {
-    immobilier: Building2, vehicules: Car, electronique: SmartphoneIcon,
-    mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
-    loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
-    famille: Baby, 'materiel-pro': Factory, divers: Package,
-  }
-
   if (success) {
     return (
-      <DashboardLayout active="seller-post" onNavigate={onNavigate}>
+      <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser}>
         <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <CheckCircle size={40} color="#10B981" />
@@ -432,7 +430,7 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
   }
 
   return (
-    <DashboardLayout active="seller-post" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Publier une annonce</h1>
 
@@ -461,7 +459,6 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
                 {categories.map(cat => {
-                  const CatIcon = iconMap[cat.slug] || Package
                   const selected = categoryId === cat.id
                   return (
                     <button
@@ -477,8 +474,8 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
                       onMouseLeave={e => { if (!selected) e.currentTarget.style.outlineColor = 'var(--border)' }}
                     >
                       <div style={{ padding: '1.25rem 0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cat.color }}>
-                          <CatIcon size={22} />
+                        <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
+                          {cat.icon}
                         </div>
                         <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem', color: selected ? cat.color : 'var(--fg)', textAlign: 'center', lineHeight: 1.2 }}>{cat.name}</span>
                       </div>
@@ -492,8 +489,8 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
           {step === 2 && catData && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem' }}>
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: catData.color }}>
-                  {React.createElement(iconMap[catData.slug] || Package, { size: 20 })}
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                  {catData.icon}
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{catData.name}</div>
@@ -527,8 +524,8 @@ export function PostListing({ onNavigate }: { onNavigate: (p: any) => void }) {
           {step === 3 && catData && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: catData.color }}>
-                  {React.createElement(iconMap[catData.slug] || Package, { size: 18 })}
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
+                  {catData.icon}
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1.05rem' }}>{catData.name}</div>
@@ -702,7 +699,7 @@ const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: st
   PAUSED: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
 }
 
-export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void }) {
+export function SellerListings({ onNavigate, onSelectListing, currentUser }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, currentUser?: AuthUser | null }) {
   const [filter, setFilter] = useState('all')
   const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
     MY_LISTINGS_QUERY,
@@ -727,7 +724,7 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
   ]
 
   return (
-    <DashboardLayout active="seller-listings" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
@@ -797,9 +794,9 @@ export function SellerListings({ onNavigate, onSelectListing }: { onNavigate: (p
 }
 
 // ─── STATISTICS ────────────────────────────────────────────────────────────
-export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
+export function SellerStats({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
   return (
-    <DashboardLayout active="seller-stats" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser}>
       <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Statistiques</h1>
       <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Analysez les performances de vos annonces</p>
 
@@ -861,7 +858,7 @@ export function SellerStats({ onNavigate }: { onNavigate: (p: any) => void }) {
 }
 
 // ─── PAYMENTS ────────────────────────────────────────────────────────────────
-export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void }) {
+export function SellerPayments({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
   const transactions = [
     { id: 'T001', type: 'Boost annonce', amount: -5000, date: '28 Jan 2024', status: 'success', method: '🟠 Orange Money' },
     { id: 'T002', type: 'Abonnement Pro (mensuel)', amount: -25000, date: '15 Jan 2024', status: 'success', method: '🟡 MTN MoMo' },
@@ -871,7 +868,7 @@ export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void })
   ]
 
   return (
-    <DashboardLayout active="seller-payments" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-payments" onNavigate={onNavigate} currentUser={currentUser}>
       <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Paiements & Transactions</h1>
       <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos méthodes de paiement et suivez vos transactions</p>
 
@@ -925,7 +922,7 @@ export function SellerPayments({ onNavigate }: { onNavigate: (p: any) => void })
 }
 
 // ─── PREMIUM ─────────────────────────────────────────────────────────────────
-export function SellerPremium({ onNavigate }: { onNavigate: (p: any) => void }) {
+export function SellerPremium({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
   const plans = [
     {
       name: 'Gratuit',
@@ -952,7 +949,7 @@ export function SellerPremium({ onNavigate }: { onNavigate: (p: any) => void }) 
   ]
 
   return (
-    <DashboardLayout active="seller-premium" onNavigate={onNavigate}>
+    <DashboardLayout active="seller-premium" onNavigate={onNavigate} currentUser={currentUser}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div className="badge badge-orange" style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>⭐ Plans Premium</div>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>

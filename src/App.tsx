@@ -297,18 +297,18 @@ export default function App() {
     const sellerContent = (() => {
       switch (page) {
         case 'seller-dashboard':
-          return <SellerDashboard onNavigate={navigate} />
+          return <SellerDashboard onNavigate={navigate} currentUser={currentUser} />
         case 'seller-post':
         case 'seller-edit':
-          return <PostListing onNavigate={navigate} />
+          return <PostListing onNavigate={navigate} currentUser={currentUser} />
         case 'seller-listings':
-          return <SellerListings onNavigate={navigate} onSelectListing={selectListing} />
+          return <SellerListings onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} />
         case 'seller-stats':
-          return <SellerStats onNavigate={navigate} />
+          return <SellerStats onNavigate={navigate} currentUser={currentUser} />
         case 'seller-payments':
-          return <SellerPayments onNavigate={navigate} />
+          return <SellerPayments onNavigate={navigate} currentUser={currentUser} />
         case 'seller-premium':
-          return <SellerPremium onNavigate={navigate} />
+          return <SellerPremium onNavigate={navigate} currentUser={currentUser} />
       }
     })()
     return (

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package } from 'lucide-react'
+import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard } from 'lucide-react'
 import { formatPrice } from '../data/mockData'
 import ViewToggle from '../components/ViewToggle'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
@@ -353,13 +353,6 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
             {categories.map(cat => {
-              const iconMap: Record<string, typeof Building2> = {
-                immobilier: Building2, vehicules: Car, electronique: Smartphone,
-                mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
-                loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
-                famille: Baby, 'materiel-pro': Factory, divers: Package,
-              }
-              const IconComp = iconMap[cat.slug] || Building2
               return (
                 <button
                   key={cat.id}
@@ -389,9 +382,9 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                       width: 42, height: 42, borderRadius: 12,
                       background: cat.color + '20',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: cat.color,
+                      fontSize: '1.2rem',
                     }}>
-                      <IconComp size={20} />
+                      {cat.icon}
                     </div>
                     <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', color: 'var(--fg)', textAlign: 'center', lineHeight: 1.15 }}>{cat.name}</span>
                     <span style={{ fontSize: '0.65rem', color: cat.color, fontWeight: 700 }}>{cat.subcategories.length} sous-catégories</span>

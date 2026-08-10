@@ -1,13 +1,6 @@
 import { useQuery } from '@apollo/client/react'
-import { Search, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package, ChevronRight } from 'lucide-react'
+import { Search, ChevronRight } from 'lucide-react'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-
-const iconMap: Record<string, typeof Building2> = {
-  immobilier: Building2, vehicules: Car, electronique: Smartphone,
-  mode: Shirt, maison: Sofa, emploi: Briefcase, services: Wrench,
-  loisirs: Dumbbell, animaux: PawPrint, agriculture: Sprout,
-  famille: Baby, 'materiel-pro': Factory, divers: Package,
-}
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -36,12 +29,11 @@ export default function Categories({ onCategorySelect }: CategoriesProps) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
         {categories.map(cat => {
-          const IconComp = iconMap[cat.slug] || Building2
           return (
             <div key={cat.id} className="card card-hover" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => onCategorySelect?.(cat.slug)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: cat.color }}>
-                  <IconComp size={22} />
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.4rem' }}>
+                  {cat.icon}
                 </div>
                 <div style={{ flex: 1 }}>
                   <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: 'var(--fg)' }}>{cat.name}</h2>
