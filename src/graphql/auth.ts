@@ -47,6 +47,12 @@ export const REFRESH_TOKEN_MUTATION = gql`
   }
 `
 
+export const LOGOUT_MUTATION = gql`
+  mutation Logout($refreshToken: String!) {
+    logout(refreshToken: $refreshToken)
+  }
+`
+
 export type AuthUser = {
   id: string
   email: string

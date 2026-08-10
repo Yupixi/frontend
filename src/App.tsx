@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useLazyQuery } from '@apollo/client/react'
+import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
-import { ME_QUERY, type AuthUser } from './graphql/auth'
-import { clearTokens, getAccessToken } from './lib/auth'
+import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
+import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
+import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import Home from './pages/Home'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
@@ -29,18 +30,41 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-payments' | 'seller-premium'
   | 'admin-dashboard' | 'admin-users' | 'admin-listings' | 'admin-categories' | 'admin-reports' | 'admin-stats' | 'admin-config'
 
+// The app never changes the URL (pushState is only used to make the browser
+// back/forward buttons work), so a hard reload always re-mounts at the
+// initial state. Session storage survives a reload (unlike history.state,
+// which some browsers drop) and lets us restore where the user actually was.
+type NavState = {
+  page: Page
+  selectedListingId: string
+  selectedSellerId: string
+  searchTerm: string
+  searchCity: string
+  categoryFilter: string
+}
+const NAV_STORAGE_KEY = 'yupixi_nav_state'
+
+function loadNavState(): Partial<NavState> {
+  try {
+    const raw = sessionStorage.getItem(NAV_STORAGE_KEY)
+    return raw ? JSON.parse(raw) as Partial<NavState> : {}
+  } catch {
+    return {}
+  }
+}
+const savedNav = loadNavState()
+
 export default function App() {
-  const [page, setPage] = useState<Page>('home')
+  const [page, setPage] = useState<Page>(savedNav.page ?? 'home')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [userRole] = useState<'buyer' | 'seller' | 'admin'>('seller')
-  const [favorites, setFavorites] = useState<string[]>(['l1', 'l3'])
-  const [selectedListingId, setSelectedListingId] = useState('l1')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [searchCity, setSearchCity] = useState('Abidjan')
-  const [selectedSellerId, setSelectedSellerId] = useState('s1')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [selectedListingId, setSelectedListingId] = useState(savedNav.selectedListingId ?? 'l1')
+  const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
+  const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
+  const [selectedSellerId, setSelectedSellerId] = useState(savedNav.selectedSellerId ?? 's1')
+  const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
@@ -53,6 +77,26 @@ export default function App() {
   }, [])
 
   const [fetchMe] = useLazyQuery<{ me: AuthUser }>(ME_QUERY)
+  const [logoutMutation] = useMutation<{ logout: boolean }>(LOGOUT_MUTATION)
+
+  // A silent token refresh can fail well after mount (token expired/revoked
+  // mid-session) — apollo.ts clears storage but has no way to touch React
+  // state, so it dispatches this event instead.
+  useEffect(() => {
+    const onSessionExpired = () => {
+      setIsLoggedIn(false)
+      setCurrentUser(null)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+  }, [])
+
+  const { data: favoritesData, refetch: refetchFavorites } = useQuery<{ myFavoriteIds: string[] }>(
+    MY_FAVORITE_IDS_QUERY,
+    { skip: !isLoggedIn },
+  )
+  const favorites = favoritesData?.myFavoriteIds ?? []
+  const [toggleFavoriteMutation] = useMutation<{ toggleFavorite: boolean }>(TOGGLE_FAVORITE_MUTATION)
 
   // Restore the session on load: a stored access token doesn't mean it's
   // still valid, so confirm with `me` (the Apollo error link transparently
@@ -150,6 +194,14 @@ export default function App() {
     window.scrollTo(0, 0)
   }, [page])
 
+  // Persist navigation state so a hard reload lands back where the user was.
+  useEffect(() => {
+    const state: NavState = {
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter,
+    }
+    sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter])
+
   const navigate = (p: Page) => {
     setPage(p)
     window.history.pushState({ __yupixiPage: p }, '')
@@ -166,10 +218,22 @@ export default function App() {
   }
 
   const toggleFavorite = (id: string) => {
-    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
+    if (!isLoggedIn) {
+      navigate('auth')
+      return Promise.resolve()
+    }
+    return toggleFavoriteMutation({ variables: { listingId: id } }).then(() => {
+      void refetchFavorites()
+    })
   }
 
   const logout = () => {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) {
+      // Best-effort: revoke server-side so the refresh token can't be reused
+      // even if it leaked. Local state is cleared regardless of the result.
+      void logoutMutation({ variables: { refreshToken } }).catch(() => undefined)
+    }
     clearTokens()
     setIsLoggedIn(false)
     setCurrentUser(null)

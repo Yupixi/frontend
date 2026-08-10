@@ -1,6 +1,12 @@
 const ACCESS_TOKEN_KEY = 'yupixi_access_token'
 const REFRESH_TOKEN_KEY = 'yupixi_refresh_token'
 
+// Dispatched when a stored refresh token is rejected by the server (expired
+// or revoked) so React state outside Apollo's non-reactive client module
+// (App.tsx's isLoggedIn/currentUser) can react and stop showing a stale
+// logged-in UI.
+export const SESSION_EXPIRED_EVENT = 'yupixi:session-expired'
+
 export function storeTokens(accessToken: string, refreshToken: string) {
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
