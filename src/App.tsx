@@ -30,17 +30,41 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-payments' | 'seller-premium'
   | 'admin-dashboard' | 'admin-users' | 'admin-listings' | 'admin-categories' | 'admin-reports' | 'admin-stats' | 'admin-config'
 
+// The app never changes the URL (pushState is only used to make the browser
+// back/forward buttons work), so a hard reload always re-mounts at the
+// initial state. Session storage survives a reload (unlike history.state,
+// which some browsers drop) and lets us restore where the user actually was.
+type NavState = {
+  page: Page
+  selectedListingId: string
+  selectedSellerId: string
+  searchTerm: string
+  searchCity: string
+  categoryFilter: string
+}
+const NAV_STORAGE_KEY = 'yupixi_nav_state'
+
+function loadNavState(): Partial<NavState> {
+  try {
+    const raw = sessionStorage.getItem(NAV_STORAGE_KEY)
+    return raw ? JSON.parse(raw) as Partial<NavState> : {}
+  } catch {
+    return {}
+  }
+}
+const savedNav = loadNavState()
+
 export default function App() {
-  const [page, setPage] = useState<Page>('home')
+  const [page, setPage] = useState<Page>(savedNav.page ?? 'home')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [userRole] = useState<'buyer' | 'seller' | 'admin'>('seller')
-  const [selectedListingId, setSelectedListingId] = useState('l1')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [searchCity, setSearchCity] = useState('Abidjan')
-  const [selectedSellerId, setSelectedSellerId] = useState('s1')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [selectedListingId, setSelectedListingId] = useState(savedNav.selectedListingId ?? 'l1')
+  const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
+  const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
+  const [selectedSellerId, setSelectedSellerId] = useState(savedNav.selectedSellerId ?? 's1')
+  const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
@@ -156,6 +180,14 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [page])
+
+  // Persist navigation state so a hard reload lands back where the user was.
+  useEffect(() => {
+    const state: NavState = {
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter,
+    }
+    sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter])
 
   const navigate = (p: Page) => {
     setPage(p)
