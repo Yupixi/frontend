@@ -44,6 +44,59 @@ export const LISTINGS_QUERY = gql`
   }
 `
 
+export const LISTING_QUERY = gql`
+  query Listing($id: String!) {
+    listing(id: $id) {
+      id
+      title
+      description
+      price
+      currency
+      city
+      locationLabel
+      condition
+      negotiable
+      deliveryAvailable
+      tags
+      viewsCount
+      favoritesCount
+      publishedAt
+      createdAt
+      coverImageUrl
+      media {
+        url
+      }
+      category {
+        slug
+        name
+      }
+      subcategory {
+        slug
+        name
+      }
+      seller {
+        id
+        fullName
+        phone
+        avatarUrl
+        city
+        createdAt
+      }
+    }
+  }
+`
+
+export type RemoteListingDetail = RemoteListing & {
+  seller: {
+    id: string
+    fullName: string
+    phone: string | null
+    avatarUrl: string | null
+    city: string | null
+    createdAt: string
+  }
+}
+
 export type RemoteListing = {
   id: string
   title: string
