@@ -169,7 +169,10 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect }: HomeProps) {
   const [homeViewMode, setHomeViewMode] = useState<'grid' | 'list'>('grid')
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
-  const categories = categoriesData?.categories ?? []
+  // Highlight a curated subset (staff-ordered via sortOrder) on the homepage —
+  // the header nav already covers full category browsing, so this section is
+  // meant as a shortcut to the busiest categories, not a duplicate full list.
+  const popularCategories = (categoriesData?.categories ?? []).slice(0, 8)
 
   const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
     variables: { sort: 'RECENT', page: 1, pageSize: 12 },
@@ -336,12 +339,36 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
       {/* Content Container */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem' }}>
 
-        {/* Popular Categories Grid */}
+        {/* Recent Listings */}
+        <section style={{ marginBottom: '3.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h2 className="section-title" style={{ margin: 0 }}>Récemment Publiées</h2>
+              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les dernières opportunités ajoutées à Abidjan & villes de Côte d'Ivoire</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <ViewToggle viewMode={homeViewMode} onChange={setHomeViewMode} />
+              <button
+                onClick={() => onNavigate('search')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.9rem' }}
+              >
+                Voir toutes les annonces <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+
+          {renderListingsContainer(recent)}
+        </section>
+
+        {/* Popular Categories Grid — placed after the recent listings on
+            purpose: a visitor who scrolls this far hasn't found what they
+            want yet, so offer category browsing as the next way to narrow
+            it down rather than leading with it. */}
         <section style={{ marginBottom: '3.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div>
               <h2 className="section-title" style={{ margin: 0 }}>Catégories Populaires</h2>
-              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Explorez le catalogue Yüpixi en Côte d'Ivoire</p>
+              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les catégories les plus recherchées sur Yüpixi</p>
             </div>
             <button
               onClick={() => onNavigate('categories')}
@@ -352,7 +379,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
-            {categories.map(cat => {
+            {popularCategories.map(cat => {
               return (
                 <button
                   key={cat.id}
@@ -393,27 +420,6 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               )
             })}
           </div>
-        </section>
-
-        {/* Recent Listings */}
-        <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div>
-              <h2 className="section-title" style={{ margin: 0 }}>Récemment Publiées</h2>
-              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les dernières opportunités ajoutées à Abidjan & villes de Côte d'Ivoire</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <ViewToggle viewMode={homeViewMode} onChange={setHomeViewMode} />
-              <button
-                onClick={() => onNavigate('search')}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.9rem' }}
-              >
-                Voir toutes les annonces <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-
-          {renderListingsContainer(recent)}
         </section>
 
         {/* Mobile Money Safety Section */}
