@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Search as SearchIcon, SlidersHorizontal, MapPin, Heart, Eye, Shield, ChevronDown, X, Star } from 'lucide-react'
-import { listings, categories, formatPrice, cities } from '../data/mockData'
+import { useQuery } from '@apollo/client/react'
+import { Search as SearchIcon, SlidersHorizontal, MapPin, Heart, Eye, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { formatPrice, cities } from '../data/mockData'
 import BottomSheet from '../components/BottomSheet'
 import ViewToggle from '../components/ViewToggle'
+import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
+import { LISTINGS_QUERY, type RemoteListing, type ListingSort } from '../graphql/listings'
+import { formatRelativeDate } from '../lib/format'
+
+const PAGE_SIZE = 20
 
 type SearchProps = {
   onNavigate: (page: any) => void
@@ -17,11 +23,19 @@ type SearchProps = {
   onCityChange?: (city: string) => void
 }
 
-export default function SearchPage({ onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity, onCityChange }: SearchProps) {
+function listingLocation(listing: RemoteListing): string {
+  return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+}
+
+function listingImage(listing: RemoteListing): string {
+  return listing.coverImageUrl ?? listing.media[0]?.url ?? ''
+}
+
+export default function SearchPage({ onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity }: SearchProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [sortBy, setSortBy] = useState('recent')
+  const [sortBy, setSortBy] = useState<'recent' | 'price-asc' | 'price-desc'>('recent')
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
   const [selectedCity, setSelectedCity] = useState(externalCity || '')
@@ -29,12 +43,21 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
   const [condition, setCondition] = useState('')
   const [negotiable, setNegotiable] = useState(false)
   const [delivery, setDelivery] = useState(false)
-  const [verified, setVerified] = useState(false)
   const [hasPhotos, setHasPhotos] = useState(false)
-  const [minRating, setMinRating] = useState(0)
+  const [page, setPage] = useState(1)
+  const [debouncedSearch, setDebouncedSearch] = useState(externalSearchTerm || '')
 
   useEffect(() => { setSelectedCity(externalCity || '') }, [externalCity])
   useEffect(() => { setSelectedCategory(categoryFilter || '') }, [categoryFilter])
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(externalSearchTerm || ''), 300)
+    return () => clearTimeout(t)
+  }, [externalSearchTerm])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, selectedCategory, selectedCity, condition, priceMin, priceMax, sortBy])
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
@@ -49,49 +72,47 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
     if (key === 'price') { setPriceMin(''); setPriceMax('') }
     if (key === 'negotiable') setNegotiable(false)
     if (key === 'delivery') setDelivery(false)
-    if (key === 'verified') setVerified(false)
     if (key === 'photos') setHasPhotos(false)
-    if (key === 'rating') setMinRating(0)
   }
 
   const resetAll = () => {
     setSelectedCity(''); setSelectedCategory(''); setCondition('')
     setPriceMin(''); setPriceMax('')
-    setNegotiable(false); setDelivery(false); setVerified(false); setHasPhotos(false)
-    setMinRating(0)
+    setNegotiable(false); setDelivery(false); setHasPhotos(false)
     onClearCategoryFilter?.()
   }
 
-  const filtered = listings.filter(l => {
-    if (selectedCategory && l.category !== selectedCategory) return false
-    if (selectedCity && l.city !== selectedCity) return false
-    if (condition && l.condition !== condition) return false
-    if (priceMin && l.price < Number(priceMin)) return false
-    if (priceMax && l.price > Number(priceMax)) return false
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const categories = categoriesData?.categories ?? []
+
+  const sortMap: Record<typeof sortBy, ListingSort> = {
+    recent: 'RECENT', 'price-asc': 'PRICE_ASC', 'price-desc': 'PRICE_DESC',
+  }
+
+  const filter = {
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    ...(selectedCategory ? { categorySlug: selectedCategory } : {}),
+    ...(selectedCity ? { city: selectedCity } : {}),
+    ...(condition ? { condition } : {}),
+    ...(priceMin ? { minPrice: Number(priceMin) } : {}),
+    ...(priceMax ? { maxPrice: Number(priceMax) } : {}),
+  }
+
+  const { data, loading } = useQuery<{
+    listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number }
+  }>(LISTINGS_QUERY, {
+    variables: { filter, sort: sortMap[sortBy], page, pageSize: PAGE_SIZE },
+  })
+
+  const items = data?.listings.items ?? []
+  const sorted = items.filter(l => {
     if (negotiable && !l.negotiable) return false
-    if (delivery && !l.delivery) return false
-    if (verified && !l.seller.verified) return false
-    if (hasPhotos && (!l.images || l.images.length === 0)) return false
-    if (minRating > 0 && (l.seller.rating || 0) < minRating) return false
-    if (externalSearchTerm) {
-      const q = externalSearchTerm.toLowerCase()
-      const match = l.title.toLowerCase().includes(q) ||
-        (l.description && l.description.toLowerCase().includes(q)) ||
-        l.category.toLowerCase().includes(q) ||
-        l.city.toLowerCase().includes(q)
-      if (!match) return false
-    }
+    if (delivery && !l.deliveryAvailable) return false
+    if (hasPhotos && l.media.length === 0) return false
     return true
   })
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'price-asc') return a.price - b.price
-    if (sortBy === 'price-desc') return b.price - a.price
-    if (sortBy === 'popular') return b.views - a.views
-    return 0
-  })
-
-  const activeCategoryName = categories.find(c => c.id === (selectedCategory || categoryFilter))?.name
+  const activeCategoryName = categories.find(c => c.slug === (selectedCategory || categoryFilter))?.name
   const activeFilters = [
     { key: 'category', label: activeCategoryName || '' },
     { key: 'city', label: selectedCity },
@@ -99,9 +120,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
     { key: 'price', label: (priceMin || priceMax) ? `${priceMin || '0'} – ${priceMax || '∞'} FCFA` : '' },
     { key: 'negotiable', label: negotiable ? 'Négociable' : '' },
     { key: 'delivery', label: delivery ? 'Livraison possible' : '' },
-    { key: 'verified', label: verified ? 'Vendeur vérifié' : '' },
     { key: 'photos', label: hasPhotos ? 'Avec photos' : '' },
-    { key: 'rating', label: minRating > 0 ? `Note ≥ ${minRating} ★` : '' },
   ].filter(f => f.label) as { key: string; label: string }[]
 
   const headerTitle = (selectedCategory || categoryFilter)
@@ -125,7 +144,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
           <p className="filter-label">Catégorie</p>
           <select className="input" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); if (e.target.value !== categoryFilter) onClearCategoryFilter?.() }}>
             <option value="">Toutes</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
           </select>
         </div>
         <div>
@@ -153,20 +172,7 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <button className={`filter-chip${negotiable ? ' active' : ''}`} onClick={() => setNegotiable(!negotiable)}>Négociable</button>
           <button className={`filter-chip${delivery ? ' active' : ''}`} onClick={() => setDelivery(!delivery)}>Livraison possible</button>
-          <button className={`filter-chip${verified ? ' active' : ''}`} onClick={() => setVerified(!verified)}>Vendeur vérifié</button>
           <button className={`filter-chip${hasPhotos ? ' active' : ''}`} onClick={() => setHasPhotos(!hasPhotos)}>Avec photos</button>
-        </div>
-      </div>
-
-      {/* Note vendeur minimum */}
-      <div>
-        <p className="filter-label">Note vendeur minimum</p>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[3, 4, 5].map(r => (
-            <button key={r} className={`filter-chip${minRating === r ? ' active' : ''}`} onClick={() => setMinRating(minRating === r ? 0 : r)}>
-              {r} <Star size={13} fill={minRating === r ? 'currentColor' : 'none'} />
-            </button>
-          ))}
         </div>
       </div>
 
@@ -204,21 +210,22 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
           <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
             {headerTitle}
           </h1>
-          <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', margin: '4px 0 0' }}>{sorted.length} résultat{sorted.length > 1 ? 's' : ''} trouvé{sorted.length > 1 ? 's' : ''}</p>
+          <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', margin: '4px 0 0' }}>
+            {loading ? 'Recherche...' : `${data?.listings.totalCount ?? 0} résultat${(data?.listings.totalCount ?? 0) > 1 ? 's' : ''} trouvé${(data?.listings.totalCount ?? 0) > 1 ? 's' : ''}`}
+          </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Sort */}
           <div style={{ position: 'relative' }}>
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
+              onChange={e => setSortBy(e.target.value as typeof sortBy)}
               className="input"
               style={{ width: 'auto', paddingRight: 32, appearance: 'none', cursor: 'pointer' }}
             >
               <option value="recent">Plus récentes</option>
               <option value="price-asc">Prix croissant</option>
               <option value="price-desc">Prix décroissant</option>
-              <option value="popular">Plus populaires</option>
             </select>
             <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-muted)', pointerEvents: 'none' }} />
           </div>
@@ -288,7 +295,6 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
                   style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
                   onClick={() => onSelectListing(l.id)}
                 >
-                  {l.sponsored && <span className="badge badge-yellow" style={{ position: 'absolute', top: 10, left: 10, zIndex: 2 }}>Sponsorisé</span>}
                   <button
                     onClick={e => { e.stopPropagation(); onToggleFavorite(l.id) }}
                     style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
@@ -296,20 +302,20 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
                     <Heart size={14} fill={favorites.includes(l.id) ? '#FE0000' : 'none'} color={favorites.includes(l.id) ? '#FE0000' : '#666'} />
                   </button>
                   <div style={{ height: 170, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                    <img src={l.image} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    <img src={listingImage(l)} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   </div>
                   <div style={{ padding: '12px 12px' }}>
-                    <div className="price-tag" style={{ fontSize: '1rem' }}>{formatPrice(l.price)}</div>
+                    <div className="price-tag" style={{ fontSize: '1rem' }}>{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</div>
                     <p style={{ margin: '4px 0 6px', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'Nunito, sans-serif', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>{l.title}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.75rem' }}>
-                      <MapPin size={11} />{l.location}
+                      <MapPin size={11} />{listingLocation(l)}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.72rem', color: 'var(--fg-subtle)' }}>
-                      <span>{l.date}</span>
+                      <span>{formatRelativeDate(l.publishedAt ?? l.createdAt)}</span>
                       <span style={{ display: 'flex', gap: 6 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Eye size={11} />{l.views}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Heart size={11} />{l.favorites}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Eye size={11} />{l.viewsCount}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Heart size={11} />{l.favoritesCount}</span>
                       </span>
                     </div>
                   </div>
@@ -325,14 +331,14 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
                   onClick={() => onSelectListing(l.id)}
                 >
                   <div className="listing-list-thumb">
-                    <img src={l.image} alt={l.title}
+                    <img src={listingImage(l)} alt={l.title}
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ minWidth: 0 }}>
                         <h3 className="listing-list-title">{l.title}</h3>
-                        <div className="price-tag">{formatPrice(l.price)}</div>
+                        <div className="price-tag">{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</div>
                       </div>
                       <button onClick={e => { e.stopPropagation(); onToggleFavorite(l.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                         <Heart size={18} fill={favorites.includes(l.id) ? '#FE0000' : 'none'} color={favorites.includes(l.id) ? '#FE0000' : '#999'} />
@@ -340,14 +346,43 @@ export default function SearchPage({ onNavigate, onSelectListing, favorites, onT
                     </div>
                     <p className="listing-list-desc">{l.description}</p>
                     <div className="listing-list-meta">
-                      <span><MapPin size={12} />{l.location}, {l.city}</span>
-                      <span>{l.date}</span>
-                      <span><Eye size={12} />{l.views}</span>
-                      {l.seller.verified && <span style={{ color: '#3B82F6' }}><Shield size={12} />Vérifié</span>}
+                      <span><MapPin size={12} />{listingLocation(l)}</span>
+                      <span>{formatRelativeDate(l.publishedAt ?? l.createdAt)}</span>
+                      <span><Eye size={12} />{l.viewsCount}</span>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {!loading && sorted.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--fg-muted)' }}>
+              Aucune annonce ne correspond à votre recherche.
+            </div>
+          )}
+
+          {data && data.listings.totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: '2rem' }}>
+              <button
+                className="btn-outline"
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0.5rem 0.9rem', opacity: page <= 1 ? 0.5 : 1 }}
+              >
+                <ChevronLeft size={16} /> Précédent
+              </button>
+              <span style={{ fontSize: '0.85rem', color: 'var(--fg-muted)' }}>
+                Page {data.listings.page} / {data.listings.totalPages}
+              </span>
+              <button
+                className="btn-outline"
+                disabled={page >= data.listings.totalPages}
+                onClick={() => setPage(p => p + 1)}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0.5rem 0.9rem', opacity: page >= data.listings.totalPages ? 0.5 : 1 }}
+              >
+                Suivant <ChevronRight size={16} />
+              </button>
             </div>
           )}
         </div>
