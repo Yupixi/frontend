@@ -59,7 +59,6 @@ export default function App() {
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
-  const [userRole] = useState<'buyer' | 'seller' | 'admin'>('seller')
   const [selectedListingId, setSelectedListingId] = useState(savedNav.selectedListingId ?? 'l1')
   const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
@@ -167,6 +166,7 @@ export default function App() {
 
   const navigateToCategory = (cat: string) => {
     setCategoryFilter(cat)
+    setSearchTerm('')
     navigate('search')
   }
 
@@ -355,10 +355,10 @@ export default function App() {
         onToggleDark={() => setDark(d => !d)}
         isLoggedIn={isLoggedIn}
         currentUser={currentUser}
-        userRole={userRole}
         onToggleLogin={logout}
         onSelectListing={selectListing}
         onSetSearchTerm={setSearchTerm}
+        onClearCategoryFilter={() => setCategoryFilter('')}
       >
         {renderPage()}
       </Layout>
