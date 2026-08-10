@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery } from '@apollo/client/react'
 import {
   Heart, MessageCircle, Bell, History, Settings, LayoutDashboard,
   Eye, MapPin, Star, Shield, Send, Search, Trash2, CheckCheck,
@@ -6,6 +7,16 @@ import {
   LogOut, ChevronRight, TrendingUp, Clock, ArrowLeft, Menu, X,
 } from 'lucide-react'
 import { listings, conversations, notifications, formatPrice, sellers } from '../../data/mockData'
+import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
+
+type FavoriteListing = {
+  id: string
+  title: string
+  price: number | null
+  currency: string
+  city: string
+  coverImageUrl: string | null
+}
 
 type BuyerSidebarProps = {
   active: string
@@ -95,9 +106,12 @@ function PageLayout({ active, onNavigate, children }: { active: string, onNaviga
 
 // ─── BUYER DASHBOARD ───────────────────────────────────────────────────────
 export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[] }) {
-  const recentListings = listings.slice(0, 4)
+  const { data: favData } = useQuery<{ myFavorites: { items: FavoriteListing[] } }>(MY_FAVORITES_QUERY, {
+    variables: { page: 1, pageSize: 4 },
+  })
+  const recentListings = favData?.myFavorites.items ?? []
   const stats = [
-    { label: 'Favoris', value: favorites.length || 5, icon: Heart, color: '#FE0000', bg: 'rgba(254,0,0,0.08)' },
+    { label: 'Favoris', value: favorites.length, icon: Heart, color: '#FE0000', bg: 'rgba(254,0,0,0.08)' },
     { label: 'Messages', value: 3, icon: MessageCircle, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)' },
     { label: 'Annonces vues', value: 127, icon: Eye, color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)' },
     { label: 'Alertes actives', value: 4, icon: BellRing, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
@@ -132,22 +146,28 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onN
             Voir tout <ChevronRight size={15} />
           </button>
         </div>
-        <div className="buyer-fav-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
-          {recentListings.map(l => (
-            <div key={l.id} className="card card-hover" style={{ display: 'flex', gap: '0.75rem', padding: '0.75rem', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
-              <div style={{ width: 64, height: 64, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
-                <img src={l.image} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ margin: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.title}</p>
-                <div className="price-tag" style={{ fontSize: '0.9rem', marginTop: 2 }}>{formatPrice(l.price)}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <MapPin size={10} />{l.location}
+        {recentListings.length === 0 ? (
+          <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune annonce sauvegardée pour l'instant.</p>
+        ) : (
+          <div className="buyer-fav-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+            {recentListings.map(l => (
+              <div key={l.id} className="card card-hover" style={{ display: 'flex', gap: '0.75rem', padding: '0.75rem', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
+                <div style={{ width: 64, height: 64, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
+                  {l.coverImageUrl && (
+                    <img src={l.coverImageUrl} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  )}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.title}</p>
+                  <div className="price-tag" style={{ fontSize: '0.9rem', marginTop: 2 }}>{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <MapPin size={10} />{l.city}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
@@ -185,10 +205,24 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onN
 }
 
 // ─── BUYER FAVORITES ───────────────────────────────────────────────────────
-export function BuyerFavorites({ onNavigate, onSelectListing, favorites, onToggleFavorite }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[], onToggleFavorite: (id: string) => void }) {
-  const favListings = listings.filter(l => favorites.includes(l.id)).length > 0
-    ? listings.filter(l => favorites.includes(l.id))
-    : listings.slice(0, 5)
+export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[], onToggleFavorite: (id: string) => void | Promise<void> }) {
+  const { data, loading, refetch } = useQuery<{ myFavorites: { totalCount: number; items: FavoriteListing[] } }>(
+    MY_FAVORITES_QUERY,
+    { variables: { page: 1, pageSize: 50 } },
+  )
+  const favListings = data?.myFavorites.items ?? []
+
+  const handleToggle = (id: string) => {
+    void Promise.resolve(onToggleFavorite(id)).then(() => refetch())
+  }
+
+  if (loading) {
+    return (
+      <PageLayout active="buyer-favorites" onNavigate={onNavigate}>
+        <p style={{ color: 'var(--fg-muted)' }}>Chargement...</p>
+      </PageLayout>
+    )
+  }
 
   return (
     <PageLayout active="buyer-favorites" onNavigate={onNavigate}>
@@ -210,19 +244,21 @@ export function BuyerFavorites({ onNavigate, onSelectListing, favorites, onToggl
           {favListings.map(l => (
             <div key={l.id} className="card card-hover" style={{ overflow: 'hidden', position: 'relative' }}>
               <button
-                onClick={() => onToggleFavorite(l.id)}
+                onClick={() => handleToggle(l.id)}
                 style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
                 <Heart size={16} fill="#FE0000" color="#FE0000" />
               </button>
               <div style={{ height: 170, background: 'var(--border-subtle)', overflow: 'hidden', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
-                <img src={l.image} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                {l.coverImageUrl && (
+                  <img src={l.coverImageUrl} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                )}
               </div>
               <div style={{ padding: '12px 14px' }}>
-                <div className="price-tag">{formatPrice(l.price)}</div>
+                <div className="price-tag">{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</div>
                 <p style={{ margin: '4px 0 6px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.3 }}>{l.title}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.78rem' }}>
-                  <MapPin size={11} />{l.location}
+                  <MapPin size={11} />{l.city}
                 </div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                   <button className="btn-primary" style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }} onClick={() => onNavigate('buyer-messages')}>Contacter</button>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useLazyQuery } from '@apollo/client/react'
+import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { ME_QUERY, type AuthUser } from './graphql/auth'
+import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { clearTokens, getAccessToken } from './lib/auth'
 import Home from './pages/Home'
 import SearchPage from './pages/Search'
@@ -35,7 +36,6 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [userRole] = useState<'buyer' | 'seller' | 'admin'>('seller')
-  const [favorites, setFavorites] = useState<string[]>(['l1', 'l3'])
   const [selectedListingId, setSelectedListingId] = useState('l1')
   const [searchTerm, setSearchTerm] = useState('')
   const [searchCity, setSearchCity] = useState('Abidjan')
@@ -53,6 +53,13 @@ export default function App() {
   }, [])
 
   const [fetchMe] = useLazyQuery<{ me: AuthUser }>(ME_QUERY)
+
+  const { data: favoritesData, refetch: refetchFavorites } = useQuery<{ myFavoriteIds: string[] }>(
+    MY_FAVORITE_IDS_QUERY,
+    { skip: !isLoggedIn },
+  )
+  const favorites = favoritesData?.myFavoriteIds ?? []
+  const [toggleFavoriteMutation] = useMutation<{ toggleFavorite: boolean }>(TOGGLE_FAVORITE_MUTATION)
 
   // Restore the session on load: a stored access token doesn't mean it's
   // still valid, so confirm with `me` (the Apollo error link transparently
@@ -166,7 +173,13 @@ export default function App() {
   }
 
   const toggleFavorite = (id: string) => {
-    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
+    if (!isLoggedIn) {
+      navigate('auth')
+      return Promise.resolve()
+    }
+    return toggleFavoriteMutation({ variables: { listingId: id } }).then(() => {
+      void refetchFavorites()
+    })
   }
 
   const logout = () => {
