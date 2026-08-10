@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, CheckCircle, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package } from 'lucide-react'
-import { listings, formatPrice } from '../data/mockData'
+import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard, Building2, Car, Smartphone, Shirt, Sofa, Briefcase, Wrench, Dumbbell, PawPrint, Sprout, Baby, Factory, Package } from 'lucide-react'
+import { formatPrice } from '../data/mockData'
 import ViewToggle from '../components/ViewToggle'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
+import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
+import { formatRelativeDate } from '../lib/format'
 
 type HomeProps = {
   onNavigate: (page: any) => void
@@ -13,11 +15,16 @@ type HomeProps = {
   onCategorySelect?: (categoryId: string) => void
 }
 
-// Boosted listings = the ads placed in the hero "Espace Boost" (sponsored)
-const heroBoosted = listings.filter(l => l.sponsored)
+function listingLocation(listing: RemoteListing): string {
+  return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+}
+
+function listingImage(listing: RemoteListing): string {
+  return listing.coverImageUrl ?? listing.media[0]?.url ?? ''
+}
 
 function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
-  listing: typeof listings[0], onSelect: () => void, onToggleFav: () => void, isFav: boolean
+  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean
 }) {
   const [imgError, setImgError] = useState(false)
 
@@ -25,18 +32,13 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
     <div className="card card-hover listing-card" style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative', background: 'var(--bg-card)' }} onClick={onSelect}>
 
       {/* Badges Overlay */}
-      <div className="listing-card-badges" style={{ position: 'absolute', top: 12, left: 12, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {listing.sponsored && (
-          <span className="badge badge-yellow">
-            <Sparkles size={11} /> Sponsorisé
-          </span>
-        )}
-        {listing.negotiable && (
+      {listing.negotiable && (
+        <div className="listing-card-badges" style={{ position: 'absolute', top: 12, left: 12, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span className="badge badge-red" style={{ background: '#FE0000', color: '#FFF' }}>
             Négociable
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Heart Favorite Button */}
       <button
@@ -55,9 +57,9 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
 
       {/* Image Preview Container */}
       <div className="listing-card-img" style={{ height: 190, background: 'var(--border-subtle)', overflow: 'hidden', position: 'relative' }}>
-        {!imgError ? (
+        {!imgError && listingImage(listing) ? (
           <img
-            src={listing.image}
+            src={listingImage(listing)}
             alt={listing.title}
             className="listing-img"
             onError={() => setImgError(true)}
@@ -72,7 +74,7 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
       {/* Card Content Details */}
       <div className="listing-card-body" style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div className="price-tag">{formatPrice(listing.price)}</div>
+          <div className="price-tag">{listing.price != null ? formatPrice(listing.price) : 'Prix sur demande'}</div>
         </div>
 
         <h3 style={{
@@ -92,27 +94,21 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
 
         <div className="listing-card-location" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--fg-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
           <MapPin size={13} style={{ color: 'var(--primary)' }} />
-          <span>{listing.location}, {listing.city}</span>
+          <span>{listingLocation(listing)}</span>
         </div>
 
         {/* Card Footer Info */}
         <div className="listing-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {listing.seller.verified ? (
-              <span className="badge badge-blue" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
-                <ShieldCheck size={12} style={{ color: '#00A3E0' }} /> Vendeur Vérifié
-              </span>
-            ) : (
-              <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>{listing.date}</span>
-            )}
-          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>
+            {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}
+          </span>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.75rem', color: 'var(--fg-subtle)', fontWeight: 600 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Eye size={13} />{listing.views}
+              <Eye size={13} />{listing.viewsCount}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Heart size={13} />{listing.favorites}
+              <Heart size={13} />{listing.favoritesCount}
             </span>
           </div>
         </div>
@@ -122,15 +118,15 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
 }
 
 function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
-  listing: typeof listings[0], onSelect: () => void, onToggleFav: () => void, isFav: boolean
+  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean
 }) {
   const [imgError, setImgError] = useState(false)
 
   return (
     <div className="card card-hover listing-list-card" onClick={onSelect}>
       <div className="listing-list-thumb">
-        {!imgError ? (
-          <img src={listing.image} alt={listing.title} onError={() => setImgError(true)} />
+        {!imgError && listingImage(listing) ? (
+          <img src={listingImage(listing)} alt={listing.title} onError={() => setImgError(true)} />
         ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
             <Tag size={28} />
@@ -141,12 +137,13 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ minWidth: 0 }}>
-            <div className="listing-list-meta" style={{ marginTop: 0, color: 'var(--primary)' }}>
-              {listing.sponsored && <span><Sparkles size={12} /> Sponsorisé</span>}
-              {listing.negotiable && <span>Négociable</span>}
-            </div>
+            {listing.negotiable && (
+              <div className="listing-list-meta" style={{ marginTop: 0, color: 'var(--primary)' }}>
+                <span>Négociable</span>
+              </div>
+            )}
             <h3 className="listing-list-title">{listing.title}</h3>
-            <div className="price-tag">{formatPrice(listing.price)}</div>
+            <div className="price-tag">{listing.price != null ? formatPrice(listing.price) : 'Prix sur demande'}</div>
           </div>
           <button
             onClick={e => { e.stopPropagation(); onToggleFav() }}
@@ -160,11 +157,9 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
         <p className="listing-list-desc">{listing.description}</p>
 
         <div className="listing-list-meta">
-          <span><MapPin size={12} />{listing.location}, {listing.city}</span>
-          <span>{listing.date}</span>
-          <span><Eye size={12} />{listing.views}</span>
-          <span><Heart size={12} />{listing.favorites}</span>
-          {listing.seller.verified && <span style={{ color: '#00A3E0' }}><ShieldCheck size={12} />Vérifié</span>}
+          <span><MapPin size={12} />{listingLocation(listing)}</span>
+          <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
+          <span><Eye size={12} />{listing.viewsCount}</span>
         </div>
       </div>
     </div>
@@ -172,13 +167,19 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
 }
 
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect }: HomeProps) {
-  const featured = listings.filter(l => l.sponsored)
-  const recent = listings.slice(0, 8)
   const [homeViewMode, setHomeViewMode] = useState<'grid' | 'list'>('grid')
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const categories = categoriesData?.categories ?? []
 
-  const renderListings = (items: typeof listings) =>
+  const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+    variables: { sort: 'RECENT', page: 1, pageSize: 12 },
+  })
+  const recent = listingsData?.listings.items ?? []
+  // "À la une" = most-favorited of the recent batch — an honest stand-in until
+  // paid Boost placements exist (Sprint 2+, see PromotionsModule).
+  const highlighted = [...recent].sort((a, b) => b.favoritesCount - a.favoritesCount).slice(0, 4)
+
+  const renderListings = (items: RemoteListing[]) =>
     homeViewMode === 'grid'
       ? items.map(l => (
         <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} />
@@ -187,7 +188,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
         <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} />
       ))
 
-  const renderListingsContainer = (items: typeof listings) =>
+  const renderListingsContainer = (items: RemoteListing[]) =>
     homeViewMode === 'grid'
       ? <div className="listing-grid">{renderListings(items)}</div>
       : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>{renderListings(items)}</div>
@@ -246,18 +247,18 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               </div>
             </div>
 
-            {/* === Right Column: Espace Boost (boosted listings) === */}
+            {/* === Right Column: À la une (most-favorited recent listings) === */}
             <div className="hero-right">
               <div className="hero-boost-header">
                 <span className="hero-boost-pill">
-                  <Zap size={13} fill="#0F172A" /> Espace Boost
+                  <Zap size={13} fill="#0F172A" /> À la une
                 </span>
-                <span className="hero-boost-note">Annonces mises en avant par nos vendeurs</span>
+                <span className="hero-boost-note">Les annonces les plus populaires du moment</span>
                 <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
               </div>
 
               <div className="hero-mosaic">
-                {heroBoosted.map((card, i) => {
+                {highlighted.map((card, i) => {
                   const isMain = i === 0
                   const isFav = favorites.includes(card.id)
                   return (
@@ -268,30 +269,18 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                       onClick={() => onSelectListing(card.id)}
                     >
                       <div className="hero-mosaic-img-wrap">
-                        <img src={card.image} alt={card.title} className="hero-mosaic-img" />
+                        <img src={listingImage(card)} alt={card.title} className="hero-mosaic-img" />
                         {/* Gradient overlay at bottom */}
                         <div className="hero-mosaic-overlay" />
 
-                        {/* Boost badge */}
-                        <div className="hero-mosaic-boost">
-                          <Zap size={10} fill="#0F172A" /> BOOST
-                        </div>
-
                         {/* Category badge */}
                         <div className="hero-mosaic-category">
-                          {categories.find(c => c.slug === card.category)?.name || card.category}
+                          {card.category.name}
                         </div>
-
-                        {/* Verified badge */}
-                        {card.seller.verified && (
-                          <div className="hero-mosaic-verified">
-                            <CheckCircle size={isMain ? 16 : 12} />
-                          </div>
-                        )}
 
                         {/* Price */}
                         <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-                          {formatPrice(card.price)}
+                          {card.price != null ? formatPrice(card.price) : 'Prix sur demande'}
                         </div>
                       </div>
 
@@ -300,7 +289,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                         <h3 className="hero-mosaic-title">{card.title}</h3>
                         <div className="hero-mosaic-location">
                           <MapPin size={13} />
-                          {card.location}, {card.city}
+                          {listingLocation(card)}
                         </div>
                       </div>
 
@@ -411,21 +400,6 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               )
             })}
           </div>
-        </section>
-
-        {/* Featured Sponsored Section */}
-        <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h2 className="section-title" style={{ margin: 0 }}>Annonces en Vedette</h2>
-              <span className="badge badge-yellow" style={{ fontSize: '0.8rem', padding: '4px 12px' }}>
-                <Sparkles size={13} /> Sponsorisées
-              </span>
-            </div>
-            <ViewToggle viewMode={homeViewMode} onChange={setHomeViewMode} />
-          </div>
-
-          {renderListingsContainer(featured)}
         </section>
 
         {/* Recent Listings */}
