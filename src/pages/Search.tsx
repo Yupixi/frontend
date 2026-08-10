@@ -32,7 +32,11 @@ function listingImage(listing: RemoteListing): string {
 }
 
 export default function SearchPage({ onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity }: SearchProps) {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  // A cramped 2-column grid reads as cluttered on small screens — default to
+  // the single-column list view there; desktop keeps the grid.
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() =>
+    typeof window !== 'undefined' && window.innerWidth <= 640 ? 'list' : 'grid',
+  )
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [sortBy, setSortBy] = useState<'recent' | 'price-asc' | 'price-desc'>('recent')

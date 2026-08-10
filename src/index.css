@@ -414,9 +414,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .mobile-search-btn { display: flex !important; }
   .glass-header > div > div > form { display: none !important; }
   .glass-header .role-switcher { display: none !important; }
-  .glass-header .btn-outline,
-  .glass-header .btn-primary span { display: none !important; }
-  .glass-header .btn-primary { padding: 0.5rem !important; border-radius: 10px !important; min-width: 38px; justify-content: center; }
+  .glass-header .btn-outline { display: none !important; }
   .glass-header nav { display: none !important; }
   body { font-size: 15px; }
   .section-title { font-size: 1.25rem !important; }
