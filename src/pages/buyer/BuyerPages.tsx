@@ -6,7 +6,8 @@ import {
   Smartphone, Moon, Sun, Lock, User, Globe, BellRing, Package,
   LogOut, ChevronRight, TrendingUp, Clock, ArrowLeft, Menu, X,
 } from 'lucide-react'
-import { listings, conversations, notifications, formatPrice, sellers } from '../../data/mockData'
+import { listings, conversations, notifications, sellers } from '../../data/mockData'
+import Price from '../../components/Price'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
 
 type FavoriteListing = {
@@ -159,7 +160,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onN
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <p style={{ margin: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.title}</p>
-                  <div className="price-tag" style={{ fontSize: '0.9rem', marginTop: 2 }}>{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</div>
+                  <div className="price-tag" style={{ fontSize: '0.9rem', marginTop: 2 }}><Price amount={l.price} /></div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
                     <MapPin size={10} />{l.city}
                   </div>
@@ -255,7 +256,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite }
                 )}
               </div>
               <div style={{ padding: '12px 14px' }}>
-                <div className="price-tag">{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</div>
+                <div className="price-tag"><Price amount={l.price} /></div>
                 <p style={{ margin: '4px 0 6px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.3 }}>{l.title}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.78rem' }}>
                   <MapPin size={11} />{l.city}
@@ -441,7 +442,7 @@ export function BuyerHistory({ onNavigate, onSelectListing }: { onNavigate: (p: 
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', marginBottom: 3 }}>{l.title}</div>
-              <div className="price-tag" style={{ fontSize: '0.9rem' }}>{formatPrice(l.price)}</div>
+              <div className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={l.price} /></div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-subtle)', fontSize: '0.75rem' }}>

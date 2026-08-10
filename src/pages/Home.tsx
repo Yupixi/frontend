@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard } from 'lucide-react'
-import { formatPrice } from '../data/mockData'
 import ViewToggle from '../components/ViewToggle'
+import Price from '../components/Price'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
@@ -83,7 +83,7 @@ function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
       {/* Card Content Details */}
       <div className="listing-card-body" style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div className="price-tag">{listing.price != null ? formatPrice(listing.price) : 'Prix sur demande'}</div>
+          <div className="price-tag"><Price amount={listing.price} /></div>
         </div>
 
         <h3 style={{
@@ -152,7 +152,7 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
               </div>
             )}
             <h3 className="listing-list-title">{listing.title}</h3>
-            <div className="price-tag">{listing.price != null ? formatPrice(listing.price) : 'Prix sur demande'}</div>
+            <div className="price-tag"><Price amount={listing.price} /></div>
           </div>
           <button
             onClick={e => { e.stopPropagation(); onToggleFav() }}
@@ -322,7 +322,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
                         {/* Price */}
                         <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-                          {card.price != null ? formatPrice(card.price) : 'Prix sur demande'}
+                          <Price amount={card.price} />
                         </div>
                       </div>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Star, Shield, MapPin, MessageCircle, Award, Clock, Eye, Heart, ThumbsUp } from 'lucide-react'
-import { sellers, listings, formatPrice } from '../data/mockData'
+import { sellers, listings } from '../data/mockData'
+import Price from '../components/Price'
 
 type SellerProfileProps = {
   sellerId: string
@@ -130,7 +131,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing }:
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
               </div>
               <div style={{ padding: '12px 14px' }}>
-                <div className="price-tag" style={{ fontSize: '1rem' }}>{formatPrice(l.price)}</div>
+                <div className="price-tag" style={{ fontSize: '1rem' }}><Price amount={l.price} /></div>
                 <p style={{ margin: '4px 0 6px', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'Nunito, sans-serif', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--fg-muted)' }}>
                   <span>{l.date}</span>
