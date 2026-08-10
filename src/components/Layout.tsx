@@ -365,13 +365,14 @@ export default function Layout({
                 </button>
               )}
 
-              {/* Action Button "+ Publier" */}
+              {/* Action Button "+ Publier" — desktop only; on mobile this
+                  lives in the bottom nav bar instead (see below) */}
               <button
                 onClick={() => {
                   onNavigate('seller-post')
                   triggerToast('Création d\'une nouvelle annonce')
                 }}
-                className="btn-primary"
+                className="btn-primary desktop-only"
                 style={{ fontSize: '0.875rem', padding: '0.6rem 1.25rem' }}
               >
                 <Plus size={16} />
@@ -626,7 +627,7 @@ export default function Layout({
           {[
             { label: 'Accueil', icon: Home, page: 'home' as Page },
             { label: 'Recherche', icon: Search, page: 'search' as Page },
-            { label: 'Catégories', icon: Grid, page: 'categories' as Page },
+            { label: 'Publier', icon: Plus, page: 'seller-post' as Page },
             { label: 'Favoris', icon: Heart, page: 'buyer-favorites' as Page },
             { label: 'Profil', icon: User, page: (isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
           ].map(item => {
