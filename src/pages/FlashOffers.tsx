@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Zap, Clock, Heart, MapPin, Eye, Tag, Sparkles, Flame, ArrowRight } from 'lucide-react'
-import { listings, formatPrice } from '../data/mockData'
+import { listings } from '../data/mockData'
+import Price from '../components/Price'
 
 type FlashOffersProps = {
   onNavigate: (page: any) => void
@@ -152,9 +153,9 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                 <div style={{ padding: '14px' }}>
                   {/* Original price crossed out */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <div className="price-tag" style={{ fontSize: '1.15rem', color: '#FE0000' }}>{formatPrice(l.price)}</div>
+                    <div className="price-tag" style={{ fontSize: '1.15rem', color: '#FE0000' }}><Price amount={l.price} /></div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)', textDecoration: 'line-through' }}>
-                      {formatPrice(Math.round(l.price * (1 + Math.random() * 0.4 + 0.1)))}
+                      <Price amount={Math.round(l.price * (1 + Math.random() * 0.4 + 0.1))} />
                     </div>
                   </div>
 

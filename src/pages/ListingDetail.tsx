@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Eye, Tag, Truck, CheckCircle,
   Calendar, ArrowLeft, Flag, ExternalLink,
 } from 'lucide-react'
-import { formatPrice } from '../data/mockData'
+import Price from '../components/Price'
 import { LISTING_QUERY, LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { getAccessToken } from '../lib/auth'
@@ -159,7 +159,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <div>
                 <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
-                <div className="price-tag" style={{ fontSize: '1.75rem' }}>{listing.price != null ? formatPrice(listing.price) : 'Prix sur demande'}</div>
+                <div className="price-tag" style={{ fontSize: '1.75rem' }}><Price amount={listing.price} /></div>
                 {listing.negotiable && <span className="badge badge-green" style={{ marginTop: 6 }}>Prix négociable</span>}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -229,7 +229,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
                       <img src={l.coverImageUrl ?? l.media[0]?.url ?? ''} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     </div>
                     <div style={{ padding: '10px 12px' }}>
-                      <div className="price-tag" style={{ fontSize: '0.95rem' }}>{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</div>
+                      <div className="price-tag" style={{ fontSize: '0.95rem' }}><Price amount={l.price} /></div>
                       <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--fg)', fontFamily: 'Nunito, sans-serif', fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
                     </div>
                   </div>
@@ -343,7 +343,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}>{listing.price != null ? formatPrice(listing.price) : 'Prix sur demande'}</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}><Price amount={listing.price} /></div>
           {listing.negotiable && <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>Prix négociable</div>}
         </div>
         <button onClick={() => onToggleFavorite(listing.id)} style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>

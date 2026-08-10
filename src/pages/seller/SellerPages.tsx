@@ -8,7 +8,8 @@ import {
   Bell, LogOut, ChevronDown, Menu, X,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { listings, viewStats, formatPrice, cities } from '../../data/mockData'
+import { listings, viewStats, cities } from '../../data/mockData'
+import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
 import {
@@ -307,7 +308,7 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.title}</p>
-              <span style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{formatPrice(l.price)}</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}><Price amount={l.price} /></span>
             </div>
             <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--fg-muted)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={13} />{l.views}</span>
@@ -665,8 +666,8 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
                     )}
                   </div>
                   <div style={{ padding: '1.25rem' }}>
-                    {!noPriceCats.includes(catSlug) && <div className="price-tag" style={{ fontSize: '1.1rem' }}>{price ? `${parseInt(price).toLocaleString('fr')} FCFA` : '0 FCFA'}</div>}
-                    {noPriceCats.includes(catSlug) && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}>{customFields.salaire} FCFA/mois</div>}
+                    {!noPriceCats.includes(catSlug) && <div className="price-tag" style={{ fontSize: '1.1rem' }}><Price amount={price ? parseInt(price) : 0} /></div>}
+                    {noPriceCats.includes(catSlug) && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}><Price amount={Number(customFields.salaire)} />/mois</div>}
                     <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '8px 0 10px', fontSize: '1.1rem' }}>{title || 'Titre de votre annonce'}</h3>
                     <div style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} />{city}</span>
@@ -793,7 +794,7 @@ export function SellerListings({ onNavigate, onSelectListing, currentUser, onLog
                   <span className="badge" style={{ background: s.bg, color: s.color, flexShrink: 0, fontSize: '0.72rem' }}>{s.label}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
-                  <span className="price-tag" style={{ fontSize: '0.9rem' }}>{l.price != null ? formatPrice(l.price) : 'Prix sur demande'}</span>
+                  <span className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={l.price} /></span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={12} />{l.viewsCount}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={12} />{l.favoritesCount}</span>
                   <span>{new Date(l.createdAt).toLocaleDateString('fr-FR')}</span>
@@ -935,7 +936,7 @@ export function SellerPayments({ onNavigate, currentUser, onLogout }: { onNaviga
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '0.95rem', color: t.amount > 0 ? '#10B981' : 'var(--fg)' }}>
-                {t.amount > 0 ? '+' : ''}{t.amount.toLocaleString('fr')} FCFA
+                {t.amount > 0 ? '+' : ''}<Price amount={t.amount} />
               </div>
               <span className="badge" style={{ fontSize: '0.7rem', background: t.status === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: t.status === 'success' ? '#10B981' : '#EF4444' }}>
                 {t.status === 'success' ? '✓ Réussi' : '✗ Échoué'}
@@ -995,7 +996,7 @@ export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigat
             <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', color: plan.color, margin: '0 0 0.75rem' }}>{plan.name}</h2>
             <div style={{ marginBottom: '1.25rem' }}>
               <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: plan.price === 0 ? '1.5rem' : '2rem' }}>
-                {plan.price === 0 ? 'Gratuit' : plan.price.toLocaleString('fr') + ' FCFA'}
+                {plan.price === 0 ? 'Gratuit' : <Price amount={plan.price} />}
               </span>
               {plan.price > 0 && <span style={{ color: 'var(--fg-muted)', fontSize: '0.875rem' }}> / mois</span>}
             </div>
