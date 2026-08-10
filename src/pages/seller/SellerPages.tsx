@@ -4,8 +4,8 @@ import {
   LayoutDashboard, Plus, Package, BarChart2, CreditCard, Award, Eye, Heart,
   MessageCircle, TrendingUp, TrendingDown, CheckCircle, XCircle, Edit3,
   Trash2, ChevronRight, Upload, MapPin, Tag, Image, Star, ArrowUp,
-  DollarSign, Users, AlertCircle,
-  Bell, LogOut, Search, ChevronDown, Menu, X,
+  DollarSign, Users, AlertCircle, Home, Settings,
+  Bell, LogOut, ChevronDown, Menu, X,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { listings, viewStats, formatPrice, cities } from '../../data/mockData'
@@ -25,7 +25,8 @@ import type { AuthUser } from '../../graphql/auth'
 
 // ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────
 
-function DashboardHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNavigate }: { activeLabel: string; currentUser?: AuthUser | null; onBack: () => void; onToggleSidebar?: () => void; onNavigate: (p: any) => void }) {
+function DashboardHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNavigate, onLogout }: { activeLabel: string; currentUser?: AuthUser | null; onBack: () => void; onToggleSidebar?: () => void; onNavigate: (p: any) => void; onLogout: () => void }) {
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const displayName = currentUser?.fullName || 'Mon compte'
   const displayInitial = displayName.charAt(0).toUpperCase()
   return (
@@ -41,34 +42,60 @@ function DashboardHeader({ activeLabel, currentUser, onBack, onToggleSidebar, on
         onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
-        ← Retour
+        ← Retour au site
       </button>
-      <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
-      <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 34 }} />
-      <span className="badge" style={{ background: '#FE0000', color: '#fff', fontSize: '0.7rem', padding: '2px 10px' }}>Vendeur</span>
+      <h1 className="desktop-only" style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>{activeLabel}</h1>
       <div style={{ flex: 1 }} />
-      <div className="desktop-only" style={{ fontSize: '0.82rem', color: 'var(--fg-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'var(--border-subtle)', padding: '4px 12px', borderRadius: 6 }}>
-          <span style={{ color: 'var(--fg-subtle)' }}>/</span> {activeLabel}
-        </span>
-      </div>
-      <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
       <button onClick={() => onNavigate('buyer-notifications')} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
         <Bell size={18} />
       </button>
-      <div onClick={() => onNavigate('buyer-settings')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', transition: 'all 0.12s' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif" }}>{displayInitial}</div>
-        <div className="desktop-only" style={{ textAlign: 'left' }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>{displayName}</div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>Vendeur</div>
-        </div>
-        <ChevronDown size={14} style={{ color: 'var(--fg-subtle)' }} />
+      <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', background: 'none', border: 'none', transition: 'all 0.12s' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif" }}>{displayInitial}</div>
+          <div className="desktop-only" style={{ textAlign: 'left' }}>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>{displayName}</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>{currentUser?.email ?? ''}</div>
+          </div>
+          <ChevronDown size={14} style={{ color: 'var(--fg-subtle)' }} />
+        </button>
+
+        {userMenuOpen && (
+          <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 220, zIndex: 200, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+            {[
+              { icon: Home, label: 'Espace Acheteur', page: 'buyer-dashboard' as const },
+              { icon: Settings, label: 'Paramètres du compte', page: 'buyer-settings' as const },
+            ].map(item => (
+              <button
+                key={item.page}
+                onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <item.icon size={16} />
+                {item.label}
+              </button>
+            ))}
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6 }}>
+              <button
+                onClick={() => { setUserMenuOpen(false); onLogout() }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <LogOut size={16} />
+                Se déconnecter
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   )
@@ -183,7 +210,7 @@ function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCo
   )
 }
 
-function DashboardLayout({ active, onNavigate, children, currentUser }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null }) {
+function DashboardLayout({ active, onNavigate, children, currentUser, onLogout }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null, onLogout: () => void }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { data: listingsData } = useQuery<{ myListings: { totalCount: number } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 1 } })
   const labels: Record<string, string> = {
@@ -199,7 +226,7 @@ function DashboardLayout({ active, onNavigate, children, currentUser }: { active
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
       <DashboardSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} listingsCount={listingsData?.myListings.totalCount} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <DashboardHeader activeLabel={labels[active] || active} currentUser={currentUser} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} onNavigate={onNavigate} />
+        <DashboardHeader activeLabel={labels[active] || active} currentUser={currentUser} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} onNavigate={onNavigate} onLogout={onLogout} />
         <main className="dashboard-main" style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
           {children}
         </main>
@@ -209,7 +236,7 @@ function DashboardLayout({ active, onNavigate, children, currentUser }: { active
 }
 
 // ─── SELLER DASHBOARD ───────────────────────────────────────────────────────
-export function SellerDashboard({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
+export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const stats = [
     { label: 'Annonces actives', value: 8, icon: Package, color: '#FE0000', bg: 'rgba(254,0,0,0.08)', trend: '+2', up: true },
     { label: 'Vues ce mois', value: '2 457', icon: Eye, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)', trend: '+18%', up: true },
@@ -220,7 +247,7 @@ export function SellerDashboard({ onNavigate, currentUser }: { onNavigate: (p: a
   const topListings = listings.slice(0, 4).map((l, i) => ({ ...l, rank: i + 1 }))
 
   return (
-    <DashboardLayout active="seller-dashboard" onNavigate={onNavigate} currentUser={currentUser}>
+    <DashboardLayout active="seller-dashboard" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Tableau de bord</h1>
@@ -294,7 +321,7 @@ export function SellerDashboard({ onNavigate, currentUser }: { onNavigate: (p: a
 }
 
 // ─── POST LISTING ────────────────────────────────────────────────────────────
-export function PostListing({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
+export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   useEffect(() => {
     if (!getAccessToken()) onNavigate('auth')
   }, [onNavigate])
@@ -329,7 +356,7 @@ export function PostListing({ onNavigate, currentUser }: { onNavigate: (p: any) 
 
   if (success) {
     return (
-      <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser}>
+      <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
         <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <CheckCircle size={40} color="#10B981" />
@@ -430,7 +457,7 @@ export function PostListing({ onNavigate, currentUser }: { onNavigate: (p: any) 
   }
 
   return (
-    <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser}>
+    <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Publier une annonce</h1>
 
@@ -699,7 +726,7 @@ const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: st
   PAUSED: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
 }
 
-export function SellerListings({ onNavigate, onSelectListing, currentUser }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, currentUser?: AuthUser | null }) {
+export function SellerListings({ onNavigate, onSelectListing, currentUser, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const [filter, setFilter] = useState('all')
   const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
     MY_LISTINGS_QUERY,
@@ -724,7 +751,7 @@ export function SellerListings({ onNavigate, onSelectListing, currentUser }: { o
   ]
 
   return (
-    <DashboardLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser}>
+    <DashboardLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
@@ -794,9 +821,9 @@ export function SellerListings({ onNavigate, onSelectListing, currentUser }: { o
 }
 
 // ─── STATISTICS ────────────────────────────────────────────────────────────
-export function SellerStats({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
+export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   return (
-    <DashboardLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser}>
+    <DashboardLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Statistiques</h1>
       <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Analysez les performances de vos annonces</p>
 
@@ -858,7 +885,7 @@ export function SellerStats({ onNavigate, currentUser }: { onNavigate: (p: any) 
 }
 
 // ─── PAYMENTS ────────────────────────────────────────────────────────────────
-export function SellerPayments({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
+export function SellerPayments({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const transactions = [
     { id: 'T001', type: 'Boost annonce', amount: -5000, date: '28 Jan 2024', status: 'success', method: '🟠 Orange Money' },
     { id: 'T002', type: 'Abonnement Pro (mensuel)', amount: -25000, date: '15 Jan 2024', status: 'success', method: '🟡 MTN MoMo' },
@@ -868,7 +895,7 @@ export function SellerPayments({ onNavigate, currentUser }: { onNavigate: (p: an
   ]
 
   return (
-    <DashboardLayout active="seller-payments" onNavigate={onNavigate} currentUser={currentUser}>
+    <DashboardLayout active="seller-payments" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Paiements & Transactions</h1>
       <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos méthodes de paiement et suivez vos transactions</p>
 
@@ -922,7 +949,7 @@ export function SellerPayments({ onNavigate, currentUser }: { onNavigate: (p: an
 }
 
 // ─── PREMIUM ─────────────────────────────────────────────────────────────────
-export function SellerPremium({ onNavigate, currentUser }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null }) {
+export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const plans = [
     {
       name: 'Gratuit',
@@ -949,7 +976,7 @@ export function SellerPremium({ onNavigate, currentUser }: { onNavigate: (p: any
   ]
 
   return (
-    <DashboardLayout active="seller-premium" onNavigate={onNavigate} currentUser={currentUser}>
+    <DashboardLayout active="seller-premium" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div className="badge badge-orange" style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>⭐ Plans Premium</div>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>

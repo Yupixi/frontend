@@ -297,18 +297,18 @@ export default function App() {
     const sellerContent = (() => {
       switch (page) {
         case 'seller-dashboard':
-          return <SellerDashboard onNavigate={navigate} currentUser={currentUser} />
+          return <SellerDashboard onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-post':
         case 'seller-edit':
-          return <PostListing onNavigate={navigate} currentUser={currentUser} />
+          return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-listings':
-          return <SellerListings onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} />
+          return <SellerListings onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-stats':
-          return <SellerStats onNavigate={navigate} currentUser={currentUser} />
+          return <SellerStats onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-payments':
-          return <SellerPayments onNavigate={navigate} currentUser={currentUser} />
+          return <SellerPayments onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-premium':
-          return <SellerPremium onNavigate={navigate} currentUser={currentUser} />
+          return <SellerPremium onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
       }
     })()
     return (
