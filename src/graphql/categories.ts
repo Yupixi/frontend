@@ -13,6 +13,13 @@ export const CATEGORIES_QUERY = gql`
         slug
         name
       }
+      attributes {
+        key
+        label
+        type
+        options
+        required
+      }
     }
   }
 `
@@ -23,6 +30,14 @@ export type CategorySubcategory = {
   name: string
 }
 
+export type CategoryAttribute = {
+  key: string
+  label: string
+  type: 'TEXT' | 'NUMBER' | 'SELECT'
+  options: string[]
+  required: boolean
+}
+
 export type RemoteCategory = {
   id: string
   slug: string
@@ -30,4 +45,5 @@ export type RemoteCategory = {
   icon: string
   color: string
   subcategories: CategorySubcategory[]
+  attributes: CategoryAttribute[]
 }

@@ -24,6 +24,7 @@ type LayoutProps = {
   onToggleDark: () => void
   children: React.ReactNode
   isLoggedIn: boolean
+  currentUser?: { fullName: string; email: string } | null
   userRole: 'buyer' | 'seller' | 'admin'
   onToggleLogin: () => void
   onSelectRole?: (role: 'buyer' | 'seller' | 'admin') => void
@@ -39,12 +40,15 @@ export default function Layout({
   onToggleDark,
   children,
   isLoggedIn,
+  currentUser,
   userRole,
   onToggleLogin,
   onSelectRole,
   onSelectListing,
   onSetSearchTerm
 }: LayoutProps) {
+  const displayName = currentUser?.fullName || 'Mon compte'
+  const displayInitial = displayName.charAt(0).toUpperCase()
   const [search, setSearch] = useState('')
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -336,9 +340,9 @@ export default function Layout({
                         fontWeight: 900,
                         fontFamily: 'Outfit, sans-serif'
                       }}>
-                        K
+                        {displayInitial}
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--fg)' }}>Kouamé</span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--fg)' }}>{displayName.split(' ')[0]}</span>
                       <ChevronDown size={14} style={{ color: 'var(--fg-muted)' }} />
                     </button>
 
@@ -350,8 +354,8 @@ export default function Layout({
                         width: 240, zIndex: 200, padding: 8
                       }}>
                         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
-                          <div style={{ fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>Kouamé Jean-Baptiste</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>kouame@yupixi.ci</div>
+                          <div style={{ fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>{displayName}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>{currentUser?.email ?? ''}</div>
 
                           {/* Role Switch */}
                           <div style={{ marginTop: 10, display: 'flex', gap: 4, background: 'var(--border-subtle)', padding: 3, borderRadius: 8 }}>
@@ -543,10 +547,10 @@ export default function Layout({
           }}>
             {isLoggedIn && (
               <div style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 900, fontSize: '0.9rem' }}>K</div>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 900, fontSize: '0.9rem' }}>{displayInitial}</div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem', fontFamily: 'Outfit, sans-serif' }}>Kouamé Jean-Baptiste</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>kouame@yupixi.ci</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', fontFamily: 'Outfit, sans-serif' }}>{displayName}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>{currentUser?.email ?? ''}</div>
                 </div>
               </div>
             )}

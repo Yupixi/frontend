@@ -86,6 +86,47 @@ export const LISTING_QUERY = gql`
   }
 `
 
+export const CREATE_LISTING_MUTATION = gql`
+  mutation CreateListing($input: CreateListingInput!) {
+    createListing(input: $input) {
+      id
+      status
+    }
+  }
+`
+
+export const ATTACH_LISTING_MEDIA_MUTATION = gql`
+  mutation AttachListingMedia($listingId: String!, $urls: [String!]!) {
+    attachListingMedia(listingId: $listingId, urls: $urls) {
+      id
+    }
+  }
+`
+
+export const SUBMIT_LISTING_FOR_REVIEW_MUTATION = gql`
+  mutation SubmitListingForReview($id: String!) {
+    submitListingForReview(id: $id) {
+      id
+      status
+    }
+  }
+`
+
+export type CreateListingInput = {
+  categoryId: string
+  subcategoryId?: string
+  title: string
+  description: string
+  price?: number
+  city: string
+  locationLabel?: string
+  condition?: string
+  negotiable?: boolean
+  deliveryAvailable?: boolean
+  attributes?: Record<string, string>
+  tags?: string[]
+}
+
 export type RemoteListingDetail = RemoteListing & {
   seller: {
     id: string

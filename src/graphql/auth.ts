@@ -28,6 +28,25 @@ export const LOGIN_MUTATION = gql`
   }
 `
 
+export const ME_QUERY = gql`
+  query Me {
+    me {
+      id
+      email
+      fullName
+    }
+  }
+`
+
+export const REFRESH_TOKEN_MUTATION = gql`
+  mutation RefreshToken($refreshToken: String!) {
+    refreshToken(refreshToken: $refreshToken) {
+      accessToken
+      refreshToken
+    }
+  }
+`
+
 export type AuthUser = {
   id: string
   email: string
