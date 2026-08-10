@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
-import { ME_QUERY, type AuthUser } from './graphql/auth'
+import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
-import { clearTokens, getAccessToken } from './lib/auth'
+import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import Home from './pages/Home'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
@@ -77,6 +77,19 @@ export default function App() {
   }, [])
 
   const [fetchMe] = useLazyQuery<{ me: AuthUser }>(ME_QUERY)
+  const [logoutMutation] = useMutation<{ logout: boolean }>(LOGOUT_MUTATION)
+
+  // A silent token refresh can fail well after mount (token expired/revoked
+  // mid-session) — apollo.ts clears storage but has no way to touch React
+  // state, so it dispatches this event instead.
+  useEffect(() => {
+    const onSessionExpired = () => {
+      setIsLoggedIn(false)
+      setCurrentUser(null)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+  }, [])
 
   const { data: favoritesData, refetch: refetchFavorites } = useQuery<{ myFavoriteIds: string[] }>(
     MY_FAVORITE_IDS_QUERY,
@@ -215,6 +228,12 @@ export default function App() {
   }
 
   const logout = () => {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) {
+      // Best-effort: revoke server-side so the refresh token can't be reused
+      // even if it leaked. Local state is cleared regardless of the result.
+      void logoutMutation({ variables: { refreshToken } }).catch(() => undefined)
+    }
     clearTokens()
     setIsLoggedIn(false)
     setCurrentUser(null)

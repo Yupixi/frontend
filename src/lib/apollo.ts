@@ -3,7 +3,7 @@ import { ErrorLink } from '@apollo/client/link/error'
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import { setContext } from '@apollo/client/link/context'
 import { Observable } from 'rxjs'
-import { clearTokens, getAccessToken, getRefreshToken, storeTokens } from './auth'
+import { clearTokens, getAccessToken, getRefreshToken, storeTokens, SESSION_EXPIRED_EVENT } from './auth'
 
 const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || 'http://localhost:3000/graphql'
 
@@ -40,6 +40,7 @@ async function refreshAccessToken(): Promise<string | null> {
     const tokens = json.data?.refreshToken
     if (!tokens) {
       clearTokens()
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
       return null
     }
     storeTokens(tokens.accessToken, tokens.refreshToken)
