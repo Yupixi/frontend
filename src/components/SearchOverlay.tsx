@@ -1,26 +1,35 @@
 import { useState, useEffect, useRef } from 'react'
+import { useQuery } from '@apollo/client/react'
 import { Search, MapPin, TrendingUp, Clock, X } from 'lucide-react'
-import { listings, categories } from '../data/mockData'
+import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
+import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 
 type Props = {
   query: string
   onQueryChange: (q: string) => void
   onSearch: () => void
   onSelectListing: (id: string) => void
+  onSelectCategory: (slug: string) => void
   onClose: () => void
   onNavigate: (page: any) => void
 }
 
-export default function SearchOverlay({ query, onQueryChange, onSearch, onSelectListing, onClose, onNavigate }: Props) {
+export default function SearchOverlay({ query, onQueryChange, onSearch, onSelectListing, onSelectCategory, onClose }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const [selectedIdx, setSelectedIdx] = useState(-1)
+  const [debouncedQuery, setDebouncedQuery] = useState('')
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null
     inputRef.current?.focus()
     return () => prev?.focus()
   }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250)
+    return () => clearTimeout(t)
+  }, [query])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -42,32 +51,16 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  const q = query.toLowerCase().trim()
+  const q = query.trim()
 
-  const catName = (id: string) => categories.find(c => c.id === id)?.name || id
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const categories = categoriesData?.categories ?? []
 
-  const suggestions = q
-    ? (() => {
-        const seen = new Set<string>()
-        const results: { term: string; catName: string; catColor: string }[] = []
-        for (const l of listings) {
-          const lower = l.title.toLowerCase()
-          if (lower.includes(q)) {
-            const key = l.title
-            if (!seen.has(key)) {
-              seen.add(key)
-              results.push({
-                term: l.title,
-                catName: catName(l.category),
-                catColor: categories.find(c => c.id === l.category)?.color || '#FE0000',
-              })
-            }
-          }
-          if (results.length >= 8) break
-        }
-        return results
-      })()
-    : []
+  const { data: suggestData, loading: suggestLoading } = useQuery<{ listings: { items: RemoteListing[] } }>(
+    LISTINGS_QUERY,
+    { variables: { filter: { search: debouncedQuery }, pageSize: 8 }, skip: !debouncedQuery },
+  )
+  const suggestions = debouncedQuery ? (suggestData?.listings.items ?? []) : []
 
   const popularSearches = ['iPhone 15', 'Toyota', 'Villa Cocody', 'PS5', 'Canapé', 'Vélo']
 
@@ -81,8 +74,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (selectedIdx >= 0 && suggestions[selectedIdx]) {
-        onQueryChange(suggestions[selectedIdx].term)
-        onSearch()
+        onSelectListing(suggestions[selectedIdx].id)
         onClose()
       } else {
         onSearch()
@@ -160,25 +152,30 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
         animation: 'slideDown 0.2s ease-out',
       }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '0.75rem 1.25rem 2rem' }}>
-          {q && suggestions.length > 0 && (
+          {q && suggestLoading && (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--fg-muted)', fontSize: '0.9rem' }}>Recherche...</div>
+          )}
+
+          {q && !suggestLoading && suggestions.length > 0 && (
             <div role="listbox" id={listboxId} aria-label="Suggestions" style={{ animation: 'fadeIn 0.2s ease-out' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)', marginBottom: 4 }}>
                 <TrendingUp size={14} style={{ color: 'var(--fg-subtle)' }} aria-hidden="true" />
                 <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suggestions</span>
               </div>
               {suggestions.map((s, i) => {
-                const idx = s.term.toLowerCase().indexOf(q)
-                const before = idx > 0 ? s.term.slice(0, idx) : ''
-                const match = idx >= 0 ? s.term.slice(idx, idx + q.length) : ''
-                const after = idx >= 0 ? s.term.slice(idx + q.length) : ''
+                const lower = s.title.toLowerCase()
+                const idx = lower.indexOf(q.toLowerCase())
+                const before = idx > 0 ? s.title.slice(0, idx) : ''
+                const match = idx >= 0 ? s.title.slice(idx, idx + q.length) : s.title
+                const after = idx >= 0 ? s.title.slice(idx + q.length) : ''
                 return (
                   <button
-                    key={s.term}
+                    key={s.id}
                     id={`suggestion-${i}`}
                     role="option"
                     aria-selected={i === selectedIdx}
                     type="button"
-                    onClick={() => { onQueryChange(s.term); onSearch(); onClose() }}
+                    onClick={() => { onSelectListing(s.id); onClose() }}
                     onMouseEnter={() => setSelectedIdx(i)}
                     style={{
                       width: '100%', display: 'flex', gap: 10, alignItems: 'center',
@@ -193,7 +190,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                         {before}<span style={{ fontWeight: 900, fontSize: '0.95rem', color: 'var(--primary)' }}>{match}</span>{after}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--fg-subtle)', marginTop: 1 }}>
-                        dans <span style={{ color: s.catColor, fontWeight: 700 }}>{s.catName}</span>
+                        dans <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{s.category.name}</span>
                       </div>
                     </div>
                   </button>
@@ -217,7 +214,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
             </div>
           )}
 
-          {q && suggestions.length === 0 && (
+          {q && !suggestLoading && suggestions.length === 0 && (
             <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--fg-muted)' }}>
               <Search size={40} style={{ opacity: 0.3, marginBottom: 12 }} aria-hidden="true" />
               <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '1rem', margin: '0 0 4px' }}>Aucun résultat</p>
@@ -257,11 +254,11 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                 <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catégories</span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="none">
-                {categories.slice(0, 8).map(cat => (
+                {categories.map(cat => (
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => { onQueryChange(cat.name); onClose() }}
+                    onClick={() => { onSelectCategory(cat.slug); onClose() }}
                     style={{
                       padding: '8px 18px', border: 'none', borderRadius: 999,
                       cursor: 'pointer', background: cat.color + '12', color: cat.color,

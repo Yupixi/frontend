@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
 import {
   Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
-  Sun, Moon, LogOut, Settings, Package, BarChart2, Shield,
-  Plus, Home, Sparkles, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
+  Sun, Moon, LogOut, Settings, Package, BarChart2, ShoppingBag,
+  Plus, Home, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
   Shirt, Wrench, Grid, User
 } from 'lucide-react'
 import Logo from './Logo'
 import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
-import { notifications } from '../data/mockData'
 
 type Page =
   | 'home' | 'search' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
@@ -25,11 +24,10 @@ type LayoutProps = {
   children: React.ReactNode
   isLoggedIn: boolean
   currentUser?: { fullName: string; email: string } | null
-  userRole: 'buyer' | 'seller' | 'admin'
   onToggleLogin: () => void
-  onSelectRole?: (role: 'buyer' | 'seller' | 'admin') => void
   onSelectListing?: (id: string) => void
   onSetSearchTerm?: (term: string) => void
+  onClearCategoryFilter?: () => void
 }
 
 export default function Layout({
@@ -41,11 +39,10 @@ export default function Layout({
   children,
   isLoggedIn,
   currentUser,
-  userRole,
   onToggleLogin,
-  onSelectRole,
   onSelectListing,
-  onSetSearchTerm
+  onSetSearchTerm,
+  onClearCategoryFilter
 }: LayoutProps) {
   const displayName = currentUser?.fullName || 'Mon compte'
   const displayInitial = displayName.charAt(0).toUpperCase()
@@ -54,7 +51,6 @@ export default function Layout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [notifOpen, setNotifOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('Accueil')
   const flashTexts = ['Offres Flash', 'Jusqu\'à -50%', 'Livraison Offerte', 'Stock Limitė']
@@ -71,8 +67,6 @@ export default function Layout({
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const unreadNotifs = notifications.filter(n => !n.read).length
-
   const triggerToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3000)
@@ -84,6 +78,7 @@ export default function Layout({
   }
 
   const handleSearchSubmit = () => {
+    onClearCategoryFilter?.()
     onSetSearchTerm?.(search)
     setSearchOverlayOpen(false)
     onNavigate('search')
@@ -123,28 +118,6 @@ export default function Layout({
             >
               <Logo size="md" colorMode="red" />
             </button>
-
-            {/* Role Switcher */}
-            <div className="role-switcher" style={{ display: 'none' }}>
-              <button
-                className={`role-btn ${userRole === 'buyer' ? 'active' : ''}`}
-                onClick={() => onSelectRole?.('buyer')}
-              >
-                Acheteur
-              </button>
-              <button
-                className={`role-btn ${userRole === 'seller' ? 'active' : ''}`}
-                onClick={() => onSelectRole?.('seller')}
-              >
-                Vendeur
-              </button>
-              <button
-                className={`role-btn ${userRole === 'admin' ? 'active' : ''}`}
-                onClick={() => onSelectRole?.('admin')}
-              >
-                Admin
-              </button>
-            </div>
 
             {/* Search button — opens overlay */}
             <div onClick={openSearchOverlay} className="desktop-only" style={{
@@ -213,64 +186,26 @@ export default function Layout({
 
               {isLoggedIn ? (
                 <>
-                  {/* Notifications */}
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => { setNotifOpen(!notifOpen); setUserMenuOpen(false) }}
-                      style={{
-                        background: 'var(--border-subtle)',
-                        border: '1px solid var(--border)',
-                        cursor: 'pointer',
-                        width: 38,
-                        height: 38,
-                        color: 'var(--fg-muted)',
-                        borderRadius: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative'
-                      }}
-                    >
-                      <Bell size={18} />
-                      {unreadNotifs > 0 && <span className="notif-dot">+{unreadNotifs}</span>}
-                    </button>
-
-                    {/* Notifications popover */}
-                    {notifOpen && (
-                      <div style={{
-                        position: 'absolute', right: 0, top: '100%', marginTop: 10,
-                        background: 'var(--bg-card)', border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius)',
-                        width: 360, maxHeight: 420, overflowY: 'auto', zIndex: 200,
-                      }}>
-                        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '1rem' }}>Notifications</span>
-                          <button onClick={() => { onNavigate('buyer-notifications'); setNotifOpen(false) }} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif' }}>Voir tout</button>
-                        </div>
-                        {notifications.slice(0, 5).map(n => (
-                          <div
-                            key={n.id}
-                            style={{
-                              padding: '12px 18px',
-                              borderBottom: '1px solid var(--border-subtle)',
-                              background: n.read ? 'transparent' : 'rgba(254,0,0,0.03)',
-                              cursor: 'pointer',
-                            }}
-                            onClick={() => { setNotifOpen(false); onNavigate('buyer-notifications') }}
-                          >
-                            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                              <div>
-                                <div style={{ fontWeight: 800, fontSize: '0.875rem', fontFamily: 'Outfit, sans-serif' }}>{n.title}</div>
-                                <div style={{ color: 'var(--fg-muted)', fontSize: '0.8rem', marginTop: 2, lineHeight: 1.4 }}>{n.body}</div>
-                                <div style={{ color: 'var(--fg-subtle)', fontSize: '0.75rem', marginTop: 4, fontWeight: 600 }}>{n.time}</div>
-                              </div>
-                              {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', marginLeft: 'auto', marginTop: 4, flexShrink: 0 }} />}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {/* Notifications — badge/dropdown content will return once
+                      real notifications ship; for now just navigate. */}
+                  <button
+                    onClick={() => onNavigate('buyer-notifications')}
+                    style={{
+                      background: 'var(--border-subtle)',
+                      border: '1px solid var(--border)',
+                      cursor: 'pointer',
+                      width: 38,
+                      height: 38,
+                      color: 'var(--fg-muted)',
+                      borderRadius: 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="Notifications"
+                  >
+                    <Bell size={18} />
+                  </button>
 
                   {/* Messages */}
                   <button
@@ -286,11 +221,10 @@ export default function Layout({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      position: 'relative'
                     }}
+                    title="Messages"
                   >
                     <MessageCircle size={18} />
-                    <span className="notif-dot">2</span>
                   </button>
 
                   {/* Favorites */}
@@ -315,7 +249,7 @@ export default function Layout({
                   {/* User Avatar Menu */}
                   <div style={{ position: 'relative' }}>
                     <button
-                      onClick={() => { setUserMenuOpen(!userMenuOpen); setNotifOpen(false) }}
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -356,41 +290,17 @@ export default function Layout({
                         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
                           <div style={{ fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>{displayName}</div>
                           <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>{currentUser?.email ?? ''}</div>
-
-                          {/* Role Switch */}
-                          <div style={{ marginTop: 10, display: 'flex', gap: 4, background: 'var(--border-subtle)', padding: 3, borderRadius: 8 }}>
-                            {(['buyer', 'seller', 'admin'] as const).map(r => (
-                              <button
-                                key={r}
-                                onClick={() => {
-                                  onSelectRole?.(r)
-                                  triggerToast(`Mode ${r === 'admin' ? 'Administrateur' : r === 'seller' ? 'Vendeur' : 'Acheteur'} activé`)
-                                }}
-                                style={{
-                                  flex: 1,
-                                  border: 'none',
-                                  borderRadius: 6,
-                                  padding: '4px 0',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 800,
-                                  fontFamily: 'Outfit, sans-serif',
-                                  cursor: 'pointer',
-                                  background: userRole === r ? 'var(--primary)' : 'transparent',
-                                  color: userRole === r ? '#FFF' : 'var(--fg-muted)'
-                                }}
-                              >
-                                {r === 'admin' ? 'Admin' : r === 'seller' ? 'Vendeur' : 'Acheteur'}
-                              </button>
-                            ))}
-                          </div>
                         </div>
 
+                        {/* Everyone on Yüpixi can both buy and sell — these are
+                            two dashboards for the same account, not a role to
+                            switch between. */}
                         {[
-                          { icon: Home, label: 'Mon Tableau de Bord', page: `${userRole}-dashboard` as Page },
-                          { icon: Package, label: 'Mes Annonces Vente', page: 'seller-listings' as Page },
+                          { icon: Home, label: 'Espace Acheteur', page: 'buyer-dashboard' as Page },
+                          { icon: ShoppingBag, label: 'Espace Vendeur', page: 'seller-dashboard' as Page },
+                          { icon: Package, label: 'Mes Annonces', page: 'seller-listings' as Page },
                           { icon: Heart, label: 'Mes Favoris', page: 'buyer-favorites' as Page },
                           { icon: BarChart2, label: 'Statistiques & Revenus', page: 'seller-stats' as Page },
-                          ...(userRole === 'admin' ? [{ icon: Shield, label: 'Administration Center', page: 'admin-dashboard' as Page }] : []),
                           { icon: Settings, label: 'Paramètres du Compte', page: 'buyer-settings' as Page },
                         ].map(item => (
                           <button
@@ -625,10 +535,16 @@ export default function Layout({
             <div>
               <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Recherche Rapide</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {['Appartements à Abidjan Cocody', 'iPhone 15 Pro Max Neufs', 'Toyota RAV4 & Hilux', 'Robes & Sacs de Marque', 'Services de Déménagement'].map(link => (
-                  <li key={link}>
-                    <button onClick={() => onNavigate('search')} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                      {link}
+                {[
+                  { label: 'Appartements à Abidjan Cocody', query: 'appartement' },
+                  { label: 'iPhone 15 Pro Max Neufs', query: 'iPhone 15' },
+                  { label: 'Toyota RAV4 & Hilux', query: 'Toyota' },
+                  { label: 'Robes & Sacs de Marque', query: 'robe' },
+                  { label: 'Services de Déménagement', query: 'déménagement' },
+                ].map(item => (
+                  <li key={item.label}>
+                    <button onClick={() => { onClearCategoryFilter?.(); onSetSearchTerm?.(item.query); onNavigate('search') }} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                      {item.label}
                     </button>
                   </li>
                 ))}
@@ -638,10 +554,16 @@ export default function Layout({
             <div>
               <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Espace Membre</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {['Publier une Annonce Gratuite', 'Mes Favoris', 'Espace Vendeur Pro', 'Abonnements & Boost Annonces', 'Centre de Sécurité'].map(link => (
-                  <li key={link}>
-                    <button onClick={() => onNavigate('auth')} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                      {link}
+                {[
+                  { label: 'Publier une Annonce Gratuite', page: 'seller-post' as Page },
+                  { label: 'Mes Favoris', page: 'buyer-favorites' as Page },
+                  { label: 'Espace Vendeur Pro', page: 'seller-dashboard' as Page },
+                  { label: 'Abonnements & Boost Annonces', page: 'seller-premium' as Page },
+                  { label: 'Centre de Sécurité', page: 'buyer-settings' as Page },
+                ].map(item => (
+                  <li key={item.label}>
+                    <button onClick={() => onNavigate(isLoggedIn ? item.page : 'auth')} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                      {item.label}
                     </button>
                   </li>
                 ))}
@@ -677,6 +599,7 @@ export default function Layout({
           onQueryChange={setSearch}
           onSearch={handleSearchSubmit}
           onSelectListing={onSelectListing || onNavigate}
+          onSelectCategory={onNavigateCategory}
           onClose={() => setSearchOverlayOpen(false)}
           onNavigate={onNavigate}
         />
