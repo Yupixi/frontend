@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard } from 'lucide-react'
 import { formatPrice } from '../data/mockData'
@@ -17,6 +17,15 @@ type HomeProps = {
 
 function listingLocation(listing: RemoteListing): string {
   return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+}
+
+// Deterministic per-(seed, id) pseudo-random in [0, 1) — used to vary which
+// popular listings a session sees in "À la une" without reshuffling on every
+// re-render (the seed is generated once per session, not per render).
+function seededRandom(seed: number, id: string): number {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0
+  return Math.abs(Math.sin(seed + hash))
 }
 
 function listingImage(listing: RemoteListing): string {
@@ -178,9 +187,35 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     variables: { sort: 'RECENT', page: 1, pageSize: 12 },
   })
   const recent = listingsData?.listings.items ?? []
-  // "À la une" = most-favorited of the recent batch — an honest stand-in until
-  // paid Boost placements exist (Sprint 2+, see PromotionsModule).
-  const highlighted = [...recent].sort((a, b) => b.favoritesCount - a.favoritesCount).slice(0, 4)
+
+  // Generated once per session (not per render) so "À la une" doesn't
+  // reshuffle every time something re-renders the page.
+  const [sessionSeed] = useState(() => Math.random() * 1000)
+
+  // "À la une" — an honest stand-in for paid Boost placements (Sprint 2+,
+  // see PromotionsModule): the anchor card is the genuinely most-favorited
+  // listing, but the other slots draw from a pool of popular listings and
+  // are (a) biased toward categories the visitor has already favorited on
+  // Yupixi, and (b) varied per session via a stable shuffle — so it isn't
+  // the exact same four listings for every visitor on every visit.
+  const highlighted = useMemo(() => {
+    if (recent.length === 0) return []
+    const pool = [...recent].sort((a, b) => b.favoritesCount - a.favoritesCount).slice(0, 8)
+    const interestSlugs = new Set(
+      recent.filter(l => favorites.includes(l.id)).map(l => l.category.slug),
+    )
+    const [anchor, ...rest] = pool
+    const ranked = rest
+      .map(listing => ({ listing, rand: seededRandom(sessionSeed, listing.id) }))
+      .sort((a, b) => {
+        const aMatches = interestSlugs.has(a.listing.category.slug)
+        const bMatches = interestSlugs.has(b.listing.category.slug)
+        if (aMatches !== bMatches) return aMatches ? -1 : 1
+        return a.rand - b.rand
+      })
+      .map(entry => entry.listing)
+    return anchor ? [anchor, ...ranked].slice(0, 4) : ranked.slice(0, 4)
+  }, [recent, favorites, sessionSeed])
 
   const renderListings = (items: RemoteListing[]) =>
     homeViewMode === 'grid'
