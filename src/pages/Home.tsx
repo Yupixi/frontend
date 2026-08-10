@@ -314,30 +314,8 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
         </div>
       </section>
 
-      {/* Trust Bar */}
-      <section className="trust-bar">
-        <div className="trust-bar-inner">
-          {[
-            { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID', desc: 'Identité certifiée' },
-            { icon: CreditCard, text: 'Paiement Wave & Orange Money', desc: 'Transaction sécurisée' },
-            { icon: Star, text: 'Avis Clients Certifiés', desc: 'Recommandations vérifiées' },
-            { icon: Award, text: 'Support 7j/7 en Côte d\'Ivoire', desc: 'Assistance dédiée' },
-          ].map((item, i) => (
-            <div key={item.text} className="trust-bar-item">
-              <div className="trust-bar-icon">
-                <item.icon size={20} />
-              </div>
-              <div>
-                <div className="trust-bar-text">{item.text}</div>
-                <div className="trust-bar-desc">{item.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Content Container */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem 0' }}>
 
         {/* Recent Listings */}
         <section style={{ marginBottom: '3.5rem' }}>
@@ -469,6 +447,34 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           </div>
         </section>
 
+      </div>
+
+      {/* Trust Bar — desktop/tablet only (hidden below 768px in index.css);
+          the certified-badge row crowds a small screen without adding much,
+          and on desktop it reads better as reassurance right before the
+          seller CTA than as the very first thing under the hero. */}
+      <section className="trust-bar">
+        <div className="trust-bar-inner">
+          {[
+            { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID', desc: 'Identité certifiée' },
+            { icon: CreditCard, text: 'Paiement Wave & Orange Money', desc: 'Transaction sécurisée' },
+            { icon: Star, text: 'Avis Clients Certifiés', desc: 'Recommandations vérifiées' },
+            { icon: Award, text: 'Support 7j/7 en Côte d\'Ivoire', desc: 'Assistance dédiée' },
+          ].map((item, i) => (
+            <div key={item.text} className="trust-bar-item">
+              <div className="trust-bar-icon">
+                <item.icon size={20} />
+              </div>
+              <div>
+                <div className="trust-bar-text">{item.text}</div>
+                <div className="trust-bar-desc">{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem' }}>
         {/* CTA Seller Banner */}
         <section>
           <div className="pattern-yupixi" style={{

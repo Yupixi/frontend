@@ -1082,6 +1082,12 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .dark .trust-bar-item:nth-child(4) { border-top-color: #3A2727; }
 }
 
+/* Hidden below the app's mobile breakpoint — the certified-badge row
+   crowds a small screen without adding much; kept for desktop/tablet. */
+@media (max-width: 768px) {
+  .trust-bar { display: none; }
+}
+
 /* --- Filter chips & labels (search) --- */
 .filter-label {
   font-family: 'Outfit', sans-serif;
@@ -1218,7 +1224,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 @media (max-width: 640px) {
-  .trust-bar { display: none; }
   .listing-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.6rem;
@@ -1276,23 +1281,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
     width: 13px !important;
     height: 13px !important;
   }
-}
-
-@media (max-width: 640px) {
-  .trust-bar-inner { grid-template-columns: 1fr; }
-  .trust-bar-item {
-    padding: 1rem;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  .trust-bar-item:last-child { border-bottom: none; }
-  .trust-bar-item:nth-child(2) { border-right: none; }
-  .trust-bar-item:nth-child(3),
-  .trust-bar-item:nth-child(4) { border-top: none; }
-  .dark .trust-bar-item:nth-child(3),
-  .dark .trust-bar-item:nth-child(4) { border-top-color: transparent; }
-  .trust-bar-text { font-size: 0.8rem; }
-  .trust-bar-desc { font-size: 0.68rem; }
 }
 
 /* --- Animations --- */
