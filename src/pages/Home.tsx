@@ -169,7 +169,10 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect }: HomeProps) {
   const [homeViewMode, setHomeViewMode] = useState<'grid' | 'list'>('grid')
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
-  const categories = categoriesData?.categories ?? []
+  // Highlight a curated subset (staff-ordered via sortOrder) on the homepage —
+  // the header nav already covers full category browsing, so this section is
+  // meant as a shortcut to the busiest categories, not a duplicate full list.
+  const popularCategories = (categoriesData?.categories ?? []).slice(0, 8)
 
   const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
     variables: { sort: 'RECENT', page: 1, pageSize: 12 },
@@ -341,7 +344,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div>
               <h2 className="section-title" style={{ margin: 0 }}>Catégories Populaires</h2>
-              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Explorez le catalogue Yüpixi en Côte d'Ivoire</p>
+              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les catégories les plus recherchées sur Yüpixi</p>
             </div>
             <button
               onClick={() => onNavigate('categories')}
@@ -352,7 +355,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
-            {categories.map(cat => {
+            {popularCategories.map(cat => {
               return (
                 <button
                   key={cat.id}
