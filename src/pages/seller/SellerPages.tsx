@@ -554,11 +554,11 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
           <span style={{ color: 'var(--fg-muted)', fontSize: '0.82rem', marginLeft: 'auto' }}>{steps[step - 1]}</span>
         </div>
 
-        <div className="card" style={{ padding: '2rem' }}>
+        <div className="card postlisting-step-card" style={{ padding: '2rem' }}>
           {step === 1 && (
             <div>
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
+              <div className="postlisting-category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
                 {categories.map(cat => {
                   const selected = categoryId === cat.id
                   return (
@@ -598,7 +598,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                   <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>Choisissez une sous-catégorie</div>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div className="postlisting-subcategory-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 {catData.subcategories.map(sub => (
                   <button
                     key={sub.id}
@@ -634,7 +634,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                 </div>
               </div>
 
-              <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+              <div className="postlisting-fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
                   <input className="input" placeholder={titlePlaceholders[catSlug] || 'Ex: Titre de votre annonce'} value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
@@ -879,25 +879,25 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
         {filtered.map((l, i) => {
           const s = LISTING_STATUS_META[l.status] ?? LISTING_STATUS_META.DRAFT
           return (
-            <div key={l.id} style={{ display: 'flex', gap: '0.875rem', padding: '1rem', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
+            <div key={l.id} className="seller-listing-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem', padding: '1rem', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
               <div style={{ width: 72, height: 56, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0, cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
                 {l.coverImageUrl && (
                   <img src={l.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 )}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="seller-listing-content" style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3, flexWrap: 'wrap' }}>
                   <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
                   <span className="badge" style={{ background: s.bg, color: s.color, flexShrink: 0, fontSize: '0.72rem' }}>{s.label}</span>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
                   <span className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={l.price} /></span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={12} />{l.viewsCount}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={12} />{l.favoritesCount}</span>
                   <span>{new Date(l.createdAt).toLocaleDateString('fr-FR')}</span>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <div className="seller-listing-actions" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 <button onClick={() => onEditListing(l.id)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Edit3 size={14} /> Modifier
                 </button>
