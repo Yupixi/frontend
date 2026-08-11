@@ -482,6 +482,14 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .postlisting-category-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)) !important; }
   .postlisting-subcategory-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
 
+  /* Mes annonces row: thumbnail + content + 3 action buttons never fit on
+     one line on a phone — the buttons (flex-shrink:0) won the fight for
+     space and squeezed content to near-zero width, so the title
+     disappeared and the status badge visually collided with "Modifier".
+     Give actions their own full-width row below instead of fighting for
+     the same line. */
+  .seller-listing-actions { flex-basis: 100% !important; justify-content: flex-end; margin-top: 4px; }
+
   .listing-detail-grid { grid-template-columns: 1fr !important; }
   .listing-detail-image { height: 260px !important; }
   .listing-detail-sticky { position: static !important; }
