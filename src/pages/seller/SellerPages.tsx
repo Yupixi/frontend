@@ -554,11 +554,11 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
           <span style={{ color: 'var(--fg-muted)', fontSize: '0.82rem', marginLeft: 'auto' }}>{steps[step - 1]}</span>
         </div>
 
-        <div className="card" style={{ padding: '2rem' }}>
+        <div className="card postlisting-step-card" style={{ padding: '2rem' }}>
           {step === 1 && (
             <div>
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
+              <div className="postlisting-category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
                 {categories.map(cat => {
                   const selected = categoryId === cat.id
                   return (
@@ -598,7 +598,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                   <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>Choisissez une sous-catégorie</div>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div className="postlisting-subcategory-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 {catData.subcategories.map(sub => (
                   <button
                     key={sub.id}
@@ -634,7 +634,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                 </div>
               </div>
 
-              <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+              <div className="postlisting-fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
                   <input className="input" placeholder={titlePlaceholders[catSlug] || 'Ex: Titre de votre annonce'} value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />

@@ -470,6 +470,17 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .dashboard-main h1 { font-size: 1.25rem !important; }
   .dashboard-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .dashboard-two-col { grid-template-columns: 1fr !important; }
+  /* Input fields (as opposed to the tap-to-select category/subcategory
+     buttons below) stay one-per-row on mobile — full width is easier to
+     read the label against and tap into than a paired-up half-width field. */
+  .postlisting-fields-grid { grid-template-columns: 1fr !important; }
+  /* The wizard card's 2rem padding plus .dashboard-main's own padding left
+     so little content width that even the category/subcategory grids'
+     minmax() couldn't fit a second column — same one-column-only problem,
+     one level up. Trim the padding and the minmax floor to fit two. */
+  .postlisting-step-card { padding: 1.25rem !important; }
+  .postlisting-category-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)) !important; }
+  .postlisting-subcategory-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
 
   .listing-detail-grid { grid-template-columns: 1fr !important; }
   .listing-detail-image { height: 260px !important; }
