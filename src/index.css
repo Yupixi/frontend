@@ -1235,6 +1235,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 /* --- List view cards (search + home) --- */
 .listing-list-card {
   display: flex;
+  align-items: center;
   gap: 1rem;
   padding: 1rem;
   cursor: pointer;
