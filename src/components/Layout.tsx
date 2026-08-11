@@ -173,9 +173,14 @@ export default function Layout({
               {isLoggedIn ? (
                 <>
                   {/* Notifications — badge/dropdown content will return once
-                      real notifications ship; for now just navigate. */}
+                      real notifications ship; for now just navigate.
+                      Desktop only: on mobile these three plus the dark-mode
+                      toggle crowded the header past the viewport width —
+                      Favoris/Profil already live in the bottom nav, and
+                      Messages/Notifications are one tap away from there. */}
                   <button
                     onClick={() => onNavigate('buyer-notifications')}
+                    className="desktop-only"
                     style={{
                       background: 'var(--border-subtle)',
                       border: '1px solid var(--border)',
@@ -196,6 +201,7 @@ export default function Layout({
                   {/* Messages */}
                   <button
                     onClick={() => onNavigate('buyer-messages')}
+                    className="desktop-only"
                     style={{
                       background: 'var(--border-subtle)',
                       border: '1px solid var(--border)',
@@ -216,6 +222,7 @@ export default function Layout({
                   {/* Favorites */}
                   <button
                     onClick={() => onNavigate('buyer-favorites')}
+                    className="desktop-only"
                     style={{
                       background: 'var(--border-subtle)',
                       border: '1px solid var(--border)',
@@ -228,6 +235,7 @@ export default function Layout({
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}
+                    title="Favoris"
                   >
                     <Heart size={18} />
                   </button>
@@ -262,8 +270,8 @@ export default function Layout({
                       }}>
                         {displayInitial}
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--fg)' }}>{displayName.split(' ')[0]}</span>
-                      <ChevronDown size={14} style={{ color: 'var(--fg-muted)' }} />
+                      <span className="desktop-only" style={{ fontSize: '0.875rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--fg)' }}>{displayName.split(' ')[0]}</span>
+                      <ChevronDown size={14} className="desktop-only" style={{ color: 'var(--fg-muted)' }} />
                     </button>
 
                     {userMenuOpen && (
