@@ -373,15 +373,17 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
     )
   }
 
-  const noPriceCats = ['emploi', 'services', 'animaux', 'divers']
   const catSlug = catData?.slug ?? ''
+  // Backend-driven per category (Category.requiresPrice) — categories like
+  // Emploi/Services/Animaux/Divers don't ask for a fixed price.
+  const requiresPrice = catData?.requiresPrice ?? true
 
   const canGoNext = () => {
     if (step === 1) return !!categoryId
     if (step === 2) return !!subcategoryId
     if (step === 3) {
       if (!title.trim() || !description.trim()) return false
-      if (!noPriceCats.includes(catSlug) && !price) return false
+      if (requiresPrice && !price) return false
       return true
     }
     if (step === 4) return true
@@ -432,7 +434,7 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
             subcategoryId: subcategoryId || undefined,
             title: title.trim(),
             description,
-            price: noPriceCats.includes(catSlug) ? undefined : (price ? Number(price) : undefined),
+            price: requiresPrice ? (price ? Number(price) : undefined) : undefined,
             city,
             negotiable,
             attributes: customFields,
@@ -568,7 +570,7 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
                   <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>{title.length}/100 caractères</div>
                 </div>
 
-                {!noPriceCats.includes(catSlug) && (
+                {requiresPrice && (
                   <div>
                     <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix (FCFA) *</label>
                     <div style={{ position: 'relative' }}>
@@ -666,8 +668,8 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
                     )}
                   </div>
                   <div style={{ padding: '1.25rem' }}>
-                    {!noPriceCats.includes(catSlug) && <div className="price-tag" style={{ fontSize: '1.1rem' }}><Price amount={price ? parseInt(price) : 0} /></div>}
-                    {noPriceCats.includes(catSlug) && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}><Price amount={Number(customFields.salaire)} />/mois</div>}
+                    {requiresPrice && <div className="price-tag" style={{ fontSize: '1.1rem' }}><Price amount={price ? parseInt(price) : 0} /></div>}
+                    {!requiresPrice && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}><Price amount={Number(customFields.salaire)} />/mois</div>}
                     <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '8px 0 10px', fontSize: '1.1rem' }}>{title || 'Titre de votre annonce'}</h3>
                     <div style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} />{city}</span>
