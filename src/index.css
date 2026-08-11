@@ -222,6 +222,18 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .badge-blue { background: rgba(0, 163, 224, 0.12); color: #00A3E0; border: 1px solid rgba(0, 163, 224, 0.25); }
 .badge-gray { background: var(--border-subtle); color: var(--fg-muted); border: 1px solid var(--border); }
 
+.map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--border-subtle);
+  background-image: radial-gradient(var(--border) 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+.dark .map-placeholder { background-color: #2A1B1B; }
+
 .section-title {
   font-family: 'Outfit', sans-serif;
   font-weight: 900;

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Heart, Share2, MapPin, MessageCircle, Phone,
@@ -33,6 +33,20 @@ function X({ size }: { size: number }) {
 
 function listingLocation(listing: RemoteListing): string {
   return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+}
+
+function SpecItem({ icon, label, value }: { icon: ReactNode, label: string, value: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.75rem' }}>
+      <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--primary)' }}>
+        {icon}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: '0.82rem', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+      </div>
+    </div>
+  )
 }
 
 export default function ListingDetail({ listingId, onNavigate, onSelectSeller, favorites, onToggleFavorite }: ListingDetailProps) {
@@ -127,13 +141,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
               )}
               {images.length > 1 && (
                 <>
-                  <button onClick={() => setImgIdx(i => Math.max(0, i - 1))} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+                  <button onClick={() => setImgIdx(i => Math.max(0, i - 1))} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
                     <ChevronLeft size={20} />
                   </button>
-                  <button onClick={() => setImgIdx(i => Math.min(images.length - 1, i + 1))} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+                  <button onClick={() => setImgIdx(i => Math.min(images.length - 1, i + 1))} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
                     <ChevronRight size={20} />
                   </button>
-                  <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 700 }}>
+                  <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 800, fontFamily: "'Outfit', 'Nunito', sans-serif" }}>
                     {imgIdx + 1} / {images.length}
                   </div>
                 </>
@@ -158,7 +172,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
           <div className="card" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <div>
-                <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
+                <h1 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
                 <div className="price-tag" style={{ fontSize: '1.75rem' }}><Price amount={listing.price} /></div>
                 {listing.negotiable && <span className="badge badge-green" style={{ marginTop: 6 }}>Prix négociable</span>}
               </div>
@@ -184,18 +198,19 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-              {listing.condition && <span className="badge badge-gray"><Tag size={11} /> {listing.condition}</span>}
-              {listing.deliveryAvailable && <span className="badge badge-blue"><Truck size={11} /> Livraison possible</span>}
-              {listing.negotiable && <span className="badge badge-green"><CheckCircle size={11} /> Négociable</span>}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', marginBottom: '1.25rem' }}>
+              <SpecItem icon={<Tag size={15} />} label="Catégorie" value={listing.category.name} />
+              {listing.subcategory && <SpecItem icon={<Tag size={15} />} label="Sous-catégorie" value={listing.subcategory.name} />}
+              {listing.condition && listing.condition !== 'N/A' && <SpecItem icon={<CheckCircle size={15} />} label="État" value={listing.condition} />}
+              <SpecItem icon={<Truck size={15} />} label="Livraison" value={listing.deliveryAvailable ? 'Disponible' : 'Non disponible'} />
             </div>
 
-            <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Description</h3>
+            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Description</h3>
             <p style={{ color: 'var(--fg)', lineHeight: 1.7, fontSize: '0.9rem', margin: 0, whiteSpace: 'pre-wrap' }}>{listing.description}</p>
 
             {listing.tags.length > 0 && (
               <div style={{ borderTop: '1px solid var(--border)', marginTop: '1.25rem', paddingTop: '1.25rem' }}>
-                <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Mots-clés</h3>
+                <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Mots-clés</h3>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {listing.tags.map(t => <span key={t} className="badge badge-gray">{t}</span>)}
                 </div>
@@ -205,13 +220,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
 
           {/* Map */}
           <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1rem' }}>Localisation</h3>
+            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 1rem' }}>Localisation</h3>
             <div className="map-placeholder" style={{ height: 220 }}>
               <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', marginBottom: 8 }}>📍</div>
-                <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: '#444', fontSize: '0.9rem' }}>{listingLocation(listing)}</div>
-                <div style={{ color: '#666', fontSize: '0.8rem', marginTop: 4 }}>Carte interactive — Côte d'Ivoire</div>
-                <button style={{ marginTop: 12, background: '#fff', border: '1.5px solid #4CAF50', color: '#2E7D32', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, margin: '12px auto 0' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', color: 'var(--primary)' }}>
+                  <MapPin size={22} />
+                </div>
+                <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', fontSize: '0.9rem' }}>{listingLocation(listing)}</div>
+                <div style={{ color: 'var(--fg-muted)', fontSize: '0.8rem', marginTop: 4 }}>Carte interactive — Côte d'Ivoire</div>
+                <button className="btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem', margin: '12px auto 0' }}>
                   <ExternalLink size={13} /> Ouvrir dans Maps
                 </button>
               </div>
@@ -221,7 +238,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
           {/* Similar listings */}
           {similar.length > 0 && (
             <div>
-              <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1.1rem', margin: '0 0 1rem' }}>Annonces similaires</h3>
+              <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', margin: '0 0 1rem' }}>Annonces similaires</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 {similar.map(l => (
                   <div key={l.id} className="card card-hover" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => onNavigate('listing-detail')}>
@@ -230,7 +247,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
                     </div>
                     <div style={{ padding: '10px 12px' }}>
                       <div className="price-tag" style={{ fontSize: '0.95rem' }}><Price amount={l.price} /></div>
-                      <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--fg)', fontFamily: 'Nunito, sans-serif', fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--fg)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
                     </div>
                   </div>
                 ))}
@@ -242,7 +259,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
         {/* Right sidebar: desktop only */}
         <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
-            <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacter le vendeur</h3>
+            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacter le vendeur</h3>
 
             <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => onNavigate('buyer-messages')}>
               <MessageCircle size={18} /> Envoyer un message
@@ -251,7 +268,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
             {listing.seller.phone ? (
               contactOpen ? (
                 <div style={{ background: 'var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', marginBottom: '0.75rem', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>{listing.seller.phone}</div>
+                  <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>{listing.seller.phone}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>Cliquez pour appeler</div>
                 </div>
               ) : (
@@ -265,7 +282,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
 
             {offerOpen ? (
               <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
+                <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
                 <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button className="btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>Envoyer l'offre</button>
@@ -273,7 +290,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
                 </div>
               </div>
             ) : (
-              <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Tag size={15} /> Faire une offre
               </button>
             )}
@@ -288,12 +305,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
                   </div>
                 )}
                 <div>
-                  <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem', color: 'var(--fg)' }}>{listing.seller.fullName}</div>
+                  <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '0.9rem', color: 'var(--fg)' }}>{listing.seller.fullName}</div>
                   {listing.seller.city && <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{listing.seller.city}</div>}
                 </div>
               </button>
 
-              <button onClick={() => onSelectSeller(listing.seller.id)} style={{ marginTop: '0.75rem', width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg)', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.85rem' }}>
+              <button onClick={() => onSelectSeller(listing.seller.id)} style={{ marginTop: '0.75rem', width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem' }}>
                 Voir le profil complet →
               </button>
             </div>
@@ -303,7 +320,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
                 <p style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>Merci, votre signalement a été transmis.</p>
               ) : reportOpen ? (
                 <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem', textAlign: 'left' }}>
-                  <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.8rem', display: 'block', marginBottom: 6 }}>Motif</label>
+                  <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.8rem', display: 'block', marginBottom: 6 }}>Motif</label>
                   <select className="input" value={reportReason} onChange={e => setReportReason(e.target.value)} style={{ marginBottom: 8 }}>
                     {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
@@ -324,7 +341,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
           </div>
 
           <div className="card" style={{ padding: '1.25rem' }}>
-            <h4 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--fg)' }}>🔒 Conseils de sécurité</h4>
+            <h4 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--fg)' }}>🔒 Conseils de sécurité</h4>
             <ul style={{ margin: 0, padding: '0 0 0 16px', color: 'var(--fg-muted)', fontSize: '0.8rem', lineHeight: 1.8 }}>
               <li>Rencontrez le vendeur dans un lieu public</li>
               <li>Vérifiez le produit avant de payer</li>
@@ -397,7 +414,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
               {listing.seller.phone ? (
                 contactOpen ? (
                   <div style={{ background: 'var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', marginBottom: '0.75rem', textAlign: 'center' }}>
-                    <a href={`tel:${listing.seller.phone}`} style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)', textDecoration: 'none' }}>{listing.seller.phone}</a>
+                    <a href={`tel:${listing.seller.phone}`} style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)', textDecoration: 'none' }}>{listing.seller.phone}</a>
                     <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>Appuyez pour appeler</div>
                   </div>
                 ) : (
