@@ -726,6 +726,16 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   transform: scale(1.06);
 }
 
+.hero-mosaic-img-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border-subtle);
+  color: var(--fg-subtle);
+}
+
 .hero-mosaic-overlay {
   position: absolute;
   inset: 0;
@@ -914,6 +924,33 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   margin-left: auto;
 }
 
+/* Slide indicator dots — only meaningful for the mobile carousel below;
+   the desktop mosaic is a static grid, not a scroller. */
+.hero-mosaic-dots {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+.hero-mosaic-dot {
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: all 0.25s ease;
+}
+.dark .hero-mosaic-dot {
+  background: #4A3535;
+}
+.hero-mosaic-dot.active {
+  width: 20px;
+  background: var(--primary);
+}
+
 /* --- Responsive --- */
 @media (max-width: 1024px) {
   .hero-grid {
@@ -1010,6 +1047,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   }
   .hero-boost-hint {
     display: inline-flex;
+  }
+  .hero-mosaic-dots {
+    display: flex;
   }
   .hero-stats {
     grid-template-columns: repeat(3, 1fr);

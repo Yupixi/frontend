@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard } from 'lucide-react'
 import ViewToggle from '../components/ViewToggle'
@@ -175,6 +175,60 @@ function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
   )
 }
 
+function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggleFav }: {
+  card: RemoteListing, isMain: boolean, isFav: boolean, animationDelay: string, onSelect: () => void, onToggleFav: () => void
+}) {
+  const [imgError, setImgError] = useState(false)
+
+  return (
+    <div
+      className={`hero-mosaic-card${isMain ? ' hero-mosaic-card-main' : ''}`}
+      style={{ animationDelay }}
+      onClick={onSelect}
+    >
+      <div className="hero-mosaic-img-wrap">
+        {!imgError && listingImage(card) ? (
+          <img src={listingImage(card)} alt={card.title} className="hero-mosaic-img" onError={() => setImgError(true)} />
+        ) : (
+          <div className="hero-mosaic-img-fallback">
+            <Tag size={isMain ? 36 : 24} />
+          </div>
+        )}
+        {/* Gradient overlay at bottom */}
+        <div className="hero-mosaic-overlay" />
+
+        {/* Category badge */}
+        <div className="hero-mosaic-category">
+          {card.category.name}
+        </div>
+
+        {/* Price */}
+        <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
+          <Price amount={card.price} />
+        </div>
+      </div>
+
+      {/* Card body (title + location) */}
+      <div className="hero-mosaic-body">
+        <h3 className="hero-mosaic-title">{card.title}</h3>
+        <div className="hero-mosaic-location">
+          <MapPin size={13} />
+          {listingLocation(card)}
+        </div>
+      </div>
+
+      {/* Heart icon */}
+      <button
+        className="hero-mosaic-fav"
+        onClick={e => { e.stopPropagation(); onToggleFav() }}
+        style={{ color: isFav ? 'var(--primary)' : 'var(--fg-subtle)' }}
+      >
+        <Heart size={isMain ? 16 : 12} fill={isFav ? 'var(--primary)' : 'none'} />
+      </button>
+    </div>
+  )
+}
+
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect }: HomeProps) {
   // A cramped 2-column grid reads as cluttered on small screens — default to
   // the single-column list view there; desktop keeps the grid.
@@ -220,6 +274,58 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
       .map(entry => entry.listing)
     return anchor ? [anchor, ...ranked].slice(0, 4) : ranked.slice(0, 4)
   }, [recent, favorites, sessionSeed])
+
+  // On mobile "À la une" is a horizontal scroll-snap carousel (see
+  // .hero-mosaic in index.css); this drives its auto-advance and dots.
+  // Desktop keeps the static mosaic grid, where this is a harmless no-op.
+  const mosaicRef = useRef<HTMLDivElement>(null)
+  const [activeSlide, setActiveSlide] = useState(0)
+  const resumeAutoplayAtRef = useRef(0)
+  const scrollRafRef = useRef<number | null>(null)
+
+  const scrollMosaicTo = (index: number) => {
+    const container = mosaicRef.current
+    const target = container?.children[index] as HTMLElement | undefined
+    if (!container || !target) return
+    container.scrollTo({ left: target.offsetLeft - container.offsetLeft, behavior: 'smooth' })
+  }
+
+  const pauseAutoplay = () => {
+    resumeAutoplayAtRef.current = Date.now() + 5000
+  }
+
+  const handleMosaicScroll = () => {
+    if (scrollRafRef.current != null) return
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null
+      const container = mosaicRef.current
+      if (!container) return
+      const cards = Array.from(container.children) as HTMLElement[]
+      let closest = 0
+      let minDist = Infinity
+      cards.forEach((el, i) => {
+        const dist = Math.abs(el.offsetLeft - container.offsetLeft - container.scrollLeft)
+        if (dist < minDist) { minDist = dist; closest = i }
+      })
+      setActiveSlide(closest)
+    })
+  }
+
+  useEffect(() => {
+    if (highlighted.length <= 1) return
+    const interval = setInterval(() => {
+      if (window.innerWidth > 640) return
+      if (Date.now() < resumeAutoplayAtRef.current) return
+      const container = mosaicRef.current
+      if (!container) return
+      const cards = container.children
+      if (cards.length < 2) return
+      const next = (activeSlide + 1) % cards.length
+      scrollMosaicTo(next)
+    }, 4000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlighted.length, activeSlide])
 
   const renderListings = (items: RemoteListing[]) =>
     homeViewMode === 'grid'
@@ -299,54 +405,37 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
               </div>
 
-              <div className="hero-mosaic">
-                {highlighted.map((card, i) => {
-                  const isMain = i === 0
-                  const isFav = favorites.includes(card.id)
-                  return (
-                    <div
-                      key={card.id}
-                      className={`hero-mosaic-card${isMain ? ' hero-mosaic-card-main' : ''}`}
-                      style={{ animationDelay: `${i * 0.15}s` }}
-                      onClick={() => onSelectListing(card.id)}
-                    >
-                      <div className="hero-mosaic-img-wrap">
-                        <img src={listingImage(card)} alt={card.title} className="hero-mosaic-img" />
-                        {/* Gradient overlay at bottom */}
-                        <div className="hero-mosaic-overlay" />
-
-                        {/* Category badge */}
-                        <div className="hero-mosaic-category">
-                          {card.category.name}
-                        </div>
-
-                        {/* Price */}
-                        <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-                          <Price amount={card.price} />
-                        </div>
-                      </div>
-
-                      {/* Card body (title + location) */}
-                      <div className="hero-mosaic-body">
-                        <h3 className="hero-mosaic-title">{card.title}</h3>
-                        <div className="hero-mosaic-location">
-                          <MapPin size={13} />
-                          {listingLocation(card)}
-                        </div>
-                      </div>
-
-                      {/* Heart icon */}
-                      <button
-                        className="hero-mosaic-fav"
-                        onClick={e => { e.stopPropagation(); onToggleFavorite(card.id) }}
-                        style={{ color: isFav ? 'var(--primary)' : 'var(--fg-subtle)' }}
-                      >
-                        <Heart size={isMain ? 16 : 12} fill={isFav ? 'var(--primary)' : 'none'} />
-                      </button>
-                    </div>
-                  )
-                })}
+              <div
+                className="hero-mosaic"
+                ref={mosaicRef}
+                onScroll={handleMosaicScroll}
+                onTouchStart={pauseAutoplay}
+              >
+                {highlighted.map((card, i) => (
+                  <HeroMosaicCard
+                    key={card.id}
+                    card={card}
+                    isMain={i === 0}
+                    isFav={favorites.includes(card.id)}
+                    animationDelay={`${i * 0.15}s`}
+                    onSelect={() => onSelectListing(card.id)}
+                    onToggleFav={() => onToggleFavorite(card.id)}
+                  />
+                ))}
               </div>
+
+              {highlighted.length > 1 && (
+                <div className="hero-mosaic-dots">
+                  {highlighted.map((card, i) => (
+                    <button
+                      key={card.id}
+                      className={`hero-mosaic-dot${i === activeSlide ? ' active' : ''}`}
+                      onClick={() => { pauseAutoplay(); scrollMosaicTo(i) }}
+                      aria-label={`Aller à l'annonce ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
