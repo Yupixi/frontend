@@ -928,10 +928,17 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 @media (max-width: 640px) {
   .hero-premium-inner {
-    padding: 2rem 1rem 3rem;
+    padding: 1.25rem 1rem 1.5rem;
   }
   .hero-grid {
-    gap: 1.5rem;
+    gap: 0;
+  }
+  /* The marketing block (badge/title/subtitle/CTAs/stats) is redundant on
+     mobile — the header search bar and bottom nav already cover those
+     actions — and pushes real content below the fold. Lead with "À la
+     une" instead, which is real listings, not landing-page copy. */
+  .hero-left {
+    display: none;
   }
   .hero-mosaic {
     display: flex;
