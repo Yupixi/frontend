@@ -86,12 +86,54 @@ export const LISTING_QUERY = gql`
   }
 `
 
+export const MY_LISTING_QUERY = gql`
+  query MyListing($id: String!) {
+    myListing(id: $id) {
+      id
+      title
+      description
+      price
+      city
+      negotiable
+      status
+      attributes
+      media {
+        id
+        url
+      }
+      category {
+        id
+        slug
+      }
+      subcategory {
+        id
+        slug
+      }
+    }
+  }
+`
+
 export const CREATE_LISTING_MUTATION = gql`
   mutation CreateListing($input: CreateListingInput!) {
     createListing(input: $input) {
       id
       status
     }
+  }
+`
+
+export const UPDATE_LISTING_MUTATION = gql`
+  mutation UpdateListing($id: String!, $input: UpdateListingInput!) {
+    updateListing(id: $id, input: $input) {
+      id
+      status
+    }
+  }
+`
+
+export const DELETE_LISTING_MEDIA_MUTATION = gql`
+  mutation DeleteListingMedia($mediaId: String!) {
+    deleteListingMedia(mediaId: $mediaId)
   }
 `
 
@@ -147,6 +189,20 @@ export type MyListingRow = {
   favoritesCount: number
   createdAt: string
   coverImageUrl: string | null
+}
+
+export type MyListingDetail = {
+  id: string
+  title: string
+  description: string
+  price: number | null
+  city: string
+  negotiable: boolean
+  status: string
+  attributes: Record<string, string>
+  media: { id: string; url: string }[]
+  category: { id: string; slug: string }
+  subcategory: { id: string; slug: string } | null
 }
 
 export type CreateListingInput = {

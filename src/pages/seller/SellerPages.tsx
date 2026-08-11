@@ -15,9 +15,13 @@ import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
 import {
   ATTACH_LISTING_MEDIA_MUTATION,
   CREATE_LISTING_MUTATION,
+  DELETE_LISTING_MEDIA_MUTATION,
   DELETE_LISTING_MUTATION,
+  MY_LISTING_QUERY,
   MY_LISTINGS_QUERY,
   SUBMIT_LISTING_FOR_REVIEW_MUTATION,
+  UPDATE_LISTING_MUTATION,
+  type MyListingDetail,
   type MyListingRow,
 } from '../../graphql/listings'
 import { getAccessToken } from '../../lib/auth'
@@ -332,7 +336,8 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
 }
 
 // ─── POST LISTING ────────────────────────────────────────────────────────────
-export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
+export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string }) {
+  const isEditing = !!listingId
   useEffect(() => {
     if (!getAccessToken()) onNavigate('auth')
   }, [onNavigate])
@@ -347,17 +352,43 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
   const [city, setCity] = useState('Abidjan')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [existingMedia, setExistingMedia] = useState<{ id: string; url: string }[]>([])
   const [customFields, setCustomFields] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [prefilled, setPrefilled] = useState(false)
 
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const categories = categoriesData?.categories ?? []
+  const { data: existingData, loading: loadingExisting } = useQuery<{ myListing: MyListingDetail }>(MY_LISTING_QUERY, {
+    variables: { id: listingId },
+    skip: !isEditing,
+  })
   const [createListing, { loading: creating }] = useMutation<{ createListing: { id: string; status: string } }>(CREATE_LISTING_MUTATION)
+  const [updateListing, { loading: updating }] = useMutation<{ updateListing: { id: string; status: string } }>(UPDATE_LISTING_MUTATION)
   const [attachListingMedia, { loading: attaching }] = useMutation(ATTACH_LISTING_MEDIA_MUTATION)
+  const [deleteListingMedia] = useMutation(DELETE_LISTING_MEDIA_MUTATION)
   const [submitListingForReview, { loading: submittingReview }] = useMutation(SUBMIT_LISTING_FOR_REVIEW_MUTATION)
   const [uploading, setUploading] = useState(false)
-  const publishing = creating || uploading || attaching || submittingReview
+  const publishing = creating || updating || uploading || attaching || submittingReview
+
+  // Prefill the wizard from the existing listing once both it and the
+  // category list (needed to resolve requiresPrice/attributes schema) are in.
+  useEffect(() => {
+    if (prefilled || !isEditing) return
+    const listing = existingData?.myListing
+    if (!listing || categories.length === 0) return
+    setCategoryId(listing.category.id)
+    setSubcategoryId(listing.subcategory?.id ?? '')
+    setTitle(listing.title)
+    setPrice(listing.price != null ? String(listing.price) : '')
+    setNegotiable(listing.negotiable)
+    setDescription(listing.description)
+    setCity(listing.city)
+    setCustomFields((listing.attributes ?? {}) as Record<string, string>)
+    setExistingMedia(listing.media)
+    setPrefilled(true)
+  }, [existingData, categories, isEditing, prefilled])
 
   const steps = ['Catégorie', 'Sous-catégorie', 'Informations', 'Photos', 'Aperçu']
 
@@ -365,18 +396,32 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
   const subData = catData?.subcategories.find(s => s.id === subcategoryId)
   const stepsCount = steps.length
 
+  if (isEditing && loadingExisting && !prefilled) {
+    return (
+      <DashboardLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+        <div style={{ padding: '4rem 1rem', textAlign: 'center', color: 'var(--fg-muted)' }}>Chargement de l'annonce...</div>
+      </DashboardLayout>
+    )
+  }
+
   if (success) {
     return (
-      <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+      <DashboardLayout active={isEditing ? 'seller-listings' : 'seller-post'} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
         <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <CheckCircle size={40} color="#10B981" />
           </div>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>Annonce soumise !</h2>
-          <p style={{ color: 'var(--fg-muted)', marginBottom: '2rem' }}>Votre annonce est en attente de validation par notre équipe. Elle sera visible par les acheteurs dès son approbation.</p>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>{isEditing ? 'Annonce mise à jour !' : 'Annonce soumise !'}</h2>
+          <p style={{ color: 'var(--fg-muted)', marginBottom: '2rem' }}>
+            {isEditing
+              ? 'Vos modifications ont été enregistrées.'
+              : 'Votre annonce est en attente de validation par notre équipe. Elle sera visible par les acheteurs dès son approbation.'}
+          </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => onNavigate('seller-listings')}>Voir mes annonces</button>
-            <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1); setCategoryId(''); setSubcategoryId(''); setCustomFields({}); setImageFiles([]); setImagePreviews([]) }}>Publier une autre annonce</button>
+            {!isEditing && (
+              <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1); setCategoryId(''); setSubcategoryId(''); setCustomFields({}); setImageFiles([]); setImagePreviews([]) }}>Publier une autre annonce</button>
+            )}
           </div>
         </div>
       </DashboardLayout>
@@ -422,7 +467,7 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
 
   const handleFilesSelected = (files: FileList | null) => {
     if (!files) return
-    const remaining = 8 - imageFiles.length
+    const remaining = 8 - existingMedia.length - imageFiles.length
     const picked = Array.from(files).slice(0, remaining)
     setImageFiles(prev => [...prev, ...picked])
     setImagePreviews(prev => [...prev, ...picked.map(f => URL.createObjectURL(f))])
@@ -433,46 +478,56 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
     setImagePreviews(prev => prev.filter((_, idx) => idx !== i))
   }
 
+  const removeExistingImage = (mediaId: string) => {
+    setExistingMedia(prev => prev.filter(m => m.id !== mediaId))
+    void deleteListingMedia({ variables: { mediaId } }).catch(() => undefined)
+  }
+
   const handlePublish = async () => {
     if (!catData) return
     setSubmitError(null)
     try {
-      const { data: createData } = await createListing({
-        variables: {
-          input: {
-            categoryId: catData.id,
-            subcategoryId: subcategoryId || undefined,
-            title: title.trim(),
-            description,
-            price: requiresPrice ? (price ? Number(price) : undefined) : undefined,
-            city,
-            negotiable,
-            attributes: customFields,
-          },
-        },
-      })
-      const listingId = createData?.createListing?.id
-      if (!listingId) throw new Error('La création a échoué')
+      const input = {
+        categoryId: catData.id,
+        subcategoryId: subcategoryId || undefined,
+        title: title.trim(),
+        description,
+        price: requiresPrice ? (price ? Number(price) : undefined) : undefined,
+        city,
+        negotiable,
+        attributes: customFields,
+      }
+
+      let targetId: string
+      if (isEditing && listingId) {
+        await updateListing({ variables: { id: listingId, input } })
+        targetId = listingId
+      } else {
+        const { data: createData } = await createListing({ variables: { input } })
+        const newId = createData?.createListing?.id
+        if (!newId) throw new Error('La création a échoué')
+        targetId = newId
+      }
 
       if (imageFiles.length > 0) {
         setUploading(true)
         const urls = await uploadImages(imageFiles)
         setUploading(false)
-        await attachListingMedia({ variables: { listingId, urls } })
+        await attachListingMedia({ variables: { listingId: targetId, urls } })
       }
 
-      await submitListingForReview({ variables: { id: listingId } })
+      if (!isEditing) await submitListingForReview({ variables: { id: targetId } })
       setSuccess(true)
     } catch (err) {
       setUploading(false)
-      setSubmitError(err instanceof Error ? err.message : 'La publication a échoué. Réessayez.')
+      setSubmitError(err instanceof Error ? err.message : (isEditing ? "La mise à jour a échoué. Réessayez." : 'La publication a échoué. Réessayez.'))
     }
   }
 
   return (
-    <DashboardLayout active="seller-post" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+    <DashboardLayout active={isEditing ? 'seller-listings' : 'seller-post'} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Publier une annonce</h1>
+        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>{isEditing ? "Modifier l'annonce" : 'Publier une annonce'}</h1>
 
         <div className="seller-steps-desktop" style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', alignItems: 'center', background: 'var(--border-subtle)', borderRadius: 12, padding: '0.75rem 1rem' }}>
           {steps.map((s, i) => (
@@ -634,10 +689,24 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
               <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 0.5rem', fontSize: '1.1rem' }}>Ajoutez vos photos</h2>
               <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>La première photo sera la photo principale. Maximum 8 photos.</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
+                {existingMedia.map((m, i) => (
+                  <div key={m.id} style={{ aspectRatio: '1', borderRadius: 'var(--radius-sm)', overflow: 'hidden', position: 'relative' }}>
+                    <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {i === 0 && (
+                      <span style={{ position: 'absolute', top: 6, left: 6, background: 'var(--primary)', color: '#fff', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: 6 }}>Principale</span>
+                    )}
+                    <button
+                      onClick={() => removeExistingImage(m.id)}
+                      style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
                 {imagePreviews.map((src, i) => (
                   <div key={src} style={{ aspectRatio: '1', borderRadius: 'var(--radius-sm)', overflow: 'hidden', position: 'relative' }}>
                     <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    {i === 0 && (
+                    {existingMedia.length === 0 && i === 0 && (
                       <span style={{ position: 'absolute', top: 6, left: 6, background: 'var(--primary)', color: '#fff', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: 6 }}>Principale</span>
                     )}
                     <button
@@ -648,7 +717,7 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
                     </button>
                   </div>
                 ))}
-                {imageFiles.length < 8 && (
+                {existingMedia.length + imageFiles.length < 8 && (
                   <label style={{ aspectRatio: '1', border: '2px dashed var(--primary)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', background: 'rgba(254,0,0,0.02)' }}>
                     <Upload size={28} color="var(--primary)" />
                     <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>Ajouter</span>
@@ -671,8 +740,8 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
               <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div className="card" style={{ overflow: 'hidden' }}>
                   <div style={{ height: 220, background: `linear-gradient(135deg, ${catData.color}10 0%, var(--border) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                    {imagePreviews[0] ? (
-                      <img src={imagePreviews[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {(existingMedia[0]?.url || imagePreviews[0]) ? (
+                      <img src={existingMedia[0]?.url || imagePreviews[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <Image size={48} color="var(--fg-subtle)" />
                     )}
@@ -697,11 +766,21 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <AlertCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.95rem', marginBottom: 8 }}>Avant de publier</div>
+                      <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.95rem', marginBottom: 8 }}>{isEditing ? 'Avant d\'enregistrer' : 'Avant de publier'}</div>
                       <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem', color: 'var(--fg-muted)', lineHeight: 1.8 }}>
-                        <li>Votre annonce sera publiée immédiatement</li>
-                        <li>Elle sera visible dans les résultats de recherche</li>
-                        <li>Respectez nos conditions d'utilisation</li>
+                        {isEditing ? (
+                          <>
+                            <li>Vos modifications seront visibles immédiatement</li>
+                            <li>Le statut actuel de l'annonce est conservé</li>
+                            <li>Respectez nos conditions d'utilisation</li>
+                          </>
+                        ) : (
+                          <>
+                            <li>Votre annonce sera publiée immédiatement</li>
+                            <li>Elle sera visible dans les résultats de recherche</li>
+                            <li>Respectez nos conditions d'utilisation</li>
+                          </>
+                        )}
                       </ul>
                     </div>
                   </div>
@@ -718,7 +797,7 @@ export function PostListing({ onNavigate, currentUser, onLogout }: { onNavigate:
               <button className="btn-primary" onClick={() => canGoNext() && setStep(s => s + 1)} disabled={!canGoNext()} style={{ opacity: canGoNext() ? 1 : 0.5 }}>Suivant →</button>
             ) : (
               <button className="btn-primary" style={{ background: '#10B981', borderColor: '#10B981', opacity: publishing ? 0.7 : 1 }} onClick={handlePublish} disabled={publishing}>
-                {publishing ? 'Publication...' : "✓ Publier l'annonce"}
+                {publishing ? (isEditing ? 'Enregistrement...' : 'Publication...') : (isEditing ? '✓ Enregistrer les modifications' : "✓ Publier l'annonce")}
               </button>
             )}
           </div>
@@ -739,7 +818,7 @@ const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: st
   PAUSED: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
 }
 
-export function SellerListings({ onNavigate, onSelectListing, currentUser, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
+export function SellerListings({ onNavigate, onSelectListing, onEditListing, currentUser, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, onEditListing: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const [filter, setFilter] = useState('all')
   const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
     MY_LISTINGS_QUERY,
@@ -813,7 +892,7 @@ export function SellerListings({ onNavigate, onSelectListing, currentUser, onLog
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => onNavigate('seller-edit')} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
+                <button onClick={() => onEditListing(l.id)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Edit3 size={14} /> Modifier
                 </button>
                 <button onClick={() => handleDelete(l.id, l.title)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444' }}>

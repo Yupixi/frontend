@@ -212,6 +212,11 @@ export default function App() {
     navigate('listing-detail')
   }
 
+  const editListing = (id: string) => {
+    setSelectedListingId(id)
+    navigate('seller-edit')
+  }
+
   const selectSeller = (id: string) => {
     setSelectedSellerId(id)
     navigate('seller-profile')
@@ -299,10 +304,11 @@ export default function App() {
         case 'seller-dashboard':
           return <SellerDashboard onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-post':
-        case 'seller-edit':
           return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'seller-edit':
+          return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} listingId={selectedListingId} />
         case 'seller-listings':
-          return <SellerListings onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
+          return <SellerListings onNavigate={navigate} onSelectListing={selectListing} onEditListing={editListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-stats':
           return <SellerStats onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-payments':
