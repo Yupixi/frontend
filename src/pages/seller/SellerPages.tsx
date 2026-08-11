@@ -7,7 +7,7 @@ import {
   DollarSign, Users, AlertCircle, Home, Settings,
   Bell, LogOut, ChevronDown, Menu, X,
 } from 'lucide-react'
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { cities } from '../../data/mockData'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
@@ -291,13 +291,19 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
           <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Publiez une annonce pour voir vos statistiques de vues.</p>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={chartData}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FE0000" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: "'Outfit', sans-serif" }} />
-              <Bar dataKey="vues" fill="#FE0000" radius={[4, 4, 0, 0]} />
-            </BarChart>
+              <Area type="monotone" dataKey="vues" stroke="#FE0000" strokeWidth={2.5} fill="url(#colorViews)" />
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -957,13 +963,19 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune donnée pour le moment.</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={byViews}>
+              <AreaChart data={byViews}>
+                <defs>
+                  <linearGradient id="gViews" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#FE0000" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
-                <Bar dataKey="value" fill="#FE0000" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Area type="monotone" dataKey="value" stroke="#FE0000" strokeWidth={2} fill="url(#gViews)" />
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
@@ -973,13 +985,19 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune donnée pour le moment.</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={byFavorites}>
+              <AreaChart data={byFavorites}>
+                <defs>
+                  <linearGradient id="gFavorites" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
-                <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} fill="url(#gFavorites)" />
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
