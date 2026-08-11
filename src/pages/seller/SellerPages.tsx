@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, Plus, Package, BarChart2, CreditCard, Award, Eye, Heart,
-  MessageCircle, TrendingUp, TrendingDown, CheckCircle, XCircle, Edit3,
+  CheckCircle, XCircle, Edit3, Clock,
   Trash2, ChevronRight, Upload, MapPin, Tag, Image, Star, ArrowUp,
   DollarSign, Users, AlertCircle, Home, Settings,
   Bell, LogOut, ChevronDown, Menu, X,
 } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { listings, viewStats, cities } from '../../data/mockData'
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { cities } from '../../data/mockData'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
@@ -238,14 +238,24 @@ function DashboardLayout({ active, onNavigate, children, currentUser, onLogout }
 
 // ─── SELLER DASHBOARD ───────────────────────────────────────────────────────
 export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
+  const { data, loading } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(MY_LISTINGS_QUERY, {
+    variables: { page: 1, pageSize: 100 },
+  })
+  const myListings = data?.myListings.items ?? []
+  const activeCount = myListings.filter(l => l.status === 'APPROVED').length
+  const pendingCount = myListings.filter(l => l.status === 'PENDING_REVIEW').length
+  const totalViews = myListings.reduce((sum, l) => sum + l.viewsCount, 0)
+  const totalFavorites = myListings.reduce((sum, l) => sum + l.favoritesCount, 0)
+
   const stats = [
-    { label: 'Annonces actives', value: 8, icon: Package, color: '#FE0000', bg: 'rgba(254,0,0,0.08)', trend: '+2', up: true },
-    { label: 'Vues ce mois', value: '2 457', icon: Eye, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)', trend: '+18%', up: true },
-    { label: 'Contacts reçus', value: 84, icon: MessageCircle, color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)', trend: '+12', up: true },
-    { label: 'Favoris reçus', value: 136, icon: Heart, color: '#EC4899', bg: 'rgba(236,72,153,0.08)', trend: '-3', up: false },
+    { label: 'Annonces actives', value: activeCount, icon: Package, color: '#FE0000', bg: 'rgba(254,0,0,0.08)' },
+    { label: 'Vues totales', value: totalViews, icon: Eye, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)' },
+    { label: 'En attente de validation', value: pendingCount, icon: Clock, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
+    { label: 'Favoris reçus', value: totalFavorites, icon: Heart, color: '#EC4899', bg: 'rgba(236,72,153,0.08)' },
   ]
 
-  const topListings = listings.slice(0, 4).map((l, i) => ({ ...l, rank: i + 1 }))
+  const topListings = [...myListings].sort((a, b) => b.viewsCount - a.viewsCount).slice(0, 6)
+  const chartData = topListings.map(l => ({ name: l.title.length > 14 ? l.title.slice(0, 14) + '…' : l.title, vues: l.viewsCount }))
 
   return (
     <DashboardLayout active="seller-dashboard" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
@@ -262,35 +272,30 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
       <div className="dashboard-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {stats.map(s => (
           <div key={s.label} className="card" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <s.icon size={20} color={s.color} />
-              </div>
-              {s.up ? <TrendingUp size={16} color="#10B981" /> : <TrendingDown size={16} color="#EF4444" />}
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
+              <s.icon size={20} color={s.color} />
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{s.value}</div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{loading ? '—' : s.value}</div>
             <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues des 7 derniers jours</h2>
-        <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={viewStats}>
-            <defs>
-              <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#FE0000" stopOpacity={0.12} />
-                <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 12, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: "'Outfit', sans-serif" }} />
-            <Area type="monotone" dataKey="views" stroke="#FE0000" strokeWidth={2.5} fill="url(#colorViews)" />
-          </AreaChart>
-        </ResponsiveContainer>
+        <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues par annonce</h2>
+        {!loading && chartData.length === 0 ? (
+          <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Publiez une annonce pour voir vos statistiques de vues.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: "'Outfit', sans-serif" }} />
+              <Bar dataKey="vues" fill="#FE0000" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
@@ -300,19 +305,24 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
             Voir tout <ChevronRight size={15} />
           </button>
         </div>
+        {!loading && topListings.length === 0 && (
+          <p style={{ padding: '1.25rem', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune annonce pour le moment.</p>
+        )}
         {topListings.map((l, i) => (
           <div key={l.id} style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem 1.25rem', borderBottom: i < topListings.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: l.rank <= 3 ? 'var(--primary)' : 'var(--fg-muted)', width: 22, textAlign: 'center' }}>#{l.rank}</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: i < 3 ? 'var(--primary)' : 'var(--fg-muted)', width: 22, textAlign: 'center' }}>#{i + 1}</span>
             <div style={{ width: 48, height: 40, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
-              <img src={l.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              {l.coverImageUrl && (
+                <img src={l.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.title}</p>
               <span style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}><Price amount={l.price} /></span>
             </div>
             <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--fg-muted)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={13} />{l.views}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={13} />{l.favorites}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={13} />{l.viewsCount}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={13} />{l.favoritesCount}</span>
             </div>
           </div>
         ))}
@@ -825,6 +835,20 @@ export function SellerListings({ onNavigate, onSelectListing, currentUser, onLog
 
 // ─── STATISTICS ────────────────────────────────────────────────────────────
 export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
+  const { data, loading } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(MY_LISTINGS_QUERY, {
+    variables: { page: 1, pageSize: 100 },
+  })
+  const myListings = data?.myListings.items ?? []
+  const activeCount = myListings.filter(l => l.status === 'APPROVED').length
+  const totalViews = myListings.reduce((sum, l) => sum + l.viewsCount, 0)
+  const totalFavorites = myListings.reduce((sum, l) => sum + l.favoritesCount, 0)
+  const engagementRate = totalViews > 0 ? ((totalFavorites / totalViews) * 100).toFixed(1) + '%' : '—'
+
+  const byViews = [...myListings].sort((a, b) => b.viewsCount - a.viewsCount).slice(0, 6)
+    .map(l => ({ name: l.title.length > 14 ? l.title.slice(0, 14) + '…' : l.title, value: l.viewsCount }))
+  const byFavorites = [...myListings].sort((a, b) => b.favoritesCount - a.favoritesCount).slice(0, 6)
+    .map(l => ({ name: l.title.length > 14 ? l.title.slice(0, 14) + '…' : l.title, value: l.favoritesCount }))
+
   return (
     <DashboardLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Statistiques</h1>
@@ -832,55 +856,53 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
 
       <div className="dashboard-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: 'Vues totales', value: '12 457', trend: '+18%', icon: Eye, color: '#3B82F6' },
-          { label: 'Contacts', value: 342, trend: '+24%', icon: MessageCircle, color: '#8B5CF6' },
-          { label: 'Favoris', value: 568, trend: '+12%', icon: Heart, color: '#EC4899' },
-          { label: 'Taux de contact', value: '2.7%', trend: '+0.3%', icon: Users, color: '#10B981' },
+          { label: 'Annonces actives', value: activeCount, icon: Package, color: '#FE0000' },
+          { label: 'Vues totales', value: totalViews, icon: Eye, color: '#3B82F6' },
+          { label: 'Favoris reçus', value: totalFavorites, icon: Heart, color: '#EC4899' },
+          { label: "Taux d'engagement", value: engagementRate, icon: Users, color: '#10B981' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '1.25rem' }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: s.color + '12', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
               <s.icon size={20} color={s.color} />
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{s.value}</div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{loading ? '—' : s.value}</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{s.label}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4 }}>
-              <TrendingUp size={12} color="#10B981" />
-              <span style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 700 }}>{s.trend} ce mois</span>
-            </div>
           </div>
         ))}
       </div>
 
       <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues quotidiennes</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={viewStats}>
-              <defs>
-                <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FE0000" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
-              <Area type="monotone" dataKey="views" stroke="#FE0000" strokeWidth={2} fill="url(#g1)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues par annonce</h2>
+          {!loading && byViews.length === 0 ? (
+            <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune donnée pour le moment.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={byViews}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                <Bar dataKey="value" fill="#FE0000" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacts reçus</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={viewStats}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
-              <Bar dataKey="contacts" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Favoris par annonce</h2>
+          {!loading && byFavorites.length === 0 ? (
+            <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune donnée pour le moment.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={byFavorites}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </DashboardLayout>
