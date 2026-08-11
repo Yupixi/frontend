@@ -418,6 +418,13 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   height: 0;
 }
 
+.listing-breadcrumb-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .mobile-menu-btn { display: flex !important; }
@@ -443,6 +450,10 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .listing-detail-sticky { position: static !important; }
   .listing-detail-seller-grid { grid-template-columns: 1fr 1fr !important; }
   .listing-thumbnails { display: none !important; }
+  /* The full title right below (as the page heading) makes repeating it
+     in the breadcrumb redundant, and on a narrow screen it wraps the
+     whole breadcrumb row onto two lines. */
+  .listing-breadcrumb-title, .listing-breadcrumb-sep { display: none !important; }
 
   .buyer-sidebar-desktop { display: none !important; }
   .buyer-mobile-menu-btn { display: flex !important; }

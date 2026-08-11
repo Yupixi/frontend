@@ -104,8 +104,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
         </button>
         <span>/</span>
         <span>{listing.category.name}</span>
-        <span>/</span>
-        <span style={{ color: 'var(--fg)' }}>{listing.title}</span>
+        <span className="listing-breadcrumb-sep">/</span>
+        <span className="listing-breadcrumb-title" style={{ color: 'var(--fg)' }}>{listing.title}</span>
       </div>
 
       <div className="listing-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem' }}>
