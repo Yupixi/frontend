@@ -513,6 +513,11 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .buyer-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .buyer-fav-grid { grid-template-columns: 1fr !important; }
   .buyer-settings-grid { grid-template-columns: 1fr !important; }
+  /* The unread count wraps inside the h1 at this width, and with the
+     "Tout marquer" button pinned to the row via space-between + center,
+     the wrapped line and the button end up overlapping visually. Stack
+     them instead. */
+  .buyer-notifications-header { flex-direction: column !important; align-items: flex-start !important; }
   .buyer-msg-list { position: absolute !important; inset: 0; width: 100% !important; z-index: 10; background: var(--bg-card); }
   .buyer-msg-list-hidden { display: none !important; }
   .buyer-msg-chat-hidden { display: none !important; }
