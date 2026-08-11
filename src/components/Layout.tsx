@@ -627,12 +627,52 @@ export default function Layout({
           {[
             { label: 'Accueil', icon: Home, page: 'home' as Page },
             { label: 'Recherche', icon: Search, page: 'search' as Page },
-            { label: 'Publier', icon: Plus, page: 'seller-post' as Page },
+            { label: 'Publier', icon: Plus, page: 'seller-post' as Page, primary: true },
             { label: 'Favoris', icon: Heart, page: 'buyer-favorites' as Page },
             { label: 'Profil', icon: User, page: (isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
           ].map(item => {
             const IconComp = item.icon
             const isActive = currentPage === item.page
+
+            if (item.primary) {
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => onNavigate(item.page)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 3,
+                    padding: '0 0 6px',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    fontFamily: "'Outfit', sans-serif",
+                    fontWeight: 800,
+                    fontSize: '0.62rem',
+                    color: 'var(--primary)',
+                  }}
+                >
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 46,
+                    height: 46,
+                    borderRadius: '50%',
+                    background: 'var(--primary)',
+                    marginTop: -20,
+                    boxShadow: '0 4px 14px rgba(254,0,0,0.4)',
+                    border: '3px solid var(--bg-card)',
+                  }}>
+                    <IconComp size={22} strokeWidth={2.6} color="#fff" />
+                  </span>
+                  {item.label}
+                </button>
+              )
+            }
+
             return (
               <button
                 key={item.label}

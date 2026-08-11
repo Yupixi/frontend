@@ -6,6 +6,7 @@ import Price from '../components/Price'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
+import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 
 type HomeProps = {
   onNavigate: (page: any) => void
@@ -231,10 +232,15 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
 
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect }: HomeProps) {
   // A cramped 2-column grid reads as cluttered on small screens — default to
-  // the single-column list view there; desktop keeps the grid.
-  const [homeViewMode, setHomeViewMode] = useState<'grid' | 'list'>(() =>
-    typeof window !== 'undefined' && window.innerWidth <= 640 ? 'list' : 'grid',
+  // the single-column list view there; desktop keeps the grid. An explicit
+  // choice is remembered (shared with Search) and wins over that default.
+  const [homeViewMode, setHomeViewModeState] = useState<'grid' | 'list'>(() =>
+    getStoredViewMode() ?? (typeof window !== 'undefined' && window.innerWidth <= 640 ? 'list' : 'grid'),
   )
+  const setHomeViewMode = (mode: 'grid' | 'list') => {
+    setHomeViewModeState(mode)
+    setStoredViewMode(mode)
+  }
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   // Highlight a curated subset (staff-ordered via sortOrder) on the homepage —
   // the header nav already covers full category browsing, so this section is

@@ -8,6 +8,7 @@ import ViewToggle from '../components/ViewToggle'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, type RemoteListing, type ListingSort } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
+import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 
 const PAGE_SIZE = 20
 
@@ -34,10 +35,15 @@ function listingImage(listing: RemoteListing): string {
 
 export default function SearchPage({ onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity }: SearchProps) {
   // A cramped 2-column grid reads as cluttered on small screens — default to
-  // the single-column list view there; desktop keeps the grid.
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() =>
-    typeof window !== 'undefined' && window.innerWidth <= 640 ? 'list' : 'grid',
+  // the single-column list view there; desktop keeps the grid. An explicit
+  // choice is remembered (shared with Home) and wins over that default.
+  const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() =>
+    getStoredViewMode() ?? (typeof window !== 'undefined' && window.innerWidth <= 640 ? 'list' : 'grid'),
   )
+  const setViewMode = (mode: 'grid' | 'list') => {
+    setViewModeState(mode)
+    setStoredViewMode(mode)
+  }
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [sortBy, setSortBy] = useState<'recent' | 'price-asc' | 'price-desc'>('recent')
