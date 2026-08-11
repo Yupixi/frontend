@@ -592,8 +592,9 @@ export default function Layout({
         />
       )}
 
-      {/* Mobile Bottom Navigation */}
-      {isMobile && (
+      {/* Mobile Bottom Navigation — hidden on listing-detail, which has its
+          own contextual "Contacter" bar in the same fixed bottom slot. */}
+      {isMobile && currentPage !== 'listing-detail' && (
         <nav
           aria-label="Navigation principale"
           style={{

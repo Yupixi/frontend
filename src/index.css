@@ -222,6 +222,32 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .badge-blue { background: rgba(0, 163, 224, 0.12); color: #00A3E0; border: 1px solid rgba(0, 163, 224, 0.25); }
 .badge-gray { background: var(--border-subtle); color: var(--fg-muted); border: 1px solid var(--border); }
 
+.map-placeholder {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--border-subtle);
+}
+.dark .map-placeholder { background-color: #2A1B1B; }
+/* No per-listing coordinates to geocode against, so this is a single
+   OpenStreetMap tile centered on Côte d'Ivoire — an honest "we're on
+   the map" backdrop, not a claim of pinpoint precision. Kept faint
+   (per feedback) so the pin + label stay the focal point. */
+.map-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('https://tile.openstreetmap.org/7/62/61.png');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.16;
+}
+.dark .map-placeholder::before { opacity: 0.09; }
+
 .section-title {
   font-family: 'Outfit', sans-serif;
   font-weight: 900;
@@ -418,6 +444,13 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   height: 0;
 }
 
+.listing-breadcrumb-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .mobile-menu-btn { display: flex !important; }
@@ -443,6 +476,16 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .listing-detail-sticky { position: static !important; }
   .listing-detail-seller-grid { grid-template-columns: 1fr 1fr !important; }
   .listing-thumbnails { display: none !important; }
+  .listing-detail-card { padding: 1rem !important; }
+  .listing-detail-title { font-size: 1.15rem !important; margin-bottom: 6px !important; }
+  .listing-detail-actions button { width: 36px !important; height: 36px !important; }
+  /* Single column so a spec's full value (e.g. a long subcategory name)
+     has room to wrap onto two lines instead of being squeezed. */
+  .listing-detail-specs { grid-template-columns: 1fr !important; }
+  /* The full title right below (as the page heading) makes repeating it
+     in the breadcrumb redundant, and on a narrow screen it wraps the
+     whole breadcrumb row onto two lines. */
+  .listing-breadcrumb-title, .listing-breadcrumb-sep { display: none !important; }
 
   .buyer-sidebar-desktop { display: none !important; }
   .buyer-mobile-menu-btn { display: flex !important; }
