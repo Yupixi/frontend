@@ -43,7 +43,7 @@ function SpecItem({ icon, label, value }: { icon: ReactNode, label: string, valu
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: '0.82rem', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+        <div style={{ fontSize: '0.82rem', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', lineHeight: 1.25, wordBreak: 'break-word' }}>{value}</div>
       </div>
     </div>
   )
@@ -169,14 +169,14 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
           </div>
 
           {/* Details card */}
-          <div className="card" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div>
-                <h1 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
+          <div className="card listing-detail-card" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
+            <div className="listing-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: '1rem' }}>
+              <div style={{ minWidth: 0 }}>
+                <h1 className="listing-detail-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
                 <div className="price-tag" style={{ fontSize: '1.75rem' }}><Price amount={listing.price} /></div>
                 {listing.negotiable && <span className="badge badge-green" style={{ marginTop: 6 }}>Prix négociable</span>}
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="listing-detail-actions" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <button onClick={() => onToggleFavorite(listing.id)} style={{ background: isFav ? 'rgba(254,0,0,0.08)' : 'var(--border-subtle)', border: isFav ? '1.5px solid rgba(254,0,0,0.3)' : '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                   <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
                 </button>
@@ -198,7 +198,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', marginBottom: '1.25rem' }}>
+            <div className="listing-detail-specs" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', marginBottom: '1.25rem' }}>
               <SpecItem icon={<Tag size={15} />} label="Catégorie" value={listing.category.name} />
               {listing.subcategory && <SpecItem icon={<Tag size={15} />} label="Sous-catégorie" value={listing.subcategory.name} />}
               {listing.condition && listing.condition !== 'N/A' && <SpecItem icon={<CheckCircle size={15} />} label="État" value={listing.condition} />}
