@@ -278,20 +278,45 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // On mobile "À la une" is a horizontal scroll-snap carousel (see
   // .hero-mosaic in index.css); this drives its auto-advance and dots.
   // Desktop keeps the static mosaic grid, where this is a harmless no-op.
+  // The rendered strip repeats the first card at the end so autoplay can
+  // scroll smoothly "past" the last real card instead of rewinding — once
+  // that scroll settles on the clone, we snap back to the real first card
+  // with no animation, which is invisible since the clone looks identical.
+  const loopCount = highlighted.length
+  const mosaicSlides = loopCount > 1 ? [...highlighted, highlighted[0]] : highlighted
+
   const mosaicRef = useRef<HTMLDivElement>(null)
   const [activeSlide, setActiveSlide] = useState(0)
+  const activeSlideRef = useRef(0)
   const resumeAutoplayAtRef = useRef(0)
   const scrollRafRef = useRef<number | null>(null)
+  const scrollEndTimerRef = useRef<number | null>(null)
 
-  const scrollMosaicTo = (index: number) => {
+  const setActiveSlideSynced = (index: number) => {
+    activeSlideRef.current = index
+    setActiveSlide(index)
+  }
+
+  const scrollMosaicTo = (index: number, smooth = true) => {
     const container = mosaicRef.current
     const target = container?.children[index] as HTMLElement | undefined
     if (!container || !target) return
-    container.scrollTo({ left: target.offsetLeft - container.offsetLeft, behavior: 'smooth' })
+    container.scrollTo({ left: target.offsetLeft - container.offsetLeft, behavior: smooth ? 'smooth' : 'auto' })
   }
 
   const pauseAutoplay = () => {
     resumeAutoplayAtRef.current = Date.now() + 5000
+  }
+
+  const closestSlideIndex = (container: HTMLDivElement) => {
+    const cards = Array.from(container.children) as HTMLElement[]
+    let closest = 0
+    let minDist = Infinity
+    cards.forEach((el, i) => {
+      const dist = Math.abs(el.offsetLeft - container.offsetLeft - container.scrollLeft)
+      if (dist < minDist) { minDist = dist; closest = i }
+    })
+    return closest
   }
 
   const handleMosaicScroll = () => {
@@ -300,32 +325,35 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
       scrollRafRef.current = null
       const container = mosaicRef.current
       if (!container) return
-      const cards = Array.from(container.children) as HTMLElement[]
-      let closest = 0
-      let minDist = Infinity
-      cards.forEach((el, i) => {
-        const dist = Math.abs(el.offsetLeft - container.offsetLeft - container.scrollLeft)
-        if (dist < minDist) { minDist = dist; closest = i }
-      })
-      setActiveSlide(closest)
+      setActiveSlideSynced(closestSlideIndex(container) % Math.max(loopCount, 1))
     })
+
+    // Debounced "scroll has settled" check: if it settled on the trailing
+    // clone, jump back to the real first card without animating.
+    if (scrollEndTimerRef.current != null) window.clearTimeout(scrollEndTimerRef.current)
+    scrollEndTimerRef.current = window.setTimeout(() => {
+      const container = mosaicRef.current
+      if (!container) return
+      if (loopCount > 1 && closestSlideIndex(container) === loopCount) {
+        scrollMosaicTo(0, false)
+        setActiveSlideSynced(0)
+      }
+    }, 150)
   }
 
+  // Set up the autoplay timer once per loopCount (not per slide change) —
+  // it reads the current index from a ref so it never needs to re-arm and
+  // drift/restart every time a scroll event nudges the displayed dot.
   useEffect(() => {
-    if (highlighted.length <= 1) return
+    if (loopCount <= 1) return
     const interval = setInterval(() => {
       if (window.innerWidth > 640) return
       if (Date.now() < resumeAutoplayAtRef.current) return
-      const container = mosaicRef.current
-      if (!container) return
-      const cards = container.children
-      if (cards.length < 2) return
-      const next = (activeSlide + 1) % cards.length
-      scrollMosaicTo(next)
+      scrollMosaicTo(activeSlideRef.current + 1)
     }, 4000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlighted.length, activeSlide])
+  }, [loopCount])
 
   const renderListings = (items: RemoteListing[]) =>
     homeViewMode === 'grid'
@@ -411,9 +439,9 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 onScroll={handleMosaicScroll}
                 onTouchStart={pauseAutoplay}
               >
-                {highlighted.map((card, i) => (
+                {mosaicSlides.map((card, i) => (
                   <HeroMosaicCard
-                    key={card.id}
+                    key={i < loopCount ? card.id : `${card.id}-loop`}
                     card={card}
                     isMain={i === 0}
                     isFav={favorites.includes(card.id)}

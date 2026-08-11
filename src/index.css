@@ -701,6 +701,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .hero-mosaic-card:nth-child(2) { grid-column: 3; grid-row: 1; }
 .hero-mosaic-card:nth-child(3) { grid-column: 4; grid-row: 1; }
 .hero-mosaic-card:nth-child(4) { grid-column: 3 / 5; grid-row: 2; }
+/* A 5th card only exists as the mobile carousel's trailing loop clone
+   (see hero-mosaic-dots comment) — never shown in the desktop grid. */
+.hero-mosaic-card:nth-child(5) { display: none; }
 
 /* Anim delay per card */
 .hero-mosaic-card:nth-child(1) { animation-delay: 0s; }
@@ -970,6 +973,14 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .hero-grid {
     gap: 0;
   }
+  /* Grid items default to min-width: auto, so .hero-mosaic's overflow-x:auto
+     row (whose negative-margin bleed depends on a correctly-sized containing
+     block) was letting its own scrollable content dictate .hero-right's
+     width instead of shrinking to the actual grid track — inflating the
+     whole carousel past the viewport. */
+  .hero-right {
+    min-width: 0;
+  }
   /* The marketing block (badge/title/subtitle/CTAs/stats) is redundant on
      mobile — the header search bar and bottom nav already cover those
      actions — and pushes real content below the fold. Lead with "À la
@@ -979,16 +990,19 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   }
   .hero-mosaic {
     display: flex;
+    max-width: none;
     overflow-x: auto;
     gap: 12px;
     margin: 0 -1rem;
     padding: 4px 1rem 10px;
     scroll-snap-type: x mandatory;
+    scroll-padding-left: 1rem;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     animation: none;
   }
   .hero-mosaic::-webkit-scrollbar { display: none; }
+  .hero-mosaic-card:nth-child(5) { display: flex; }
   .hero-mosaic-card {
     grid-column: auto !important;
     grid-row: auto !important;
@@ -1270,8 +1284,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 .listing-list-meta span { display: inline-flex; align-items: center; gap: 3px; }
 @media (max-width: 640px) {
-  .listing-list-card { gap: 0.65rem; padding: 0.6rem; }
-  .listing-list-thumb { width: 96px !important; height: 88px !important; }
+  .listing-list-card { gap: 0.75rem; padding: 0.6rem; }
+  .listing-list-thumb { width: 120px !important; height: 120px !important; }
   .listing-list-desc { display: none; }
   .listing-list-title { font-size: 0.85rem; -webkit-line-clamp: 2; }
 }
