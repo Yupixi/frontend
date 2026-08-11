@@ -180,7 +180,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: '0.72rem', color: 'var(--fg-subtle)' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={11} />{l.views} vues</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Clock size={11} />Fin dans {timeLeft.heures}h</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Clock size={11} />Fin dans {timeLeft.hours}h</span>
                   </div>
                 </div>
               </div>

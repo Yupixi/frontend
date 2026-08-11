@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   Heart, MessageCircle, Bell, History, Settings, LayoutDashboard,
@@ -9,6 +9,7 @@ import {
 import { listings, conversations, notifications, sellers } from '../../data/mockData'
 import Price from '../../components/Price'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
+import type { AuthUser } from '../../graphql/auth'
 
 type FavoriteListing = {
   id: string
@@ -106,7 +107,7 @@ function PageLayout({ active, onNavigate, children }: { active: string, onNaviga
 }
 
 // ─── BUYER DASHBOARD ───────────────────────────────────────────────────────
-export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[] }) {
+export function BuyerDashboard({ onNavigate, onSelectListing, favorites, currentUser }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[], currentUser?: AuthUser | null }) {
   const { data: favData } = useQuery<{ myFavorites: { items: FavoriteListing[] } }>(MY_FAVORITES_QUERY, {
     variables: { page: 1, pageSize: 4 },
   })
@@ -120,8 +121,8 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites }: { onN
 
   return (
     <PageLayout active="buyer-dashboard" onNavigate={onNavigate}>
-      <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>
-        Bonjour, Kouamé 👋
+      <h1 className="buyer-page-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>
+        Bonjour{currentUser?.fullName ? `, ${currentUser.fullName.split(' ')[0]}` : ''} 👋
       </h1>
 
       <div className="buyer-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
@@ -460,11 +461,20 @@ export function BuyerHistory({ onNavigate, onSelectListing }: { onNavigate: (p: 
 }
 
 // ─── SETTINGS ──────────────────────────────────────────────────────────────
-export function BuyerSettings({ onNavigate, dark, onToggleDark }: { onNavigate: (p: any) => void, dark: boolean, onToggleDark: () => void }) {
-  const [name, setName] = useState('Kouamé Jean-Baptiste')
-  const [email, setEmail] = useState('kouame@email.ci')
-  const [phone, setPhone] = useState('+225 07 12 34 56')
+export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: { onNavigate: (p: any) => void, dark: boolean, onToggleDark: () => void, currentUser?: AuthUser | null }) {
+  const [name, setName] = useState(currentUser?.fullName ?? '')
+  const [email, setEmail] = useState(currentUser?.email ?? '')
+  const [phone, setPhone] = useState('')
   const [city, setCity] = useState('Abidjan')
+  const avatarInitial = (currentUser?.fullName || '?').charAt(0).toUpperCase()
+
+  // currentUser can still be loading (fetched async in App.tsx) when this
+  // page first mounts — sync once it arrives instead of only reading it at
+  // the initial useState() call, which would miss that update.
+  useEffect(() => {
+    if (currentUser?.fullName) setName(currentUser.fullName)
+    if (currentUser?.email) setEmail(currentUser.email)
+  }, [currentUser])
 
   const settingSections = [
     {
@@ -473,7 +483,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark }: { onNavigate: 
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', flexShrink: 0 }}>K</div>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', flexShrink: 0 }}>{avatarInitial}</div>
             <button className="btn-outline" style={{ fontSize: '0.875rem' }}>Changer la photo</button>
           </div>
           <div className="buyer-settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -483,7 +493,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark }: { onNavigate: 
             </div>
             <div>
               <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Téléphone</label>
-              <input className="input" value={phone} onChange={e => setPhone(e.target.value)} />
+              <input className="input" placeholder="+225 XX XX XX XX XX" value={phone} onChange={e => setPhone(e.target.value)} />
             </div>
             <div>
               <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Email</label>

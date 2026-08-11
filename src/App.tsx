@@ -264,7 +264,7 @@ export default function App() {
 
       // Buyer pages
       case 'buyer-dashboard':
-        return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} />
+        return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} />
       case 'buyer-favorites':
         return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'buyer-messages':
@@ -274,7 +274,7 @@ export default function App() {
       case 'buyer-history':
         return <BuyerHistory onNavigate={navigate} onSelectListing={selectListing} />
       case 'buyer-settings':
-        return <BuyerSettings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} />
+        return <BuyerSettings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} />
 
       // Admin pages
       case 'admin-dashboard':
