@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import DOMPurify from 'dompurify'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Heart, Share2, MapPin, MessageCircle, Phone,
@@ -206,7 +207,10 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, f
             </div>
 
             <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Description</h3>
-            <p style={{ color: 'var(--fg)', lineHeight: 1.7, fontSize: '0.9rem', margin: 0, whiteSpace: 'pre-wrap' }}>{listing.description}</p>
+            <div
+              style={{ color: 'var(--fg)', lineHeight: 1.7, fontSize: '0.9rem' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }}
+            />
 
             {listing.tags.length > 0 && (
               <div style={{ borderTop: '1px solid var(--border)', marginTop: '1.25rem', paddingTop: '1.25rem' }}>
