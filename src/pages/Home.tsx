@@ -447,6 +447,19 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                   />
                 ))}
               </div>
+
+              {highlighted.length > 1 && (
+                <div className="hero-mosaic-dots">
+                  {highlighted.map((card, i) => (
+                    <button
+                      key={card.id}
+                      className={`hero-mosaic-dot${i === activeSlide ? ' active' : ''}`}
+                      onClick={() => { pauseAutoplay(); scrollMosaicTo(i) }}
+                      aria-label={`Aller à l'annonce ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
