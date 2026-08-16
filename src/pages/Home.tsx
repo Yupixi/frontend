@@ -437,7 +437,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               <div className="hero-floating-container">
                 {highlighted.slice(0, 3).map((card, i) => (
                   <HeroMosaicCard
-                    key={card.id}
+                    key={i < loopCount ? card.id : `${card.id}-loop`}
                     card={card}
                     isMain={i === 0}
                     isFav={favorites.includes(card.id)}
