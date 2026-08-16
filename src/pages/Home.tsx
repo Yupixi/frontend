@@ -198,18 +198,23 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
         {/* Gradient overlay at bottom */}
         <div className="hero-mosaic-overlay" />
 
-        <div className="hero-mosaic-content">
-          {/* Category badge */}
-          <div className="hero-mosaic-category">
-            {card.category.name}
-          </div>
+        {/* Category badge */}
+        <div className="hero-mosaic-category">
+          {card.category.name}
+        </div>
 
-          <h3 className="hero-mosaic-title">{card.title}</h3>
+        {/* Price */}
+        <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
+          <Price amount={card.price} />
+        </div>
+      </div>
 
-          {/* Price */}
-          <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-            <Price amount={card.price} />
-          </div>
+      {/* Card body (title + location) */}
+      <div className="hero-mosaic-body">
+        <h3 className="hero-mosaic-title">{card.title}</h3>
+        <div className="hero-mosaic-location">
+          <MapPin size={13} />
+          {listingLocation(card)}
         </div>
       </div>
 
@@ -217,8 +222,9 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
       <button
         className="hero-mosaic-fav"
         onClick={e => { e.stopPropagation(); onToggleFav() }}
+        style={{ color: isFav ? 'var(--primary)' : 'var(--fg-subtle)' }}
       >
-        <Heart size={isMain ? 18 : 14} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'white'} />
+        <Heart size={isMain ? 16 : 12} fill={isFav ? 'var(--primary)' : 'none'} />
       </button>
     </div>
   )
@@ -369,62 +375,48 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   return (
     <div>
 
-      {/* Premium Hero Section — Immersive & Dynamic */}
-      <section className="hero-premium">
-        {/* Animated background elements */}
-        <div className="hero-premium-glow">
-          <div className="hero-glow-1" />
-          <div className="hero-glow-2" />
-        </div>
+      {/* Premium Hero Section — Two-Column with Floating Card Mosaic */}
+      <section className="hero-premium" style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Subtle gradient overlay */}
+        <div className="hero-premium-glow" />
 
         <div className="hero-premium-inner">
           <div className="hero-grid">
 
-            {/* === Left Column: Text, Search, Stats === */}
+            {/* === Left Column: Text, CTA, Stats === */}
             <div className="hero-left">
               <div className="hero-badge">
                 <Sparkles size={14} />
-                La marketplace n°1 en Côte d'Ivoire
+                La marketplace nouvelle génération
               </div>
 
               <h1 className="hero-title">
-                La marketplace préférée<br />
-                <span className="hero-title-accent">des Ivoiriens</span>
+                Trouvez, <span className="hero-title-accent">Achetez</span> & Vendez<br />
+                en Côte d'Ivoire
               </h1>
 
               <p className="hero-subtitle">
-                Achetez et vendez en toute confiance. La plateforme n°1 en Côte d'Ivoire
-                pour entrer en contact avec des vendeurs locaux.
+                La plus grande plateforme de petites annonces certifiées en Côte d'Ivoire.
+                Parcourez des milliers d'offres et payez en toute sécurité par Mobile Money.
               </p>
 
-              {/* Smart Search Bar */}
-              <div className="hero-search-container">
-                <div className="hero-search-wrapper">
-                  <div className="hero-search-input-box">
-                    <Tag size={20} className="text-slate-400" />
-                    <input
-                      type="text"
-                      className="hero-search-input"
-                      placeholder="Que recherchez-vous ? (ex: iPhone 15, Toyota...)"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && onNavigate('search')}
-                    />
-                  </div>
-                  <button className="hero-search-btn" onClick={() => onNavigate('search')}>
-                    Rechercher
-                  </button>
-                </div>
+              <div className="hero-buttons">
+                <button className="hero-btn hero-btn-primary" onClick={() => onNavigate('search')}>
+                  Explorer les annonces <ArrowRight size={18} />
+                </button>
+                <button className="hero-btn hero-btn-outline" onClick={() => onNavigate('seller-post')}>
+                  + Publier une annonce
+                </button>
               </div>
 
               {/* Stats */}
               <div className="hero-stats">
                 {[
-                  { value: '85K+', label: 'Annonces' },
-                  { value: '42K+', label: 'Vendeurs' },
-                  { value: '100%', label: 'Sécurisé' },
-                ].map((s, idx) => (
-                  <div key={s.label} className="hero-stat-item" style={{ animationDelay: `${0.6 + idx * 0.1}s` }}>
+                  { value: '85 000+', label: 'Annonces Actives' },
+                  { value: '42 000+', label: 'Vendeurs Vérifiés' },
+                  { value: '100%', label: 'Paiement Sécurisé' },
+                ].map(s => (
+                  <div key={s.label} className="hero-stat-item">
                     <div className="hero-stat-value">{s.value}</div>
                     <div className="hero-stat-label">{s.label}</div>
                   </div>
@@ -432,16 +424,29 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               </div>
             </div>
 
-            {/* === Right Column: Floating Mosaic === */}
-            <div className="hero-right desktop-only">
-              <div className="hero-floating-container">
-                {highlighted.slice(0, 3).map((card, i) => (
+            {/* === Right Column: À la une (most-favorited recent listings) === */}
+            <div className="hero-right">
+              <div className="hero-boost-header">
+                <span className="hero-boost-pill">
+                  <Zap size={13} fill="#0F172A" /> À la une
+                </span>
+                <span className="hero-boost-note">Les annonces les plus populaires du moment</span>
+                <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
+              </div>
+
+              <div
+                className="hero-mosaic"
+                ref={mosaicRef}
+                onScroll={handleMosaicScroll}
+                onTouchStart={pauseAutoplay}
+              >
+                {mosaicSlides.map((card, i) => (
                   <HeroMosaicCard
                     key={i < loopCount ? card.id : `${card.id}-loop`}
                     card={card}
                     isMain={i === 0}
                     isFav={favorites.includes(card.id)}
-                    animationDelay={`${0.4 + i * 0.2}s`}
+                    animationDelay="0s"
                     onSelect={() => onSelectListing(card.id)}
                     onToggleFav={() => onToggleFavorite(card.id)}
                   />

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta Sans:wght@400;500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta Sans:wght@400;500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap');
 @import 'tailwindcss';
 
 @theme {
@@ -84,7 +84,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   letter-spacing: -0.02em;
 }
 
-/* Yüpixi Pattern Overlay */
+/* YÃ¼pixi Pattern Overlay */
 .pattern-yupixi {
   background-color: var(--primary);
   background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px), radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, var(--primary) 1.5px);
@@ -234,7 +234,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 .dark .map-placeholder { background-color: #2A1B1B; }
 /* No per-listing coordinates to geocode against, so this is a single
-   OpenStreetMap tile centered on Côte d'Ivoire — an honest "we're on
+   OpenStreetMap tile centered on CÃ´te d'Ivoire â€” an honest "we're on
    the map" backdrop, not a claim of pinpoint precision. Kept faint
    (per feedback) so the pin + label stay the focal point. */
 .map-placeholder::before {
@@ -335,7 +335,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   letter-spacing: -0.02em;
 }
 
-/* Currency unit — sized relative to the amount it follows (em), so it
+/* Currency unit â€” sized relative to the amount it follows (em), so it
    stays proportionally small wherever the price itself is rendered at. */
 .price-unit {
   font-size: 0.55em;
@@ -471,19 +471,19 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .dashboard-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .dashboard-two-col { grid-template-columns: 1fr !important; }
   /* Input fields (as opposed to the tap-to-select category/subcategory
-     buttons below) stay one-per-row on mobile — full width is easier to
+     buttons below) stay one-per-row on mobile â€” full width is easier to
      read the label against and tap into than a paired-up half-width field. */
   .postlisting-fields-grid { grid-template-columns: 1fr !important; }
   /* The wizard card's 2rem padding plus .dashboard-main's own padding left
      so little content width that even the category/subcategory grids'
-     minmax() couldn't fit a second column — same one-column-only problem,
+     minmax() couldn't fit a second column â€” same one-column-only problem,
      one level up. Trim the padding and the minmax floor to fit two. */
   .postlisting-step-card { padding: 1.25rem !important; }
   .postlisting-category-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)) !important; }
   .postlisting-subcategory-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
 
   /* Mes annonces row: thumbnail + content + 3 action buttons never fit on
-     one line on a phone — the buttons (flex-shrink:0) won the fight for
+     one line on a phone â€” the buttons (flex-shrink:0) won the fight for
      space and squeezed content to near-zero width, so the title
      disappeared and the status badge visually collided with "Modifier".
      Give actions their own full-width row below instead of fighting for
@@ -551,450 +551,123 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .mobile-menu-btn { display: none !important; }
   .mobile-drawer { display: none !important; }
 }
-
-/* ========== PREMIUM HERO SECTION ========== */
 .hero-premium {
   background: var(--bg);
   border-bottom: 1px solid var(--border);
-  position: relative;
-  overflow: hidden;
 }
 .dark .hero-premium {
-  background: #09090B;
-  border-bottom: 1px solid #18181B;
+  background: #120B0B;
+  border-bottom: 1px solid #3A2727;
 }
 
 .hero-premium-glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(254,0,0,0.04) 0%, transparent 70%);
 }
-
-.hero-glow-1 {
-  position: absolute;
-  top: -10%;
-  right: -10%;
-  width: 60%;
-  height: 60%;
-  background: radial-gradient(circle, rgba(254,0,0,0.08) 0%, transparent 70%);
-  filter: blur(80px);
-  animation: float-glow 20s infinite alternate ease-in-out;
-}
-
-.hero-glow-2 {
-  position: absolute;
-  bottom: -10%;
-  left: -10%;
-  width: 40%;
-  height: 40%;
-  background: radial-gradient(circle, rgba(255,221,33,0.05) 0%, transparent 70%);
-  filter: blur(60px);
-  animation: float-glow 15s infinite alternate-reverse ease-in-out;
-}
-
-@keyframes float-glow {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-5%, 5%) scale(1.1); }
+.dark .hero-premium-glow {
+  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(254,0,0,0.08) 0%, transparent 70%);
 }
 
 .hero-premium-inner {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 6rem 1rem 7rem;
+  padding: 4rem 1rem 5rem;
   position: relative;
-  z-index: 1;
 }
 
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 4rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
   align-items: center;
-}
-
-@media (max-width: 1024px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-    text-align: center;
-    gap: 3rem;
-  }
-  .hero-premium-inner {
-    padding: 4rem 1rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .hero-premium-inner {
-    padding: 2.5rem 1rem 3rem !important;
-  }
-  .hero-title {
-    font-size: 2.2rem !important;
-    line-height: 1.1 !important;
-  }
-  .hero-subtitle {
-    font-size: 1rem !important;
-    margin-bottom: 0.5rem !important;
-  }
-  .hero-badge {
-    padding: 6px 12px !important;
-    font-size: 0.75rem !important;
-  }
-  .hero-search-wrapper {
-    flex-direction: column !important;
-    gap: 0.75rem !important;
-    padding: 0.5rem !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-  .hero-search-input-box {
-    background: var(--bg-card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 12px !important;
-    padding: 0.75rem 1rem !important;
-    width: 100% !important;
-  }
-  .hero-search-btn {
-    width: 100% !important;
-    padding: 0.875rem !important;
-    border-radius: 12px !important;
-  }
 }
 
 /* --- Left Column --- */
 .hero-left {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-@media (max-width: 1024px) {
-  .hero-left {
-    align-items: center;
-  }
+  gap: 1.25rem;
 }
 
 .hero-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(254,0,0,0.05);
-  border: 1px solid rgba(254,0,0,0.1);
-  padding: 8px 16px;
+  gap: 6px;
+  background: var(--border-subtle);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
   border-radius: 999px;
   font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--fg-muted);
   width: fit-content;
-  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+}
+.dark .hero-badge {
+  background: #2A1B1B;
+  border-color: #3A2727;
+  color: #B89B9B;
 }
 
 .hero-title {
   font-family: 'Outfit', sans-serif;
   font-weight: 900;
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  line-height: 1.05;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1.1;
   color: var(--fg);
   margin: 0;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
 }
-
 .hero-title-accent {
-  position: relative;
-  display: inline-block;
   color: var(--primary);
-}
-
-.hero-title-accent::after {
-  content: '';
-  position: absolute;
-  bottom: 8px;
-  left: 0;
-  width: 100%;
-  height: 8px;
-  background: rgba(254,0,0,0.1);
-  z-index: -1;
-  border-radius: 4px;
 }
 
 .hero-subtitle {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   line-height: 1.6;
   color: var(--fg-muted);
   margin: 0;
-  max-width: 540px;
+  max-width: 480px;
 }
 
-/* --- Search Bar Hero --- */
-.hero-search-container {
-  width: 100%;
-  max-width: 600px;
-  margin-top: 1rem;
-}
-
-.hero-search-wrapper {
+.hero-buttons {
   display: flex;
-  align-items: center;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  padding: 8px;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 0.85rem;
+  flex-wrap: wrap;
 }
 
-.hero-search-wrapper:focus-within {
-  border-color: var(--primary);
-  box-shadow: 0 15px 40px -12px rgba(254,0,0,0.15);
-  transform: translateY(-2px);
-}
-
-.hero-search-input-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-}
-
-.hero-search-input {
-  width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--fg);
-}
-
-.hero-search-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 14px;
-  padding: 12px 24px;
+.hero-btn {
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
+  border-radius: 12px;
+  padding: 0.85rem 1.75rem;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
+  transition: all 0.2s ease;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  border: none;
 }
-
-.hero-search-btn:hover {
+.hero-btn-primary {
+  background: var(--primary);
+  color: #FFFFFF;
+}
+.hero-btn-primary:hover {
   background: var(--primary-dark);
-  transform: scale(1.02);
-}
-
-@media (max-width: 640px) {
-  .hero-search-wrapper {
-    flex-direction: column;
-    padding: 12px;
-    border-radius: 24px;
-    gap: 12px;
-  }
-  .hero-search-btn {
-    width: 100%;
-    justify-content: center;
-  }
-  .hero-search-input-box {
-    padding: 8px 0;
-    width: 100%;
-  }
-}
-
-.hero-stats {
-  display: flex;
-  gap: 3rem;
-  margin-top: 1.5rem;
-}
-
-@media (max-width: 1024px) {
-  .hero-stats {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 640px) {
-  .hero-stats {
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
-.hero-stat-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.hero-stat-value {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: 1.75rem;
-  color: var(--fg);
-  line-height: 1;
-}
-
-.hero-stat-label {
-  font-size: 0.85rem;
-  color: var(--fg-muted);
-  font-weight: 600;
-  margin-top: 4px;
-}
-
-/* --- Right Column: Floating Mosaic --- */
-.hero-right {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 500px;
-}
-
-.hero-floating-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  perspective: 1000px;
-}
-
-.hero-mosaic-card {
-  position: relative;
-  background: var(--bg-card);
-  border-radius: 24px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.hero-mosaic-card:hover {
-  transform: translateY(-10px) rotateX(2deg) rotateY(-2deg) scale(1.02);
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.12);
-  z-index: 10;
-  border-color: rgba(254,0,0,0.2);
-}
-
-.hero-mosaic-card-main {
-  grid-row: span 2;
-  height: 100%;
-}
-
-.hero-mosaic-img-wrap {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.hero-mosaic-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hero-mosaic-card:hover .hero-mosaic-img {
-  transform: scale(1.1);
-}
-
-.hero-mosaic-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.2) 50%, transparent 100%);
-}
-
-.hero-mosaic-content {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  color: white;
-}
-
-.hero-mosaic-category {
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--secondary);
-  margin-bottom: 4px;
-}
-
-.hero-mosaic-title {
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin: 0 0 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.hero-mosaic-price {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: 1.25rem;
-}
-
-.hero-mosaic-price-lg {
-  font-size: 1.5rem;
-}
-
-.hero-mosaic-fav {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255,255,255,0.3);
-  color: white;
-  transition: all 0.2s;
-}
-
-.hero-mosaic-fav:hover {
-  background: white;
-  color: var(--primary);
-}
-
-/* Animations for staggered entry */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-left > *, .hero-stat-item {
-  animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.hero-mosaic-card {
-  animation: fadeInUp 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(254,0,0,0.25);
 }
 .hero-btn-outline {
   background: transparent;
   color: var(--fg);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
 }
 .hero-btn-outline:hover {
-  background: var(--border-subtle);
   border-color: var(--primary);
   color: var(--primary);
   transform: translateY(-1px);
@@ -1094,7 +767,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .hero-mosaic-card:nth-child(3) { grid-column: 4; grid-row: 1; }
 .hero-mosaic-card:nth-child(4) { grid-column: 3 / 5; grid-row: 2; }
 /* A 5th card only exists as the mobile carousel's trailing loop clone
-   (see hero-mosaic-dots comment) — never shown in the desktop grid. */
+   (see hero-mosaic-dots comment) ÔÇö never shown in the desktop grid. */
 .hero-mosaic-card:nth-child(5) { display: none; }
 
 /* Anim delay per card */
@@ -1319,7 +992,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   margin-left: auto;
 }
 
-/* Slide indicator dots — only meaningful for the mobile carousel below;
+/* Slide indicator dots ÔÇö only meaningful for the mobile carousel below;
    the desktop mosaic is a static grid, not a scroller. */
 .hero-mosaic-dots {
   display: none;
@@ -1368,14 +1041,14 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   /* Grid items default to min-width: auto, so .hero-mosaic's overflow-x:auto
      row (whose negative-margin bleed depends on a correctly-sized containing
      block) was letting its own scrollable content dictate .hero-right's
-     width instead of shrinking to the actual grid track — inflating the
+     width instead of shrinking to the actual grid track ÔÇö inflating the
      whole carousel past the viewport. */
   .hero-right {
     min-width: 0;
   }
   /* The marketing block (badge/title/subtitle/CTAs/stats) is redundant on
-     mobile — the header search bar and bottom nav already cover those
-     actions — and pushes real content below the fold. Lead with "À la
+     mobile ÔÇö the header search bar and bottom nav already cover those
+     actions ÔÇö and pushes real content below the fold. Lead with "├Ç la
      une" instead, which is real listings, not landing-page copy. */
   .hero-left {
     display: none;
@@ -1470,6 +1143,10 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 /* ========== TRUST BAR ========== */
+/* ========== TRUST BAR ========== */
+
+/* ========== TRUST BAR ========== */
+/* ========== TRUST BAR ========== */
 .trust-bar {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
@@ -1547,7 +1224,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .dark .trust-bar-item:nth-child(4) { border-top-color: #3A2727; }
 }
 
-/* Hidden below the app's mobile breakpoint — the certified-badge row
+/* Hidden below the app's mobile breakpoint â€” the certified-badge row
    crowds a small screen without adding much; kept for desktop/tablet. */
 @media (max-width: 768px) {
   .trust-bar { display: none; }
@@ -1871,3 +1548,5 @@ h1, h2, h3, h4, h5, h6, .font-brand {
     padding: 3rem 2.5rem !important;
   }
 }
+
+
