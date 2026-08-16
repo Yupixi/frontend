@@ -624,6 +624,44 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   }
 }
 
+@media (max-width: 768px) {
+  .hero-premium-inner {
+    padding: 2.5rem 1rem 3rem !important;
+  }
+  .hero-title {
+    font-size: 2.2rem !important;
+    line-height: 1.1 !important;
+  }
+  .hero-subtitle {
+    font-size: 1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .hero-badge {
+    padding: 6px 12px !important;
+    font-size: 0.75rem !important;
+  }
+  .hero-search-wrapper {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    padding: 0.5rem !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .hero-search-input-box {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1rem !important;
+    width: 100% !important;
+  }
+  .hero-search-btn {
+    width: 100% !important;
+    padding: 0.875rem !important;
+    border-radius: 12px !important;
+  }
+}
+
 /* --- Left Column --- */
 .hero-left {
   display: flex;

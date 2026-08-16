@@ -388,13 +388,13 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               </div>
 
               <h1 className="hero-title">
-                Trouvez les meilleures<br />
-                <span className="hero-title-accent">opportunités</span> ici.
+                La marketplace préférée<br />
+                <span className="hero-title-accent">des Ivoiriens</span>
               </h1>
 
               <p className="hero-subtitle">
-                Achetez et vendez en toute confiance. La plateforme la plus sécurisée
-                pour vos transactions par Mobile Money.
+                Achetez et vendez en toute confiance. La plateforme n°1 en Côte d'Ivoire
+                pour entrer en contact avec des vendeurs locaux.
               </p>
 
               {/* Smart Search Bar */}
@@ -539,8 +539,8 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           </div>
         </section>
 
-        {/* Mobile Money Safety Section */}
-        <section style={{ marginBottom: '3.5rem' }}>
+        {/* Trusted Partners Section */}
+        <section style={{ marginBottom: '3.5rem' }} className="desktop-only">
           <div className="card" style={{
             background: 'linear-gradient(135deg, #090D16 0%, #121826 100%)',
             border: '2px solid #FE0000',
@@ -592,7 +592,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           the certified-badge row crowds a small screen without adding much,
           and on desktop it reads better as reassurance right before the
           seller CTA than as the very first thing under the hero. */}
-      <section className="trust-bar">
+      <section className="trust-bar desktop-only">
         <div className="trust-bar-inner">
           {[
             { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID', desc: 'Identité certifiée' },
