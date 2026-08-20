@@ -1,15 +1,38 @@
-import { useState, useEffect } from 'react'
-import { useQuery } from '@apollo/client/react'
+import { useState, useEffect, useRef } from 'react'
+import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
-  Heart, MessageCircle, Bell, History, Settings, LayoutDashboard,
-  Eye, MapPin, Star, Shield, Send, Search, Trash2, CheckCheck,
-  Smartphone, Moon, Sun, Lock, User, Globe, BellRing, Package,
-  LogOut, ChevronRight, TrendingUp, Clock, ArrowLeft, Menu, X,
+  Heart, MessageCircle,
+  MapPin, Send, Trash2, CheckCheck,
+  Smartphone, Moon, Sun, Lock, User, Bell,
+  ChevronRight, Clock, ArrowLeft,
 } from 'lucide-react'
-import { listings, conversations, notifications, sellers } from '../../data/mockData'
 import Price from '../../components/Price'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
+import {
+  CONVERSATION_QUERY,
+  MARK_CONVERSATION_READ_MUTATION,
+  MESSAGE_ADDED_SUBSCRIPTION,
+  MY_CONVERSATIONS_QUERY,
+  SEND_MESSAGE_MUTATION,
+  type RemoteConversation,
+  type RemoteMessage,
+} from '../../graphql/messaging'
+import {
+  CHANGE_PASSWORD_MUTATION,
+  CLEAR_VIEW_HISTORY_MUTATION,
+  MARK_ALL_NOTIFICATIONS_READ_MUTATION,
+  MARK_NOTIFICATION_READ_MUTATION,
+  MY_NOTIFICATIONS_QUERY,
+  MY_VIEW_HISTORY_QUERY,
+  UPDATE_NOTIFICATION_PREFERENCES_MUTATION,
+  UPDATE_PROFILE_MUTATION,
+  type RemoteListingView,
+  type RemoteNotification,
+} from '../../graphql/account'
+import { formatRelativeDate } from '../../lib/format'
+import { uploadImages } from '../../lib/upload'
 import type { AuthUser } from '../../graphql/auth'
+import { AccountLayout as PageLayout } from '../account/AccountLayout'
 
 type FavoriteListing = {
   id: string
@@ -20,107 +43,22 @@ type FavoriteListing = {
   coverImageUrl: string | null
 }
 
-type BuyerSidebarProps = {
-  active: string
-  onNavigate: (page: any) => void
-}
-
-function BuyerSidebarContent({ active, onNavigate, onClose }: { active: string; onNavigate: (p: any) => void; onClose?: () => void }) {
-  const items = [
-    { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-    { key: 'buyer-favorites', icon: Heart, label: 'Mes favoris' },
-    { key: 'buyer-messages', icon: MessageCircle, label: 'Messages', badge: 3 },
-    { key: 'buyer-notifications', icon: Bell, label: 'Notifications', badge: 3 },
-    { key: 'buyer-history', icon: History, label: 'Historique' },
-    { key: 'buyer-settings', icon: Settings, label: 'Paramètres' },
-  ]
-  return (
-    <>
-      <div style={{ padding: '0.5rem 1rem 0.25rem', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--fg-subtle)' }}>
-        Espace Acheteur
-      </div>
-      {items.map(item => (
-        <button
-          key={item.key}
-          onClick={() => { onNavigate(item.key); onClose?.() }}
-          className={`sidebar-item ${active === item.key ? 'active' : ''}`}
-          style={{ width: '100%', border: 'none', position: 'relative' }}
-        >
-          <item.icon size={18} />
-          <span style={{ flex: 1 }}>{item.label}</span>
-          {item.badge && (
-            <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: 999, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 800 }}>{item.badge}</span>
-          )}
-        </button>
-      ))}
-      <div style={{ margin: '1rem 8px 0', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-        <button onClick={() => { onNavigate('seller-dashboard'); onClose?.() }} className="sidebar-item" style={{ width: '100%', border: 'none', color: 'var(--primary)' }}>
-          <Package size={18} /> Espace Vendeur
-        </button>
-      </div>
-    </>
-  )
-}
-
-function BuyerSidebar({ active, onNavigate, sidebarOpen, onClose }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void }) {
-  return (
-    <>
-      <aside className="buyer-sidebar-desktop" style={{ position: 'sticky', top: 64, height: 'calc(100vh - 64px)', overflowY: 'auto', paddingTop: '0.75rem', flexShrink: 0, width: 220 }}>
-        <BuyerSidebarContent active={active} onNavigate={onNavigate} />
-      </aside>
-      {sidebarOpen && (
-        <div className="buyer-sidebar-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onClose?.()} />
-          <aside style={{ position: 'relative', width: 280, height: '100%', background: 'var(--bg-card)', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.2s ease-out' }}>
-            <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1rem' }}>Menu</span>
-              <button onClick={() => onClose?.()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              <BuyerSidebarContent active={active} onNavigate={onNavigate} onClose={onClose} />
-            </div>
-          </aside>
-        </div>
-      )}
-    </>
-  )
-}
-
-function PageLayout({ active, onNavigate, children }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  return (
-    <div style={{ display: 'flex', maxWidth: 1280, margin: '0 auto' }}>
-      <BuyerSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="buyer-main" style={{ flex: 1, padding: '2rem', minWidth: 0 }}>
-        <button
-          className="buyer-mobile-menu-btn"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: 8, display: 'none', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', marginBottom: '0.75rem' }}
-        >
-          <Menu size={20} />
-        </button>
-        {children}
-      </div>
-    </div>
-  )
-}
-
 // ─── BUYER DASHBOARD ───────────────────────────────────────────────────────
-export function BuyerDashboard({ onNavigate, onSelectListing, favorites, currentUser }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[], currentUser?: AuthUser | null }) {
+export function BuyerDashboard({ onNavigate, onSelectListing, favorites, currentUser, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[], currentUser?: AuthUser | null, onLogout: () => void }) {
   const { data: favData } = useQuery<{ myFavorites: { items: FavoriteListing[] } }>(MY_FAVORITES_QUERY, {
     variables: { page: 1, pageSize: 4 },
   })
   const recentListings = favData?.myFavorites.items ?? []
+  const { data: conversationsData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
+  const recentConversations = (conversationsData?.myConversations ?? []).slice(0, 5)
+  const unreadMessages = recentConversations.reduce((sum, c) => sum + c.unreadCount, 0)
   const stats = [
     { label: 'Favoris', value: favorites.length, icon: Heart, color: '#FE0000', bg: 'rgba(254,0,0,0.08)' },
-    { label: 'Messages', value: 3, icon: MessageCircle, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)' },
-    { label: 'Annonces vues', value: 127, icon: Eye, color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)' },
-    { label: 'Alertes actives', value: 4, icon: BellRing, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
+    { label: 'Messages non lus', value: unreadMessages, icon: MessageCircle, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)' },
   ]
 
   return (
-    <PageLayout active="buyer-dashboard" onNavigate={onNavigate}>
+    <PageLayout active="buyer-dashboard" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <h1 className="buyer-page-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>
         Bonjour{currentUser?.fullName ? `, ${currentUser.fullName.split(' ')[0]}` : ''} 👋
       </h1>
@@ -180,24 +118,31 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
           </button>
         </div>
         <div className="card" style={{ overflow: 'hidden' }}>
-          {conversations.map((conv, i) => (
+          {recentConversations.length === 0 && (
+            <p style={{ padding: '1.25rem', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune conversation pour l'instant.</p>
+          )}
+          {recentConversations.map((conv, i) => (
             <div
               key={conv.id}
-              style={{ display: 'flex', gap: '0.75rem', padding: '0.875rem 1rem', borderBottom: i < conversations.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: conv.unread > 0 ? 'rgba(254,0,0,0.02)' : 'transparent' }}
+              style={{ display: 'flex', gap: '0.75rem', padding: '0.875rem 1rem', borderBottom: i < recentConversations.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: conv.unreadCount > 0 ? 'rgba(254,0,0,0.02)' : 'transparent' }}
               onClick={() => onNavigate('buyer-messages')}
             >
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <img src={conv.seller.avatar} alt={conv.seller.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />
-                {conv.unread > 0 && <span className="notif-dot" style={{ top: 0, right: 0 }} />}
+              <div style={{ position: 'relative', flexShrink: 0, width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
+                {conv.otherParticipant.avatarUrl ? (
+                  <img src={conv.otherParticipant.avatarUrl} alt={conv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  conv.otherParticipant.fullName.charAt(0).toUpperCase()
+                )}
+                {conv.unreadCount > 0 && <span className="notif-dot" style={{ top: 0, right: 0 }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{conv.seller.name}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>{conv.lastTime}</span>
+                  <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{conv.otherParticipant.fullName}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>{conv.lastMessageAt ? formatRelativeDate(conv.lastMessageAt) : ''}</span>
                 </div>
-                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.lastMessage}</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.lastMessage?.body ?? 'Nouvelle conversation'}</p>
               </div>
-              {conv.unread > 0 && <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: 999, padding: '2px 7px', fontSize: '0.7rem', fontWeight: 800, alignSelf: 'center', flexShrink: 0 }}>{conv.unread}</span>}
+              {conv.unreadCount > 0 && <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: 999, padding: '2px 7px', fontSize: '0.7rem', fontWeight: 800, alignSelf: 'center', flexShrink: 0 }}>{conv.unreadCount}</span>}
             </div>
           ))}
         </div>
@@ -207,7 +152,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
 }
 
 // ─── BUYER FAVORITES ───────────────────────────────────────────────────────
-export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[], onToggleFavorite: (id: string) => void | Promise<void> }) {
+export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, favorites: string[], onToggleFavorite: (id: string) => void | Promise<void>, onLogout: () => void }) {
   const { data, loading, refetch } = useQuery<{ myFavorites: { totalCount: number; items: FavoriteListing[] } }>(
     MY_FAVORITES_QUERY,
     { variables: { page: 1, pageSize: 50 } },
@@ -220,14 +165,14 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite }
 
   if (loading) {
     return (
-      <PageLayout active="buyer-favorites" onNavigate={onNavigate}>
+      <PageLayout active="buyer-favorites" onNavigate={onNavigate} onLogout={onLogout}>
         <p style={{ color: 'var(--fg-muted)' }}>Chargement...</p>
       </PageLayout>
     )
   }
 
   return (
-    <PageLayout active="buyer-favorites" onNavigate={onNavigate}>
+    <PageLayout active="buyer-favorites" onNavigate={onNavigate} onLogout={onLogout}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
           Mes favoris <span style={{ color: 'var(--fg-muted)', fontSize: '1rem', fontWeight: 600 }}>({favListings.length})</span>
@@ -276,136 +221,218 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite }
 }
 
 // ─── MESSAGES ───────────────────────────────────────────────────────────────
-export function BuyerMessages({ onNavigate }: { onNavigate: (p: any) => void }) {
-  const [activeConv, setActiveConv] = useState(conversations[0])
-  const [msg, setMsg] = useState('')
+export function BuyerMessages({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
+  const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
+  const conversations = listData?.myConversations ?? []
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [showList, setShowList] = useState(true)
+  const [msg, setMsg] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!activeId && conversations.length > 0) setActiveId(conversations[0].id)
+  }, [conversations, activeId])
+
+  const { data: convData, refetch: refetchConv } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, {
+    variables: { id: activeId },
+    skip: !activeId,
+  })
+  const activeConv = convData?.conversation
+  const messages = activeConv?.messages ?? []
+
+  const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
+  const [markConversationRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
+
+  useEffect(() => {
+    if (!activeId) return
+    void markConversationRead({ variables: { conversationId: activeId } }).then(() => refetchList())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId])
+
+  useSubscription(MESSAGE_ADDED_SUBSCRIPTION, {
+    variables: { conversationId: activeId as string },
+    skip: !activeId,
+    onData: () => {
+      void refetchConv()
+      void refetchList()
+      if (activeId) void markConversationRead({ variables: { conversationId: activeId } })
+    },
+  })
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length])
+
+  const handleSend = () => {
+    const body = msg.trim()
+    if (!body || !activeId) return
+    setMsg('')
+    void sendMessage({ variables: { conversationId: activeId, body } }).then(() => refetchConv())
+  }
 
   return (
-    <div style={{ display: 'flex', maxWidth: 1280, margin: '0 auto', height: 'calc(100vh - 120px)', position: 'relative' }}>
-      <BuyerSidebar active="buyer-messages" onNavigate={onNavigate} />
-
-      {/* Conversation list */}
-      <div className={`buyer-msg-list ${showList ? '' : 'buyer-msg-list-hidden'}`} style={{ width: 280, borderRight: '1px solid var(--border)', background: 'var(--bg-card)', flexShrink: 0, overflowY: 'auto' }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 0.75rem', fontSize: '1rem' }}>Messages</h2>
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
-            <input className="input" style={{ paddingLeft: 32, fontSize: '0.82rem', padding: '0.5rem 0.5rem 0.5rem 30px' }} placeholder="Rechercher..." />
+    <PageLayout active="buyer-messages" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+      <div style={{ display: 'flex', height: 'calc(100vh - 60px - 3rem)', margin: '-1.5rem -2rem', position: 'relative' }}>
+        {/* Conversation list */}
+        <div className={`buyer-msg-list ${showList ? '' : 'buyer-msg-list-hidden'}`} style={{ width: 300, borderRight: '1px solid var(--border)', background: 'var(--bg-card)', flexShrink: 0, overflowY: 'auto' }}>
+          <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+            <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Messages</h2>
           </div>
-        </div>
-        {conversations.map(conv => (
-          <div
-            key={conv.id}
-            onClick={() => { setActiveConv(conv); setShowList(false) }}
-            style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: activeConv.id === conv.id ? 'rgba(254,0,0,0.04)' : 'transparent', borderLeft: activeConv.id === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
-          >
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img src={conv.seller.avatar} alt={conv.seller.name} style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }} />
-              {conv.unread > 0 && <span className="notif-dot" style={{ top: 0, right: 0 }} />}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: conv.unread > 0 ? 800 : 600, fontSize: '0.85rem' }}>{conv.seller.name}</span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>{conv.lastTime}</span>
+          {conversations.length === 0 && (
+            <p style={{ padding: '1.25rem', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
+              Aucune conversation pour l'instant. Contactez un vendeur depuis une annonce pour démarrer une discussion.
+            </p>
+          )}
+          {conversations.map(conv => (
+            <div
+              key={conv.id}
+              onClick={() => { setActiveId(conv.id); setShowList(false) }}
+              style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: activeId === conv.id ? 'rgba(254,0,0,0.04)' : 'transparent', borderLeft: activeId === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
+                {conv.otherParticipant.avatarUrl ? (
+                  <img src={conv.otherParticipant.avatarUrl} alt={conv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  conv.otherParticipant.fullName.charAt(0).toUpperCase()
+                )}
+                {conv.unreadCount > 0 && <span className="notif-dot" style={{ top: 0, right: 0 }} />}
               </div>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: conv.unread > 0 ? 700 : 400 }}>
-                {conv.lastMessage}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Chat view */}
-      <div className={`buyer-msg-chat ${showList ? 'buyer-msg-chat-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button className="buyer-msg-back" onClick={() => setShowList(true)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 0, marginRight: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
-          <img src={activeConv.seller.avatar} alt={activeConv.seller.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
-          <div>
-            <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.seller.name}</div>
-            <div style={{ fontSize: '0.75rem', color: '#10B981', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> En ligne
-            </div>
-          </div>
-          <div style={{ marginLeft: 'auto', background: 'var(--border-subtle)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.78rem', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: 'var(--fg-muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            📌 {activeConv.listing.title}
-          </div>
-        </div>
-
-        <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {activeConv.messages.map(m => (
-            <div key={m.id} style={{ display: 'flex', justifyContent: m.sender === 'me' ? 'flex-end' : 'flex-start' }}>
-              <div>
-                <div className={`chat-bubble ${m.sender === 'me' ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
-                  {m.text}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: conv.unreadCount > 0 ? 800 : 600, fontSize: '0.85rem' }}>{conv.otherParticipant.fullName}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>{conv.lastMessageAt ? formatRelativeDate(conv.lastMessageAt) : ''}</span>
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', marginTop: 3, textAlign: m.sender === 'me' ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: m.sender === 'me' ? 'flex-end' : 'flex-start', gap: 3 }}>
-                  {m.time}
-                  {m.sender === 'me' && <CheckCheck size={12} color={m.read ? '#3B82F6' : 'var(--fg-subtle)'} />}
-                </div>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: conv.unreadCount > 0 ? 700 : 400 }}>
+                  {conv.lastMessage?.body ?? 'Nouvelle conversation'}
+                </p>
               </div>
             </div>
           ))}
         </div>
 
-        <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <input
-            className="input"
-            style={{ flex: 1 }}
-            placeholder="Écrivez votre message..."
-            value={msg}
-            onChange={e => setMsg(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && setMsg('')}
-          />
-          <button className="btn-primary" style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMsg('')}>
-            <Send size={18} />
-          </button>
+        {/* Chat view */}
+        <div className={`buyer-msg-chat ${showList ? 'buyer-msg-chat-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)', minWidth: 0 }}>
+          {!activeConv ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontSize: '0.9rem' }}>
+              Sélectionnez une conversation
+            </div>
+          ) : (
+            <>
+              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <button className="buyer-msg-back" onClick={() => setShowList(true)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 0, marginRight: 4 }}>
+                  <ArrowLeft size={20} />
+                </button>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)', flexShrink: 0 }}>
+                  {activeConv.otherParticipant.avatarUrl ? (
+                    <img src={activeConv.otherParticipant.avatarUrl} alt={activeConv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    activeConv.otherParticipant.fullName.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.otherParticipant.fullName}</div>
+                {activeConv.listing && (
+                  <div style={{ marginLeft: 'auto', background: 'var(--border-subtle)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.78rem', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: 'var(--fg-muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    📌 {activeConv.listing.title}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {messages.map((m: RemoteMessage) => {
+                  const isMe = m.senderId === currentUser?.id
+                  return (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                      <div>
+                        <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
+                          {m.body}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', marginTop: 3, textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: 3 }}>
+                          {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          {isMe && <CheckCheck size={12} color={m.readAt ? '#3B82F6' : 'var(--fg-subtle)'} />}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <input
+                  className="input"
+                  style={{ flex: 1 }}
+                  placeholder="Écrivez votre message..."
+                  value={msg}
+                  onChange={e => setMsg(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSend()}
+                />
+                <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1 }} onClick={handleSend}>
+                  <Send size={18} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </PageLayout>
   )
 }
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────────
-export function BuyerNotifications({ onNavigate }: { onNavigate: (p: any) => void }) {
-  const [items, setItems] = useState(notifications)
-  const markAll = () => setItems(items.map(n => ({ ...n, read: true })))
+const NOTIFICATION_ICONS: Record<RemoteNotification['type'], string> = {
+  MESSAGE: '💬',
+  LISTING_APPROVED: '✅',
+  LISTING_REJECTED: '⚠️',
+  LISTING_STATUS_CHANGED: 'ℹ️',
+}
+
+export function BuyerNotifications({ onNavigate, onSelectListing, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, onLogout: () => void }) {
+  const { data, refetch } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY)
+  const items = data?.myNotifications ?? []
+  const [markRead] = useMutation(MARK_NOTIFICATION_READ_MUTATION)
+  const [markAllRead] = useMutation(MARK_ALL_NOTIFICATIONS_READ_MUTATION)
+
+  const handleOpen = (n: RemoteNotification) => {
+    if (!n.readAt) void markRead({ variables: { id: n.id } }).then(() => refetch())
+    if (n.type === 'MESSAGE') onNavigate('buyer-messages')
+    else if (n.listingId) onSelectListing(n.listingId)
+  }
 
   return (
-    <PageLayout active="buyer-notifications" onNavigate={onNavigate}>
+    <PageLayout active="buyer-notifications" onNavigate={onNavigate} onLogout={onLogout}>
       <div className="buyer-notifications-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '0.75rem' }}>
         <h1 className="buyer-page-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
-          Notifications <span style={{ color: 'var(--fg-muted)', fontSize: '1rem', fontWeight: 600 }}>({items.filter(n => !n.read).length} non lues)</span>
+          Notifications <span style={{ color: 'var(--fg-muted)', fontSize: '1rem', fontWeight: 600 }}>({items.filter(n => !n.readAt).length} non lues)</span>
         </h1>
-        <button onClick={markAll} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', flexShrink: 0 }}>
+        <button onClick={() => void markAllRead().then(() => refetch())} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', flexShrink: 0 }}>
           Tout marquer comme lu
         </button>
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
+        {items.length === 0 && (
+          <p style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.9rem' }}>Aucune notification pour l'instant.</p>
+        )}
         {items.map((n, i) => (
           <div
             key={n.id}
-            onClick={() => setItems(items.map(x => x.id === n.id ? { ...x, read: true } : x))}
+            onClick={() => handleOpen(n)}
             style={{
               display: 'flex', gap: '0.75rem', padding: '1rem', borderBottom: i < items.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-              background: n.read ? 'transparent' : 'rgba(254,0,0,0.02)', cursor: 'pointer',
+              background: n.readAt ? 'transparent' : 'rgba(254,0,0,0.02)', cursor: 'pointer',
             }}
           >
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: n.read ? 'var(--border-subtle)' : 'rgba(254,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-              {n.icon}
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: n.readAt ? 'var(--border-subtle)' : 'rgba(254,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+              {NOTIFICATION_ICONS[n.type]}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: n.read ? 600 : 800, fontSize: '0.9rem' }}>{n.title}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>{n.time}</span>
+                <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: n.readAt ? 600 : 800, fontSize: '0.9rem' }}>{n.title}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>{formatRelativeDate(n.createdAt)}</span>
               </div>
               <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--fg-muted)', lineHeight: 1.4 }}>{n.body}</p>
             </div>
-            {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, alignSelf: 'center' }} />}
+            {!n.readAt && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, alignSelf: 'center' }} />}
           </div>
         ))}
       </div>
@@ -414,43 +441,56 @@ export function BuyerNotifications({ onNavigate }: { onNavigate: (p: any) => voi
 }
 
 // ─── HISTORY ────────────────────────────────────────────────────────────────
-export function BuyerHistory({ onNavigate, onSelectListing }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void }) {
-  const history = listings.slice(0, 6).map((l, i) => ({
-    ...l,
-    viewedAt: ['Il y a 10 min', 'Il y a 45 min', 'Il y a 2h', 'Hier, 16:30', 'Hier, 09:00', 'Il y a 3 jours'][i],
-  }))
+export function BuyerHistory({ onNavigate, onSelectListing, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, onLogout: () => void }) {
+  const { data, loading, refetch } = useQuery<{ myViewHistory: RemoteListingView[] }>(MY_VIEW_HISTORY_QUERY)
+  const [clearHistory, { loading: clearing }] = useMutation(CLEAR_VIEW_HISTORY_MUTATION)
+  const history = data?.myViewHistory ?? []
+
+  const handleClear = () => {
+    if (!window.confirm('Effacer tout votre historique de consultation ?')) return
+    void clearHistory().then(() => refetch())
+  }
 
   return (
-    <PageLayout active="buyer-history" onNavigate={onNavigate}>
+    <PageLayout active="buyer-history" onNavigate={onNavigate} onLogout={onLogout}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Historique de navigation</h1>
-        <button style={{ color: 'var(--fg-muted)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Trash2 size={15} /> Effacer
-        </button>
+        {history.length > 0 && (
+          <button onClick={handleClear} disabled={clearing} style={{ color: 'var(--fg-muted)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, opacity: clearing ? 0.6 : 1 }}>
+            <Trash2 size={15} /> Effacer
+          </button>
+        )}
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
-        {history.map((l, i) => (
+        {!loading && history.length === 0 && (
+          <p style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.9rem' }}>
+            Aucune annonce consultée récemment.
+          </p>
+        )}
+        {history.map((v, i) => (
           <div
-            key={l.id + i}
-            onClick={() => onSelectListing(l.id)}
+            key={v.listing.id}
+            onClick={() => onSelectListing(v.listing.id)}
             style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem 1rem', borderBottom: i < history.length - 1 ? '1px solid var(--border-subtle)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--border-subtle)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <div style={{ width: 64, height: 52, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
-              <img src={l.image} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              {v.listing.coverImageUrl && (
+                <img src={v.listing.coverImageUrl} alt={v.listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              )}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', marginBottom: 3 }}>{l.title}</div>
-              <div className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={l.price} /></div>
+              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', marginBottom: 3 }}>{v.listing.title}</div>
+              <div className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={v.listing.price} /></div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-subtle)', fontSize: '0.75rem' }}>
-                <Clock size={12} />{l.viewedAt}
+                <Clock size={12} />{formatRelativeDate(v.viewedAt)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.75rem', marginTop: 2 }}>
-                <MapPin size={11} />{l.location}
+                <MapPin size={11} />{v.listing.city}
               </div>
             </div>
           </div>
@@ -461,20 +501,97 @@ export function BuyerHistory({ onNavigate, onSelectListing }: { onNavigate: (p: 
 }
 
 // ─── SETTINGS ──────────────────────────────────────────────────────────────
-export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: { onNavigate: (p: any) => void, dark: boolean, onToggleDark: () => void, currentUser?: AuthUser | null }) {
+const NOTIFICATION_PREFERENCE_ITEMS: { key: string; label: string; desc: string }[] = [
+  { key: 'newMessages', label: 'Nouveaux messages', desc: 'Recevoir des alertes pour les nouveaux messages' },
+  { key: 'listingStatus', label: 'Statut de mes annonces', desc: 'Être notifié quand une annonce est approuvée ou rejetée' },
+  { key: 'priceAlerts', label: 'Alertes de prix', desc: "Notification quand le prix d'une annonce baisse" },
+  { key: 'newListings', label: 'Nouvelles annonces', desc: 'Alertes pour les recherches sauvegardées' },
+  { key: 'newsletter', label: 'Newsletter', desc: 'Conseils et sélections de la semaine' },
+]
+
+export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onLogout, onProfileUpdated }: { onNavigate: (p: any) => void, dark: boolean, onToggleDark: () => void, currentUser?: AuthUser | null, onLogout: () => void, onProfileUpdated: (user: AuthUser) => void }) {
   const [name, setName] = useState(currentUser?.fullName ?? '')
-  const [email, setEmail] = useState(currentUser?.email ?? '')
-  const [phone, setPhone] = useState('')
-  const [city, setCity] = useState('Abidjan')
+  const [phone, setPhone] = useState(currentUser?.phone ?? '')
+  const [city, setCity] = useState(currentUser?.city ?? 'Abidjan')
+  const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl ?? '')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const avatarInitial = (currentUser?.fullName || '?').charAt(0).toUpperCase()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [updateProfile, { loading: saving }] = useMutation<{ updateProfile: AuthUser }>(UPDATE_PROFILE_MUTATION)
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [changePassword, { loading: changingPassword }] = useMutation(CHANGE_PASSWORD_MUTATION)
+
+  const [updatePreferences] = useMutation<{ updateNotificationPreferences: { notificationPreferences: Record<string, boolean> } }>(UPDATE_NOTIFICATION_PREFERENCES_MUTATION)
+  const preferences = currentUser?.notificationPreferences ?? {}
 
   // currentUser can still be loading (fetched async in App.tsx) when this
   // page first mounts — sync once it arrives instead of only reading it at
   // the initial useState() call, which would miss that update.
   useEffect(() => {
-    if (currentUser?.fullName) setName(currentUser.fullName)
-    if (currentUser?.email) setEmail(currentUser.email)
+    if (!currentUser) return
+    setName(currentUser.fullName)
+    setPhone(currentUser.phone ?? '')
+    setCity(currentUser.city ?? 'Abidjan')
+    setAvatarUrl(currentUser.avatarUrl ?? '')
   }, [currentUser])
+
+  const handleAvatarSelected = async (files: FileList | null) => {
+    const file = files?.[0]
+    if (!file) return
+    setUploadingAvatar(true)
+    try {
+      const [url] = await uploadImages([file])
+      setAvatarUrl(url)
+    } catch {
+      // Upload failure just leaves the previous avatar in place.
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    setSaveError(null)
+    setSaveSuccess(false)
+    try {
+      const { data } = await updateProfile({ variables: { input: { fullName: name, phone: phone || null, city, avatarUrl: avatarUrl || null } } })
+      if (data?.updateProfile && currentUser) {
+        onProfileUpdated({ ...currentUser, ...data.updateProfile })
+      }
+      setSaveSuccess(true)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "L'enregistrement a échoué.")
+    }
+  }
+
+  const handleTogglePreference = (key: string) => {
+    const next = { ...preferences, [key]: !(preferences[key] ?? true) }
+    void updatePreferences({ variables: { preferences: next } }).then(({ data }) => {
+      if (data?.updateNotificationPreferences && currentUser) {
+        onProfileUpdated({ ...currentUser, notificationPreferences: data.updateNotificationPreferences.notificationPreferences })
+      }
+    })
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordError(null)
+    setPasswordSuccess(false)
+    try {
+      await changePassword({ variables: { input: { currentPassword, newPassword } } })
+      setPasswordSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Le changement de mot de passe a échoué.')
+    }
+  }
 
   const settingSections = [
     {
@@ -483,8 +600,13 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: {
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', flexShrink: 0 }}>{avatarInitial}</div>
-            <button className="btn-outline" style={{ fontSize: '0.875rem' }}>Changer la photo</button>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', flexShrink: 0, overflow: 'hidden' }}>
+              {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : avatarInitial}
+            </div>
+            <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => { void handleAvatarSelected(e.target.files); e.target.value = '' }} />
+            <button className="btn-outline" style={{ fontSize: '0.875rem' }} disabled={uploadingAvatar} onClick={() => avatarInputRef.current?.click()}>
+              {uploadingAvatar ? 'Envoi...' : 'Changer la photo'}
+            </button>
           </div>
           <div className="buyer-settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
@@ -497,7 +619,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: {
             </div>
             <div>
               <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Email</label>
-              <input className="input" value={email} onChange={e => setEmail(e.target.value)} />
+              <input className="input" value={currentUser?.email ?? ''} disabled title="La modification de l'email n'est pas encore disponible." style={{ opacity: 0.6, cursor: 'not-allowed' }} />
             </div>
             <div>
               <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
@@ -506,7 +628,11 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: {
               </select>
             </div>
           </div>
-          <button className="btn-primary" style={{ alignSelf: 'flex-start', padding: '0.65rem 1.5rem' }}>Enregistrer</button>
+          {saveError && <p style={{ color: '#EF4444', fontSize: '0.85rem', margin: 0 }}>{saveError}</p>}
+          {saveSuccess && <p style={{ color: '#10B981', fontSize: '0.85rem', margin: 0 }}>Profil mis à jour.</p>}
+          <button className="btn-primary" style={{ alignSelf: 'flex-start', padding: '0.65rem 1.5rem', opacity: saving ? 0.7 : 1 }} disabled={saving} onClick={handleSaveProfile}>
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
         </div>
       ),
     },
@@ -515,20 +641,14 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: {
       icon: Bell,
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-          {[
-            { label: 'Nouveaux messages', desc: 'Recevoir des alertes pour les nouveaux messages' },
-            { label: 'Réponses aux offres', desc: 'Être notifié quand un vendeur répond' },
-            { label: 'Alertes de prix', desc: "Notification quand le prix d'une annonce baisse" },
-            { label: 'Nouvelles annonces', desc: 'Alertes pour les recherches sauvegardées' },
-            { label: 'Newsletter', desc: 'Conseils et sélections de la semaine' },
-          ].map(item => (
-            <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--border-subtle)', borderRadius: 10 }}>
+          {NOTIFICATION_PREFERENCE_ITEMS.map(item => (
+            <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--border-subtle)', borderRadius: 10 }}>
               <div>
                 <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{item.label}</div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{item.desc}</div>
               </div>
               <label className="toggle">
-                <input type="checkbox" defaultChecked />
+                <input type="checkbox" checked={preferences[item.key] ?? true} onChange={() => handleTogglePreference(item.key)} />
                 <span className="toggle-slider" />
               </label>
             </div>
@@ -560,11 +680,28 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: {
       icon: Lock,
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-          <button className="btn-outline" style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Lock size={15} /> Changer le mot de passe
-          </button>
-          <button style={{ alignSelf: 'flex-start', color: '#FE0000', background: 'none', border: '1.5px solid #FE0000', borderRadius: 8, padding: '0.6rem 1.25rem', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Smartphone size={15} /> Activer la vérification 2 étapes
+          {!showPasswordForm ? (
+            <button className="btn-outline" style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => setShowPasswordForm(true)}>
+              <Lock size={15} /> Changer le mot de passe
+            </button>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 320 }}>
+              <input className="input" type="password" placeholder="Mot de passe actuel" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+              <input className="input" type="password" placeholder="Nouveau mot de passe (8 caractères min.)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              {passwordError && <p style={{ color: '#EF4444', fontSize: '0.82rem', margin: 0 }}>{passwordError}</p>}
+              {passwordSuccess && <p style={{ color: '#10B981', fontSize: '0.82rem', margin: 0 }}>Mot de passe mis à jour.</p>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn-primary" style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem', opacity: changingPassword || !currentPassword || newPassword.length < 8 ? 0.6 : 1 }} disabled={changingPassword || !currentPassword || newPassword.length < 8} onClick={handleChangePassword}>
+                  {changingPassword ? '...' : 'Confirmer'}
+                </button>
+                <button className="btn-outline" style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem' }} onClick={() => { setShowPasswordForm(false); setPasswordError(null); setCurrentPassword(''); setNewPassword('') }}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+          <button disabled style={{ alignSelf: 'flex-start', color: 'var(--fg-subtle)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem 1.25rem', cursor: 'not-allowed', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Smartphone size={15} /> Vérification 2 étapes — bientôt disponible
           </button>
         </div>
       ),
@@ -572,7 +709,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser }: {
   ]
 
   return (
-    <PageLayout active="buyer-settings" onNavigate={onNavigate}>
+    <PageLayout active="buyer-settings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Paramètres</h1>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {settingSections.map(section => (

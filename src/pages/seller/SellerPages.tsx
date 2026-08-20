@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
-  LayoutDashboard, Plus, Package, BarChart2, CreditCard, Award, Eye, Heart,
-  CheckCircle, XCircle, Edit3, Clock,
+  Plus, Eye, Heart, Package, X,
+  CheckCircle, Edit3, Clock,
   Trash2, ChevronRight, Upload, MapPin, Tag, Image, Star, ArrowUp,
-  DollarSign, Users, AlertCircle, Home, Settings,
-  Bell, LogOut, ChevronDown, Menu, X,
+  Users, AlertCircle,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { cities } from '../../data/mockData'
@@ -27,218 +26,7 @@ import {
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
 import type { AuthUser } from '../../graphql/auth'
-
-// ─── DASHBOARD LAYOUT ─────────────────────────────────────────────────────
-
-function DashboardHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNavigate, onLogout }: { activeLabel: string; currentUser?: AuthUser | null; onBack: () => void; onToggleSidebar?: () => void; onNavigate: (p: any) => void; onLogout: () => void }) {
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const displayName = currentUser?.fullName || 'Mon compte'
-  const displayInitial = displayName.charAt(0).toUpperCase()
-  return (
-    <header className="dashboard-header" style={{
-      height: 60, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
-      display: 'flex', alignItems: 'center', padding: '0 1.25rem', gap: '0.75rem',
-      flexShrink: 0,
-    }}>
-      <button className="dashboard-sidebar-mobile-btn" onClick={onToggleSidebar} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)' }}>
-        <Menu size={20} />
-      </button>
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '0.85rem', fontWeight: 600, padding: '4px 10px', borderRadius: 8, transition: 'all 0.12s' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        ← Retour au site
-      </button>
-      <h1 className="desktop-only" style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>{activeLabel}</h1>
-      <div style={{ flex: 1 }} />
-      <button onClick={() => onNavigate('buyer-notifications')} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        <Bell size={18} />
-      </button>
-      <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
-      <div style={{ position: 'relative' }}>
-        <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', background: 'none', border: 'none', transition: 'all 0.12s' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif" }}>{displayInitial}</div>
-          <div className="desktop-only" style={{ textAlign: 'left' }}>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>{displayName}</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>{currentUser?.email ?? ''}</div>
-          </div>
-          <ChevronDown size={14} style={{ color: 'var(--fg-subtle)' }} />
-        </button>
-
-        {userMenuOpen && (
-          <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 220, zIndex: 200, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-            {[
-              { icon: Home, label: 'Espace Acheteur', page: 'buyer-dashboard' as const },
-              { icon: Settings, label: 'Paramètres du compte', page: 'buyer-settings' as const },
-            ].map(item => (
-              <button
-                key={item.page}
-                onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <item.icon size={16} />
-                {item.label}
-              </button>
-            ))}
-            <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6 }}>
-              <button
-                onClick={() => { setUserMenuOpen(false); onLogout() }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <LogOut size={16} />
-                Se déconnecter
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </header>
-  )
-}
-
-const sidebarItems = [
-  { key: 'seller-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-  { key: 'seller-post', icon: Plus, label: 'Publier une annonce' },
-  { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
-  { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
-  { key: 'seller-payments', icon: CreditCard, label: 'Paiements & Transactions' },
-  { key: 'seller-premium', icon: Award, label: 'Abonnement Premium' },
-]
-
-function SidebarNav({ active, onNavigate, onClose, listingsCount }: { active: string; onNavigate: (p: any) => void; onClose?: () => void; listingsCount?: number }) {
-  return (
-    <>
-      {sidebarItems.map(item => {
-        const badge = item.key === 'seller-listings' ? listingsCount : undefined
-        return (
-          <button
-            key={item.key}
-            onClick={() => { onNavigate(item.key); onClose?.() }}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
-              cursor: 'pointer', marginBottom: 2,
-              background: active === item.key ? 'rgba(254,0,0,0.07)' : 'transparent',
-              color: active === item.key ? '#FE0000' : 'var(--fg-muted)',
-              fontFamily: "'Outfit', 'Nunito', sans-serif",
-              fontWeight: active === item.key ? 800 : 600,
-              fontSize: '0.85rem',
-              transition: 'all 0.12s',
-            }}
-            onMouseEnter={e => { if (active !== item.key) e.currentTarget.style.background = 'var(--border-subtle)' }}
-            onMouseLeave={e => { if (active !== item.key) e.currentTarget.style.background = 'transparent' }}
-          >
-            <item.icon size={18} strokeWidth={active === item.key ? 2.5 : 1.8} />
-            <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-            {!!badge && (
-              <span style={{
-                background: active === item.key ? '#FE0000' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
-                borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
-              }}>{badge}</span>
-            )}
-          </button>
-        )
-      })}
-    </>
-  )
-}
-
-function DashboardSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCount }: { active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void; listingsCount?: number }) {
-  return (
-    <>
-      {/* Desktop sidebar */}
-      <aside className="dashboard-sidebar-desktop" style={{
-        width: 230, background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
-      }}>
-        <div style={{ padding: '1rem 1rem 0.5rem', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 30, alignSelf: 'flex-start' }} />
-          <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)', fontWeight: 600, paddingLeft: 2 }}>Espace Vendeur</div>
-        </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem 0.75rem' }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--fg-subtle)', padding: '0.5rem 0.75rem', marginBottom: 4 }}>Navigation</div>
-          <SidebarNav active={active} onNavigate={onNavigate} listingsCount={listingsCount} />
-        </div>
-        <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-          <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            <LogOut size={16} />
-            <span>Retour au site</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="dashboard-sidebar-overlay" style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          animation: 'fadeIn 0.15s ease-out',
-        }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onClose?.()} />
-          <aside style={{
-            position: 'relative', width: 280, height: '100%', background: 'var(--bg-card)',
-            display: 'flex', flexDirection: 'column',
-            animation: 'slideIn 0.2s ease-out',
-          }}>
-            <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <img src="/logo-yupixi-red.svg" alt="Yüpixi" style={{ height: 28 }} />
-                <span className="badge" style={{ background: '#FE0000', color: '#fff', fontSize: '0.65rem', padding: '2px 8px' }}>Vendeur</span>
-              </div>
-              <button onClick={() => onClose?.()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-              <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} listingsCount={listingsCount} />
-            </div>
-            <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-              <button onClick={() => { onNavigate('home'); onClose?.() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
-                <LogOut size={16} />
-                <span>Retour au site</span>
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-    </>
-  )
-}
-
-function DashboardLayout({ active, onNavigate, children, currentUser, onLogout }: { active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null, onLogout: () => void }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { data: listingsData } = useQuery<{ myListings: { totalCount: number } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 1 } })
-  const labels: Record<string, string> = {
-    'seller-dashboard': 'Tableau de bord',
-    'seller-post': 'Publier une annonce',
-    'seller-listings': 'Mes annonces',
-    'seller-stats': 'Statistiques',
-    'seller-premium': 'Abonnement Premium',
-    'seller-payments': 'Paiements',
-  }
-
-  return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
-      <DashboardSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} listingsCount={listingsData?.myListings.totalCount} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <DashboardHeader activeLabel={labels[active] || active} currentUser={currentUser} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} onNavigate={onNavigate} onLogout={onLogout} />
-        <main className="dashboard-main" style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
-          {children}
-        </main>
-      </div>
-    </div>
-  )
-}
+import { AccountLayout as DashboardLayout } from '../account/AccountLayout'
 
 // ─── SELLER DASHBOARD ───────────────────────────────────────────────────────
 export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
@@ -1006,70 +794,6 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
   )
 }
 
-// ─── PAYMENTS ────────────────────────────────────────────────────────────────
-export function SellerPayments({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
-  const transactions = [
-    { id: 'T001', type: 'Boost annonce', amount: -5000, date: '28 Jan 2024', status: 'success', method: '🟠 Orange Money' },
-    { id: 'T002', type: 'Abonnement Pro (mensuel)', amount: -25000, date: '15 Jan 2024', status: 'success', method: '🟡 MTN MoMo' },
-    { id: 'T003', type: 'Vente - iPhone 15 Pro', amount: 450000, date: '10 Jan 2024', status: 'success', method: '🔵 Wave' },
-    { id: 'T004', type: 'Boost annonce', amount: -5000, date: '05 Jan 2024', status: 'failed', method: '🟠 Orange Money' },
-    { id: 'T005', type: 'Abonnement Pro (mensuel)', amount: -25000, date: '15 Déc 2023', status: 'success', method: '🟡 MTN MoMo' },
-  ]
-
-  return (
-    <DashboardLayout active="seller-payments" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Paiements & Transactions</h1>
-      <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos méthodes de paiement et suivez vos transactions</p>
-
-      <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Méthodes de paiement</h2>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          {[
-            { name: 'Orange Money', num: '+225 07 12 34 56', emoji: '🟠', active: true },
-            { name: 'MTN MoMo', num: '+225 05 98 76 54', emoji: '🟡', active: true },
-            { name: 'Wave', num: 'Non configuré', emoji: '🔵', active: false },
-          ].map(mm => (
-            <div key={mm.name} style={{ flex: 1, minWidth: 160, border: `1.5px solid ${mm.active ? 'var(--border)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', padding: '0.875rem', background: mm.active ? 'var(--bg-card)' : 'var(--border-subtle)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: '1.25rem' }}>{mm.emoji}</span>
-                {mm.active ? <CheckCircle size={16} color="#10B981" /> : <XCircle size={16} color="var(--fg-subtle)" />}
-              </div>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem' }}>{mm.name}</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{mm.num}</div>
-              {!mm.active && <button style={{ marginTop: 8, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>+ Ajouter</button>}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card" style={{ overflow: 'hidden' }}>
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: 0, fontSize: '1rem' }}>Historique des transactions</h2>
-        </div>
-        {transactions.map((t, i) => (
-          <div key={t.id} style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem 1.25rem', borderBottom: i < transactions.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: t.amount > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {t.amount > 0 ? <ArrowUp size={18} color="#10B981" /> : <DollarSign size={18} color="#EF4444" />}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem' }}>{t.type}</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{t.method} · {t.date}</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '0.95rem', color: t.amount > 0 ? '#10B981' : 'var(--fg)' }}>
-                {t.amount > 0 ? '+' : ''}<Price amount={t.amount} />
-              </div>
-              <span className="badge" style={{ fontSize: '0.7rem', background: t.status === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: t.status === 'success' ? '#10B981' : '#EF4444' }}>
-                {t.status === 'success' ? '✓ Réussi' : '✗ Échoué'}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </DashboardLayout>
-  )
-}
-
 // ─── PREMIUM ─────────────────────────────────────────────────────────────────
 export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const plans = [
@@ -1134,20 +858,6 @@ export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigat
             </button>
           </div>
         ))}
-      </div>
-
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1rem', fontSize: '1rem' }}>💳 Paiement sécurisé via Mobile Money</h3>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {[
-            { name: 'Orange Money', emoji: '🟠', color: '#FF6600' },
-            { name: 'MTN MoMo', emoji: '🟡', color: '#FFD700' },
-            { name: 'Wave', emoji: '🔵', color: '#009EFF' },
-            { name: 'Carte bancaire', emoji: '💳', color: '#1A1A1A' },
-          ].map(mm => (
-            <div key={mm.name} className="mobile-money-badge">{mm.emoji} {mm.name}</div>
-          ))}
-        </div>
       </div>
     </DashboardLayout>
   )

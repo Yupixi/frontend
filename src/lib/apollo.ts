@@ -1,13 +1,29 @@
-import { ApolloClient, InMemoryCache, HttpLink, from } from '@apollo/client'
+import { ApolloClient, InMemoryCache, HttpLink, from, split } from '@apollo/client'
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
+import { getMainDefinition } from '@apollo/client/utilities'
 import { ErrorLink } from '@apollo/client/link/error'
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import { setContext } from '@apollo/client/link/context'
+import { createClient } from 'graphql-ws'
 import { Observable } from 'rxjs'
 import { clearTokens, getAccessToken, getRefreshToken, storeTokens, SESSION_EXPIRED_EVENT } from './auth'
 
 const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || 'http://localhost:3000/graphql'
+const GRAPHQL_WS_URL = GRAPHQL_URL.replace(/^http/, 'ws')
 
 const httpLink = new HttpLink({ uri: GRAPHQL_URL })
+
+// The token can be refreshed mid-connection, so this reads localStorage
+// fresh on every WS (re)connect rather than capturing it once at import time.
+const wsLink = new GraphQLWsLink(
+  createClient({
+    url: GRAPHQL_WS_URL,
+    connectionParams: () => {
+      const token = getAccessToken()
+      return token ? { authorization: `Bearer ${token}` } : {}
+    },
+  }),
+)
 
 const authLink = setContext((_, { headers }) => {
   const token = getAccessToken()
@@ -75,7 +91,21 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
   })
 })
 
+const httpChain = from([errorLink, authLink, httpLink])
+
+// Subscriptions ride the WS link (no HTTP request to authenticate/refresh
+// against, hence not part of the auth/error chain above); everything else
+// keeps going through the existing HTTP pipeline.
+const splitLink = split(
+  ({ query }) => {
+    const definition = getMainDefinition(query)
+    return definition.kind === 'OperationDefinition' && definition.operation === 'subscription'
+  },
+  wsLink,
+  httpChain,
+)
+
 export const apolloClient = new ApolloClient({
-  link: from([errorLink, authLink, httpLink]),
+  link: splitLink,
   cache: new InMemoryCache(),
 })

@@ -34,6 +34,10 @@ export const ME_QUERY = gql`
       id
       email
       fullName
+      phone
+      city
+      avatarUrl
+      notificationPreferences
     }
   }
 `
@@ -57,6 +61,10 @@ export type AuthUser = {
   id: string
   email: string
   fullName: string
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  notificationPreferences?: Record<string, boolean>
 }
 
 export type AuthPayload = {

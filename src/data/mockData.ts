@@ -547,7 +547,7 @@ export const notifications: Notification[] = [
   { id: 'n1', type: 'message', title: 'Nouveau message', body: 'Kouamé Jean-Baptiste vous a envoyé un message à propos de votre iPhone', time: 'Il y a 5 min', read: false, icon: '💬' },
   { id: 'n2', type: 'favorite', title: 'Nouvelle mise en favoris', body: 'Votre annonce "MacBook Pro M3" a été ajoutée aux favoris', time: 'Il y a 1h', read: false, icon: '❤️' },
   { id: 'n3', type: 'offer', title: 'Offre reçue', body: 'Vous avez reçu une offre de 420 000 FCFA pour votre iPhone 15 Pro', time: 'Il y a 2h', read: false, icon: '🏷️' },
-  { id: 'n4', type: 'payment', title: 'Paiement confirmé', body: 'Votre paiement Mobile Money de 5 000 FCFA (boost annonce) a été confirmé', time: 'Hier', read: true, icon: '✅' },
+  { id: 'n4', type: 'payment', title: 'Paiement confirmé', body: 'Votre boost annonce de 5 000 FCFA a été confirmé', time: 'Hier', read: true, icon: '✅' },
   { id: 'n5', type: 'system', title: 'Annonce expirée', body: 'Votre annonce "Canapé en cuir" a expiré. Renouvelez-la pour plus de visibilité.', time: 'Hier', read: true, icon: '⏰' },
   { id: 'n6', type: 'system', title: 'Bienvenue sur Yüpixi !', body: 'Votre compte a été créé avec succès. Commencez à vendre ou acheter maintenant.', time: 'Il y a 3 jours', read: true, icon: '🎉' },
 ]

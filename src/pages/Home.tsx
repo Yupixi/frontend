@@ -5,6 +5,7 @@ import ViewToggle from '../components/ViewToggle'
 import Price from '../components/Price'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
+import { HOME_BANNERS_QUERY, type RemoteBanner } from '../graphql/content'
 import { formatRelativeDate } from '../lib/format'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 
@@ -31,6 +32,18 @@ function seededRandom(seed: number, id: string): number {
 
 function listingImage(listing: RemoteListing): string {
   return listing.coverImageUrl ?? listing.media[0]?.url ?? ''
+}
+
+// BO-authored banner CTAs store a path like "/search" (mirroring how a
+// real router would); this app navigates via named pages instead, so an
+// internal-looking path maps to its page name, external links open in a
+// new tab.
+function followBannerCta(ctaUrl: string, onNavigate: (page: any) => void) {
+  if (/^https?:\/\//.test(ctaUrl)) {
+    window.open(ctaUrl, '_blank', 'noopener,noreferrer')
+    return
+  }
+  onNavigate(ctaUrl.replace(/^\//, ''))
 }
 
 function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
@@ -252,6 +265,26 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   })
   const recent = listingsData?.listings.items ?? []
 
+  // BO-authored content (hero copy, trust bar, partners banner, seller CTA)
+  // — each falls back to the default copy below when the slot is empty, so
+  // the homepage never renders a blank section before the BO configures one.
+  const { data: bannersData } = useQuery<{
+    hero: RemoteBanner[]
+    trustBar: RemoteBanner[]
+    partners: RemoteBanner[]
+    sellerCta: RemoteBanner[]
+    featuredToggle: RemoteBanner | null
+  }>(HOME_BANNERS_QUERY)
+  const heroBanner = bannersData?.hero[0]
+  const trustBarBanners = bannersData?.trustBar ?? []
+  const partnersBanner = bannersData?.partners[0]
+  const sellerCtaBanner = bannersData?.sellerCta[0]
+  // No row for this slot = section on by default; a row lets the BO turn
+  // it off (isActive) and/or override its heading — distinct from
+  // activeBanners' filtering, which can't tell "unconfigured" from "off".
+  const featuredEnabled = bannersData?.featuredToggle ? bannersData.featuredToggle.isActive : true
+  const featuredHeading = bannersData?.featuredToggle?.isActive ? bannersData.featuredToggle : undefined
+
   // Generated once per session (not per render) so "À la une" doesn't
   // reshuffle every time something re-renders the page.
   const [sessionSeed] = useState(() => Math.random() * 1000)
@@ -375,47 +408,63 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   return (
     <div>
 
-      {/* Premium Hero Section — Two-Column with Floating Card Mosaic */}
+      {/* Hero — either a BO-supplied creative (image/GIF, shown as-is like
+          the big marketplaces do) or the default generated text hero when
+          no creative is configured for this slot. */}
       <section className="hero-premium" style={{ position: 'relative', overflow: 'hidden' }}>
-        {/* Subtle gradient overlay */}
         <div className="hero-premium-glow" />
 
         <div className="hero-premium-inner">
-          <div className="hero-grid">
+          {heroBanner?.imageUrl ? (
+            <div className="hero-creative">
+              <div className="hero-creative-media">
+                <button
+                  type="button"
+                  className="hero-creative-link"
+                  onClick={() =>
+                    heroBanner.ctaUrl ? followBannerCta(heroBanner.ctaUrl, onNavigate) : onNavigate('search')
+                  }
+                >
+                  <img src={heroBanner.imageUrl} alt={heroBanner.title} className="hero-creative-img" />
+                </button>
 
-            {/* === Left Column: Text, CTA, Stats === */}
-            <div className="hero-left">
-              <div className="hero-badge">
-                <Sparkles size={14} />
-                La marketplace nouvelle génération
+                {(heroBanner.ctaLabel || heroBanner.secondaryCtaLabel) && (
+                  <>
+                    <div className="hero-creative-scrim" />
+                    <div className="hero-creative-actions">
+                      {heroBanner.ctaLabel && (
+                        <button
+                          className="hero-btn hero-btn-primary"
+                          onClick={() =>
+                            heroBanner.ctaUrl ? followBannerCta(heroBanner.ctaUrl, onNavigate) : onNavigate('search')
+                          }
+                        >
+                          {heroBanner.ctaLabel} <ArrowRight size={18} />
+                        </button>
+                      )}
+                      {heroBanner.secondaryCtaLabel && (
+                        <button
+                          className="hero-btn hero-btn-outline"
+                          onClick={() =>
+                            heroBanner.secondaryCtaUrl
+                              ? followBannerCta(heroBanner.secondaryCtaUrl, onNavigate)
+                              : onNavigate('seller-post')
+                          }
+                        >
+                          {heroBanner.secondaryCtaLabel}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
-              <h1 className="hero-title">
-                Trouvez, <span className="hero-title-accent">Achetez</span> & Vendez<br />
-                en Côte d'Ivoire
-              </h1>
-
-              <p className="hero-subtitle">
-                La plus grande plateforme de petites annonces certifiées en Côte d'Ivoire.
-                Parcourez des milliers d'offres et payez en toute sécurité par Mobile Money.
-              </p>
-
-              <div className="hero-buttons">
-                <button className="hero-btn hero-btn-primary" onClick={() => onNavigate('search')}>
-                  Explorer les annonces <ArrowRight size={18} />
-                </button>
-                <button className="hero-btn hero-btn-outline" onClick={() => onNavigate('seller-post')}>
-                  + Publier une annonce
-                </button>
-              </div>
-
-              {/* Stats */}
-              <div className="hero-stats">
-                {[
+              <div className="hero-stats hero-stats-standalone">
+                {(heroBanner.stats?.length ? heroBanner.stats : [
                   { value: '85 000+', label: 'Annonces Actives' },
                   { value: '42 000+', label: 'Vendeurs Vérifiés' },
-                  { value: '100%', label: 'Paiement Sécurisé' },
-                ].map(s => (
+                  { value: '24/7', label: 'Support Client' },
+                ]).map(s => (
                   <div key={s.label} className="hero-stat-item">
                     <div className="hero-stat-value">{s.value}</div>
                     <div className="hero-stat-label">{s.label}</div>
@@ -423,53 +472,110 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 ))}
               </div>
             </div>
-
-            {/* === Right Column: À la une (most-favorited recent listings) === */}
-            <div className="hero-right">
-              <div className="hero-boost-header">
-                <span className="hero-boost-pill">
-                  <Zap size={13} fill="#0F172A" /> À la une
-                </span>
-                <span className="hero-boost-note">Les annonces les plus populaires du moment</span>
-                <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
+          ) : (
+            <div className="hero-left hero-left-solo">
+              <div className="hero-badge">
+                <Sparkles size={14} />
+                {heroBanner?.body || 'La marketplace nouvelle génération'}
               </div>
 
-              <div
-                className="hero-mosaic"
-                ref={mosaicRef}
-                onScroll={handleMosaicScroll}
-                onTouchStart={pauseAutoplay}
-              >
-                {mosaicSlides.map((card, i) => (
-                  <HeroMosaicCard
-                    key={i < loopCount ? card.id : `${card.id}-loop`}
-                    card={card}
-                    isMain={i === 0}
-                    isFav={favorites.includes(card.id)}
-                    animationDelay="0s"
-                    onSelect={() => onSelectListing(card.id)}
-                    onToggleFav={() => onToggleFavorite(card.id)}
+              <h1 className="hero-title">
+                {heroBanner ? heroBanner.title : (
+                  <>Trouvez, <span className="hero-title-accent">Achetez</span> & Vendez<br />en Côte d'Ivoire</>
+                )}
+              </h1>
+
+              <p className="hero-subtitle">
+                {heroBanner?.subtitle ||
+                  "La plus grande plateforme de petites annonces certifiées en Côte d'Ivoire. Parcourez des milliers d'offres et échangez directement avec les vendeurs en toute confiance."}
+              </p>
+
+              <div className="hero-buttons">
+                <button
+                  className="hero-btn hero-btn-primary"
+                  onClick={() =>
+                    heroBanner?.ctaUrl ? followBannerCta(heroBanner.ctaUrl, onNavigate) : onNavigate('search')
+                  }
+                >
+                  {heroBanner?.ctaLabel || 'Explorer les annonces'} <ArrowRight size={18} />
+                </button>
+                <button
+                  className="hero-btn hero-btn-outline"
+                  onClick={() =>
+                    heroBanner?.secondaryCtaUrl
+                      ? followBannerCta(heroBanner.secondaryCtaUrl, onNavigate)
+                      : onNavigate('seller-post')
+                  }
+                >
+                  {heroBanner?.secondaryCtaLabel || '+ Publier une annonce'}
+                </button>
+              </div>
+
+              <div className="hero-stats hero-stats-standalone hero-stats-hide-mobile">
+                {(heroBanner?.stats?.length ? heroBanner.stats : [
+                  { value: '85 000+', label: 'Annonces Actives' },
+                  { value: '42 000+', label: 'Vendeurs Vérifiés' },
+                  { value: '24/7', label: 'Support Client' },
+                ]).map(s => (
+                  <div key={s.label} className="hero-stat-item">
+                    <div className="hero-stat-value">{s.value}</div>
+                    <div className="hero-stat-label">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* "À la une" — its own section so it stays clearly visible no matter
+          what's in the hero above; the BO can turn it off entirely (or
+          retitle it) via the HOME_FEATURED slot. */}
+      {featuredEnabled && highlighted.length > 0 && (
+        <section className="featured-strip">
+          <div className="featured-strip-inner">
+            <div className="hero-boost-header">
+              <span className="hero-boost-pill">
+                <Zap size={13} fill="#0F172A" /> {featuredHeading?.title || 'À la une'}
+              </span>
+              <span className="hero-boost-note">{featuredHeading?.subtitle || 'Les annonces les plus populaires du moment'}</span>
+              <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
+            </div>
+
+            <div
+              className="hero-mosaic"
+              ref={mosaicRef}
+              onScroll={handleMosaicScroll}
+              onTouchStart={pauseAutoplay}
+            >
+              {mosaicSlides.map((card, i) => (
+                <HeroMosaicCard
+                  key={i < loopCount ? card.id : `${card.id}-loop`}
+                  card={card}
+                  isMain={i === 0}
+                  isFav={favorites.includes(card.id)}
+                  animationDelay="0s"
+                  onSelect={() => onSelectListing(card.id)}
+                  onToggleFav={() => onToggleFavorite(card.id)}
+                />
+              ))}
+            </div>
+
+            {highlighted.length > 1 && (
+              <div className="hero-mosaic-dots">
+                {highlighted.map((card, i) => (
+                  <button
+                    key={card.id}
+                    className={`hero-mosaic-dot${i === activeSlide ? ' active' : ''}`}
+                    onClick={() => { pauseAutoplay(); scrollMosaicTo(i) }}
+                    aria-label={`Aller à l'annonce ${i + 1}`}
                   />
                 ))}
               </div>
-
-              {highlighted.length > 1 && (
-                <div className="hero-mosaic-dots">
-                  {highlighted.map((card, i) => (
-                    <button
-                      key={card.id}
-                      className={`hero-mosaic-dot${i === activeSlide ? ' active' : ''}`}
-                      onClick={() => { pauseAutoplay(); scrollMosaicTo(i) }}
-                      aria-label={`Aller à l'annonce ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Content Container */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem 0' }}>
@@ -572,19 +678,15 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           }}>
             <div style={{ flex: 1, minWidth: 260 }}>
               <div style={{ display: 'inline-flex', gap: 6, background: '#FFDD21', color: '#0F172A', padding: '4px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 900, fontFamily: 'Outfit, sans-serif', marginBottom: '1rem' }}>
-                PAIEMENT MOBILE MONEY 100% SÉCURISÉ
+                {partnersBanner?.subtitle || 'TRANSACTIONS DIRECTES ENTRE PARTICULIERS'}
               </div>
               <h3 style={{ color: '#FFFFFF', margin: '0 0 0.75rem', fontSize: '1.8rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
-                Achetez et Vendez avec Wave, Orange Money & MTN MoMo
+                {partnersBanner?.title || 'Achetez et Vendez en Toute Confiance'}
               </h3>
               <p style={{ color: '#94A3B8', margin: '0 0 1.5rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
-                Sur Yüpixi, les transactions sont protégées. Réservez les articles de vos vendeurs préférés via transfert direct sécurisé.
+                {partnersBanner?.body ||
+                  "Sur Yüpixi, vous échangez directement avec l'autre partie. Convenez ensemble des modalités et finalisez votre transaction en toute sérénité."}
               </p>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <span className="badge badge-yellow" style={{ fontSize: '0.85rem', padding: '6px 14px' }}>Orange Money</span>
-                <span className="badge badge-blue" style={{ fontSize: '0.85rem', padding: '6px 14px' }}>Wave CI</span>
-                <span className="badge badge-yellow" style={{ background: '#FFCC00', color: '#000', fontSize: '0.85rem', padding: '6px 14px' }}>MTN MoMo</span>
-              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 240, background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -612,15 +714,22 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           seller CTA than as the very first thing under the hero. */}
       <section className="trust-bar desktop-only">
         <div className="trust-bar-inner">
-          {[
-            { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID', desc: 'Identité certifiée' },
-            { icon: CreditCard, text: 'Paiement Wave & Orange Money', desc: 'Transaction sécurisée' },
-            { icon: Star, text: 'Avis Clients Certifiés', desc: 'Recommandations vérifiées' },
-            { icon: Award, text: 'Support 7j/7 en Côte d\'Ivoire', desc: 'Assistance dédiée' },
-          ].map((item, i) => (
-            <div key={item.text} className="trust-bar-item">
+          {(trustBarBanners.length > 0
+            ? trustBarBanners.map((b) => ({ key: b.id, icon: Award, text: b.title, desc: b.subtitle || '', image: b.imageUrl }))
+            : [
+                { key: 'verified', icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID', desc: 'Identité certifiée' },
+                { key: 'direct', icon: CreditCard, text: 'Échanges Directs Entre Membres', desc: 'Vous gérez la transaction ensemble' },
+                { key: 'reviews', icon: Star, text: 'Avis Clients Certifiés', desc: 'Recommandations vérifiées' },
+                { key: 'support', icon: Award, text: "Support 7j/7 en Côte d'Ivoire", desc: 'Assistance dédiée' },
+              ]
+          ).map((item) => (
+            <div key={item.key} className="trust-bar-item">
               <div className="trust-bar-icon">
-                <item.icon size={20} />
+                {'image' in item && item.image ? (
+                  <img src={item.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                ) : (
+                  <item.icon size={20} />
+                )}
               </div>
               <div>
                 <div className="trust-bar-text">{item.text}</div>
@@ -634,28 +743,39 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem' }}>
         {/* CTA Seller Banner */}
         <section>
-          <div className="pattern-yupixi" style={{
-            borderRadius: 'var(--radius-xl)',
-            padding: '3rem 2rem',
-            textAlign: 'center',
-            position: 'relative',
-          }}>
+          <div
+            className={sellerCtaBanner?.imageUrl ? undefined : 'pattern-yupixi'}
+            style={{
+              borderRadius: 'var(--radius-xl)',
+              padding: '3rem 2rem',
+              textAlign: 'center',
+              position: 'relative',
+              backgroundColor: sellerCtaBanner?.backgroundColor || undefined,
+              backgroundImage: sellerCtaBanner?.imageUrl
+                ? `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${sellerCtaBanner.imageUrl})`
+                : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
             <div style={{ maxWidth: 640, margin: '0 auto', position: 'relative' }}>
               <div style={{ display: 'inline-flex', padding: 12, background: '#FFFFFF', borderRadius: 16, color: '#FE0000', marginBottom: '1rem' }}>
                 <Store size={36} />
               </div>
-              <h2 style={{ color: '#FFFFFF', margin: '0 0 0.75rem', fontSize: '2rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
-                Devenez Vendeur Certifié Yüpixi
+              <h2 style={{ color: sellerCtaBanner?.textColor || '#FFFFFF', margin: '0 0 0.75rem', fontSize: '2rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
+                {sellerCtaBanner?.title || 'Devenez Vendeur Certifié Yüpixi'}
               </h2>
-              <p style={{ color: 'rgba(255,255,255,0.92)', margin: '0 0 1.75rem', fontSize: '1.05rem', lineHeight: 1.6 }}>
-                Publiez gratuitement vos annonces et touchez plus de 1.2M d'acheteurs en Côte d'Ivoire.
+              <p style={{ color: sellerCtaBanner?.textColor ? `${sellerCtaBanner.textColor}EB` : 'rgba(255,255,255,0.92)', margin: '0 0 1.75rem', fontSize: '1.05rem', lineHeight: 1.6 }}>
+                {sellerCtaBanner?.subtitle || "Publiez gratuitement vos annonces et touchez plus de 1.2M d'acheteurs en Côte d'Ivoire."}
               </p>
               <button
                 className="btn-secondary"
                 style={{ fontSize: '1.05rem', padding: '0.85rem 2.25rem' }}
-                onClick={() => onNavigate('seller-post')}
+                onClick={() =>
+                  sellerCtaBanner?.ctaUrl ? followBannerCta(sellerCtaBanner.ctaUrl, onNavigate) : onNavigate('seller-post')
+                }
               >
-                Créer ma boutique gratuitement →
+                {sellerCtaBanner?.ctaLabel || 'Créer ma boutique gratuitement'} →
               </button>
             </div>
           </div>

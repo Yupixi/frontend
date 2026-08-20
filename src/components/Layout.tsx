@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
-  Sun, Moon, LogOut, Settings, Package, BarChart2, ShoppingBag,
+  Sun, Moon, LogOut, Settings, Package, BarChart2,
   Plus, Home, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
   Shirt, Wrench, Grid, User
 } from 'lucide-react'
@@ -10,10 +10,9 @@ import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
 
 type Page =
-  | 'home' | 'search' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
+  | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
-  | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-payments' | 'seller-premium'
-  | 'admin-dashboard' | 'admin-users' | 'admin-listings' | 'admin-categories' | 'admin-reports' | 'admin-stats' | 'admin-config'
+  | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
 
 type LayoutProps = {
   currentPage: Page
@@ -23,7 +22,7 @@ type LayoutProps = {
   onToggleDark: () => void
   children: React.ReactNode
   isLoggedIn: boolean
-  currentUser?: { fullName: string; email: string } | null
+  currentUser?: { fullName: string; email: string; avatarUrl?: string | null } | null
   onToggleLogin: () => void
   onSelectListing?: (id: string) => void
   onSetSearchTerm?: (term: string) => void
@@ -251,13 +250,14 @@ export default function Layout({
                         background: 'var(--bg-card)',
                         border: '1.5px solid var(--border)',
                         borderRadius: 999,
-                        padding: '4px 12px 4px 5px',
+                        padding: 4,
                         cursor: 'pointer'
                       }}
                     >
                       <div style={{
                         width: 32,
                         height: 32,
+                        flexShrink: 0,
                         borderRadius: '50%',
                         background: 'var(--primary)',
                         display: 'flex',
@@ -266,9 +266,12 @@ export default function Layout({
                         color: '#FFF',
                         fontSize: '0.85rem',
                         fontWeight: 900,
-                        fontFamily: 'Outfit, sans-serif'
+                        fontFamily: 'Outfit, sans-serif',
+                        overflow: 'hidden'
                       }}>
-                        {displayInitial}
+                        {currentUser?.avatarUrl
+                          ? <img src={currentUser.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : displayInitial}
                       </div>
                       <span className="desktop-only" style={{ fontSize: '0.875rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--fg)' }}>{displayName.split(' ')[0]}</span>
                       <ChevronDown size={14} className="desktop-only" style={{ color: 'var(--fg-muted)' }} />
@@ -286,15 +289,14 @@ export default function Layout({
                           <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>{currentUser?.email ?? ''}</div>
                         </div>
 
-                        {/* Everyone on Yüpixi can both buy and sell — these are
-                            two dashboards for the same account, not a role to
+                        {/* Everyone on Yüpixi can both buy and sell — one
+                            unified account space, not two dashboards to
                             switch between. */}
                         {[
-                          { icon: Home, label: 'Espace Acheteur', page: 'buyer-dashboard' as Page },
-                          { icon: ShoppingBag, label: 'Espace Vendeur', page: 'seller-dashboard' as Page },
+                          { icon: Home, label: 'Tableau de bord', page: 'buyer-dashboard' as Page },
                           { icon: Package, label: 'Mes Annonces', page: 'seller-listings' as Page },
                           { icon: Heart, label: 'Mes Favoris', page: 'buyer-favorites' as Page },
-                          { icon: BarChart2, label: 'Statistiques & Revenus', page: 'seller-stats' as Page },
+                          { icon: BarChart2, label: 'Statistiques', page: 'seller-stats' as Page },
                           { icon: Settings, label: 'Paramètres du Compte', page: 'buyer-settings' as Page },
                         ].map(item => (
                           <button
@@ -452,7 +454,11 @@ export default function Layout({
           }}>
             {isLoggedIn && (
               <div style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 900, fontSize: '0.9rem' }}>{displayInitial}</div>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 900, fontSize: '0.9rem', overflow: 'hidden' }}>
+                  {currentUser?.avatarUrl
+                    ? <img src={currentUser.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : displayInitial}
+                </div>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '0.9rem', fontFamily: 'Outfit, sans-serif' }}>{displayName}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>{currentUser?.email ?? ''}</div>
@@ -520,11 +526,6 @@ export default function Layout({
               <p style={{ color: '#94A3B8', fontSize: '0.9rem', marginTop: '1.25rem', lineHeight: 1.6 }}>
                 En associant la loupe au smile, Yüpixi offre une expérience d'achat et de vente simple, fluide et sécurisée en Côte d'Ivoire.
               </p>
-              <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-                <span className="badge badge-yellow">Orange Money</span>
-                <span className="badge badge-blue">Wave</span>
-                <span className="badge badge-yellow" style={{ background: '#FFCC00' }}>MTN MoMo</span>
-              </div>
             </div>
 
             <div>
@@ -552,8 +553,8 @@ export default function Layout({
                 {[
                   { label: 'Publier une Annonce Gratuite', page: 'seller-post' as Page },
                   { label: 'Mes Favoris', page: 'buyer-favorites' as Page },
-                  { label: 'Espace Vendeur Pro', page: 'seller-dashboard' as Page },
-                  { label: 'Abonnements & Boost Annonces', page: 'seller-premium' as Page },
+                  { label: 'Mon Tableau de Bord', page: 'buyer-dashboard' as Page },
+                  { label: 'Boost & Premium', page: 'seller-premium' as Page },
                   { label: 'Centre de Sécurité', page: 'buyer-settings' as Page },
                 ].map(item => (
                   <li key={item.label}>

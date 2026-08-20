@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
+import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import Home from './pages/Home'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
@@ -16,19 +17,19 @@ import {
   BuyerNotifications, BuyerHistory, BuyerSettings,
 } from './pages/buyer/BuyerPages'
 import {
-  SellerDashboard, PostListing, SellerListings,
-  SellerStats, SellerPayments, SellerPremium,
+  PostListing, SellerListings,
+  SellerStats, SellerPremium,
 } from './pages/seller/SellerPages'
-import {
-  AdminDashboard, AdminUsers, AdminListings,
-  AdminCategories, AdminReports, AdminStats, AdminConfig,
-} from './pages/admin/AdminPages'
 
+// Admin BO control lives in the dedicated Backoffice app (real, GraphQL-wired)
+// — this Frontend app never had a real admin surface, just a mock
+// placeholder from the original scaffold with no nav link ever pointing to
+// it (see Phase 1 audit). Removed rather than maintained as a second,
+// disconnected "admin" UI.
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
-  | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-payments' | 'seller-premium'
-  | 'admin-dashboard' | 'admin-users' | 'admin-listings' | 'admin-categories' | 'admin-reports' | 'admin-stats' | 'admin-config'
+  | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -54,8 +55,16 @@ function loadNavState(): Partial<NavState> {
 }
 const savedNav = loadNavState()
 
+// PWA manifest shortcuts (long-press the home screen icon) launch with
+// `?shortcut=<page>` — a real page, not session-restore, takes priority.
+const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers']
+function shortcutPage(): Page | null {
+  const requested = new URLSearchParams(window.location.search).get('shortcut')
+  return SHORTCUT_PAGES.includes(requested as Page) ? (requested as Page) : null
+}
+
 export default function App() {
-  const [page, setPage] = useState<Page>(savedNav.page ?? 'home')
+  const [page, setPage] = useState<Page>(shortcutPage() ?? savedNav.page ?? 'home')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -67,7 +76,14 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const onUpdateAvailable = () => setShowUpdateBanner(true)
+    window.addEventListener(SW_UPDATE_EVENT, onUpdateAvailable)
+    return () => window.removeEventListener(SW_UPDATE_EVENT, onUpdateAvailable)
+  }, [])
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
@@ -262,47 +278,20 @@ export default function App() {
       case 'auth':
         return <Auth onNavigate={navigate} onLogin={() => { setIsLoggedIn(true); void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me)) }} />
 
-      // Buyer pages
-      case 'buyer-dashboard':
-        return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} />
-      case 'buyer-favorites':
-        return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
-      case 'buyer-messages':
-        return <BuyerMessages onNavigate={navigate} />
-      case 'buyer-notifications':
-        return <BuyerNotifications onNavigate={navigate} />
-      case 'buyer-history':
-        return <BuyerHistory onNavigate={navigate} onSelectListing={selectListing} />
-      case 'buyer-settings':
-        return <BuyerSettings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} />
-
-      // Admin pages
-      case 'admin-dashboard':
-        return <AdminDashboard onNavigate={navigate} />
-      case 'admin-users':
-        return <AdminUsers onNavigate={navigate} />
-      case 'admin-listings':
-        return <AdminListings onNavigate={navigate} onSelectListing={selectListing} />
-      case 'admin-categories':
-        return <AdminCategories onNavigate={navigate} />
-      case 'admin-reports':
-        return <AdminReports onNavigate={navigate} />
-      case 'admin-stats':
-        return <AdminStats onNavigate={navigate} />
-      case 'admin-config':
-        return <AdminConfig onNavigate={navigate} />
-
       default:
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
     }
   }
 
-  // Seller dashboard gets full viewport layout (standalone)
-  if (page.startsWith('seller-')) {
-    const sellerContent = (() => {
+  // Every member is both buyer and seller — one unified account space (own
+  // full-viewport shell, no site header/footer) instead of two separate
+  // dashboards. Covers both the buyer-* and seller-* page keys.
+  if (page.startsWith('seller-') || page.startsWith('buyer-')) {
+    const accountContent = (() => {
       switch (page) {
         case 'seller-dashboard':
-          return <SellerDashboard onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-dashboard':
+          return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} onLogout={logout} />
         case 'seller-post':
           return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-edit':
@@ -311,41 +300,25 @@ export default function App() {
           return <SellerListings onNavigate={navigate} onSelectListing={selectListing} onEditListing={editListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-stats':
           return <SellerStats onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
-        case 'seller-payments':
-          return <SellerPayments onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-premium':
           return <SellerPremium onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-favorites':
+          return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onLogout={logout} />
+        case 'buyer-messages':
+          return <BuyerMessages onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-notifications':
+          return <BuyerNotifications onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
+        case 'buyer-history':
+          return <BuyerHistory onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
+        case 'buyer-settings':
+          return <BuyerSettings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
+        default:
+          return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} onLogout={logout} />
       }
     })()
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
-        {sellerContent}
-        <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
-      </div>
-    )
-  }
-
-  // Messages page gets full-height special layout
-  if (page === 'buyer-messages') {
-    return (
-      <div className={dark ? 'dark' : ''} style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <div style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', height: 64, display: 'flex', alignItems: 'center', padding: '0 1rem', gap: '1rem' }}>
-          <button onClick={() => navigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="12" fill="#FE0000" />
-              <path d="M14 28 C14 36, 34 36, 34 28" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-              <circle cx="18" cy="19" r="2.5" fill="white" />
-              <circle cx="30" cy="19" r="2.5" fill="white" />
-              <line x1="24" y1="14" x2="24" y2="22" stroke="white" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-          </button>
-          <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.3rem', color: '#FE0000' }}>Yüpixi</span>
-          <span style={{ color: 'var(--fg-muted)', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.9rem' }}>/ Messages</span>
-          <button onClick={() => navigate('home')} style={{ marginLeft: 'auto', color: 'var(--fg-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>
-            ← Retour à l'accueil
-          </button>
-        </div>
-        <BuyerMessages onNavigate={navigate} />
+        {accountContent}
         <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
@@ -369,6 +342,28 @@ export default function App() {
         {renderPage()}
       </Layout>
       <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
+    </div>
+  )
+}
+
+function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onUpdate: () => void; onDismiss: () => void }) {
+  if (!show) return null
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+      background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
+      padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+      fontFamily: "'Outfit', 'Nunito', sans-serif",
+    }}>
+      <div style={{ flex: 1, fontWeight: 700, fontSize: '0.85rem' }}>
+        Une nouvelle version de Yüpixi est disponible.
+      </div>
+      <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.8rem', fontWeight: 600 }}>Plus tard</button>
+      <button onClick={onUpdate} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+        Mettre à jour
+      </button>
     </div>
   )
 }
