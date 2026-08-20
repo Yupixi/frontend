@@ -81,7 +81,7 @@ export default function App() {
   const [selectedSellerId, setSelectedSellerId] = useState(savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
   // right conversation, not part of the session-restored nav state.
-  const [contactSeller, setContactSeller] = useState<{ listingId: string; sellerId: string } | null>(null)
+  const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
   const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
@@ -248,7 +248,7 @@ export default function App() {
     navigate('seller-profile')
   }
 
-  const contactSellerAbout = (listingId: string, sellerId: string) => {
+  const contactSellerAbout = (sellerId: string, listingId?: string) => {
     setContactSeller({ listingId, sellerId })
     navigate('buyer-messages')
   }
@@ -285,7 +285,7 @@ export default function App() {
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} onContactSeller={contactSellerAbout} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'seller-profile':
-        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} />
+        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn} />
       case 'categories':
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} />
       case 'flash-offers':
@@ -300,8 +300,12 @@ export default function App() {
 
   // Every member is both buyer and seller — one unified account space (own
   // full-viewport shell, no site header/footer) instead of two separate
-  // dashboards. Covers both the buyer-* and seller-* page keys.
-  if (page.startsWith('seller-') || page.startsWith('buyer-')) {
+  // dashboards. Covers both the buyer-* and seller-* page keys — except
+  // seller-profile, which despite the name is a public page (someone
+  // else's profile, viewed through the normal site Layout below), not
+  // part of the account shell. It was silently falling into this block's
+  // default case (BuyerDashboard) and was never actually reachable.
+  if ((page.startsWith('seller-') && page !== 'seller-profile') || page.startsWith('buyer-')) {
     const accountContent = (() => {
       switch (page) {
         case 'seller-dashboard':

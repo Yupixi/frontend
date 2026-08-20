@@ -225,7 +225,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
 }
 
 // ─── MESSAGES ───────────────────────────────────────────────────────────────
-export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, onStartWithConsumed }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, startWith?: { listingId: string; sellerId: string } | null, onStartWithConsumed?: () => void }) {
+export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, onStartWithConsumed }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, startWith?: { listingId?: string; sellerId: string } | null, onStartWithConsumed?: () => void }) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = listData?.myConversations ?? []
   const [activeId, setActiveId] = useState<string | null>(null)

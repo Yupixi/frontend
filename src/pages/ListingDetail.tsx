@@ -16,7 +16,7 @@ type ListingDetailProps = {
   listingId: string
   onNavigate: (page: any) => void
   onSelectSeller: (id: string) => void
-  onContactSeller: (listingId: string, sellerId: string) => void
+  onContactSeller: (sellerId: string, listingId?: string) => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
 }
@@ -304,7 +304,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
           <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
             <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacter le vendeur</h3>
 
-            <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => onContactSeller(listing.id, listing.seller.id)}>
+            <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => onContactSeller(listing.seller.id, listing.id)}>
               <MessageCircle size={18} /> Envoyer un message
             </button>
 
@@ -450,7 +450,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
 
-              <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => { setSellerSheetOpen(false); onContactSeller(listing.id, listing.seller.id) }}>
+              <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => { setSellerSheetOpen(false); onContactSeller(listing.seller.id, listing.id) }}>
                 <MessageCircle size={18} /> Envoyer un message
               </button>
 

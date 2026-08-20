@@ -262,6 +262,7 @@ export type ListingFilterInput = {
   condition?: string
   minPrice?: number
   maxPrice?: number
+  sellerId?: string
 }
 
 export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC'
