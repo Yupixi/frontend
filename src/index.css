@@ -655,9 +655,11 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: #FFFFFF;
 }
 @media (max-width: 768px) {
-  .hero-creative-media {
-    aspect-ratio: 16 / 9;
-  }
+  /* Same ratio as desktop (matches the BO's recommended 1200×480 upload) —
+     a narrower mobile ratio here used to crop the image's own left/right
+     edges, cutting off text or elements the marketing team baked into the
+     creative itself. Height shrinks on a narrow screen instead, which is
+     safe: nothing gets clipped that wasn't already cropped on desktop. */
   .hero-creative-actions {
     left: 0.85rem;
     right: 0.85rem;
