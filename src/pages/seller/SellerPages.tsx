@@ -10,6 +10,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { cities } from '../../data/mockData'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
+import BoostRibbon from '../../components/BoostRibbon'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
 import {
   ATTACH_LISTING_MEDIA_MUTATION,
@@ -638,6 +639,8 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
 
   return (
     <DashboardLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+      <BoostRibbon onNavigate={onNavigate} />
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>

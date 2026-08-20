@@ -8,6 +8,7 @@ import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { HOME_BANNERS_QUERY, type RemoteBanner } from '../graphql/content'
 import { formatRelativeDate } from '../lib/format'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
+import { followBannerCta } from '../lib/bannerCta'
 
 type HomeProps = {
   onNavigate: (page: any) => void
@@ -32,18 +33,6 @@ function seededRandom(seed: number, id: string): number {
 
 function listingImage(listing: RemoteListing): string {
   return listing.coverImageUrl ?? listing.media[0]?.url ?? ''
-}
-
-// BO-authored banner CTAs store a path like "/search" (mirroring how a
-// real router would); this app navigates via named pages instead, so an
-// internal-looking path maps to its page name, external links open in a
-// new tab.
-function followBannerCta(ctaUrl: string, onNavigate: (page: any) => void) {
-  if (/^https?:\/\//.test(ctaUrl)) {
-    window.open(ctaUrl, '_blank', 'noopener,noreferrer')
-    return
-  }
-  onNavigate(ctaUrl.replace(/^\//, ''))
 }
 
 function ListingCard({ listing, onSelect, onToggleFav, isFav }: {

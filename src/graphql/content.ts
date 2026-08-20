@@ -35,6 +35,15 @@ export const FLASH_OFFERS_BANNER_QUERY = gql`
   }
 `
 
+// "Toutes les pages — Bandeau annonce" in the BO — despite the name, shown
+// only on seller-facing pages (Mes annonces, Tableau de bord) where a
+// listing-boost promo is actually relevant, not truly on every page.
+export const SITEWIDE_RIBBON_QUERY = gql`
+  query SitewideRibbon {
+    activeBanners(slot: SITEWIDE_RIBBON) { ${BANNER_FIELDS} }
+  }
+`
+
 export const ACTIVE_CAMPAIGN_QUERY = gql`
   query ActiveCampaign {
     activeCampaign {
