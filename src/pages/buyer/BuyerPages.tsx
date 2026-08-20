@@ -15,6 +15,7 @@ import {
   MESSAGE_ADDED_SUBSCRIPTION,
   MY_CONVERSATIONS_QUERY,
   SEND_MESSAGE_MUTATION,
+  START_CONVERSATION_MUTATION,
   type RemoteConversation,
   type RemoteMessage,
 } from '../../graphql/messaging'
@@ -224,13 +225,29 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
 }
 
 // ─── MESSAGES ───────────────────────────────────────────────────────────────
-export function BuyerMessages({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
+export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, onStartWithConsumed }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, startWith?: { listingId: string; sellerId: string } | null, onStartWithConsumed?: () => void }) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = listData?.myConversations ?? []
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showList, setShowList] = useState(true)
   const [msg, setMsg] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [startConversation] = useMutation<{ startConversation: RemoteConversation }>(START_CONVERSATION_MUTATION)
+
+  // "Contacter le vendeur" on a listing lands here with a target instead of
+  // just the generic inbox — find or create that conversation and open it.
+  useEffect(() => {
+    if (!startWith) return
+    void startConversation({ variables: { recipientId: startWith.sellerId, listingId: startWith.listingId } }).then(({ data }) => {
+      if (data?.startConversation) {
+        setActiveId(data.startConversation.id)
+        setShowList(false)
+      }
+      void refetchList()
+      onStartWithConsumed?.()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startWith])
 
   useEffect(() => {
     if (!activeId && conversations.length > 0) setActiveId(conversations[0].id)

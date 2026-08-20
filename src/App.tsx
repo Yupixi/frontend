@@ -72,6 +72,9 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
   const [selectedSellerId, setSelectedSellerId] = useState(savedNav.selectedSellerId ?? 's1')
+  // Transient — consumed once by BuyerMessages on mount to start/open the
+  // right conversation, not part of the session-restored nav state.
+  const [contactSeller, setContactSeller] = useState<{ listingId: string; sellerId: string } | null>(null)
   const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
@@ -238,6 +241,11 @@ export default function App() {
     navigate('seller-profile')
   }
 
+  const contactSellerAbout = (listingId: string, sellerId: string) => {
+    setContactSeller({ listingId, sellerId })
+    navigate('buyer-messages')
+  }
+
   const toggleFavorite = (id: string) => {
     if (!isLoggedIn) {
       navigate('auth')
@@ -268,7 +276,7 @@ export default function App() {
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
       case 'listing-detail':
-        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} onContactSeller={contactSellerAbout} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'seller-profile':
         return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} />
       case 'categories':
@@ -305,7 +313,7 @@ export default function App() {
         case 'buyer-favorites':
           return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onLogout={logout} />
         case 'buyer-messages':
-          return <BuyerMessages onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+          return <BuyerMessages onNavigate={navigate} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} />
         case 'buyer-notifications':
           return <BuyerNotifications onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
         case 'buyer-history':
