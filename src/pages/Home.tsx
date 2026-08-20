@@ -663,13 +663,17 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               <button
                 type="button"
                 onClick={() => followBannerCta(partnersBanner.ctaUrl!, onNavigate)}
-                style={{ display: 'block', width: '100%', border: 'none', padding: 0, cursor: 'pointer', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}
+                style={{ display: 'block', width: '100%', aspectRatio: '3.6 / 1', border: 'none', padding: 0, cursor: 'pointer', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}
               >
-                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', display: 'block' }} />
+                {/* Same story as the boost ribbon: these creatives are
+                    exported on a canvas much taller than the actual card,
+                    so cover-crop to the card's own ratio instead of
+                    showing the blank margin around it. */}
+                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               </button>
             ) : (
-              <div style={{ borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
-                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', display: 'block' }} />
+              <div style={{ width: '100%', aspectRatio: '3.6 / 1', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               </div>
             )
           ) : (
