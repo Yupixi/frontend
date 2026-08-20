@@ -14,6 +14,7 @@ const BANNER_FIELDS = `
   stats {
     value
     label
+    description
   }
   backgroundColor
   textColor
@@ -28,6 +29,7 @@ export const HOME_BANNERS_QUERY = gql`
     sellerCta: activeBanners(slot: HOME_SELLER_CTA) { ${BANNER_FIELDS} }
     featuredToggle: bannerBySlot(slot: HOME_FEATURED) { ${BANNER_FIELDS} }
     promoStrip: activeBanners(slot: HOME_PROMO_STRIP) { ${BANNER_FIELDS} }
+    howItWorks: activeBanners(slot: HOME_HOW_IT_WORKS) { ${BANNER_FIELDS} }
   }
 `
 
@@ -135,6 +137,7 @@ export type RemoteFooterSettings = {
 export type RemoteBannerStat = {
   value: string
   label: string
+  description: string | null
 }
 
 export type RemoteBanner = {

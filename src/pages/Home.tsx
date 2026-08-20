@@ -104,12 +104,19 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     sellerCta: RemoteBanner[]
     featuredToggle: RemoteBanner | null
     promoStrip: RemoteBanner[]
+    howItWorks: RemoteBanner[]
   }>(HOME_BANNERS_QUERY)
   const heroBanner = bannersData?.hero[0]
   const trustBarBanners = bannersData?.trustBar ?? []
   const partnersBanner = bannersData?.partners[0]
   const sellerCtaBanner = bannersData?.sellerCta[0]
   const promoStripBanner = bannersData?.promoStrip[0]
+  const howItWorksBanner = bannersData?.howItWorks[0]
+  const steps = howItWorksBanner?.stats?.length ? howItWorksBanner.stats : [
+    { value: '1', label: 'Publiez votre annonce', description: 'Ajoutez photos et description en quelques minutes, c\'est gratuit.' },
+    { value: '2', label: 'Échangez avec les acheteurs', description: 'Répondez aux messages et négociez directement, en toute sécurité.' },
+    { value: '3', label: 'Vendez en toute confiance', description: 'Finalisez la transaction avec un membre vérifié.' },
+  ]
   // No row for this slot = section on by default; a row lets the BO turn
   // it off (isActive) and/or override its heading — distinct from
   // activeBanners' filtering, which can't tell "unconfigured" from "off".
@@ -498,6 +505,36 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           </div>
 
           {renderListingsContainer(recent)}
+        </section>
+
+        {/* Comment ça marche — BO-authored via HOME_HOW_IT_WORKS (reuses the
+            banner stats array as {value: step number, label: title,
+            description}), falls back to the default 3 steps below. */}
+        <section style={{ marginBottom: '3.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h2 className="section-title" style={{ margin: 0 }}>{howItWorksBanner?.title || 'Comment ça marche'}</h2>
+            <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>
+              {howItWorksBanner?.subtitle || "Acheter et vendre sur Yüpixi en trois étapes simples"}
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+            {steps.map((step, i) => (
+              <div key={i} style={{ textAlign: 'center', padding: '0 0.5rem' }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%', margin: '0 auto 1rem',
+                  background: 'var(--primary)', color: '#FFFFFF',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem',
+                }}>
+                  {step.value}
+                </div>
+                <h3 style={{ margin: '0 0 6px', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{step.label}</h3>
+                {step.description && (
+                  <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>{step.description}</p>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Popular Categories Grid — placed after the recent listings on
