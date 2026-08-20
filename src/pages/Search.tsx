@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { Search as SearchIcon, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { cities } from '../data/mockData'
+import { cities } from '../data/cities'
 import BottomSheet from '../components/BottomSheet'
 import ViewToggle from '../components/ViewToggle'
 import { ListingCard, ListingListCard } from '../components/ListingCard'

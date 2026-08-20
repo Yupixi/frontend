@@ -7,7 +7,7 @@ import {
   Users, AlertCircle, Check,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { cities } from '../../data/mockData'
+import { cities } from '../../data/cities'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import BoostRibbon from '../../components/BoostRibbon'
