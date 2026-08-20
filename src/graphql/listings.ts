@@ -19,6 +19,7 @@ export const LISTINGS_QUERY = gql`
         negotiable
         deliveryAvailable
         tags
+        attributes
         viewsCount
         favoritesCount
         publishedAt
@@ -66,6 +67,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       negotiable
       deliveryAvailable
       tags
+      attributes
       viewsCount
       favoritesCount
       publishedAt
@@ -113,6 +115,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       negotiable
       deliveryAvailable
       tags
+      attributes
       viewsCount
       favoritesCount
       publishedAt
@@ -159,6 +162,7 @@ export const LISTING_QUERY = gql`
       negotiable
       deliveryAvailable
       tags
+      attributes
       viewsCount
       favoritesCount
       publishedAt
@@ -363,6 +367,7 @@ export type RemoteListing = {
   negotiable: boolean
   deliveryAvailable: boolean
   tags: string[]
+  attributes: Record<string, string>
   viewsCount: number
   favoritesCount: number
   publishedAt: string | null

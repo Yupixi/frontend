@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@apollo/client/react'
 import {
   Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
   Sun, Moon, LogOut, Settings, Package, BarChart2,
@@ -8,6 +9,7 @@ import {
 import Logo from './Logo'
 import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
+import { FOOTER_SETTINGS_QUERY, type RemoteFooterSettings } from '../graphql/content'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
@@ -54,6 +56,11 @@ export default function Layout({
   const [activeCategory, setActiveCategory] = useState<string>('Accueil')
   const flashTexts = ['Offres Flash', 'Jusqu\'à -50%', 'Livraison Offerte', 'Stock Limitė']
   const [flashIdx, setFlashIdx] = useState(0)
+
+  // BO-authored footer copy — falls back to the default copy below when
+  // unconfigured, same convention as the Banner slots.
+  const { data: footerData } = useQuery<{ footerSettings: RemoteFooterSettings | null }>(FOOTER_SETTINGS_QUERY)
+  const footer = footerData?.footerSettings
 
   useEffect(() => {
     const t = setInterval(() => setFlashIdx(i => (i + 1) % flashTexts.length), 5000)
@@ -524,20 +531,21 @@ export default function Layout({
             <div>
               <Logo size="lg" colorMode="white" variant="full" />
               <p style={{ color: '#94A3B8', fontSize: '0.9rem', marginTop: '1.25rem', lineHeight: 1.6 }}>
-                En associant la loupe au smile, Yüpixi offre une expérience d'achat et de vente simple, fluide et sécurisée en Côte d'Ivoire.
+                {footer?.tagline ||
+                  "En associant la loupe au smile, Yüpixi offre une expérience d'achat et de vente simple, fluide et sécurisée en Côte d'Ivoire."}
               </p>
             </div>
 
             <div>
               <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Recherche Rapide</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
+                {(footer?.quickLinks?.length ? footer.quickLinks : [
                   { label: 'Appartements à Abidjan Cocody', query: 'appartement' },
                   { label: 'iPhone 15 Pro Max Neufs', query: 'iPhone 15' },
                   { label: 'Toyota RAV4 & Hilux', query: 'Toyota' },
                   { label: 'Robes & Sacs de Marque', query: 'robe' },
                   { label: 'Services de Déménagement', query: 'déménagement' },
-                ].map(item => (
+                ]).map(item => (
                   <li key={item.label}>
                     <button onClick={() => { onClearCategoryFilter?.(); onSetSearchTerm?.(item.query); onNavigate('search') }} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                       {item.label}
@@ -569,17 +577,18 @@ export default function Layout({
             <div>
               <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Support & Villes</h4>
               <p style={{ color: '#94A3B8', fontSize: '0.875rem', lineHeight: 1.5 }}>
-                Abidjan • Bouaké • Yamoussoukro • San-Pédro • Daloa • Korhogo
+                {footer?.supportCities || 'Abidjan • Bouaké • Yamoussoukro • San-Pédro • Daloa • Korhogo'}
               </p>
               <div style={{ marginTop: 14 }}>
-                <span style={{ color: '#FE0000', fontWeight: 800, fontSize: '0.85rem' }}>Support 7j/7 : +225 07 00 00 00 00</span>
+                <span style={{ color: '#FE0000', fontWeight: 800, fontSize: '0.85rem' }}>Support 7j/7 : {footer?.supportPhone || '+225 07 00 00 00 00'}</span>
               </div>
             </div>
           </div>
 
           <div style={{ borderTop: '1px solid #1E293B', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0 }}>
-              © 2026 Yüpixi CI. Tous droits réservés. Charte Graphique Officielle (Rouge #FE0000, Blanc #FFFFFF, Jaune #FFDD21).
+              {footer?.copyrightText ||
+                "© 2026 Yüpixi CI. Tous droits réservés. Charte Graphique Officielle (Rouge #FE0000, Blanc #FFFFFF, Jaune #FFDD21)."}
             </p>
             <div style={{ display: 'flex', gap: 16 }}>
               <span style={{ color: '#94A3B8', fontSize: '0.85rem', fontWeight: 700 }}>Fait en Côte d'Ivoire</span>

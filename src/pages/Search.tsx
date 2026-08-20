@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { Search as SearchIcon, SlidersHorizontal, MapPin, Heart, Eye, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Search as SearchIcon, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cities } from '../data/mockData'
-import Price from '../components/Price'
 import BottomSheet from '../components/BottomSheet'
 import ViewToggle from '../components/ViewToggle'
+import { ListingCard, ListingListCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, type RemoteListing, type ListingSort } from '../graphql/listings'
-import { formatRelativeDate } from '../lib/format'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 
 const PAGE_SIZE = 20
@@ -23,14 +22,6 @@ type SearchProps = {
   onSearchTermChange?: (term: string) => void
   selectedCity?: string
   onCityChange?: (city: string) => void
-}
-
-function listingLocation(listing: RemoteListing): string {
-  return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
-}
-
-function listingImage(listing: RemoteListing): string {
-  return listing.coverImageUrl ?? listing.media[0]?.url ?? ''
 }
 
 export default function SearchPage({ onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity }: SearchProps) {
@@ -298,71 +289,27 @@ export default function SearchPage({ onSelectListing, favorites, onToggleFavorit
         {/* Results */}
         <div style={{ flex: 1 }}>
           {viewMode === 'grid' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div className="listing-grid">
               {sorted.map(l => (
-                <div
+                <ListingCard
                   key={l.id}
-                  className="card card-hover"
-                  style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
-                  onClick={() => onSelectListing(l.id)}
-                >
-                  <button
-                    onClick={e => { e.stopPropagation(); onToggleFavorite(l.id) }}
-                    style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  >
-                    <Heart size={14} fill={favorites.includes(l.id) ? '#FE0000' : 'none'} color={favorites.includes(l.id) ? '#FE0000' : '#666'} />
-                  </button>
-                  <div style={{ height: 170, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                    <img src={listingImage(l)} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                  </div>
-                  <div style={{ padding: '12px 12px' }}>
-                    <div className="price-tag" style={{ fontSize: '1rem' }}><Price amount={l.price} /></div>
-                    <p style={{ margin: '4px 0 6px', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'Nunito, sans-serif', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>{l.title}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.75rem' }}>
-                      <MapPin size={11} />{listingLocation(l)}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.72rem', color: 'var(--fg-subtle)' }}>
-                      <span>{formatRelativeDate(l.publishedAt ?? l.createdAt)}</span>
-                      <span style={{ display: 'flex', gap: 6 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Eye size={11} />{l.viewsCount}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Heart size={11} />{l.favoritesCount}</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  listing={l}
+                  onSelect={() => onSelectListing(l.id)}
+                  onToggleFav={() => onToggleFavorite(l.id)}
+                  isFav={favorites.includes(l.id)}
+                />
               ))}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {sorted.map(l => (
-                <div
+                <ListingListCard
                   key={l.id}
-                  className="card card-hover listing-list-card"
-                  onClick={() => onSelectListing(l.id)}
-                >
-                  <div className="listing-list-thumb">
-                    <img src={listingImage(l)} alt={l.title}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                      <div style={{ minWidth: 0 }}>
-                        <h3 className="listing-list-title">{l.title}</h3>
-                        <div className="price-tag"><Price amount={l.price} /></div>
-                      </div>
-                      <button onClick={e => { e.stopPropagation(); onToggleFavorite(l.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
-                        <Heart size={18} fill={favorites.includes(l.id) ? '#FE0000' : 'none'} color={favorites.includes(l.id) ? '#FE0000' : '#999'} />
-                      </button>
-                    </div>
-                    <p className="listing-list-desc">{l.description}</p>
-                    <div className="listing-list-meta">
-                      <span><MapPin size={12} />{listingLocation(l)}</span>
-                      <span>{formatRelativeDate(l.publishedAt ?? l.createdAt)}</span>
-                      <span><Eye size={12} />{l.viewsCount}</span>
-                    </div>
-                  </div>
-                </div>
+                  listing={l}
+                  onSelect={() => onSelectListing(l.id)}
+                  onToggleFav={() => onToggleFavorite(l.id)}
+                  isFav={favorites.includes(l.id)}
+                />
               ))}
             </div>
           )}

@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import type { RemoteListing } from './listings'
 
 const BANNER_FIELDS = `
   id
@@ -26,6 +27,13 @@ export const HOME_BANNERS_QUERY = gql`
     partners: activeBanners(slot: HOME_PARTNERS) { ${BANNER_FIELDS} }
     sellerCta: activeBanners(slot: HOME_SELLER_CTA) { ${BANNER_FIELDS} }
     featuredToggle: bannerBySlot(slot: HOME_FEATURED) { ${BANNER_FIELDS} }
+    promoStrip: activeBanners(slot: HOME_PROMO_STRIP) { ${BANNER_FIELDS} }
+  }
+`
+
+export const CATEGORY_TOP_BANNER_QUERY = gql`
+  query CategoryTopBanner {
+    activeBanners(slot: CATEGORY_TOP) { ${BANNER_FIELDS} }
   }
 `
 
@@ -61,23 +69,68 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
         listing {
           id
           title
+          description
           price
           currency
           city
           locationLabel
-          coverImageUrl
+          condition
+          negotiable
+          deliveryAvailable
+          tags
           viewsCount
           favoritesCount
+          publishedAt
+          createdAt
+          coverImageUrl
+          media {
+            url
+          }
           category {
-            id
-            name
             slug
+            name
+          }
+          subcategory {
+            slug
+            name
+          }
+          seller {
+            id
+            fullName
           }
         }
       }
     }
   }
 `
+
+export const FOOTER_SETTINGS_QUERY = gql`
+  query FooterSettings {
+    footerSettings {
+      tagline
+      quickLinks {
+        label
+        query
+      }
+      supportCities
+      supportPhone
+      copyrightText
+    }
+  }
+`
+
+export type FooterQuickLink = {
+  label: string
+  query: string
+}
+
+export type RemoteFooterSettings = {
+  tagline: string | null
+  quickLinks: FooterQuickLink[] | null
+  supportCities: string | null
+  supportPhone: string | null
+  copyrightText: string | null
+}
 
 export type RemoteBannerStat = {
   value: string
@@ -104,18 +157,7 @@ export type ActiveCampaignListing = {
   id: string
   discountPercent: number | null
   salePrice: number | null
-  listing: {
-    id: string
-    title: string
-    price: number | null
-    currency: string
-    city: string
-    locationLabel: string | null
-    coverImageUrl: string | null
-    viewsCount: number
-    favoritesCount: number
-    category: { id: string; name: string; slug: string }
-  }
+  listing: RemoteListing
 }
 
 export type ActiveCampaign = {
