@@ -168,6 +168,7 @@ export const MY_LISTINGS_QUERY = gql`
         favoritesCount
         createdAt
         coverImageUrl
+        boostExpiresAt
       }
     }
   }
@@ -189,6 +190,7 @@ export type MyListingRow = {
   favoritesCount: number
   createdAt: string
   coverImageUrl: string | null
+  boostExpiresAt: string | null
 }
 
 export type MyListingDetail = {

@@ -27,6 +27,7 @@ import {
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
 import { LISTING_OFFERS_QUERY, RESPOND_TO_OFFER_MUTATION, type RemoteOffer } from '../../graphql/offers'
+import { CREATE_BOOST_MUTATION, MY_SUBSCRIPTION_QUERY, SUBSCRIBE_TO_PLAN_MUTATION, BOOST_TIERS, type RemoteMySubscription, type SubscriptionTier } from '../../graphql/promotions'
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as DashboardLayout } from '../account/AccountLayout'
 
@@ -614,6 +615,29 @@ const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: st
   PAUSED: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
 }
 
+// Small tier picker shown under "Booster" — no payment step yet (see
+// backend commit), so choosing a tier activates the boost immediately.
+function BoostMenu({ listingId, onDone }: { listingId: string, onDone: () => void }) {
+  const [createBoost, { loading }] = useMutation(CREATE_BOOST_MUTATION)
+
+  const pick = (tier: string) =>
+    void createBoost({ variables: { input: { listingId, tier } } }).then(() => onDone())
+
+  return (
+    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 6, zIndex: 20, width: 200 }}>
+      {BOOST_TIERS.map(t => (
+        <button key={t.tier} disabled={loading} onClick={() => pick(t.tier)} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <span>{t.label}</span>
+          <span style={{ color: 'var(--primary)' }}><Price amount={t.price} /></span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // Lazy-loaded per row on expand rather than fetched for every listing up
 // front — avoids an N+1 burst of queries when the list first renders.
 function ListingOffersPanel({ listingId }: { listingId: string }) {
@@ -668,6 +692,7 @@ function ListingOffersPanel({ listingId }: { listingId: string }) {
 export function SellerListings({ onNavigate, onSelectListing, onEditListing, currentUser, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, onEditListing: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const [filter, setFilter] = useState('all')
   const [expandedOffers, setExpandedOffers] = useState<string | null>(null)
+  const [boostMenuFor, setBoostMenuFor] = useState<string | null>(null)
   const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
     MY_LISTINGS_QUERY,
     { variables: { page: 1, pageSize: 100 } },
@@ -735,6 +760,11 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3, flexWrap: 'wrap' }}>
                   <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
                   <span className="badge" style={{ background: s.bg, color: s.color, flexShrink: 0, fontSize: '0.72rem' }}>{s.label}</span>
+                  {l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date() && (
+                    <span className="badge" style={{ background: 'rgba(254,0,0,0.08)', color: 'var(--primary)', flexShrink: 0, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <ArrowUp size={11} /> Boosté jusqu'au {new Date(l.boostExpiresAt).toLocaleDateString('fr-FR')}
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
                   <span className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={l.price} /></span>
@@ -754,9 +784,14 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                   <Tag size={14} /> Offres <ChevronDown size={13} style={{ transform: offersExpanded ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
                 </button>
                 {l.status === 'APPROVED' && (
-                  <button style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
-                    <ArrowUp size={14} /> Booster
-                  </button>
+                  <div style={{ position: 'relative' }}>
+                    <button onClick={() => setBoostMenuFor(boostMenuFor === l.id ? null : l.id)} style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
+                      <ArrowUp size={14} /> Booster
+                    </button>
+                    {boostMenuFor === l.id && (
+                      <BoostMenu listingId={l.id} onDone={() => { setBoostMenuFor(null); void refetch() }} />
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -862,31 +897,47 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
 }
 
 // ─── PREMIUM ─────────────────────────────────────────────────────────────────
+const PLANS: { tier: SubscriptionTier, name: string, price: number, color: string, features: string[], highlight?: boolean }[] = [
+  {
+    tier: 'FREE',
+    name: 'Gratuit',
+    price: 0,
+    color: '#6B7280',
+    features: ['5 annonces actives', '3 photos par annonce', 'Statistiques de base', 'Support email'],
+  },
+  {
+    tier: 'PRO',
+    name: 'Pro',
+    price: 25000,
+    color: '#FE0000',
+    features: ['Annonces illimitées', '10 photos par annonce', 'Statistiques avancées', '3 boosts par mois', 'Badge Vendeur Pro', 'Support prioritaire', 'Mise en avant dans la recherche'],
+    highlight: true,
+  },
+  {
+    tier: 'BUSINESS',
+    name: 'Business',
+    price: 75000,
+    color: '#8B5CF6',
+    features: ['Tout ce qui est dans Pro', 'Annonces sponsorisées', '20 boosts par mois', 'Page boutique dédiée', 'API access', 'Manager dédié', 'Rapports personnalisés'],
+  },
+]
+
 export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
-  const plans = [
-    {
-      name: 'Gratuit',
-      price: 0,
-      color: '#6B7280',
-      features: ['5 annonces actives', '3 photos par annonce', 'Statistiques de base', 'Support email'],
-      current: true,
-    },
-    {
-      name: 'Pro',
-      price: 25000,
-      color: '#FE0000',
-      features: ['Annonces illimitées', '10 photos par annonce', 'Statistiques avancées', '3 boosts par mois', 'Badge Vendeur Pro', 'Support prioritaire', 'Mise en avant dans la recherche'],
-      highlight: true,
-      current: false,
-    },
-    {
-      name: 'Business',
-      price: 75000,
-      color: '#8B5CF6',
-      features: ['Tout ce qui est dans Pro', 'Annonces sponsorisées', '20 boosts par mois', 'Page boutique dédiée', 'API access', 'Manager dédié', 'Rapports personnalisés'],
-      current: false,
-    },
-  ]
+  const { data, loading, refetch } = useQuery<{ mySubscription: RemoteMySubscription }>(MY_SUBSCRIPTION_QUERY)
+  const [subscribeToPlan, { loading: subscribing }] = useMutation(SUBSCRIBE_TO_PLAN_MUTATION)
+  const [subscribeError, setSubscribeError] = useState<string | null>(null)
+  const currentTier = data?.mySubscription.tier ?? 'FREE'
+  const expiresAt = data?.mySubscription.expiresAt
+
+  const choose = async (tier: SubscriptionTier) => {
+    setSubscribeError(null)
+    try {
+      await subscribeToPlan({ variables: { tier } })
+      void refetch()
+    } catch (err) {
+      setSubscribeError(err instanceof Error ? err.message : 'Impossible de changer de plan.')
+    }
+  }
 
   return (
     <DashboardLayout active="seller-premium" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
@@ -894,15 +945,21 @@ export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigat
         <div className="badge badge-orange" style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>⭐ Plans Premium</div>
         <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>
         <p style={{ color: 'var(--fg-muted)', fontSize: '1rem' }}>Choisissez le plan qui correspond à vos besoins</p>
+        {expiresAt && currentTier !== 'FREE' && (
+          <p style={{ color: 'var(--fg-subtle)', fontSize: '0.8rem', marginTop: 4 }}>Actif jusqu'au {new Date(expiresAt).toLocaleDateString('fr-FR')}</p>
+        )}
+        {subscribeError && <p style={{ color: 'var(--primary)', fontSize: '0.85rem', marginTop: 8 }}>{subscribeError}</p>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-        {plans.map(plan => (
+        {PLANS.map(plan => {
+          const isCurrent = plan.tier === currentTier
+          return (
           <div key={plan.name} className="card" style={{ padding: '1.75rem', border: plan.highlight ? `2px solid var(--primary)` : '1px solid var(--border)', position: 'relative', transform: plan.highlight ? 'scale(1.02)' : 'none' }}>
-            {plan.highlight && (
+            {plan.highlight && !isCurrent && (
               <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>⭐ Le plus populaire</div>
             )}
-            {plan.current && (
+            {isCurrent && (
               <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#6B7280', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>Plan actuel</div>
             )}
             <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', color: plan.color, margin: '0 0 0.75rem' }}>{plan.name}</h2>
@@ -920,11 +977,17 @@ export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigat
                 </li>
               ))}
             </ul>
-            <button className={plan.current ? 'btn-outline' : 'btn-primary'} style={{ width: '100%', padding: '0.75rem', background: plan.current ? undefined : plan.color, borderColor: plan.color, color: plan.current ? plan.color : '#fff' }} disabled={plan.current}>
-              {plan.current ? 'Plan actuel' : `Choisir ${plan.name}`}
+            <button
+              className={isCurrent ? 'btn-outline' : 'btn-primary'}
+              style={{ width: '100%', padding: '0.75rem', background: isCurrent ? undefined : plan.color, borderColor: plan.color, color: isCurrent ? plan.color : '#fff' }}
+              disabled={isCurrent || loading || subscribing || plan.tier === 'FREE'}
+              onClick={() => void choose(plan.tier)}
+            >
+              {isCurrent ? 'Plan actuel' : subscribing ? 'Un instant...' : `Choisir ${plan.name}`}
             </button>
           </div>
-        ))}
+          )
+        })}
       </div>
     </DashboardLayout>
   )
