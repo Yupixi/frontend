@@ -737,7 +737,7 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
         ))}
       </div>
 
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card" style={{ overflow: 'visible' }}>
         {loading && <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--fg-muted)' }}>Chargement...</div>}
         {!loading && filtered.length === 0 && (
           <div style={{ padding: '3rem 1rem', textAlign: 'center' }}>
