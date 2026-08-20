@@ -3,8 +3,8 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Plus, Eye, Heart, Package, X,
   CheckCircle, Edit3, Clock,
-  Trash2, ChevronRight, Upload, MapPin, Tag, Image, Star, ArrowUp,
-  Users, AlertCircle,
+  Trash2, ChevronRight, ChevronDown, Upload, MapPin, Tag, Image, Star, ArrowUp,
+  Users, AlertCircle, Check,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { cities } from '../../data/mockData'
@@ -26,6 +26,7 @@ import {
 } from '../../graphql/listings'
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
+import { LISTING_OFFERS_QUERY, RESPOND_TO_OFFER_MUTATION, type RemoteOffer } from '../../graphql/offers'
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as DashboardLayout } from '../account/AccountLayout'
 
@@ -613,8 +614,60 @@ const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: st
   PAUSED: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
 }
 
+// Lazy-loaded per row on expand rather than fetched for every listing up
+// front — avoids an N+1 burst of queries when the list first renders.
+function ListingOffersPanel({ listingId }: { listingId: string }) {
+  const { data, loading, refetch } = useQuery<{ listingOffers: RemoteOffer[] }>(LISTING_OFFERS_QUERY, {
+    variables: { listingId },
+  })
+  const [respondToOffer, { loading: responding }] = useMutation(RESPOND_TO_OFFER_MUTATION)
+  const offers = data?.listingOffers ?? []
+
+  const respond = (offerId: string, accept: boolean) =>
+    void respondToOffer({ variables: { offerId, accept } }).then(() => refetch())
+
+  if (loading) return <div style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--fg-muted)' }}>Chargement...</div>
+  if (offers.length === 0) return <div style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--fg-muted)' }}>Aucune offre pour l'instant.</div>
+
+  const statusLabel: Record<string, { label: string; color: string }> = {
+    PENDING: { label: 'En attente', color: 'var(--fg-muted)' },
+    ACCEPTED: { label: 'Acceptée', color: '#10B981' },
+    REJECTED: { label: 'Refusée', color: '#EF4444' },
+    EXPIRED: { label: 'Expirée', color: 'var(--fg-subtle)' },
+  }
+
+  return (
+    <div style={{ padding: '0.5rem 1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {offers.map(o => (
+        <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.5rem 0.75rem', background: 'var(--border-subtle)', borderRadius: 8, flexWrap: 'wrap' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.7rem', fontWeight: 800, color: 'var(--fg-muted)' }}>
+            {o.buyer.avatarUrl ? <img src={o.buyer.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : o.buyer.fullName.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 120 }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>{o.buyer.fullName}</div>
+            <div className="price-tag" style={{ fontSize: '0.85rem' }}><Price amount={o.amount} /></div>
+          </div>
+          {o.status === 'PENDING' ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button disabled={responding} onClick={() => respond(o.id, true)} style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981', border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 700 }}>
+                <Check size={13} /> Accepter
+              </button>
+              <button disabled={responding} onClick={() => respond(o.id, false)} style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 700 }}>
+                <X size={13} /> Refuser
+              </button>
+            </div>
+          ) : (
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: statusLabel[o.status]?.color }}>{statusLabel[o.status]?.label}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function SellerListings({ onNavigate, onSelectListing, onEditListing, currentUser, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, onEditListing: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
   const [filter, setFilter] = useState('all')
+  const [expandedOffers, setExpandedOffers] = useState<string | null>(null)
   const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
     MY_LISTINGS_QUERY,
     { variables: { page: 1, pageSize: 100 } },
@@ -669,8 +722,10 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
         )}
         {filtered.map((l, i) => {
           const s = LISTING_STATUS_META[l.status] ?? LISTING_STATUS_META.DRAFT
+          const offersExpanded = expandedOffers === l.id
           return (
-            <div key={l.id} className="seller-listing-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem', padding: '1rem', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
+            <div key={l.id}>
+            <div className="seller-listing-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem', padding: '1rem', borderBottom: offersExpanded ? 'none' : (i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none'), alignItems: 'center' }}>
               <div style={{ width: 72, height: 56, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0, cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
                 {l.coverImageUrl && (
                   <img src={l.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
@@ -695,12 +750,21 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                 <button onClick={() => handleDelete(l.id, l.title)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444' }}>
                   <Trash2 size={15} />
                 </button>
+                <button onClick={() => setExpandedOffers(offersExpanded ? null : l.id)} style={{ background: offersExpanded ? 'var(--border-subtle)' : 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
+                  <Tag size={14} /> Offres <ChevronDown size={13} style={{ transform: offersExpanded ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
+                </button>
                 {l.status === 'APPROVED' && (
                   <button style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
                     <ArrowUp size={14} /> Booster
                   </button>
                 )}
               </div>
+            </div>
+            {offersExpanded && (
+              <div style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none', background: 'var(--bg)' }}>
+                <ListingOffersPanel listingId={l.id} />
+              </div>
+            )}
             </div>
           )
         })}

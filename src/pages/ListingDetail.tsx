@@ -9,6 +9,7 @@ import {
 import Price from '../components/Price'
 import { LISTING_QUERY, LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
+import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import { getAccessToken } from '../lib/auth'
 import { formatRelativeDate } from '../lib/format'
 
@@ -62,6 +63,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [offerError, setOfferError] = useState<string | null>(null)
+  const [offerSent, setOfferSent] = useState(false)
+  const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, {
     variables: { id: listingId },
@@ -110,6 +114,22 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
     await navigator.clipboard.writeText(shareUrl)
     setLinkCopied(true)
     setTimeout(() => setLinkCopied(false), 2000)
+  }
+
+  const submitOffer = async () => {
+    setOfferError(null)
+    const amount = Number(offerAmount.replace(/[^\d]/g, ''))
+    if (!amount || amount < 1) {
+      setOfferError('Indiquez un montant valide.')
+      return
+    }
+    try {
+      await makeOffer({ variables: { input: { listingId: listing.id, amount } } })
+      setOfferSent(true)
+      setOfferAmount('')
+    } catch (err) {
+      setOfferError(err instanceof Error ? err.message : "Impossible d'envoyer l'offre.")
+    }
   }
 
   const submitReport = async () => {
@@ -323,19 +343,24 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
               <p style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)', textAlign: 'center', marginBottom: '0.75rem' }}>Numéro non renseigné</p>
             )}
 
-            {offerOpen ? (
-              <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
-                <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>Envoyer l'offre</button>
-                  <button onClick={() => setOfferOpen(false)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+            {listing.negotiable && (
+              offerSent ? (
+                <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
+              ) : offerOpen ? (
+                <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                  <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
+                  <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
+                  {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
+                    <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Tag size={15} /> Faire une offre
-              </button>
+              ) : (
+                <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Tag size={15} /> Faire une offre
+                </button>
+              )
             )}
 
             <div style={{ borderTop: '1px solid var(--border)', marginTop: '1.25rem', paddingTop: '1.25rem' }}>
@@ -469,19 +494,24 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
                 <p style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)', textAlign: 'center', marginBottom: '0.75rem' }}>Numéro non renseigné</p>
               )}
 
-              {offerOpen ? (
-                <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                  <label style={{ fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
-                  <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>Envoyer l'offre</button>
-                    <button onClick={() => setOfferOpen(false)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+              {listing.negotiable && (
+                offerSent ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
+                ) : offerOpen ? (
+                  <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                    <label style={{ fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
+                    <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
+                    {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
+                      <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Tag size={15} /> Faire une offre
-                </button>
+                ) : (
+                  <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Tag size={15} /> Faire une offre
+                  </button>
+                )
               )}
 
               <button onClick={() => setSellerSheetOpen(false)} style={{ width: '100%', background: 'none', border: 'none', borderRadius: 8, padding: '0.85rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 600, fontSize: '0.85rem', marginTop: '0.5rem' }}>
