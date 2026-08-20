@@ -7,7 +7,7 @@ import {
   Calendar, ArrowLeft, Flag, ExternalLink,
 } from 'lucide-react'
 import Price from '../components/Price'
-import { LISTING_QUERY, LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
+import { LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import { getAccessToken } from '../lib/auth'
@@ -72,11 +72,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
   })
   const listing = data?.listing
 
-  const { data: similarData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: { filter: { categorySlug: listing?.category.slug }, pageSize: 5 },
+  // Real content-based similarity (category/subcategory + price proximity +
+  // popularity, see ListingsService.findSimilar) rather than "first 4 in the
+  // same category" — falls back to a broader pool server-side when the
+  // category is thin.
+  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, {
+    variables: { listingId, limit: 4 },
     skip: !listing,
   })
-  const similar = (similarData?.listings.items ?? []).filter(l => l.id !== listingId).slice(0, 4)
+  const similar = similarData?.similarListings ?? []
 
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
 

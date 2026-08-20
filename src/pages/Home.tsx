@@ -1,12 +1,12 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { ArrowRight, Star, Zap, MapPin, Heart, Eye, Tag, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard } from 'lucide-react'
+import { ArrowRight, Star, Zap, MapPin, Heart, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard, Tag } from 'lucide-react'
 import ViewToggle from '../components/ViewToggle'
 import Price from '../components/Price'
+import { ListingCard, ListingListCard, listingImage, listingLocation } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
-import { HOME_BANNERS_QUERY, type RemoteBanner } from '../graphql/content'
-import { formatRelativeDate } from '../lib/format'
+import { LISTINGS_QUERY, RECOMMENDED_LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
+import { HOME_BANNERS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteBanner, type ActiveCampaign } from '../graphql/content'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import { followBannerCta } from '../lib/bannerCta'
 
@@ -16,166 +16,6 @@ type HomeProps = {
   favorites: string[]
   onToggleFavorite: (id: string) => void
   onCategorySelect?: (categoryId: string) => void
-}
-
-function listingLocation(listing: RemoteListing): string {
-  return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
-}
-
-// Deterministic per-(seed, id) pseudo-random in [0, 1) — used to vary which
-// popular listings a session sees in "À la une" without reshuffling on every
-// re-render (the seed is generated once per session, not per render).
-function seededRandom(seed: number, id: string): number {
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0
-  return Math.abs(Math.sin(seed + hash))
-}
-
-function listingImage(listing: RemoteListing): string {
-  return listing.coverImageUrl ?? listing.media[0]?.url ?? ''
-}
-
-function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
-  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean
-}) {
-  const [imgError, setImgError] = useState(false)
-
-  return (
-    <div className="card card-hover listing-card" style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative', background: 'var(--bg-card)' }} onClick={onSelect}>
-
-      {/* Badges Overlay */}
-      {listing.negotiable && (
-        <div className="listing-card-badges" style={{ position: 'absolute', top: 12, left: 12, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="badge badge-red" style={{ background: '#FE0000', color: '#FFF' }}>
-            Négociable
-          </span>
-        </div>
-      )}
-
-      {/* Heart Favorite Button */}
-      <button
-        className="listing-card-fav"
-        onClick={e => { e.stopPropagation(); onToggleFav() }}
-        style={{
-          position: 'absolute', top: 12, right: 12, zIndex: 2,
-          background: 'rgba(255,255,255,0.95)', border: '1px solid var(--border)', borderRadius: '50%',
-          width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-        }}
-        title="Ajouter aux favoris"
-      >
-        <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : '#64748B'} />
-      </button>
-
-      {/* Image Preview Container */}
-      <div className="listing-card-img" style={{ height: 190, background: 'var(--border-subtle)', overflow: 'hidden', position: 'relative' }}>
-        {!imgError && listingImage(listing) ? (
-          <img
-            src={listingImage(listing)}
-            alt={listing.title}
-            className="listing-img"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
-            <Tag size={40} />
-          </div>
-        )}
-      </div>
-
-      {/* Card Content Details */}
-      <div className="listing-card-body" style={{ padding: '14px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div className="price-tag"><Price amount={listing.price} /></div>
-        </div>
-
-        <h3 style={{
-          margin: '4px 0 8px',
-          fontSize: '0.95rem',
-          fontWeight: 800,
-          fontFamily: "'Outfit', sans-serif",
-          color: 'var(--fg)',
-          lineHeight: 1.3,
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical'
-        }}>
-          {listing.title}
-        </h3>
-
-        <div className="listing-card-location" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--fg-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
-          <MapPin size={13} style={{ color: 'var(--primary)' }} />
-          <span>{listingLocation(listing)}</span>
-        </div>
-
-        {/* Card Footer Info */}
-        <div className="listing-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>
-            {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}
-          </span>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.75rem', color: 'var(--fg-subtle)', fontWeight: 600 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Eye size={13} />{listing.viewsCount}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Heart size={13} />{listing.favoritesCount}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
-  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean
-}) {
-  const [imgError, setImgError] = useState(false)
-
-  return (
-    <div className="card card-hover listing-list-card" onClick={onSelect}>
-      <div className="listing-list-thumb">
-        {!imgError && listingImage(listing) ? (
-          <img src={listingImage(listing)} alt={listing.title} onError={() => setImgError(true)} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
-            <Tag size={28} />
-          </div>
-        )}
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <div style={{ minWidth: 0 }}>
-            {listing.negotiable && (
-              <div className="listing-list-meta" style={{ marginTop: 0, color: 'var(--primary)' }}>
-                <span>Négociable</span>
-              </div>
-            )}
-            <h3 className="listing-list-title">{listing.title}</h3>
-            <div className="price-tag"><Price amount={listing.price} /></div>
-          </div>
-          <button
-            onClick={e => { e.stopPropagation(); onToggleFav() }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, color: isFav ? 'var(--primary)' : 'var(--fg-muted)' }}
-            title="Ajouter aux favoris"
-          >
-            <Heart size={18} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : '#999'} />
-          </button>
-        </div>
-
-        <p className="listing-list-desc">{listing.description}</p>
-
-        <div className="listing-list-meta">
-          <span><MapPin size={12} />{listingLocation(listing)}</span>
-          <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
-          <span><Eye size={12} />{listing.viewsCount}</span>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggleFav }: {
@@ -263,45 +103,36 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     partners: RemoteBanner[]
     sellerCta: RemoteBanner[]
     featuredToggle: RemoteBanner | null
+    promoStrip: RemoteBanner[]
   }>(HOME_BANNERS_QUERY)
   const heroBanner = bannersData?.hero[0]
   const trustBarBanners = bannersData?.trustBar ?? []
   const partnersBanner = bannersData?.partners[0]
   const sellerCtaBanner = bannersData?.sellerCta[0]
+  const promoStripBanner = bannersData?.promoStrip[0]
   // No row for this slot = section on by default; a row lets the BO turn
   // it off (isActive) and/or override its heading — distinct from
   // activeBanners' filtering, which can't tell "unconfigured" from "off".
   const featuredEnabled = bannersData?.featuredToggle ? bannersData.featuredToggle.isActive : true
   const featuredHeading = bannersData?.featuredToggle?.isActive ? bannersData.featuredToggle : undefined
 
-  // Generated once per session (not per render) so "À la une" doesn't
-  // reshuffle every time something re-renders the page.
-  const [sessionSeed] = useState(() => Math.random() * 1000)
+  // Campaign rail — appears automatically the moment a campaign goes ACTIVE
+  // and inside its window (see Backend's activeCampaignWhere), with zero BO
+  // authoring beyond creating the campaign and attaching discounted
+  // listings. Distinct from promoStripBanner above, which is a manually
+  // written banner.
+  const { data: campaignData } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
+  const activeCampaign = campaignData?.activeCampaign
+  const campaignListings = activeCampaign?.listings ?? []
 
-  // "À la une" — an honest stand-in for paid Boost placements (Sprint 2+,
-  // see PromotionsModule): the anchor card is the genuinely most-favorited
-  // listing, but the other slots draw from a pool of popular listings and
-  // are (a) biased toward categories the visitor has already favorited on
-  // Yupixi, and (b) varied per session via a stable shuffle — so it isn't
-  // the exact same four listings for every visitor on every visit.
-  const highlighted = useMemo(() => {
-    if (recent.length === 0) return []
-    const pool = [...recent].sort((a, b) => b.favoritesCount - a.favoritesCount).slice(0, 8)
-    const interestSlugs = new Set(
-      recent.filter(l => favorites.includes(l.id)).map(l => l.category.slug),
-    )
-    const [anchor, ...rest] = pool
-    const ranked = rest
-      .map(listing => ({ listing, rand: seededRandom(sessionSeed, listing.id) }))
-      .sort((a, b) => {
-        const aMatches = interestSlugs.has(a.listing.category.slug)
-        const bMatches = interestSlugs.has(b.listing.category.slug)
-        if (aMatches !== bMatches) return aMatches ? -1 : 1
-        return a.rand - b.rand
-      })
-      .map(entry => entry.listing)
-    return anchor ? [anchor, ...ranked].slice(0, 4) : ranked.slice(0, 4)
-  }, [recent, favorites, sessionSeed])
+  // "À la une" — driven by the backend's recommendedListings algorithm
+  // (see ListingsService.findRecommended): category affinity from the
+  // viewer's views/favorites/offers when signed in with history, boosted
+  // listings bumped up, popularity + recency fallback otherwise.
+  const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
+    variables: { limit: 8 },
+  })
+  const highlighted = (recommendedData?.recommendedListings ?? []).slice(0, 4)
 
   const loopCount = highlighted.length
   const mosaicSlides = loopCount > 1 ? [...highlighted, highlighted[0]] : highlighted
@@ -516,6 +347,85 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           )}
         </div>
       </section>
+
+      {/* Promo strip — purely BO-authored (HOME_PROMO_STRIP), absent unless
+          an admin configures one; a thin announcement bar for things that
+          don't warrant a whole banner (a policy change, a seasonal note). */}
+      {promoStripBanner && (
+        <section
+          style={{
+            background: promoStripBanner.backgroundColor || '#0F172A',
+            color: promoStripBanner.textColor || '#FFFFFF',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => promoStripBanner.ctaUrl ? followBannerCta(promoStripBanner.ctaUrl, onNavigate) : undefined}
+            style={{
+              width: '100%', maxWidth: 1280, margin: '0 auto', padding: '0.65rem 1rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              background: 'none', border: 'none', cursor: promoStripBanner.ctaUrl ? 'pointer' : 'default',
+              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', color: 'inherit', textAlign: 'center',
+            }}
+          >
+            {promoStripBanner.title}
+            {promoStripBanner.ctaLabel && (
+              <span style={{ textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {promoStripBanner.ctaLabel} <ArrowRight size={14} />
+              </span>
+            )}
+          </button>
+        </section>
+      )}
+
+      {/* Campaign rail — appears automatically while a campaign (Black
+          Friday, soldes...) is ACTIVE and inside its date window, no manual
+          banner authoring required beyond the campaign + its discounted
+          listings. */}
+      {campaignListings.length > 0 && (
+        <section className="featured-strip" style={{ background: activeCampaign?.themeColor ? `${activeCampaign.themeColor}14` : undefined }}>
+          <div className="featured-strip-inner" style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1rem 0.5rem' }}>
+            <div className="hero-boost-header">
+              <span className="hero-boost-pill" style={{ background: activeCampaign?.themeColor || undefined }}>
+                <Zap size={13} fill="#0F172A" /> {activeCampaign?.name}
+              </span>
+              <span className="hero-boost-note">{activeCampaign?.description || 'Offres à durée limitée'}</span>
+              <button
+                onClick={() => onNavigate('flash-offers')}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: activeCampaign?.themeColor || 'var(--primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                Voir tout <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <div className="listing-grid" style={{ marginTop: '1.25rem' }}>
+              {campaignListings.slice(0, 4).map(entry => (
+                <ListingCard
+                  key={entry.id}
+                  listing={{
+                    ...entry.listing,
+                    // The badge reads discount/theme off this field — the
+                    // main listings queries get it from CampaignFieldsResolver,
+                    // but the campaign query already has everything it needs
+                    // inline, so it's assembled here instead of re-fetched.
+                    activeCampaignDiscount: {
+                      campaignId: activeCampaign!.id,
+                      campaignName: activeCampaign!.name,
+                      campaignSlug: activeCampaign!.slug,
+                      themeColor: activeCampaign!.themeColor,
+                      discountPercent: entry.discountPercent,
+                      salePrice: entry.salePrice,
+                    },
+                  }}
+                  onSelect={() => onSelectListing(entry.listing.id)}
+                  onToggleFav={() => onToggleFavorite(entry.listing.id)}
+                  isFav={favorites.includes(entry.listing.id)}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* "À la une" — its own section so it stays clearly visible no matter
           what's in the hero above; the BO can turn it off entirely (or

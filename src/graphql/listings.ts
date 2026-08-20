@@ -24,6 +24,14 @@ export const LISTINGS_QUERY = gql`
         publishedAt
         createdAt
         coverImageUrl
+        activeCampaignDiscount {
+          campaignId
+          campaignName
+          campaignSlug
+          themeColor
+          discountPercent
+          salePrice
+        }
         media {
           url
         }
@@ -39,6 +47,99 @@ export const LISTINGS_QUERY = gql`
           id
           fullName
         }
+      }
+    }
+  }
+`
+
+export const RECOMMENDED_LISTINGS_QUERY = gql`
+  query RecommendedListings($limit: Float) {
+    recommendedListings(limit: $limit) {
+      id
+      title
+      description
+      price
+      currency
+      city
+      locationLabel
+      condition
+      negotiable
+      deliveryAvailable
+      tags
+      viewsCount
+      favoritesCount
+      publishedAt
+      createdAt
+      coverImageUrl
+      boostExpiresAt
+      activeCampaignDiscount {
+        campaignId
+        campaignName
+        campaignSlug
+        themeColor
+        discountPercent
+        salePrice
+      }
+      media {
+        url
+      }
+      category {
+        slug
+        name
+      }
+      subcategory {
+        slug
+        name
+      }
+      seller {
+        id
+        fullName
+      }
+    }
+  }
+`
+
+export const SIMILAR_LISTINGS_QUERY = gql`
+  query SimilarListings($listingId: String!, $limit: Float) {
+    similarListings(listingId: $listingId, limit: $limit) {
+      id
+      title
+      description
+      price
+      currency
+      city
+      locationLabel
+      condition
+      negotiable
+      deliveryAvailable
+      tags
+      viewsCount
+      favoritesCount
+      publishedAt
+      createdAt
+      coverImageUrl
+      activeCampaignDiscount {
+        campaignId
+        campaignName
+        campaignSlug
+        themeColor
+        discountPercent
+        salePrice
+      }
+      media {
+        url
+      }
+      category {
+        slug
+        name
+      }
+      subcategory {
+        slug
+        name
+      }
+      seller {
+        id
+        fullName
       }
     }
   }
@@ -63,6 +164,14 @@ export const LISTING_QUERY = gql`
       publishedAt
       createdAt
       coverImageUrl
+      activeCampaignDiscount {
+        campaignId
+        campaignName
+        campaignSlug
+        themeColor
+        discountPercent
+        salePrice
+      }
       media {
         url
       }
@@ -233,6 +342,15 @@ export type RemoteListingDetail = RemoteListing & {
   }
 }
 
+export type CampaignDiscount = {
+  campaignId: string
+  campaignName: string
+  campaignSlug: string
+  themeColor: string | null
+  discountPercent: number | null
+  salePrice: number | null
+}
+
 export type RemoteListing = {
   id: string
   title: string
@@ -250,6 +368,8 @@ export type RemoteListing = {
   publishedAt: string | null
   createdAt: string
   coverImageUrl: string | null
+  boostExpiresAt?: string | null
+  activeCampaignDiscount?: CampaignDiscount | null
   media: { url: string }[]
   category: { slug: string; name: string }
   subcategory: { slug: string; name: string } | null
