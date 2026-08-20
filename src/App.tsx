@@ -63,12 +63,19 @@ function shortcutPage(): Page | null {
   return SHORTCUT_PAGES.includes(requested as Page) ? (requested as Page) : null
 }
 
+// "Partager l'annonce" needs a link that actually opens the listing for
+// whoever receives it — the app otherwise never puts state in the URL, so
+// a shared `window.location.href` would just be the homepage.
+function sharedListingId(): string | null {
+  return new URLSearchParams(window.location.search).get('listing')
+}
+
 export default function App() {
-  const [page, setPage] = useState<Page>(shortcutPage() ?? savedNav.page ?? 'home')
+  const [page, setPage] = useState<Page>(sharedListingId() ? 'listing-detail' : (shortcutPage() ?? savedNav.page ?? 'home'))
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
-  const [selectedListingId, setSelectedListingId] = useState(savedNav.selectedListingId ?? 'l1')
+  const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? savedNav.selectedListingId ?? 'l1')
   const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
   const [selectedSellerId, setSelectedSellerId] = useState(savedNav.selectedSellerId ?? 's1')

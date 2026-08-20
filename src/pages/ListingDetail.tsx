@@ -61,6 +61,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, {
     variables: { id: listingId },
@@ -90,6 +91,26 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
 
   const images = listing.media.length > 0 ? listing.media.map(m => m.url) : (listing.coverImageUrl ? [listing.coverImageUrl] : [])
   const isFav = favorites.includes(listing.id)
+
+  // The app never puts state in the URL (see App.tsx), so the shareable
+  // link is built here with a `?listing=` param App.tsx knows to read on
+  // load — a plain window.location.href would just point at the homepage.
+  const shareUrl = `${window.location.origin}${window.location.pathname}?listing=${listing.id}`
+
+  const shareListing = async () => {
+    const shareData = { title: listing.title, text: `${listing.title} — ${listingLocation(listing)}`, url: shareUrl }
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData)
+      } catch {
+        // User cancelled the native share sheet — not an error.
+      }
+      return
+    }
+    await navigator.clipboard.writeText(shareUrl)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
 
   const submitReport = async () => {
     await createReport({
@@ -182,9 +203,16 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
                 <button onClick={() => onToggleFavorite(listing.id)} style={{ background: isFav ? 'rgba(254,0,0,0.08)' : 'var(--border-subtle)', border: isFav ? '1.5px solid rgba(254,0,0,0.3)' : '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                   <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
                 </button>
-                <button style={{ background: 'var(--border-subtle)', border: '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Share2 size={18} color="var(--fg-muted)" />
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button onClick={() => void shareListing()} title="Partager l'annonce" style={{ background: 'var(--border-subtle)', border: '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Share2 size={18} color="var(--fg-muted)" />
+                  </button>
+                  {linkCopied && (
+                    <span style={{ position: 'absolute', top: '110%', right: 0, background: 'var(--fg)', color: 'var(--bg-card)', fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: 8, whiteSpace: 'nowrap', zIndex: 5 }}>
+                      Lien copié !
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -233,7 +261,17 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
                 </div>
                 <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', fontSize: '0.9rem' }}>{listingLocation(listing)}</div>
                 <div style={{ color: 'var(--fg-muted)', fontSize: '0.8rem', marginTop: 4 }}>Carte interactive — Côte d'Ivoire</div>
-                <button className="btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem', margin: '12px auto 0' }}>
+                <button
+                  className="btn-outline"
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', margin: '12px auto 0' }}
+                  onClick={() =>
+                    window.open(
+                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${listingLocation(listing)}, Côte d'Ivoire`)}`,
+                      '_blank',
+                      'noopener,noreferrer',
+                    )
+                  }
+                >
                   <ExternalLink size={13} /> Ouvrir dans Maps
                 </button>
               </div>

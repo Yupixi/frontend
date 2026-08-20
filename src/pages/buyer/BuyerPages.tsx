@@ -233,11 +233,19 @@ export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, on
   const [msg, setMsg] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [startConversation] = useMutation<{ startConversation: RemoteConversation }>(START_CONVERSATION_MUTATION)
+  // Guards against firing the mutation twice for the same target — React
+  // StrictMode double-invokes mount effects in dev, and this one isn't
+  // idempotent to trigger redundantly (the backend now tolerates a true
+  // race, but there's no reason to make two requests for one intent).
+  const startedForRef = useRef<string | null>(null)
 
   // "Contacter le vendeur" on a listing lands here with a target instead of
   // just the generic inbox — find or create that conversation and open it.
   useEffect(() => {
     if (!startWith) return
+    const key = `${startWith.listingId}:${startWith.sellerId}`
+    if (startedForRef.current === key) return
+    startedForRef.current = key
     void startConversation({ variables: { recipientId: startWith.sellerId, listingId: startWith.listingId } }).then(({ data }) => {
       if (data?.startConversation) {
         setActiveId(data.startConversation.id)
