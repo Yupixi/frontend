@@ -663,47 +663,67 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           </div>
         </section>
 
-        {/* Trusted Partners Section */}
+        {/* Trusted Partners Section — a BO-supplied creative replaces the
+            whole card (it's typically a self-contained graphic with its
+            own heading/icons/badges already baked in, same reasoning as
+            the hero); otherwise the generated dark card below, still
+            BO-editable via text fields. */}
         <section style={{ marginBottom: '3.5rem' }} className="desktop-only">
-          <div className="card" style={{
-            background: 'linear-gradient(135deg, #090D16 0%, #121826 100%)',
-            border: '2px solid #FE0000',
-            borderRadius: 'var(--radius-xl)',
-            padding: '2.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '2.5rem',
-            flexWrap: 'wrap',
-            color: '#FFFFFF'
-          }}>
-            <div style={{ flex: 1, minWidth: 260 }}>
-              <div style={{ display: 'inline-flex', gap: 6, background: '#FFDD21', color: '#0F172A', padding: '4px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 900, fontFamily: 'Outfit, sans-serif', marginBottom: '1rem' }}>
-                {partnersBanner?.subtitle || 'TRANSACTIONS DIRECTES ENTRE PARTICULIERS'}
+          {partnersBanner?.imageUrl ? (
+            partnersBanner.ctaUrl ? (
+              <button
+                type="button"
+                onClick={() => followBannerCta(partnersBanner.ctaUrl!, onNavigate)}
+                style={{ display: 'block', width: '100%', border: 'none', padding: 0, cursor: 'pointer', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}
+              >
+                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', display: 'block' }} />
+              </button>
+            ) : (
+              <div style={{ borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', display: 'block' }} />
               </div>
-              <h3 style={{ color: '#FFFFFF', margin: '0 0 0.75rem', fontSize: '1.8rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
-                {partnersBanner?.title || 'Achetez et Vendez en Toute Confiance'}
-              </h3>
-              <p style={{ color: '#94A3B8', margin: '0 0 1.5rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
-                {partnersBanner?.body ||
-                  "Sur Yüpixi, vous échangez directement avec l'autre partie. Convenez ensemble des modalités et finalisez votre transaction en toute sérénité."}
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 240, background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              {[
-                { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce d\'Identité' },
-                { icon: Zap, text: 'Confirmation SMS & Notification Instantanée' },
-                { icon: Tag, text: '0% de Commission sur vos 3 Premières Ventes' },
-              ].map(item => (
-                <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem', fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
-                  <div style={{ width: 34, height: 34, background: '#FE0000', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <item.icon size={18} color="#FFFFFF" />
-                  </div>
-                  {item.text}
+            )
+          ) : (
+            <div className="card" style={{
+              background: 'linear-gradient(135deg, #090D16 0%, #121826 100%)',
+              border: '2px solid #FE0000',
+              borderRadius: 'var(--radius-xl)',
+              padding: '2.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2.5rem',
+              flexWrap: 'wrap',
+              color: '#FFFFFF'
+            }}>
+              <div style={{ flex: 1, minWidth: 260 }}>
+                <div style={{ display: 'inline-flex', gap: 6, background: '#FFDD21', color: '#0F172A', padding: '4px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 900, fontFamily: 'Outfit, sans-serif', marginBottom: '1rem' }}>
+                  {partnersBanner?.subtitle || 'TRANSACTIONS DIRECTES ENTRE PARTICULIERS'}
                 </div>
-              ))}
+                <h3 style={{ color: '#FFFFFF', margin: '0 0 0.75rem', fontSize: '1.8rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
+                  {partnersBanner?.title || 'Achetez et Vendez en Toute Confiance'}
+                </h3>
+                <p style={{ color: '#94A3B8', margin: '0 0 1.5rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                  {partnersBanner?.body ||
+                    "Sur Yüpixi, vous échangez directement avec l'autre partie. Convenez ensemble des modalités et finalisez votre transaction en toute sérénité."}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 240, background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                {[
+                  { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce d\'Identité' },
+                  { icon: Zap, text: 'Confirmation SMS & Notification Instantanée' },
+                  { icon: Tag, text: '0% de Commission sur vos 3 Premières Ventes' },
+                ].map(item => (
+                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem', fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
+                    <div style={{ width: 34, height: 34, background: '#FE0000', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <item.icon size={18} color="#FFFFFF" />
+                    </div>
+                    {item.text}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
       </div>
