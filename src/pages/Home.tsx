@@ -105,6 +105,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     featuredToggle: RemoteBanner | null
     promoStrip: RemoteBanner[]
     howItWorks: RemoteBanner[]
+    testimonials: RemoteBanner[]
   }>(HOME_BANNERS_QUERY)
   const heroBanner = bannersData?.hero[0]
   const trustBarBanners = bannersData?.trustBar ?? []
@@ -116,6 +117,16 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     { value: '1', label: 'Publiez votre annonce', description: 'Ajoutez photos et description en quelques minutes, c\'est gratuit.' },
     { value: '2', label: 'Échangez avec les acheteurs', description: 'Répondez aux messages et négociez directement, en toute sécurité.' },
     { value: '3', label: 'Vendez en toute confiance', description: 'Finalisez la transaction avec un membre vérifié.' },
+  ]
+
+  // "value" carries the star rating, "label" the author line, "description"
+  // the quote — same free-form stats array as the how-it-works steps above,
+  // interpreted differently for this slot.
+  const testimonialsBanner = bannersData?.testimonials[0]
+  const testimonials = testimonialsBanner?.stats?.length ? testimonialsBanner.stats : [
+    { value: '5', label: 'Aminata K. — Vendeuse à Abidjan', description: "Vendu mon iPhone en moins de 24h, l'acheteur était sérieux et la transaction s'est faite en toute confiance." },
+    { value: '5', label: 'Yves T. — Acheteur à Cocody', description: "Interface simple, annonces vérifiées, j'ai trouvé mon appartement en une semaine." },
+    { value: '4', label: 'Fatou D. — Vendeuse à Bouaké', description: 'Le support client est très réactif, on sent que la sécurité des utilisateurs est prise au sérieux.' },
   ]
   // No row for this slot = section on by default; a row lets the BO turn
   // it off (isActive) and/or override its heading — distinct from
@@ -664,6 +675,40 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               </div>
             </div>
           )}
+        </section>
+
+        {/* Témoignages — BO-authored via HOME_TESTIMONIALS (reuses the
+            banner stats array as {value: rating, label: author line,
+            description: quote}), falls back to the default 3 below. */}
+        <section style={{ marginTop: '3.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h2 className="section-title" style={{ margin: 0 }}>{testimonialsBanner?.title || 'Ils nous font confiance'}</h2>
+            <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>
+              {testimonialsBanner?.subtitle || "Ce que disent les membres de la communauté Yüpixi"}
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+            {testimonials.map((t, i) => {
+              const rating = Math.max(0, Math.min(5, Math.round(Number(t.value)) || 0))
+              return (
+                <div key={i} className="card" style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', gap: 2, marginBottom: 10 }}>
+                    {Array.from({ length: 5 }).map((_, s) => (
+                      <Star key={s} size={15} fill={s < rating ? '#FFDD21' : 'none'} color={s < rating ? '#FFDD21' : 'var(--border)'} />
+                    ))}
+                  </div>
+                  {t.description && (
+                    <p style={{ fontSize: '0.9rem', color: 'var(--fg)', lineHeight: 1.6, margin: '0 0 14px' }}>
+                      « {t.description} »
+                    </p>
+                  )}
+                  <p style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--fg-muted)', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    {t.label}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
         </section>
 
       </div>

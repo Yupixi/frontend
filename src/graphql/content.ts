@@ -30,6 +30,7 @@ export const HOME_BANNERS_QUERY = gql`
     featuredToggle: bannerBySlot(slot: HOME_FEATURED) { ${BANNER_FIELDS} }
     promoStrip: activeBanners(slot: HOME_PROMO_STRIP) { ${BANNER_FIELDS} }
     howItWorks: activeBanners(slot: HOME_HOW_IT_WORKS) { ${BANNER_FIELDS} }
+    testimonials: activeBanners(slot: HOME_TESTIMONIALS) { ${BANNER_FIELDS} }
   }
 `
 
