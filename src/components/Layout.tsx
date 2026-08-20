@@ -9,7 +9,7 @@ import {
 import Logo from './Logo'
 import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
-import { FOOTER_SETTINGS_QUERY, type RemoteFooterSettings } from '../graphql/content'
+import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteFooterSettings, type ActiveCampaign } from '../graphql/content'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
@@ -62,6 +62,27 @@ export default function Layout({
   const { data: footerData } = useQuery<{ footerSettings: RemoteFooterSettings | null }>(FOOTER_SETTINGS_QUERY)
   const footer = footerData?.footerSettings
 
+  // Site-wide campaign theming — a live campaign's color becomes the accent
+  // for the announcement bar below (and anything else that opts into
+  // --campaign-accent) without repainting --primary everywhere, which would
+  // make every button/link on the site match whatever color an admin picked
+  // for the current campaign.
+  const { data: campaignData } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
+  const activeCampaign = campaignData?.activeCampaign
+  useEffect(() => {
+    const root = document.documentElement
+    if (activeCampaign?.themeColor) {
+      root.style.setProperty('--campaign-accent', activeCampaign.themeColor)
+    } else {
+      root.style.removeProperty('--campaign-accent')
+    }
+    return () => { root.style.removeProperty('--campaign-accent') }
+  }, [activeCampaign?.themeColor])
+
+  const daysRemaining = activeCampaign
+    ? Math.max(0, Math.ceil((new Date(activeCampaign.endsAt).getTime() - Date.now()) / 86_400_000))
+    : 0
+
   useEffect(() => {
     const t = setInterval(() => setFlashIdx(i => (i + 1) % flashTexts.length), 5000)
     return () => clearInterval(t)
@@ -92,6 +113,29 @@ export default function Layout({
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--fg)', display: 'flex', flexDirection: 'column' }}>
+
+      {/* Campaign announcement bar — appears automatically on every page
+          while a campaign is ACTIVE and inside its date window, themed with
+          the campaign's own color. No BO authoring beyond the campaign
+          itself; see the Home campaign rail for the matching product grid. */}
+      {activeCampaign && (
+        <button
+          onClick={() => onNavigate('flash-offers')}
+          style={{
+            width: '100%', border: 'none', cursor: 'pointer',
+            background: 'var(--campaign-accent, var(--primary))', color: '#FFFFFF',
+            padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem', textAlign: 'center',
+          }}
+        >
+          <Zap size={14} fill="#FFFFFF" />
+          {activeCampaign.name}
+          {activeCampaign.description && <span style={{ fontWeight: 600, opacity: 0.9 }}>— {activeCampaign.description}</span>}
+          {daysRemaining > 0 && (
+            <span style={{ opacity: 0.85 }}>· se termine dans {daysRemaining}j</span>
+          )}
+        </button>
+      )}
 
       {/* Main Header */}
       <header className="glass-header" style={{
