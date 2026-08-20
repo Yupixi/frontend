@@ -224,7 +224,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ minWidth: 0 }}>
             {(listing.activeCampaignDiscount || listing.negotiable) && (
-              <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
                 <PromoBadge listing={listing} />
                 {listing.negotiable && (
                   <div className="listing-list-meta" style={{ marginTop: 0, color: 'var(--primary)' }}>
@@ -234,7 +234,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
               </div>
             )}
             <h3 className="listing-list-title">{listing.title}</h3>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 8 }}>
               <div className="price-tag">
                 <Price amount={salePrice ?? listing.price} fallback={archetypePriceFallback(listing)} />
                 {priceSuffix && <span style={{ fontSize: '0.7em', fontWeight: 600, color: 'var(--fg-muted)' }}> {priceSuffix}</span>}

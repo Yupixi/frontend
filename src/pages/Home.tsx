@@ -383,12 +383,17 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               width: '100%', maxWidth: 1280, margin: '0 auto', padding: '0.65rem 1rem',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               background: 'none', border: 'none', cursor: promoStripBanner.ctaUrl ? 'pointer' : 'default',
-              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', color: 'inherit', textAlign: 'center',
+              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', color: 'inherit', textAlign: 'left',
             }}
           >
-            {promoStripBanner.title}
+            {/* Truncates rather than wrapping to several lines — a long
+                admin-authored title shouldn't push this thin strip tall on
+                a narrow screen. */}
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {promoStripBanner.title}
+            </span>
             {promoStripBanner.ctaLabel && (
-              <span style={{ textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                 {promoStripBanner.ctaLabel} <ArrowRight size={14} />
               </span>
             )}

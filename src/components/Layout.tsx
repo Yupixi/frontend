@@ -125,14 +125,22 @@ export default function Layout({
             width: '100%', border: 'none', cursor: 'pointer',
             background: 'var(--campaign-accent, var(--primary))', color: '#FFFFFF',
             padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem', textAlign: 'center',
+            fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem', textAlign: 'left',
           }}
         >
-          <Zap size={14} fill="#FFFFFF" />
-          {activeCampaign.name}
-          {activeCampaign.description && <span style={{ fontWeight: 600, opacity: 0.9 }}>— {activeCampaign.description}</span>}
+          <Zap size={14} style={{ flexShrink: 0 }} fill="#FFFFFF" />
+          {/* Name + description truncate together on one line rather than
+              wrapping to several — a long campaign name/description
+              shouldn't push a persistent site-wide bar to 3+ lines on a
+              narrow screen. */}
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {activeCampaign.name}
+            {activeCampaign.description && (
+              <span style={{ fontWeight: 600, opacity: 0.9 }}> — {activeCampaign.description}</span>
+            )}
+          </span>
           {daysRemaining > 0 && (
-            <span style={{ opacity: 0.85 }}>· se termine dans {daysRemaining}j</span>
+            <span style={{ opacity: 0.85, flexShrink: 0 }}>· se termine dans {daysRemaining}j</span>
           )}
         </button>
       )}
