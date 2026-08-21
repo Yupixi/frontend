@@ -24,6 +24,9 @@ const CONVERSATION_FIELDS = `
     id
     title
     coverImageUrl
+    price
+    currency
+    status
   }
   otherParticipant {
     id
@@ -84,6 +87,17 @@ export const MESSAGE_ADDED_SUBSCRIPTION = gql`
   }
 `
 
+// Fires for either participant on ANY conversation the moment a new message
+// lands, whether or not that thread is open — this is what makes the inbox
+// list itself live instead of only the currently-open thread.
+export const CONVERSATION_UPDATED_SUBSCRIPTION = gql`
+  subscription ConversationUpdated {
+    conversationUpdated {
+      ${CONVERSATION_FIELDS}
+    }
+  }
+`
+
 export type RemoteUserRef = {
   id: string
   fullName: string
@@ -106,7 +120,7 @@ export type RemoteConversation = {
   lastMessageAt: string | null
   unreadCount: number
   createdAt: string
-  listing: { id: string; title: string; coverImageUrl: string | null } | null
+  listing: { id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string } | null
   otherParticipant: RemoteUserRef
   lastMessage: RemoteMessage | null
   messages?: RemoteMessage[]

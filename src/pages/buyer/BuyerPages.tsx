@@ -4,13 +4,14 @@ import {
   Heart, MessageCircle,
   MapPin, Send, Trash2, CheckCheck,
   Smartphone, Moon, Sun, Lock, User, Bell,
-  ChevronRight, Clock, ArrowLeft,
+  ChevronRight, Clock, ArrowLeft, ImageOff,
 } from 'lucide-react'
 import Price from '../../components/Price'
 import BoostRibbon from '../../components/BoostRibbon'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
 import {
   CONVERSATION_QUERY,
+  CONVERSATION_UPDATED_SUBSCRIPTION,
   MARK_CONVERSATION_READ_MUTATION,
   MESSAGE_ADDED_SUBSCRIPTION,
   MY_CONVERSATIONS_QUERY,
@@ -225,7 +226,18 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
 }
 
 // ─── MESSAGES ───────────────────────────────────────────────────────────────
-export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, onStartWithConsumed }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, startWith?: { listingId?: string; sellerId: string } | null, onStartWithConsumed?: () => void }) {
+function messageDayLabel(iso: string): string {
+  const d = new Date(iso)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+  if (sameDay(d, today)) return "Aujourd'hui"
+  if (sameDay(d, yesterday)) return 'Hier'
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })
+}
+
+export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed }: { onNavigate: (p: any) => void, onSelectListing?: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void, startWith?: { listingId?: string; sellerId: string } | null, onStartWithConsumed?: () => void }) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = listData?.myConversations ?? []
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -261,11 +273,16 @@ export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, on
     if (!activeId && conversations.length > 0) setActiveId(conversations[0].id)
   }, [conversations, activeId])
 
-  const { data: convData, refetch: refetchConv } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, {
+  const { data: convData, loading: convLoading, refetch: refetchConv } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, {
     variables: { id: activeId },
     skip: !activeId,
   })
-  const activeConv = convData?.conversation
+  // Apollo keeps serving the PREVIOUS conversation's data while the new
+  // variables' query is in flight, so without this guard, switching threads
+  // briefly shows the wrong person's name/messages under the new selection —
+  // exactly the kind of mix-up that reads as "a message went to the wrong
+  // person". Only trust convData once it actually matches activeId.
+  const activeConv = convData?.conversation?.id === activeId ? convData.conversation : undefined
   const messages = activeConv?.messages ?? []
 
   const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
@@ -285,6 +302,13 @@ export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, on
       void refetchList()
       if (activeId) void markConversationRead({ variables: { conversationId: activeId } })
     },
+  })
+
+  // Live inbox: fires for ANY conversation the moment a new message lands,
+  // not just the one currently open (messageAdded above only covers that
+  // case) — this is what keeps the conversation list itself real-time.
+  useSubscription(CONVERSATION_UPDATED_SUBSCRIPTION, {
+    onData: () => void refetchList(),
   })
 
   useEffect(() => {
@@ -328,8 +352,18 @@ export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, on
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                   <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: conv.unreadCount > 0 ? 800 : 600, fontSize: '0.85rem' }}>{conv.otherParticipant.fullName}</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>{conv.lastMessageAt ? formatRelativeDate(conv.lastMessageAt) : ''}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', flexShrink: 0 }}>{conv.lastMessageAt ? formatRelativeDate(conv.lastMessageAt) : ''}</span>
                 </div>
+                {conv.listing && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2, minWidth: 0 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 3, overflow: 'hidden', flexShrink: 0, background: 'var(--border-subtle)' }}>
+                      {conv.listing.coverImageUrl && <img src={conv.listing.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {conv.listing.title}
+                    </span>
+                  </div>
+                )}
                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: conv.unreadCount > 0 ? 700 : 400 }}>
                   {conv.lastMessage?.body ?? 'Nouvelle conversation'}
                 </p>
@@ -340,17 +374,24 @@ export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, on
 
         {/* Chat view */}
         <div className={`buyer-msg-chat ${showList ? 'buyer-msg-chat-hidden' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)', minWidth: 0 }}>
-          {!activeConv ? (
+          {!activeId ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontSize: '0.9rem' }}>
               Sélectionnez une conversation
             </div>
+          ) : !activeConv ? (
+            // activeId is set but convData hasn't caught up yet (switching
+            // threads, or the very first load) — show a neutral loading
+            // state instead of stale content from the previous conversation.
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)', fontSize: '0.85rem' }}>
+              {convLoading ? 'Chargement...' : ''}
+            </div>
           ) : (
             <>
-              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                 <button className="buyer-msg-back" onClick={() => setShowList(true)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 0, marginRight: 4 }}>
                   <ArrowLeft size={20} />
                 </button>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)', flexShrink: 0 }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)', flexShrink: 0 }}>
                   {activeConv.otherParticipant.avatarUrl ? (
                     <img src={activeConv.otherParticipant.avatarUrl} alt={activeConv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -358,25 +399,48 @@ export function BuyerMessages({ onNavigate, currentUser, onLogout, startWith, on
                   )}
                 </div>
                 <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.otherParticipant.fullName}</div>
-                {activeConv.listing && (
-                  <div style={{ marginLeft: 'auto', background: 'var(--border-subtle)', borderRadius: 8, padding: '0.4rem 0.75rem', fontSize: '0.78rem', fontFamily: 'Nunito, sans-serif', fontWeight: 700, color: 'var(--fg-muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    📌 {activeConv.listing.title}
-                  </div>
-                )}
               </div>
 
-              <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {messages.map((m: RemoteMessage) => {
+              {/* What this thread is about — always visible while chatting,
+                  not just a small pill easy to miss. Clickable through to
+                  the listing itself. */}
+              {activeConv.listing && (
+                <div
+                  onClick={() => onSelectListing?.(activeConv.listing!.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-card)', cursor: onSelectListing ? 'pointer' : 'default' }}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
+                    {activeConv.listing.coverImageUrl ? (
+                      <img src={activeConv.listing.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <ImageOff size={16} />
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeConv.listing.title}</p>
+                    <div className="price-tag" style={{ fontSize: '0.8rem' }}><Price amount={activeConv.listing.price} /></div>
+                  </div>
+                  {onSelectListing && <ChevronRight size={16} color="var(--fg-subtle)" style={{ flexShrink: 0 }} />}
+                </div>
+              )}
+
+              <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {messages.map((m: RemoteMessage, i: number) => {
                   const isMe = m.senderId === currentUser?.id
+                  const prev = messages[i - 1]
+                  const showDivider = !prev || messageDayLabel(prev.createdAt) !== messageDayLabel(m.createdAt)
                   return (
-                    <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-                      <div>
-                        <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
-                          {m.body}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', marginTop: 3, textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: 3 }}>
-                          {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                          {isMe && <CheckCheck size={12} color={m.readAt ? '#3B82F6' : 'var(--fg-subtle)'} />}
+                    <div key={m.id}>
+                      {showDivider && <div className="chat-day-divider">{messageDayLabel(m.createdAt)}</div>}
+                      <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                        <div>
+                          <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
+                            {m.body}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', marginTop: 3, textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: 3 }}>
+                            {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            {isMe && <CheckCheck size={12} color={m.readAt ? '#3B82F6' : 'var(--fg-subtle)'} />}
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -324,7 +324,7 @@ export default function App() {
         case 'buyer-favorites':
           return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onLogout={logout} />
         case 'buyer-messages':
-          return <BuyerMessages onNavigate={navigate} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} />
+          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} />
         case 'buyer-notifications':
           return <BuyerNotifications onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
         case 'buyer-history':
