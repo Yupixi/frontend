@@ -109,6 +109,30 @@ export const CONVERSATION_UPDATED_SUBSCRIPTION = gql`
   }
 `
 
+// A read receipt only ever changed on the NEXT fetch (reopening the
+// thread) without this — the sender's open thread had no way to hear
+// that the other side just read their message.
+export const CONVERSATION_READ_SUBSCRIPTION = gql`
+  subscription ConversationRead($conversationId: String!) {
+    conversationRead(conversationId: $conversationId)
+  }
+`
+
+export const SET_TYPING_MUTATION = gql`
+  mutation SetTyping($conversationId: String!, $isTyping: Boolean!) {
+    setTyping(conversationId: $conversationId, isTyping: $isTyping)
+  }
+`
+
+export const TYPING_STATUS_SUBSCRIPTION = gql`
+  subscription TypingStatus($conversationId: String!) {
+    typingStatus(conversationId: $conversationId) {
+      userId
+      isTyping
+    }
+  }
+`
+
 export type RemoteUserRef = {
   id: string
   fullName: string

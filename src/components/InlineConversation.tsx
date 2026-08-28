@@ -3,6 +3,7 @@ import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import { Send, X, User, Mail, Phone, CheckCheck } from 'lucide-react'
 import {
   CONVERSATION_QUERY,
+  MARK_CONVERSATION_READ_MUTATION,
   MESSAGE_ADDED_SUBSCRIPTION,
   SEND_MESSAGE_MUTATION,
   START_CONVERSATION_MUTATION,
@@ -12,6 +13,7 @@ import {
 import { GUEST_LOGIN_MUTATION } from '../graphql/auth'
 import type { AuthPayload } from '../graphql/auth'
 import { storeTokens, getAccessToken } from '../lib/auth'
+import { useConversationReadRefresh, useTypingIndicator } from '../lib/useMessagingLive'
 
 type InlineConversationProps = {
   sellerId: string
@@ -197,12 +199,27 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { data, refetch } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, { variables: { id: conversationId } })
   const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
+  const [markRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
   const messages = data?.conversation?.messages ?? []
+
+  // "Me" is whoever ISN'T otherParticipant — the thread has exactly two
+  // sides and this component only ever renders for the side that opened it.
+  const otherId = data?.conversation?.otherParticipant.id
+  const { otherIsTyping, notifyTyping, notifyStoppedTyping } = useTypingIndicator(conversationId, otherId)
+  useConversationReadRefresh(conversationId, refetch)
 
   useSubscription(MESSAGE_ADDED_SUBSCRIPTION, {
     variables: { conversationId },
-    onData: () => void refetch(),
+    onData: () => {
+      void refetch()
+      void markRead({ variables: { conversationId } })
+    },
   })
+
+  useEffect(() => {
+    void markRead({ variables: { conversationId } })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -212,12 +229,9 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
     const body = msg.trim()
     if (!body) return
     setMsg('')
+    notifyStoppedTyping()
     void sendMessage({ variables: { conversationId, body } }).then(() => refetch())
   }
-
-  // "Me" is whoever ISN'T otherParticipant — the thread has exactly two
-  // sides and this component only ever renders for the side that opened it.
-  const otherId = data?.conversation?.otherParticipant.id
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 380 }}>
@@ -256,13 +270,19 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
         <div ref={messagesEndRef} />
       </div>
 
+      {otherIsTyping && (
+        <p style={{ margin: '0 0 0.35rem', fontSize: '0.72rem', color: 'var(--fg-subtle)', fontStyle: 'italic' }}>
+          {sellerName} est en train d'écrire...
+        </p>
+      )}
+
       <div style={{ display: 'flex', gap: 8, marginTop: '0.5rem' }}>
         <input
           className="input"
           style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
           placeholder="Écrivez votre message..."
           value={msg}
-          onChange={e => setMsg(e.target.value)}
+          onChange={e => { setMsg(e.target.value); notifyTyping() }}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
         />
         <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.55rem', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1, flexShrink: 0 }} onClick={handleSend}>

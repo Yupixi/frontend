@@ -9,6 +9,7 @@ import {
 import Price from '../../components/Price'
 import BoostRibbon from '../../components/BoostRibbon'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
+import { useConversationReadRefresh, useTypingIndicator } from '../../lib/useMessagingLive'
 import {
   CONVERSATION_QUERY,
   CONVERSATION_UPDATED_SUBSCRIPTION,
@@ -289,6 +290,8 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
   const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
   const [markConversationRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
   const [setDealStatus, { loading: updatingDeal }] = useMutation(SET_CONVERSATION_DEAL_STATUS_MUTATION)
+  const { otherIsTyping, notifyTyping, notifyStoppedTyping } = useTypingIndicator(activeId, activeConv?.otherParticipant.id)
+  useConversationReadRefresh(activeId, refetchConv)
 
   useEffect(() => {
     if (!activeId) return
@@ -321,6 +324,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
     const body = msg.trim()
     if (!body || !activeId) return
     setMsg('')
+    notifyStoppedTyping()
     void sendMessage({ variables: { conversationId: activeId, body } }).then(() => refetchConv())
   }
 
@@ -513,14 +517,20 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
               </div>
 
               <div style={{ padding: '0.75rem 1rem 1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                <div style={{ marginBottom: 7, color: 'var(--fg-subtle)', fontSize: '0.7rem', textAlign: 'center' }}>Échange sécurisé sur Yupixi · Ne partagez jamais de code de paiement</div>
+                {otherIsTyping ? (
+                  <div style={{ marginBottom: 7, color: 'var(--primary)', fontSize: '0.72rem', textAlign: 'center', fontWeight: 700, fontStyle: 'italic' }}>
+                    {activeConv.otherParticipant.fullName} est en train d'écrire...
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 7, color: 'var(--fg-subtle)', fontSize: '0.7rem', textAlign: 'center' }}>Échange sécurisé sur Yupixi · Ne partagez jamais de code de paiement</div>
+                )}
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                 <input
                   className="input"
                   style={{ flex: 1 }}
                   placeholder="Écrivez votre message..."
                   value={msg}
-                  onChange={e => setMsg(e.target.value)}
+                  onChange={e => { setMsg(e.target.value); notifyTyping() }}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
                 />
                 <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1 }} onClick={handleSend}>
