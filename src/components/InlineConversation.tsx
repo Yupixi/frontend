@@ -21,6 +21,17 @@ type InlineConversationProps = {
   onClose: () => void
 }
 
+// A visibly distinct "panel within the card" — a sunken/tinted surface so
+// the chat reads as its own widget rather than blending into the flat
+// white "Discutez avec le vendeur" card around it.
+const PANEL_STYLE: React.CSSProperties = {
+  background: 'var(--bg)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '0.85rem',
+  marginBottom: '1.25rem',
+}
+
 // The whole point: never navigate away from the listing to talk to a
 // seller. A logged-in visitor goes straight to the thread; an anonymous
 // one fills a tiny name/email form first (creating a lightweight guest
@@ -47,7 +58,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
 
   if (conversationId) {
     return (
-      <div style={{ marginBottom: '1.25rem' }}>
+      <div style={PANEL_STYLE}>
         <ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} />
       </div>
     )
@@ -55,7 +66,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
 
   if (getAccessToken()) {
     return (
-      <div style={{ padding: '1rem 0', textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+      <div style={{ ...PANEL_STYLE, textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
         {starting ? 'Connexion à la discussion...' : (startError ?? '')}
         {startError && (
           <button className="btn-primary" style={{ display: 'block', margin: '0.75rem auto 0', padding: '0.5rem 1rem', fontSize: '0.82rem' }} onClick={beginThread}>
@@ -67,7 +78,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   }
 
   return (
-    <div style={{ marginBottom: '1.25rem' }}>
+    <div style={PANEL_STYLE}>
       <GuestForm
         sellerId={sellerId}
         listingId={listingId}
