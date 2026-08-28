@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v4'
+const VERSION = 'v5'
 const STATIC_CACHE = `yupixi-static-${VERSION}`
 const PAGE_CACHE = `yupixi-pages-${VERSION}`
 const OFFLINE_URL = '/offline.html'
@@ -27,6 +27,43 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
+})
+
+// Fires even when no tab is open — this is what lets an anonymous guest
+// (no email/SMS ever sent to them) learn a seller replied. Payload shape
+// is set by Backend NotificationsService.create → PushService.sendToUser.
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    // ignore malformed payloads
+  }
+  const title = data.title || 'Yupixi'
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: data.url || '/' },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          client.navigate?.(url)
+          return client.focus()
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url)
+    }),
+  )
 })
 
 self.addEventListener('activate', (event) => {

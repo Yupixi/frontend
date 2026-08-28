@@ -5,6 +5,7 @@ import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
+import { subscribeToPush } from './lib/pushNotifications'
 import Home from './pages/Home'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
@@ -259,6 +260,9 @@ export default function App() {
   const handleAuthenticated = () => {
     setIsLoggedIn(true)
     void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me))
+    // Best-effort browser push opt-in — matters most for a guest who just
+    // messaged a seller and has no other way to learn about a reply.
+    void subscribeToPush()
   }
 
   const toggleFavorite = (id: string) => {
