@@ -16,6 +16,7 @@ import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import { storeTokens, getAccessToken } from '../lib/auth'
 import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../lib/useMessagingLive'
 import OfferBubble from './OfferBubble'
+import PriceSuggestionHint from './PriceSuggestionHint'
 
 type InlineConversationProps = {
   sellerId: string
@@ -320,6 +321,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
           <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.78rem', display: 'block', marginBottom: 5 }}>
             Votre offre ({data?.conversation?.listing?.currency ?? 'XOF'})
           </label>
+          <PriceSuggestionHint listingId={data?.conversation?.listingId} onUseAmount={amount => setOfferAmount(String(amount))} />
           <input className="input" style={{ marginBottom: 6, fontSize: '0.85rem' }} placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
           {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.74rem', margin: '0 0 6px' }}>{offerError}</p>}
           <div style={{ display: 'flex', gap: 6 }}>

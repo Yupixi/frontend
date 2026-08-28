@@ -9,6 +9,7 @@ import {
 import Price from '../../components/Price'
 import BoostRibbon from '../../components/BoostRibbon'
 import OfferBubble from '../../components/OfferBubble'
+import PriceSuggestionHint from '../../components/PriceSuggestionHint'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
 import { MAKE_OFFER_MUTATION, RESPOND_TO_OFFER_MUTATION } from '../../graphql/offers'
 import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../../lib/useMessagingLive'
@@ -550,6 +551,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                               responding={respondingOfferId === m.offer.id}
                               onAccept={() => respondOffer(m.offer!.id, true)}
                               onReject={() => respondOffer(m.offer!.id, false)}
+                              listingId={activeConv.listingId}
                             />
                           ) : (
                             <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
@@ -581,6 +583,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                     <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.82rem', display: 'block', marginBottom: 6 }}>
                       Votre offre ({activeConv.listing?.currency ?? 'XOF'})
                     </label>
+                    <PriceSuggestionHint listingId={activeConv.listingId} onUseAmount={amount => setOfferAmount(String(amount))} />
                     <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
                     {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
                     <div style={{ display: 'flex', gap: 6 }}>

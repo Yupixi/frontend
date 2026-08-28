@@ -52,6 +52,29 @@ export const RESPOND_TO_OFFER_MUTATION = gql`
   }
 `
 
+// Heuristic, not ML: the median of what buyers and sellers actually agreed
+// on for comparable items (see OffersService.getPriceSuggestion) — shown to
+// both sides while negotiating so neither is guessing in the dark.
+export const PRICE_SUGGESTION_QUERY = gql`
+  query PriceSuggestion($listingId: String!) {
+    priceSuggestion(listingId: $listingId) {
+      suggestedAmount
+      minAmount
+      maxAmount
+      currency
+      sampleSize
+    }
+  }
+`
+
+export type RemotePriceSuggestion = {
+  suggestedAmount: number | null
+  minAmount: number | null
+  maxAmount: number | null
+  currency: string
+  sampleSize: number
+}
+
 export type RemoteOffer = {
   id: string
   amount: number
