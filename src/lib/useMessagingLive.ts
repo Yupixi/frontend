@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useSubscription } from '@apollo/client/react'
 import {
   CONVERSATION_READ_SUBSCRIPTION,
+  OFFER_UPDATED_SUBSCRIPTION,
   SET_TYPING_MUTATION,
   TYPING_STATUS_SUBSCRIPTION,
 } from '../graphql/messaging'
@@ -72,5 +73,16 @@ export function useConversationReadRefresh(conversationId: string | null | undef
     variables: { conversationId: conversationId as string },
     skip: !conversationId,
     onData: () => onReadRef.current(),
+  })
+}
+
+export function useOfferUpdatedRefresh(conversationId: string | null | undefined, onUpdate: () => void) {
+  const onUpdateRef = useRef(onUpdate)
+  onUpdateRef.current = onUpdate
+
+  useSubscription(OFFER_UPDATED_SUBSCRIPTION, {
+    variables: { conversationId: conversationId as string },
+    skip: !conversationId,
+    onData: () => onUpdateRef.current(),
   })
 }

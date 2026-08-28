@@ -4,12 +4,14 @@ import {
   Heart, MessageCircle,
   MapPin, Send, Trash2, CheckCheck,
   Smartphone, Moon, Sun, Lock, User, Bell,
-  ChevronRight, Clock, ArrowLeft, ImageOff, Handshake, CircleX,
+  ChevronRight, Clock, ArrowLeft, ImageOff, Handshake, CircleX, Tag, X,
 } from 'lucide-react'
 import Price from '../../components/Price'
 import BoostRibbon from '../../components/BoostRibbon'
+import OfferBubble from '../../components/OfferBubble'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
-import { useConversationReadRefresh, useTypingIndicator } from '../../lib/useMessagingLive'
+import { MAKE_OFFER_MUTATION, RESPOND_TO_OFFER_MUTATION } from '../../graphql/offers'
+import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../../lib/useMessagingLive'
 import {
   CONVERSATION_QUERY,
   CONVERSATION_UPDATED_SUBSCRIPTION,
@@ -245,6 +247,10 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showList, setShowList] = useState(true)
   const [msg, setMsg] = useState('')
+  const [offerFormOpen, setOfferFormOpen] = useState(false)
+  const [offerAmount, setOfferAmount] = useState('')
+  const [offerError, setOfferError] = useState<string | null>(null)
+  const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [startConversation] = useMutation<{ startConversation: RemoteConversation }>(START_CONVERSATION_MUTATION)
   // Guards against firing the mutation twice for the same target — React
@@ -290,13 +296,22 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
   const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
   const [markConversationRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
   const [setDealStatus, { loading: updatingDeal }] = useMutation(SET_CONVERSATION_DEAL_STATUS_MUTATION)
+  const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
+  const [respondToOffer] = useMutation(RESPOND_TO_OFFER_MUTATION)
   const { otherIsTyping, notifyTyping, notifyStoppedTyping } = useTypingIndicator(activeId, activeConv?.otherParticipant.id)
   useConversationReadRefresh(activeId, refetchConv)
+  useOfferUpdatedRefresh(activeId, refetchConv)
 
   useEffect(() => {
     if (!activeId) return
     void markConversationRead({ variables: { conversationId: activeId } }).then(() => refetchList())
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId])
+
+  useEffect(() => {
+    setOfferFormOpen(false)
+    setOfferAmount('')
+    setOfferError(null)
   }, [activeId])
 
   useSubscription(MESSAGE_ADDED_SUBSCRIPTION, {
@@ -342,6 +357,31 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
     if (!window.confirm(message)) return
     void setDealStatus({ variables: { conversationId: activeId, status } })
       .then(() => { void refetchConv(); void refetchList() })
+  }
+
+  const submitOffer = () => {
+    if (!activeId || !activeConv?.listingId) return
+    const amount = Number(offerAmount.replace(/\s/g, ''))
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setOfferError('Entrez un montant valide.')
+      return
+    }
+    setOfferError(null)
+    void makeOffer({ variables: { input: { listingId: activeConv.listingId, amount, conversationId: activeId } } })
+      .then(() => {
+        setOfferFormOpen(false)
+        setOfferAmount('')
+        void refetchConv()
+        void refetchList()
+      })
+      .catch((err: Error) => setOfferError(err.message))
+  }
+
+  const respondOffer = (offerId: string, accept: boolean) => {
+    setRespondingOfferId(offerId)
+    void respondToOffer({ variables: { offerId, accept } })
+      .then(() => { void refetchConv(); void refetchList() })
+      .finally(() => setRespondingOfferId(null))
   }
 
   return (
@@ -501,9 +541,21 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                       {showDivider && <div className="chat-day-divider">{messageDayLabel(m.createdAt)}</div>}
                       <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                         <div>
-                          <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
-                            {m.body}
-                          </div>
+                          {m.offer ? (
+                            <OfferBubble
+                              offer={m.offer}
+                              currency={activeConv.listing?.currency ?? 'XOF'}
+                              isMine={isMe}
+                              canRespond={!isMe && activeConv.canManageDeal}
+                              responding={respondingOfferId === m.offer.id}
+                              onAccept={() => respondOffer(m.offer!.id, true)}
+                              onReject={() => respondOffer(m.offer!.id, false)}
+                            />
+                          ) : (
+                            <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`}>
+                              {m.body}
+                            </div>
+                          )}
                           <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', marginTop: 3, textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: 3 }}>
                             {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             {isMe && <CheckCheck size={12} color={m.readAt ? '#3B82F6' : 'var(--fg-subtle)'} />}
@@ -524,19 +576,38 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                 ) : (
                   <div style={{ marginBottom: 7, color: 'var(--fg-subtle)', fontSize: '0.7rem', textAlign: 'center' }}>Échange sécurisé sur Yupixi · Ne partagez jamais de code de paiement</div>
                 )}
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <input
-                  className="input"
-                  style={{ flex: 1 }}
-                  placeholder="Écrivez votre message..."
-                  value={msg}
-                  onChange={e => { setMsg(e.target.value); notifyTyping() }}
-                  onKeyDown={e => e.key === 'Enter' && handleSend()}
-                />
-                <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1 }} onClick={handleSend}>
-                  <Send size={18} />
-                </button>
-                </div>
+                {offerFormOpen ? (
+                  <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', marginBottom: '0.5rem' }}>
+                    <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.82rem', display: 'block', marginBottom: 6 }}>
+                      Votre offre ({activeConv.listing?.currency ?? 'XOF'})
+                    </label>
+                    <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
+                    {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="btn-primary" disabled={sendingOffer} onClick={submitOffer} style={{ flex: 1, padding: '0.55rem', fontSize: '0.82rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
+                      <button onClick={() => { setOfferFormOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.55rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  {!activeConv.canManageDeal && activeConv.listing?.negotiable && activeConv.dealStatus === 'DISCUSSING' && (
+                    <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 42, height: 42, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
+                      <Tag size={18} />
+                    </button>
+                  )}
+                  <input
+                    className="input"
+                    style={{ flex: 1 }}
+                    placeholder="Écrivez votre message..."
+                    value={msg}
+                    onChange={e => { setMsg(e.target.value); notifyTyping() }}
+                    onKeyDown={e => e.key === 'Enter' && handleSend()}
+                  />
+                  <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1 }} onClick={handleSend}>
+                    <Send size={18} />
+                  </button>
+                  </div>
+                )}
               </div>
             </>
           )}

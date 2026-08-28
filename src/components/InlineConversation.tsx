@@ -1,6 +1,6 @@
 import { cloneElement, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
-import { Send, X, User, Mail, Phone, CheckCheck } from 'lucide-react'
+import { Send, Tag, X, User, Mail, Phone, CheckCheck } from 'lucide-react'
 import {
   CONVERSATION_QUERY,
   MARK_CONVERSATION_READ_MUTATION,
@@ -12,8 +12,10 @@ import {
 } from '../graphql/messaging'
 import { GUEST_LOGIN_MUTATION } from '../graphql/auth'
 import type { AuthPayload } from '../graphql/auth'
+import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import { storeTokens, getAccessToken } from '../lib/auth'
-import { useConversationReadRefresh, useTypingIndicator } from '../lib/useMessagingLive'
+import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../lib/useMessagingLive'
+import OfferBubble from './OfferBubble'
 
 type InlineConversationProps = {
   sellerId: string
@@ -200,6 +202,10 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
   const { data, refetch } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, { variables: { id: conversationId } })
   const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
   const [markRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
+  const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
+  const [offerFormOpen, setOfferFormOpen] = useState(false)
+  const [offerAmount, setOfferAmount] = useState('')
+  const [offerError, setOfferError] = useState<string | null>(null)
   const messages = data?.conversation?.messages ?? []
 
   // "Me" is whoever ISN'T otherParticipant — the thread has exactly two
@@ -207,6 +213,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
   const otherId = data?.conversation?.otherParticipant.id
   const { otherIsTyping, notifyTyping, notifyStoppedTyping } = useTypingIndicator(conversationId, otherId)
   useConversationReadRefresh(conversationId, refetch)
+  useOfferUpdatedRefresh(conversationId, refetch)
 
   useSubscription(MESSAGE_ADDED_SUBSCRIPTION, {
     variables: { conversationId },
@@ -233,6 +240,26 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
     void sendMessage({ variables: { conversationId, body } }).then(() => refetch())
   }
 
+  const submitOffer = () => {
+    const listingId = data?.conversation?.listingId
+    if (!listingId) return
+    const amount = Number(offerAmount.replace(/\s/g, ''))
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setOfferError('Entrez un montant valide.')
+      return
+    }
+    setOfferError(null)
+    void makeOffer({ variables: { input: { listingId, amount, conversationId } } })
+      .then(() => {
+        setOfferFormOpen(false)
+        setOfferAmount('')
+        void refetch()
+      })
+      .catch((err: Error) => setOfferError(err.message))
+  }
+
+  const canOffer = data?.conversation?.listing?.negotiable && data.conversation.dealStatus === 'DISCUSSING'
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 380 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -255,9 +282,21 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
               {showDivider && <div className="chat-day-divider" style={{ fontSize: '0.65rem', margin: '0.35rem 0' }}>{messageDayLabel(m.createdAt)}</div>}
               <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                 <div>
-                  <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`} style={{ fontSize: '0.82rem', padding: '0.5rem 0.75rem' }}>
-                    {m.body}
-                  </div>
+                  {m.offer ? (
+                    <OfferBubble
+                      offer={m.offer}
+                      currency={data?.conversation?.listing?.currency ?? 'XOF'}
+                      isMine={isMe}
+                      canRespond={false}
+                      responding={false}
+                      onAccept={() => {}}
+                      onReject={() => {}}
+                    />
+                  ) : (
+                    <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`} style={{ fontSize: '0.82rem', padding: '0.5rem 0.75rem' }}>
+                      {m.body}
+                    </div>
+                  )}
                   <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)', marginTop: 2, textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: 3 }}>
                     {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                     {isMe && <CheckCheck size={11} color={m.readAt ? '#3B82F6' : 'var(--fg-subtle)'} />}
@@ -276,19 +315,38 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
         </p>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: '0.5rem' }}>
-        <input
-          className="input"
-          style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
-          placeholder="Écrivez votre message..."
-          value={msg}
-          onChange={e => { setMsg(e.target.value); notifyTyping() }}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
-        />
-        <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.55rem', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1, flexShrink: 0 }} onClick={handleSend}>
-          <Send size={16} />
-        </button>
-      </div>
+      {offerFormOpen ? (
+        <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.65rem', marginTop: '0.5rem' }}>
+          <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.78rem', display: 'block', marginBottom: 5 }}>
+            Votre offre ({data?.conversation?.listing?.currency ?? 'XOF'})
+          </label>
+          <input className="input" style={{ marginBottom: 6, fontSize: '0.85rem' }} placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
+          {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.74rem', margin: '0 0 6px' }}>{offerError}</p>}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn-primary" disabled={sendingOffer} onClick={submitOffer} style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
+            <button onClick={() => { setOfferFormOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.5rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={14} /></button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, marginTop: '0.5rem' }}>
+          {canOffer && (
+            <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 38, height: 38, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
+              <Tag size={16} />
+            </button>
+          )}
+          <input
+            className="input"
+            style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
+            placeholder="Écrivez votre message..."
+            value={msg}
+            onChange={e => { setMsg(e.target.value); notifyTyping() }}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+          />
+          <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.55rem', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1, flexShrink: 0 }} onClick={handleSend}>
+            <Send size={16} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

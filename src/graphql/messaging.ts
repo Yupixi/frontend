@@ -12,6 +12,11 @@ const MESSAGE_FIELDS = `
     fullName
     avatarUrl
   }
+  offer {
+    id
+    amount
+    status
+  }
 `
 
 const CONVERSATION_FIELDS = `
@@ -30,6 +35,7 @@ const CONVERSATION_FIELDS = `
     price
     currency
     status
+    negotiable
   }
   otherParticipant {
     id
@@ -133,10 +139,24 @@ export const TYPING_STATUS_SUBSCRIPTION = gql`
   }
 `
 
+// Accepting/rejecting an offer doesn't create a new message, so the thread
+// wouldn't otherwise learn about the decision until it was reopened.
+export const OFFER_UPDATED_SUBSCRIPTION = gql`
+  subscription OfferUpdated($conversationId: String!) {
+    offerUpdated(conversationId: $conversationId)
+  }
+`
+
 export type RemoteUserRef = {
   id: string
   fullName: string
   avatarUrl: string | null
+}
+
+export type RemoteMessageOffer = {
+  id: string
+  amount: number
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'
 }
 
 export type RemoteMessage = {
@@ -147,6 +167,7 @@ export type RemoteMessage = {
   readAt: string | null
   createdAt: string
   sender: RemoteUserRef
+  offer: RemoteMessageOffer | null
 }
 
 export type RemoteConversation = {
@@ -158,7 +179,7 @@ export type RemoteConversation = {
   dealClosedAt: string | null
   canManageDeal: boolean
   createdAt: string
-  listing: { id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string } | null
+  listing: { id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string; negotiable: boolean } | null
   otherParticipant: RemoteUserRef
   lastMessage: RemoteMessage | null
   messages?: RemoteMessage[]
