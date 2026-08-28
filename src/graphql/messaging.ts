@@ -19,6 +19,9 @@ const CONVERSATION_FIELDS = `
   listingId
   lastMessageAt
   unreadCount
+  dealStatus
+  dealClosedAt
+  canManageDeal
   createdAt
   listing {
     id
@@ -79,6 +82,14 @@ export const MARK_CONVERSATION_READ_MUTATION = gql`
   }
 `
 
+export const SET_CONVERSATION_DEAL_STATUS_MUTATION = gql`
+  mutation SetConversationDealStatus($conversationId: String!, $status: ConversationDealStatus!) {
+    setConversationDealStatus(conversationId: $conversationId, status: $status) {
+      ${CONVERSATION_FIELDS}
+    }
+  }
+`
+
 export const MESSAGE_ADDED_SUBSCRIPTION = gql`
   subscription MessageAdded($conversationId: String!) {
     messageAdded(conversationId: $conversationId) {
@@ -119,6 +130,9 @@ export type RemoteConversation = {
   listingId: string | null
   lastMessageAt: string | null
   unreadCount: number
+  dealStatus: 'DISCUSSING' | 'CONCLUDED' | 'NOT_CONCLUDED'
+  dealClosedAt: string | null
+  canManageDeal: boolean
   createdAt: string
   listing: { id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string } | null
   otherParticipant: RemoteUserRef

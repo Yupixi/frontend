@@ -13,6 +13,7 @@ export const LISTINGS_QUERY = gql`
         description
         price
         currency
+        countryCode
         city
         locationLabel
         condition
@@ -61,6 +62,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       description
       price
       currency
+      countryCode
       city
       locationLabel
       condition
@@ -109,6 +111,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       description
       price
       currency
+      countryCode
       city
       locationLabel
       condition
@@ -156,6 +159,7 @@ export const LISTING_QUERY = gql`
       description
       price
       currency
+      countryCode
       city
       locationLabel
       condition
@@ -190,7 +194,6 @@ export const LISTING_QUERY = gql`
       seller {
         id
         fullName
-        phone
         avatarUrl
         city
         createdAt
@@ -206,6 +209,8 @@ export const MY_LISTING_QUERY = gql`
       title
       description
       price
+      currency
+      countryCode
       city
       negotiable
       status
@@ -311,6 +316,8 @@ export type MyListingDetail = {
   title: string
   description: string
   price: number | null
+  currency: string
+  countryCode: string
   city: string
   negotiable: boolean
   status: string
@@ -326,6 +333,8 @@ export type CreateListingInput = {
   title: string
   description: string
   price?: number
+  currency?: string
+  countryCode?: string
   city: string
   locationLabel?: string
   condition?: string
@@ -339,7 +348,6 @@ export type RemoteListingDetail = RemoteListing & {
   seller: {
     id: string
     fullName: string
-    phone: string | null
     avatarUrl: string | null
     city: string | null
     createdAt: string
@@ -361,6 +369,7 @@ export type RemoteListing = {
   description: string
   price: number | null
   currency: string
+  countryCode: string
   city: string
   locationLabel: string | null
   condition: string | null
@@ -386,6 +395,8 @@ export type ListingFilterInput = {
   categorySlug?: string
   subcategorySlug?: string
   city?: string
+  countryCode?: string
+  currency?: string
   condition?: string
   minPrice?: number
   maxPrice?: number

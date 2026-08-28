@@ -4,7 +4,7 @@ import {
   Heart, MessageCircle,
   MapPin, Send, Trash2, CheckCheck,
   Smartphone, Moon, Sun, Lock, User, Bell,
-  ChevronRight, Clock, ArrowLeft, ImageOff,
+  ChevronRight, Clock, ArrowLeft, ImageOff, Handshake, CircleX,
 } from 'lucide-react'
 import Price from '../../components/Price'
 import BoostRibbon from '../../components/BoostRibbon'
@@ -16,6 +16,7 @@ import {
   MESSAGE_ADDED_SUBSCRIPTION,
   MY_CONVERSATIONS_QUERY,
   SEND_MESSAGE_MUTATION,
+  SET_CONVERSATION_DEAL_STATUS_MUTATION,
   START_CONVERSATION_MUTATION,
   type RemoteConversation,
   type RemoteMessage,
@@ -104,7 +105,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <p style={{ margin: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.title}</p>
-                  <div className="price-tag" style={{ fontSize: '0.9rem', marginTop: 2 }}><Price amount={l.price} /></div>
+                  <div className="price-tag" style={{ fontSize: '0.9rem', marginTop: 2 }}><Price amount={l.price} currency={l.currency} /></div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
                     <MapPin size={10} />{l.city}
                   </div>
@@ -207,7 +208,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
                 )}
               </div>
               <div style={{ padding: '12px 14px' }}>
-                <div className="price-tag"><Price amount={l.price} /></div>
+                <div className="price-tag"><Price amount={l.price} currency={l.currency} /></div>
                 <p style={{ margin: '4px 0 6px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.3 }}>{l.title}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.78rem' }}>
                   <MapPin size={11} />{l.city}
@@ -287,6 +288,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
 
   const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
   const [markConversationRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
+  const [setDealStatus, { loading: updatingDeal }] = useMutation(SET_CONVERSATION_DEAL_STATUS_MUTATION)
 
   useEffect(() => {
     if (!activeId) return
@@ -320,6 +322,22 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
     if (!body || !activeId) return
     setMsg('')
     void sendMessage({ variables: { conversationId: activeId, body } }).then(() => refetchConv())
+  }
+
+  const conversationStarters = [
+    'Bonjour, cette annonce est-elle toujours disponible ?',
+    "Bonjour, pouvez-vous m’en dire plus sur l’état de l’article ?",
+    'Bonjour, la livraison ou une remise en main propre est-elle possible ?',
+  ]
+
+  const closeDeal = (status: 'CONCLUDED' | 'NOT_CONCLUDED') => {
+    if (!activeId) return
+    const message = status === 'CONCLUDED'
+      ? "Confirmer que la vente est conclue ? L’annonce sera marquée comme vendue."
+      : "Confirmer que cette discussion n’a pas abouti à une vente ?"
+    if (!window.confirm(message)) return
+    void setDealStatus({ variables: { conversationId: activeId, status } })
+      .then(() => { void refetchConv(); void refetchList() })
   }
 
   return (
@@ -362,6 +380,11 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                     <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {conv.listing.title}
                     </span>
+                    {conv.dealStatus !== 'DISCUSSING' && (
+                      <span style={{ flexShrink: 0, borderRadius: 999, padding: '1px 5px', fontSize: '0.6rem', fontWeight: 800, background: conv.dealStatus === 'CONCLUDED' ? 'rgba(16,185,129,0.12)' : 'var(--border-subtle)', color: conv.dealStatus === 'CONCLUDED' ? '#059669' : 'var(--fg-muted)' }}>
+                        {conv.dealStatus === 'CONCLUDED' ? 'VENDU' : 'NON CONCLUE'}
+                      </span>
+                    )}
                   </div>
                 )}
                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: conv.unreadCount > 0 ? 700 : 400 }}>
@@ -398,7 +421,12 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                     activeConv.otherParticipant.fullName.charAt(0).toUpperCase()
                   )}
                 </div>
-                <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.otherParticipant.fullName}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.otherParticipant.fullName}</div>
+                  <div style={{ fontSize: '0.7rem', color: activeConv.dealStatus === 'CONCLUDED' ? '#059669' : activeConv.dealStatus === 'NOT_CONCLUDED' ? '#64748B' : '#D97706', fontWeight: 700 }}>
+                    {activeConv.dealStatus === 'CONCLUDED' ? 'Vente conclue' : activeConv.dealStatus === 'NOT_CONCLUDED' ? 'Vente non conclue' : 'Discussion en cours'}
+                  </div>
+                </div>
               </div>
 
               {/* What this thread is about — always visible while chatting,
@@ -418,13 +446,48 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeConv.listing.title}</p>
-                    <div className="price-tag" style={{ fontSize: '0.8rem' }}><Price amount={activeConv.listing.price} /></div>
+                    <div className="price-tag" style={{ fontSize: '0.8rem' }}><Price amount={activeConv.listing.price} currency={activeConv.listing.currency} /></div>
                   </div>
                   {onSelectListing && <ChevronRight size={16} color="var(--fg-subtle)" style={{ flexShrink: 0 }} />}
                 </div>
               )}
 
+              {activeConv.listing && activeConv.canManageDeal && activeConv.dealStatus === 'DISCUSSING' && (
+                <div style={{ padding: '0.65rem 1.25rem', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(245,158,11,0.06)' }}>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--fg-muted)', fontWeight: 700, marginRight: 'auto' }}>Cette discussion a-t-elle abouti ?</span>
+                  <button className="btn-primary" disabled={updatingDeal} onClick={() => closeDeal('CONCLUDED')} style={{ padding: '0.45rem 0.7rem', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: 5, background: '#10B981', borderColor: '#10B981' }}>
+                    <Handshake size={14} /> Vente conclue
+                  </button>
+                  <button className="btn-outline" disabled={updatingDeal} onClick={() => closeDeal('NOT_CONCLUDED')} style={{ padding: '0.45rem 0.7rem', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <CircleX size={14} /> Non conclue
+                  </button>
+                </div>
+              )}
+
+              {activeConv.dealStatus !== 'DISCUSSING' && (
+                <div style={{ padding: '0.65rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', background: activeConv.dealStatus === 'CONCLUDED' ? 'rgba(16,185,129,0.08)' : 'var(--border-subtle)', color: activeConv.dealStatus === 'CONCLUDED' ? '#047857' : 'var(--fg-muted)', fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}>
+                  {activeConv.dealStatus === 'CONCLUDED' ? <Handshake size={16} /> : <CircleX size={16} />}
+                  {activeConv.dealStatus === 'CONCLUDED' ? 'Le vendeur a confirmé que cette vente est conclue.' : 'Le vendeur a indiqué que cette discussion n’a pas abouti à une vente.'}
+                </div>
+              )}
+
               <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {messages.length === 0 && (
+                  <div style={{ maxWidth: 520, width: '100%', margin: 'auto', textAlign: 'center' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 0.75rem', background: 'rgba(254,0,0,0.08)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MessageCircle size={23} />
+                    </div>
+                    <h3 style={{ margin: '0 0 0.35rem', fontSize: '1rem', fontWeight: 800 }}>Commencez la discussion</h3>
+                    <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Choisissez une question ou écrivez votre propre message. Ne partagez pas de coordonnées ou de données sensibles.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {conversationStarters.map(starter => (
+                        <button key={starter} className="btn-outline" onClick={() => setMsg(starter)} style={{ padding: '0.65rem 0.8rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600 }}>
+                          {starter}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {messages.map((m: RemoteMessage, i: number) => {
                   const isMe = m.senderId === currentUser?.id
                   const prev = messages[i - 1]
@@ -449,7 +512,9 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                 <div ref={messagesEndRef} />
               </div>
 
-              <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem 1rem 1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                <div style={{ marginBottom: 7, color: 'var(--fg-subtle)', fontSize: '0.7rem', textAlign: 'center' }}>Échange sécurisé sur Yupixi · Ne partagez jamais de code de paiement</div>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                 <input
                   className="input"
                   style={{ flex: 1 }}
@@ -461,6 +526,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                 <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1 }} onClick={handleSend}>
                   <Send size={18} />
                 </button>
+                </div>
               </div>
             </>
           )}
@@ -575,7 +641,7 @@ export function BuyerHistory({ onNavigate, onSelectListing, onLogout }: { onNavi
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', marginBottom: 3 }}>{v.listing.title}</div>
-              <div className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={v.listing.price} /></div>
+              <div className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={v.listing.price} currency={v.listing.currency} /></div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-subtle)', fontSize: '0.75rem' }}>

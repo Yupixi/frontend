@@ -3,11 +3,12 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Plus, Eye, Heart, Package, X,
   CheckCircle, Edit3, Clock,
-  Trash2, ChevronRight, ChevronDown, Upload, MapPin, Tag, Image, Star, ArrowUp,
+  Trash2, ChevronRight, ChevronDown, Upload, MapPin, Tag, Image, ArrowUp,
   Users, AlertCircle, Check,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { cities } from '../../data/cities'
+import { CURRENCIES, MARKETS, marketForCountry } from '../../data/markets'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import BoostRibbon from '../../components/BoostRibbon'
@@ -147,6 +148,8 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
   const [negotiable, setNegotiable] = useState(false)
   const [description, setDescription] = useState('')
   const [city, setCity] = useState('Abidjan')
+  const [countryCode, setCountryCode] = useState('CI')
+  const [currency, setCurrency] = useState('XOF')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingMedia, setExistingMedia] = useState<{ id: string; url: string }[]>([])
@@ -182,6 +185,8 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
     setNegotiable(listing.negotiable)
     setDescription(listing.description)
     setCity(listing.city)
+    setCountryCode(listing.countryCode)
+    setCurrency(listing.currency)
     setCustomFields((listing.attributes ?? {}) as Record<string, string>)
     setExistingMedia(listing.media)
     setPrefilled(true)
@@ -290,6 +295,8 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
         title: title.trim(),
         description,
         price: requiresPrice ? (price ? Number(price) : undefined) : undefined,
+        currency,
+        countryCode,
         city,
         negotiable,
         attributes: customFields,
@@ -434,7 +441,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
 
                 {requiresPrice && (
                   <div>
-                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix (FCFA) *</label>
+                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix ({currency}) *</label>
                     <div style={{ position: 'relative' }}>
                       <Tag size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
                       <input className="input" style={{ paddingLeft: 40 }} placeholder="Ex: 150 000" value={price} onChange={e => setPrice(e.target.value)} type="number" />
@@ -446,12 +453,32 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                 )}
 
                 <div>
+                  <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Pays</label>
+                  <select className="input" value={countryCode} onChange={e => {
+                    const nextCountry = e.target.value
+                    setCountryCode(nextCountry)
+                    const market = marketForCountry(nextCountry)
+                    if (market) setCurrency(market.currency)
+                  }}>
+                    {MARKETS.map(market => <option key={market.countryCode} value={market.countryCode}>{market.country}</option>)}
+                  </select>
+                </div>
+
+                {requiresPrice && (
+                  <div>
+                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Devise</label>
+                    <select className="input" value={currency} onChange={e => setCurrency(e.target.value)}>
+                      {CURRENCIES.map(code => <option key={code} value={code}>{code}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div>
                   <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
                   <div style={{ position: 'relative' }}>
                     <MapPin size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: catData.color }} />
-                    <select className="input" style={{ paddingLeft: 40 }} value={city} onChange={e => setCity(e.target.value)}>
-                      {cities.map(c => <option key={c}>{c}</option>)}
-                    </select>
+                    <input className="input" style={{ paddingLeft: 40 }} list="market-cities" value={city} onChange={e => setCity(e.target.value)} />
+                    <datalist id="market-cities">{cities.map(c => <option key={c} value={c} />)}</datalist>
                   </div>
                 </div>
 
@@ -544,8 +571,8 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                     )}
                   </div>
                   <div style={{ padding: '1.25rem' }}>
-                    {requiresPrice && <div className="price-tag" style={{ fontSize: '1.1rem' }}><Price amount={price ? parseInt(price) : 0} /></div>}
-                    {!requiresPrice && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}><Price amount={Number(customFields.salaire)} />/mois</div>}
+                    {requiresPrice && <div className="price-tag" style={{ fontSize: '1.1rem' }}><Price amount={price ? parseInt(price) : 0} currency={currency} /></div>}
+                    {!requiresPrice && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}><Price amount={Number(customFields.salaire)} currency={currency} />/mois</div>}
                     <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '8px 0 10px', fontSize: '1.1rem' }}>{title || 'Titre de votre annonce'}</h3>
                     <div style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} />{city}</span>

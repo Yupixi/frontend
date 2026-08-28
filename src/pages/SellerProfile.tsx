@@ -183,7 +183,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                   )}
                 </div>
                 <div style={{ padding: '12px 14px' }}>
-                  <div className="price-tag" style={{ fontSize: '1rem' }}><Price amount={l.price} /></div>
+                  <div className="price-tag" style={{ fontSize: '1rem' }}><Price amount={l.price} currency={l.currency} /></div>
                   <p style={{ margin: '4px 0 6px', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'Nunito, sans-serif', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--fg-muted)' }}>
                     <span>{l.publishedAt ? formatRelativeDate(l.publishedAt) : ''}</span>

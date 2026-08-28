@@ -143,12 +143,12 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
       <div className="listing-card-body" style={{ padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
           <div className="price-tag">
-            <Price amount={salePrice ?? listing.price} fallback={archetypePriceFallback(listing)} />
+            <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
             {priceSuffix && <span style={{ fontSize: '0.7em', fontWeight: 600, color: 'var(--fg-muted)' }}> {priceSuffix}</span>}
           </div>
           {salePrice != null && (
             <div style={{ fontSize: '0.78rem', color: 'var(--fg-subtle)', textDecoration: 'line-through' }}>
-              <Price amount={listing.price} />
+              <Price amount={listing.price} currency={listing.currency} />
             </div>
           )}
         </div>
@@ -236,12 +236,12 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
             <h3 className="listing-list-title">{listing.title}</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 8 }}>
               <div className="price-tag">
-                <Price amount={salePrice ?? listing.price} fallback={archetypePriceFallback(listing)} />
+                <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
                 {priceSuffix && <span style={{ fontSize: '0.7em', fontWeight: 600, color: 'var(--fg-muted)' }}> {priceSuffix}</span>}
               </div>
               {salePrice != null && (
                 <div style={{ fontSize: '0.78rem', color: 'var(--fg-subtle)', textDecoration: 'line-through' }}>
-                  <Price amount={listing.price} />
+                  <Price amount={listing.price} currency={listing.currency} />
                 </div>
               )}
             </div>

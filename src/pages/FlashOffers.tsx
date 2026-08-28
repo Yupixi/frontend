@@ -180,11 +180,11 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                   <div style={{ padding: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                       <div className="price-tag" style={{ fontSize: '1.15rem', color: '#FE0000' }}>
-                        <Price amount={salePrice ?? listing.price} />
+                        <Price amount={salePrice ?? listing.price} currency={listing.currency} />
                       </div>
                       {salePrice != null && listing.price != null && (
                         <div style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)', textDecoration: 'line-through' }}>
-                          <Price amount={listing.price} />
+                          <Price amount={listing.price} currency={listing.currency} />
                         </div>
                       )}
                     </div>

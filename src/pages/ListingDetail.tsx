@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import DOMPurify from 'dompurify'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
-  Heart, Share2, MapPin, MessageCircle, Phone,
+  Heart, Share2, MapPin, MessageCircle, ShieldCheck,
   ChevronLeft, ChevronRight, Eye, Tag, Truck, CheckCircle,
   Calendar, ArrowLeft, Flag, ExternalLink,
 } from 'lucide-react'
@@ -54,7 +54,6 @@ function SpecItem({ icon, label, value }: { icon: ReactNode, label: string, valu
 
 export default function ListingDetail({ listingId, onNavigate, onSelectSeller, onContactSeller, favorites, onToggleFavorite }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
-  const [contactOpen, setContactOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
   const [offerAmount, setOfferAmount] = useState('')
   const [sellerSheetOpen, setSellerSheetOpen] = useState(false)
@@ -220,7 +219,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
             <div className="listing-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: '1rem' }}>
               <div style={{ minWidth: 0 }}>
                 <h1 className="listing-detail-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
-                <div className="price-tag" style={{ fontSize: '1.75rem' }}><Price amount={listing.price} /></div>
+                <div className="price-tag" style={{ fontSize: '1.75rem' }}><Price amount={listing.price} currency={listing.currency} /></div>
                 {listing.negotiable && <span className="badge badge-green" style={{ marginTop: 6 }}>Prix négociable</span>}
               </div>
               <div className="listing-detail-actions" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -313,7 +312,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
                       <img src={l.coverImageUrl ?? l.media[0]?.url ?? ''} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     </div>
                     <div style={{ padding: '10px 12px' }}>
-                      <div className="price-tag" style={{ fontSize: '0.95rem' }}><Price amount={l.price} /></div>
+                      <div className="price-tag" style={{ fontSize: '0.95rem' }}><Price amount={l.price} currency={l.currency} /></div>
                       <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--fg)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
                     </div>
                   </div>
@@ -326,33 +325,23 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
         {/* Right sidebar: desktop only */}
         <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Contacter le vendeur</h3>
+            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>Discutez avec le vendeur</h3>
+            <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Yupixi.</p>
 
             <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => onContactSeller(listing.seller.id, listing.id)}>
-              <MessageCircle size={18} /> Envoyer un message
+              <MessageCircle size={18} /> Démarrer la discussion
             </button>
-
-            {listing.seller.phone ? (
-              contactOpen ? (
-                <div style={{ background: 'var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', marginBottom: '0.75rem', textAlign: 'center' }}>
-                  <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>{listing.seller.phone}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>Cliquez pour appeler</div>
-                </div>
-              ) : (
-                <button className="btn-outline" style={{ width: '100%', padding: '0.85rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setContactOpen(true)}>
-                  <Phone size={16} /> Afficher le numéro
-                </button>
-              )
-            ) : (
-              <p style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)', textAlign: 'center', marginBottom: '0.75rem' }}>Numéro non renseigné</p>
-            )}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
+              <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
+              <span>Vos coordonnées restent privées. Gardez vos échanges sur Yupixi pour conserver le contexte de la transaction.</span>
+            </div>
 
             {listing.negotiable && (
               offerSent ? (
                 <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
               ) : offerOpen ? (
                 <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                  <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
+                  <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
                   <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
                   {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -432,7 +421,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}><Price amount={listing.price} /></div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}><Price amount={listing.price} currency={listing.currency} /></div>
           {listing.negotiable && <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>Prix négociable</div>}
         </div>
         <button onClick={() => onToggleFavorite(listing.id)} style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
@@ -480,30 +469,19 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
               </button>
 
               <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => { setSellerSheetOpen(false); onContactSeller(listing.seller.id, listing.id) }}>
-                <MessageCircle size={18} /> Envoyer un message
+                <MessageCircle size={18} /> Démarrer la discussion
               </button>
-
-              {listing.seller.phone ? (
-                contactOpen ? (
-                  <div style={{ background: 'var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', marginBottom: '0.75rem', textAlign: 'center' }}>
-                    <a href={`tel:${listing.seller.phone}`} style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)', textDecoration: 'none' }}>{listing.seller.phone}</a>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>Appuyez pour appeler</div>
-                  </div>
-                ) : (
-                  <button className="btn-outline" style={{ width: '100%', padding: '0.85rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setContactOpen(true)}>
-                    <Phone size={16} /> Afficher le numéro
-                  </button>
-                )
-              ) : (
-                <p style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)', textAlign: 'center', marginBottom: '0.75rem' }}>Numéro non renseigné</p>
-              )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
+                <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
+                <span>Échangez sur Yupixi : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
+              </div>
 
               {listing.negotiable && (
                 offerSent ? (
                   <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
                 ) : offerOpen ? (
                   <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                    <label style={{ fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre (FCFA)</label>
+                    <label style={{ fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
                     <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
                     {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
                     <div style={{ display: 'flex', gap: 6 }}>
