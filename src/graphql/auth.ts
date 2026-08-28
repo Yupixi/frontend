@@ -28,6 +28,23 @@ export const LOGIN_MUTATION = gql`
   }
 `
 
+// Lets a visitor message a seller without registering first — creates (or
+// reuses) a lightweight account behind the scenes so the rest of the app's
+// messaging stays unchanged. See Backend AuthService.guestLogin.
+export const GUEST_LOGIN_MUTATION = gql`
+  mutation GuestLogin($input: GuestLoginInput!) {
+    guestLogin(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        email
+        fullName
+      }
+    }
+  }
+`
+
 export const ME_QUERY = gql`
   query Me {
     me {

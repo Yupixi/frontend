@@ -7,6 +7,7 @@ import {
   Calendar, ArrowLeft, Flag, ExternalLink,
 } from 'lucide-react'
 import Price from '../components/Price'
+import InlineConversation from '../components/InlineConversation'
 import { LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
@@ -17,7 +18,7 @@ type ListingDetailProps = {
   listingId: string
   onNavigate: (page: any) => void
   onSelectSeller: (id: string) => void
-  onContactSeller: (sellerId: string, listingId?: string) => void
+  onAuthenticated: () => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
 }
@@ -52,12 +53,13 @@ function SpecItem({ icon, label, value }: { icon: ReactNode, label: string, valu
   )
 }
 
-export default function ListingDetail({ listingId, onNavigate, onSelectSeller, onContactSeller, favorites, onToggleFavorite }: ListingDetailProps) {
+export default function ListingDetail({ listingId, onNavigate, onSelectSeller, onAuthenticated, favorites, onToggleFavorite }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [offerOpen, setOfferOpen] = useState(false)
   const [offerAmount, setOfferAmount] = useState('')
   const [sellerSheetOpen, setSellerSheetOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
@@ -326,15 +328,28 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
         <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
             <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>Discutez avec le vendeur</h3>
-            <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Yupixi.</p>
 
-            <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => onContactSeller(listing.seller.id, listing.id)}>
-              <MessageCircle size={18} /> Démarrer la discussion
-            </button>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-              <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-              <span>Vos coordonnées restent privées. Gardez vos échanges sur Yupixi pour conserver le contexte de la transaction.</span>
-            </div>
+            {chatOpen ? (
+              <InlineConversation
+                sellerId={listing.seller.id}
+                listingId={listing.id}
+                sellerName={listing.seller.fullName}
+                onAuthenticated={onAuthenticated}
+                onClose={() => setChatOpen(false)}
+              />
+            ) : (
+              <>
+                <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Yupixi.</p>
+
+                <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
+                  <MessageCircle size={18} /> Démarrer la discussion
+                </button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
+                  <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
+                  <span>Vos coordonnées restent privées. Gardez vos échanges sur Yupixi pour conserver le contexte de la transaction.</span>
+                </div>
+              </>
+            )}
 
             {listing.negotiable && (
               offerSent ? (
@@ -468,13 +483,25 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
 
-              <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => { setSellerSheetOpen(false); onContactSeller(listing.seller.id, listing.id) }}>
-                <MessageCircle size={18} /> Démarrer la discussion
-              </button>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-                <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-                <span>Échangez sur Yupixi : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
-              </div>
+              {chatOpen ? (
+                <InlineConversation
+                  sellerId={listing.seller.id}
+                  listingId={listing.id}
+                  sellerName={listing.seller.fullName}
+                  onAuthenticated={onAuthenticated}
+                  onClose={() => setChatOpen(false)}
+                />
+              ) : (
+                <>
+                  <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
+                    <MessageCircle size={18} /> Démarrer la discussion
+                  </button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
+                    <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
+                    <span>Échangez sur Yupixi : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
+                  </div>
+                </>
+              )}
 
               {listing.negotiable && (
                 offerSent ? (

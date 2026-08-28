@@ -253,6 +253,14 @@ export default function App() {
     navigate('buyer-messages')
   }
 
+  // Shared by the full-page Auth screen and the inline guest-messaging flow
+  // on ListingDetail (see InlineConversation) — both just need React state
+  // to catch up after tokens are already stored.
+  const handleAuthenticated = () => {
+    setIsLoggedIn(true)
+    void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me))
+  }
+
   const toggleFavorite = (id: string) => {
     if (!isLoggedIn) {
       navigate('auth')
@@ -283,7 +291,7 @@ export default function App() {
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
       case 'listing-detail':
-        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} onContactSeller={contactSellerAbout} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} />
       case 'seller-profile':
         return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn} />
       case 'categories':
@@ -291,7 +299,7 @@ export default function App() {
       case 'flash-offers':
         return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
       case 'auth':
-        return <Auth onNavigate={navigate} onLogin={() => { setIsLoggedIn(true); void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me)) }} />
+        return <Auth onNavigate={navigate} onLogin={handleAuthenticated} />
 
       default:
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
