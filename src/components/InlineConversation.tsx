@@ -46,12 +46,16 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   }, [])
 
   if (conversationId) {
-    return <ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} />
+    return (
+      <div style={{ marginBottom: '1.25rem' }}>
+        <ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} />
+      </div>
+    )
   }
 
   if (getAccessToken()) {
     return (
-      <div style={{ padding: '1rem 0', textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
+      <div style={{ padding: '1rem 0', textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
         {starting ? 'Connexion à la discussion...' : (startError ?? '')}
         {startError && (
           <button className="btn-primary" style={{ display: 'block', margin: '0.75rem auto 0', padding: '0.5rem 1rem', fontSize: '0.82rem' }} onClick={beginThread}>
@@ -63,12 +67,14 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   }
 
   return (
-    <GuestForm
-      sellerId={sellerId}
-      listingId={listingId}
-      onAuthenticated={onAuthenticated}
-      onStarted={setConversationId}
-    />
+    <div style={{ marginBottom: '1.25rem' }}>
+      <GuestForm
+        sellerId={sellerId}
+        listingId={listingId}
+        onAuthenticated={onAuthenticated}
+        onStarted={setConversationId}
+      />
+    </div>
   )
 }
 
@@ -90,10 +96,14 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email.trim() && !phone.trim()) {
+      setError('Indiquez au moins un email ou un numéro de téléphone.')
+      return
+    }
     setError(null)
     setSending(true)
     try {
-      const { data } = await guestLogin({ variables: { input: { fullName, email, phone: phone || undefined } } })
+      const { data } = await guestLogin({ variables: { input: { fullName, email: email.trim() || undefined, phone: phone.trim() || undefined } } })
       if (!data) throw new Error()
       storeTokens(data.guestLogin.accessToken, data.guestLogin.refreshToken)
 
@@ -120,7 +130,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
       <p style={{ margin: '0 0 0.2rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
-        Indiquez comment le vendeur peut vous identifier — aucun compte n'est nécessaire.
+        Indiquez comment le vendeur peut vous identifier — aucun compte n'est nécessaire. Email ou téléphone suffit.
       </p>
 
       {error && (
@@ -130,8 +140,8 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
       )}
 
       <MiniField icon={User}><input className="input" placeholder="Votre nom" value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} /></MiniField>
-      <MiniField icon={Mail}><input className="input" type="email" placeholder="Votre email" value={email} onChange={e => setEmail(e.target.value)} required /></MiniField>
-      <MiniField icon={Phone}><input className="input" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} /></MiniField>
+      <MiniField icon={Phone}><input className="input" type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} /></MiniField>
+      <MiniField icon={Mail}><input className="input" type="email" placeholder="Email (optionnel)" value={email} onChange={e => setEmail(e.target.value)} /></MiniField>
 
       <textarea
         className="input"
