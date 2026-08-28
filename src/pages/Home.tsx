@@ -9,6 +9,7 @@ import { LISTINGS_QUERY, RECOMMENDED_LISTINGS_QUERY, type RemoteListing } from '
 import { HOME_BANNERS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteBanner, type ActiveCampaign } from '../graphql/content'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import { followBannerCta } from '../lib/bannerCta'
+import type { AuthUser } from '../graphql/auth'
 
 type HomeProps = {
   onNavigate: (page: any) => void
@@ -16,6 +17,7 @@ type HomeProps = {
   favorites: string[]
   onToggleFavorite: (id: string) => void
   onCategorySelect?: (categoryId: string) => void
+  currentUser?: AuthUser | null
 }
 
 function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggleFav }: {
@@ -72,7 +74,7 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
   )
 }
 
-export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect }: HomeProps) {
+export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser }: HomeProps) {
   // A cramped 2-column grid reads as cluttered on small screens — default to
   // the single-column list view there; desktop keeps the grid. An explicit
   // choice is remembered (shared with Search) and wins over that default.
@@ -228,10 +230,10 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   const renderListings = (items: RemoteListing[]) =>
     homeViewMode === 'grid'
       ? items.map(l => (
-        <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} />
+        <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
       ))
       : items.map(l => (
-        <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} />
+        <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
       ))
 
   const renderListingsContainer = (items: RemoteListing[]) =>
@@ -443,6 +445,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                   onSelect={() => onSelectListing(entry.listing.id)}
                   onToggleFav={() => onToggleFavorite(entry.listing.id)}
                   isFav={favorites.includes(entry.listing.id)}
+                  currentUserId={currentUser?.id}
                 />
               ))}
             </div>

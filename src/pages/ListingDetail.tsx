@@ -4,13 +4,15 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Heart, Share2, MapPin, MessageCircle, ShieldCheck,
   ChevronLeft, ChevronRight, Eye, Tag, Truck, CheckCircle,
-  Calendar, ArrowLeft, Flag, ExternalLink,
+  Calendar, ArrowLeft, Flag, ExternalLink, ArrowUp,
 } from 'lucide-react'
 import Price from '../components/Price'
 import InlineConversation from '../components/InlineConversation'
+import BoostMenu from '../components/BoostMenu'
 import { LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
+import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
 import { formatRelativeDate } from '../lib/format'
 
@@ -21,6 +23,7 @@ type ListingDetailProps = {
   onAuthenticated: () => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
+  currentUser?: AuthUser | null
 }
 
 const REPORT_REASONS = [
@@ -53,7 +56,39 @@ function SpecItem({ icon, label, value }: { icon: ReactNode, label: string, valu
   )
 }
 
-export default function ListingDetail({ listingId, onNavigate, onSelectSeller, onAuthenticated, favorites, onToggleFavorite }: ListingDetailProps) {
+// Shown instead of the chat/offer panel when the viewer owns the listing —
+// they can't message or make an offer to themselves, so this is where the
+// boost invite goes instead (see the user's ask: invite to boost wherever
+// they see their own listing).
+function OwnerBoostPanel({ listingId, isBoosted, boostExpiresAt, boostMenuOpen, setBoostMenuOpen, justBoosted, onBoosted }: {
+  listingId: string
+  isBoosted: boolean
+  boostExpiresAt: string | null | undefined
+  boostMenuOpen: boolean
+  setBoostMenuOpen: (open: boolean) => void
+  justBoosted: boolean
+  onBoosted: () => void
+}) {
+  if (isBoosted || justBoosted) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: '#059669', fontSize: '0.82rem', fontWeight: 700 }}>
+        <ArrowUp size={16} />
+        {boostExpiresAt ? `Boosté jusqu'au ${new Date(boostExpiresAt).toLocaleDateString('fr-FR')}` : 'Boost activé'}
+      </div>
+    )
+  }
+  return (
+    <div style={{ position: 'relative' }}>
+      <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>C'est votre annonce. Boostez-la pour passer devant les autres et être vu davantage.</p>
+      <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => setBoostMenuOpen(!boostMenuOpen)}>
+        <ArrowUp size={18} /> Booster cette annonce
+      </button>
+      {boostMenuOpen && <BoostMenu listingId={listingId} onDone={() => { setBoostMenuOpen(false); onBoosted() }} />}
+    </div>
+  )
+}
+
+export default function ListingDetail({ listingId, onNavigate, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [offerOpen, setOfferOpen] = useState(false)
   const [offerAmount, setOfferAmount] = useState('')
@@ -66,6 +101,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
   const [linkCopied, setLinkCopied] = useState(false)
   const [offerError, setOfferError] = useState<string | null>(null)
   const [offerSent, setOfferSent] = useState(false)
+  const [boostMenuOpen, setBoostMenuOpen] = useState(false)
+  const [justBoosted, setJustBoosted] = useState(false)
   const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, {
@@ -100,6 +137,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
 
   const images = listing.media.length > 0 ? listing.media.map(m => m.url) : (listing.coverImageUrl ? [listing.coverImageUrl] : [])
   const isFav = favorites.includes(listing.id)
+  const isOwner = !!currentUser && listing.seller.id === currentUser.id
+  const isBoosted = !!listing.boostExpiresAt && new Date(listing.boostExpiresAt) > new Date()
 
   // The app never puts state in the URL (see App.tsx), so the shareable
   // link is built here with a `?listing=` param App.tsx knows to read on
@@ -327,48 +366,64 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
         {/* Right sidebar: desktop only */}
         <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>Discutez avec le vendeur</h3>
+            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>
+              {isOwner ? 'Votre annonce' : 'Discutez avec le vendeur'}
+            </h3>
 
-            {chatOpen ? (
-              <InlineConversation
-                sellerId={listing.seller.id}
+            {isOwner ? (
+              <OwnerBoostPanel
                 listingId={listing.id}
-                sellerName={listing.seller.fullName}
-                onAuthenticated={onAuthenticated}
-                onClose={() => setChatOpen(false)}
+                isBoosted={isBoosted}
+                boostExpiresAt={listing.boostExpiresAt}
+                boostMenuOpen={boostMenuOpen}
+                setBoostMenuOpen={setBoostMenuOpen}
+                justBoosted={justBoosted}
+                onBoosted={() => setJustBoosted(true)}
               />
             ) : (
               <>
-                <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Yupixi.</p>
+                {chatOpen ? (
+                  <InlineConversation
+                    sellerId={listing.seller.id}
+                    listingId={listing.id}
+                    sellerName={listing.seller.fullName}
+                    onAuthenticated={onAuthenticated}
+                    onClose={() => setChatOpen(false)}
+                  />
+                ) : (
+                  <>
+                    <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Yupixi.</p>
 
-                <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
-                  <MessageCircle size={18} /> Démarrer la discussion
-                </button>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-                  <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-                  <span>Vos coordonnées restent privées. Gardez vos échanges sur Yupixi pour conserver le contexte de la transaction.</span>
-                </div>
+                    <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
+                      <MessageCircle size={18} /> Démarrer la discussion
+                    </button>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
+                      <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
+                      <span>Vos coordonnées restent privées. Gardez vos échanges sur Yupixi pour conserver le contexte de la transaction.</span>
+                    </div>
+                  </>
+                )}
+
+                {listing.negotiable && (
+                  offerSent ? (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
+                  ) : offerOpen ? (
+                    <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                      <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
+                      <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
+                      {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
+                        <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <Tag size={15} /> Faire une offre
+                    </button>
+                  )
+                )}
               </>
-            )}
-
-            {listing.negotiable && (
-              offerSent ? (
-                <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
-              ) : offerOpen ? (
-                <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                  <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
-                  <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
-                  {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
-                    <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
-                  </div>
-                </div>
-              ) : (
-                <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Tag size={15} /> Faire une offre
-                </button>
-              )
             )}
 
             <div style={{ borderTop: '1px solid var(--border)', marginTop: '1.25rem', paddingTop: '1.25rem' }}>
@@ -439,11 +494,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
           <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}><Price amount={listing.price} currency={listing.currency} /></div>
           {listing.negotiable && <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>Prix négociable</div>}
         </div>
-        <button onClick={() => onToggleFavorite(listing.id)} style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-          <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
-        </button>
+        {!isOwner && (
+          <button onClick={() => onToggleFavorite(listing.id)} style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
+          </button>
+        )}
         <button onClick={() => setSellerSheetOpen(true)} className="btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, fontSize: '0.85rem', fontFamily: "'Outfit', sans-serif", fontWeight: 800 }}>
-          <MessageCircle size={16} /> Contacter
+          {isOwner ? <><ArrowUp size={16} /> Booster</> : <><MessageCircle size={16} /> Contacter</>}
         </button>
       </div>
 
@@ -483,44 +540,58 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
 
-              {chatOpen ? (
-                <InlineConversation
-                  sellerId={listing.seller.id}
+              {isOwner ? (
+                <OwnerBoostPanel
                   listingId={listing.id}
-                  sellerName={listing.seller.fullName}
-                  onAuthenticated={onAuthenticated}
-                  onClose={() => setChatOpen(false)}
+                  isBoosted={isBoosted}
+                  boostExpiresAt={listing.boostExpiresAt}
+                  boostMenuOpen={boostMenuOpen}
+                  setBoostMenuOpen={setBoostMenuOpen}
+                  justBoosted={justBoosted}
+                  onBoosted={() => setJustBoosted(true)}
                 />
               ) : (
                 <>
-                  <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
-                    <MessageCircle size={18} /> Démarrer la discussion
-                  </button>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-                    <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-                    <span>Échangez sur Yupixi : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
-                  </div>
-                </>
-              )}
+                  {chatOpen ? (
+                    <InlineConversation
+                      sellerId={listing.seller.id}
+                      listingId={listing.id}
+                      sellerName={listing.seller.fullName}
+                      onAuthenticated={onAuthenticated}
+                      onClose={() => setChatOpen(false)}
+                    />
+                  ) : (
+                    <>
+                      <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
+                        <MessageCircle size={18} /> Démarrer la discussion
+                      </button>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
+                        <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
+                        <span>Échangez sur Yupixi : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
+                      </div>
+                    </>
+                  )}
 
-              {listing.negotiable && (
-                offerSent ? (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
-                ) : offerOpen ? (
-                  <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                    <label style={{ fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
-                    <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
-                    {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
-                      <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <Tag size={15} /> Faire une offre
-                  </button>
-                )
+                  {listing.negotiable && (
+                    offerSent ? (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
+                    ) : offerOpen ? (
+                      <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                        <label style={{ fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
+                        <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
+                        {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
+                          <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <Tag size={15} /> Faire une offre
+                      </button>
+                    )
+                  )}
+                </>
               )}
 
               <button onClick={() => setSellerSheetOpen(false)} style={{ width: '100%', background: 'none', border: 'none', borderRadius: 8, padding: '0.85rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 600, fontSize: '0.85rem', marginTop: '0.5rem' }}>

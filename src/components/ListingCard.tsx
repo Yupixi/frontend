@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Heart, MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, type LucideIcon } from 'lucide-react'
+import { Heart, MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type LucideIcon } from 'lucide-react'
 import Price from './Price'
+import BoostMenu from './BoostMenu'
 import type { RemoteListing } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
 import {
@@ -63,6 +64,31 @@ export function discountedPrice(listing: RemoteListing): number | null {
   return null
 }
 
+function isActivelyBoosted(listing: RemoteListing): boolean {
+  return !!listing.boostExpiresAt && new Date(listing.boostExpiresAt) > new Date()
+}
+
+// Shown on the seller's own card wherever it appears in a feed — the user
+// asked to be invited to boost everywhere they see their own listing, not
+// just from "Mes annonces". Self-contained (own open/done state) since a
+// feed renders many of these side by side.
+function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
+  const [open, setOpen] = useState(false)
+  const [done, setDone] = useState(false)
+  if (isActivelyBoosted(listing) || done) return null
+  return (
+    <div style={{ position: 'relative', marginTop: 8 }} onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', padding: '6px 8px', background: 'rgba(254,0,0,0.06)', border: '1px dashed var(--primary)', borderRadius: 8, color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
+      >
+        <ArrowUp size={12} /> Boostez cette annonce
+      </button>
+      {open && <BoostMenu listingId={listing.id} onDone={() => { setOpen(false); setDone(true) }} />}
+    </div>
+  )
+}
+
 function PromoBadge({ listing }: { listing: RemoteListing }) {
   const discount = listing.activeCampaignDiscount
   if (!discount) return null
@@ -85,13 +111,14 @@ function PromoBadge({ listing }: { listing: RemoteListing }) {
   )
 }
 
-export function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
-  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean
+export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {
+  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
 }) {
   const [imgError, setImgError] = useState(false)
   const salePrice = discountedPrice(listing)
   const priceSuffix = archetypePriceSuffix(listing)
   const isRoute = getArchetype(listing) === 'route'
+  const isOwn = !!currentUserId && listing.seller.id === currentUserId
 
   return (
     <div className="card card-hover listing-card" style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative', background: 'var(--bg-card)' }} onClick={onSelect}>
@@ -193,13 +220,15 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav }: {
             </span>
           </div>
         </div>
+
+        {isOwn && <OwnListingBoostCta listing={listing} />}
       </div>
     </div>
   )
 }
 
-export function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
-  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean
+export function ListingListCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {
+  listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
 }) {
   const [imgError, setImgError] = useState(false)
   const salePrice = discountedPrice(listing)
@@ -207,6 +236,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
   const highlight = archetypeHighlight(listing)
   const isRoute = getArchetype(listing) === 'route'
   const accent = ARCHETYPE_ACCENT[getArchetype(listing)]
+  const isOwn = !!currentUserId && listing.seller.id === currentUserId
 
   return (
     <div className="card card-hover listing-list-card" onClick={onSelect}>
@@ -268,6 +298,8 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav }: {
           <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
           <span><Eye size={12} />{listing.viewsCount}</span>
         </div>
+
+        {isOwn && <OwnListingBoostCta listing={listing} />}
       </div>
     </div>
   )

@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Plus, Eye, Heart, Package, X,
   CheckCircle, Edit3, Clock,
-  Trash2, ChevronRight, ChevronDown, Upload, MapPin, Tag, Image, ArrowUp,
+  Trash2, ChevronRight, ChevronDown, Upload, MapPin, Tag, Image, ArrowUp, TrendingUp,
   Users, AlertCircle, Check,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -12,9 +12,11 @@ import { CURRENCIES, MARKETS, marketForCountry } from '../../data/markets'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import BoostRibbon from '../../components/BoostRibbon'
+import BoostMenu from '../../components/BoostMenu'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
 import {
   ATTACH_LISTING_MEDIA_MUTATION,
+  BUMP_LISTING_MUTATION,
   CREATE_LISTING_MUTATION,
   DELETE_LISTING_MEDIA_MUTATION,
   DELETE_LISTING_MUTATION,
@@ -28,7 +30,7 @@ import {
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
 import { LISTING_OFFERS_QUERY, RESPOND_TO_OFFER_MUTATION, type RemoteOffer } from '../../graphql/offers'
-import { CREATE_BOOST_MUTATION, MY_SUBSCRIPTION_QUERY, SUBSCRIBE_TO_PLAN_MUTATION, BOOST_TIERS, type RemoteMySubscription, type SubscriptionTier } from '../../graphql/promotions'
+import { MY_SUBSCRIPTION_QUERY, SUBSCRIBE_TO_PLAN_MUTATION, BOOST_TIERS, type RemoteMySubscription, type SubscriptionTier } from '../../graphql/promotions'
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as DashboardLayout } from '../account/AccountLayout'
 
@@ -155,6 +157,8 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
   const [existingMedia, setExistingMedia] = useState<{ id: string; url: string }[]>([])
   const [customFields, setCustomFields] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
+  const [publishedListingId, setPublishedListingId] = useState<string | null>(null)
+  const [boosted, setBoosted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [prefilled, setPrefilled] = useState(false)
 
@@ -219,10 +223,33 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
               ? 'Vos modifications ont été enregistrées.'
               : 'Votre annonce est en attente de validation par notre équipe. Elle sera visible par les acheteurs dès son approbation.'}
           </p>
+
+          {!isEditing && publishedListingId && (
+            <div className="card" style={{ maxWidth: 420, margin: '0 auto 2rem', padding: '1.5rem', textAlign: 'left' }}>
+              {boosted ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#10B981', fontWeight: 700 }}>
+                  <CheckCircle size={20} />
+                  Boost activé — votre annonce sera mise en avant dès son approbation.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.5rem' }}>
+                    <ArrowUp size={18} color="var(--primary)" />
+                    <h3 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>Boostez votre annonce</h3>
+                  </div>
+                  <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
+                    Passez devant les autres annonces dès votre approbation — jusqu'à {BOOST_TIERS[BOOST_TIERS.length - 1].days} jours de visibilité prioritaire.
+                  </p>
+                  <BoostMenu variant="inline" listingId={publishedListingId} onDone={() => setBoosted(true)} />
+                </>
+              )}
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={() => onNavigate('seller-listings')}>Voir mes annonces</button>
             {!isEditing && (
-              <button className="btn-outline" onClick={() => { setSuccess(false); setStep(1); setCategoryId(''); setSubcategoryId(''); setCustomFields({}); setImageFiles([]); setImagePreviews([]) }}>Publier une autre annonce</button>
+              <button className="btn-outline" onClick={() => { setSuccess(false); setPublishedListingId(null); setBoosted(false); setStep(1); setCategoryId(''); setSubcategoryId(''); setCustomFields({}); setImageFiles([]); setImagePreviews([]) }}>Publier une autre annonce</button>
             )}
           </div>
         </div>
@@ -321,6 +348,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
       }
 
       if (!isEditing) await submitListingForReview({ variables: { id: targetId } })
+      setPublishedListingId(targetId)
       setSuccess(true)
     } catch (err) {
       setUploading(false)
@@ -642,29 +670,6 @@ const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: st
   PAUSED: { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', label: 'En pause' },
 }
 
-// Small tier picker shown under "Booster" — no payment step yet (see
-// backend commit), so choosing a tier activates the boost immediately.
-function BoostMenu({ listingId, onDone }: { listingId: string, onDone: () => void }) {
-  const [createBoost, { loading }] = useMutation(CREATE_BOOST_MUTATION)
-
-  const pick = (tier: string) =>
-    void createBoost({ variables: { input: { listingId, tier } } }).then(() => onDone())
-
-  return (
-    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 6, zIndex: 20, width: 200 }}>
-      {BOOST_TIERS.map(t => (
-        <button key={t.tier} disabled={loading} onClick={() => pick(t.tier)} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg)' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <span>{t.label}</span>
-          <span style={{ color: 'var(--primary)' }}><Price amount={t.price} /></span>
-        </button>
-      ))}
-    </div>
-  )
-}
-
 // Lazy-loaded per row on expand rather than fetched for every listing up
 // front — avoids an N+1 burst of queries when the list first renders.
 function ListingOffersPanel({ listingId }: { listingId: string }) {
@@ -720,11 +725,13 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
   const [filter, setFilter] = useState('all')
   const [expandedOffers, setExpandedOffers] = useState<string | null>(null)
   const [boostMenuFor, setBoostMenuFor] = useState<string | null>(null)
+  const [bumpMessage, setBumpMessage] = useState<{ id: string; text: string } | null>(null)
   const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
     MY_LISTINGS_QUERY,
     { variables: { page: 1, pageSize: 100 } },
   )
   const [deleteListing] = useMutation(DELETE_LISTING_MUTATION)
+  const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
 
   const myListings = data?.myListings.items ?? []
   const filtered = filter === 'all' ? myListings : myListings.filter(l => l.status === filter)
@@ -732,6 +739,19 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
   const handleDelete = (id: string, title: string) => {
     if (!window.confirm(`Supprimer "${title}" ? Cette action est irréversible.`)) return
     void deleteListing({ variables: { id } }).then(() => refetch())
+  }
+
+  // Mirrors the backend's 24h cooldown (see ListingsService.bumpListing) so
+  // the button can just be disabled instead of round-tripping to find out.
+  const BUMP_COOLDOWN_MS = 24 * 60 * 60 * 1000
+  const nextBumpAt = (l: MyListingRow) => new Date(new Date(l.publishedAt ?? l.createdAt).getTime() + BUMP_COOLDOWN_MS)
+  const canBump = (l: MyListingRow) => nextBumpAt(l) <= new Date()
+
+  const handleBump = (id: string) => {
+    setBumpMessage(null)
+    void bumpListing({ variables: { id } })
+      .then(() => { setBumpMessage({ id, text: 'Remontée en tête du fil !' }); void refetch() })
+      .catch(() => setBumpMessage({ id, text: "Réessayez plus tard." }))
   }
 
   const filterTabs = [
@@ -810,6 +830,21 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                 <button onClick={() => setExpandedOffers(offersExpanded ? null : l.id)} style={{ background: offersExpanded ? 'var(--border-subtle)' : 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Tag size={14} /> Offres <ChevronDown size={13} style={{ transform: offersExpanded ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
                 </button>
+                {l.status === 'APPROVED' && (
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => handleBump(l.id)}
+                      disabled={bumping || !canBump(l)}
+                      title={canBump(l) ? 'Remettre en tête du fil' : `Disponible le ${nextBumpAt(l).toLocaleString('fr-FR')}`}
+                      style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: canBump(l) ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: canBump(l) ? 'var(--fg-muted)' : 'var(--fg-subtle)', opacity: canBump(l) ? 1 : 0.6 }}
+                    >
+                      <TrendingUp size={14} /> Remonter
+                    </button>
+                    {bumpMessage?.id === l.id && (
+                      <span style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, fontSize: '0.72rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap' }}>{bumpMessage.text}</span>
+                    )}
+                  </div>
+                )}
                 {l.status === 'APPROVED' && (
                   <div style={{ position: 'relative' }}>
                     <button onClick={() => setBoostMenuFor(boostMenuFor === l.id ? null : l.id)} style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>

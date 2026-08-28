@@ -26,6 +26,7 @@ export const LISTINGS_QUERY = gql`
         publishedAt
         createdAt
         coverImageUrl
+        boostExpiresAt
         activeCampaignDiscount {
           campaignId
           campaignName
@@ -172,6 +173,7 @@ export const LISTING_QUERY = gql`
       publishedAt
       createdAt
       coverImageUrl
+      boostExpiresAt
       activeCampaignDiscount {
         campaignId
         campaignName
@@ -285,6 +287,7 @@ export const MY_LISTINGS_QUERY = gql`
         viewsCount
         favoritesCount
         createdAt
+        publishedAt
         coverImageUrl
         boostExpiresAt
       }
@@ -298,6 +301,15 @@ export const DELETE_LISTING_MUTATION = gql`
   }
 `
 
+export const BUMP_LISTING_MUTATION = gql`
+  mutation BumpListing($id: String!) {
+    bumpListing(id: $id) {
+      id
+      publishedAt
+    }
+  }
+`
+
 export type MyListingRow = {
   id: string
   title: string
@@ -307,6 +319,7 @@ export type MyListingRow = {
   viewsCount: number
   favoritesCount: number
   createdAt: string
+  publishedAt: string | null
   coverImageUrl: string | null
   boostExpiresAt: string | null
 }
