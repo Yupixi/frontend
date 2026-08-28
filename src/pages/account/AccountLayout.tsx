@@ -51,12 +51,16 @@ function useUnreadCounts() {
   return { listingsCount: listingsData?.myListings.totalCount, unreadMessages }
 }
 
-function SidebarNav({ active, onNavigate, onClose, listingsCount, unreadMessages }: {
-  active: string; onNavigate: (p: any) => void; onClose?: () => void; listingsCount?: number; unreadMessages?: number
+function SidebarNav({ active, onNavigate, onClose, listingsCount, unreadMessages, isGuest }: {
+  active: string; onNavigate: (p: any) => void; onClose?: () => void; listingsCount?: number; unreadMessages?: number; isGuest?: boolean
 }) {
+  // A guest identity only exists to hold a conversation open — there's no
+  // account behind it, so every other area of the account shell stays
+  // hidden rather than just visually disabled.
+  const items = isGuest ? sidebarItems.filter(item => item.key === 'buyer-messages') : sidebarItems
   return (
     <>
-      {sidebarItems.map(item => {
+      {items.map(item => {
         const badge = item.key === 'seller-listings' ? listingsCount : item.key === 'buyer-messages' ? unreadMessages : undefined
         return (
           <button
@@ -91,8 +95,8 @@ function SidebarNav({ active, onNavigate, onClose, listingsCount, unreadMessages
   )
 }
 
-function AccountSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCount, unreadMessages }: {
-  active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void; listingsCount?: number; unreadMessages?: number
+function AccountSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCount, unreadMessages, isGuest }: {
+  active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void; listingsCount?: number; unreadMessages?: number; isGuest?: boolean
 }) {
   return (
     <>
@@ -104,7 +108,7 @@ function AccountSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCoun
           <Logo size="md" colorMode="red" />
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-          <SidebarNav active={active} onNavigate={onNavigate} listingsCount={listingsCount} unreadMessages={unreadMessages} />
+          <SidebarNav active={active} onNavigate={onNavigate} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
         </div>
         <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
           <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
@@ -126,7 +130,7 @@ function AccountSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCoun
               <button onClick={() => onClose?.()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-              <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} listingsCount={listingsCount} unreadMessages={unreadMessages} />
+              <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
             </div>
             <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
               <button onClick={() => { onNavigate('home'); onClose?.() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
@@ -145,6 +149,7 @@ function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNa
   activeLabel: string; currentUser?: AuthUser | null; onBack: () => void; onToggleSidebar?: () => void; onNavigate: (p: any) => void; onLogout: () => void
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const isGuest = !!currentUser?.isGuest
   const displayName = currentUser?.fullName || 'Mon compte'
   const displayInitial = displayName.charAt(0).toUpperCase()
   return (
@@ -164,12 +169,14 @@ function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNa
       </button>
       <h1 className="desktop-only" style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>{activeLabel}</h1>
       <div style={{ flex: 1 }} />
-      <button onClick={() => onNavigate('buyer-notifications')} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        <Bell size={18} />
-      </button>
+      {!isGuest && (
+        <button onClick={() => onNavigate('buyer-notifications')} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <Bell size={18} />
+        </button>
+      )}
       <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
       <div style={{ position: 'relative' }}>
         <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', background: 'none', border: 'none', transition: 'all 0.12s' }}
@@ -190,10 +197,10 @@ function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNa
 
         {userMenuOpen && (
           <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 220, zIndex: 200, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-            {[
+            {(isGuest ? [] : [
               { icon: Home, label: 'Tableau de bord', page: 'buyer-dashboard' as const },
               { icon: Settings, label: 'Paramètres du compte', page: 'buyer-settings' as const },
-            ].map(item => (
+            ]).map(item => (
               <button
                 key={item.page}
                 onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
@@ -228,10 +235,11 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { listingsCount, unreadMessages } = useUnreadCounts()
+  const isGuest = !!currentUser?.isGuest
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
-      <AccountSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} listingsCount={listingsCount} unreadMessages={unreadMessages} />
+      <AccountSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <AccountHeader activeLabel={ACCOUNT_PAGE_LABELS[active] || active} currentUser={currentUser} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} onNavigate={onNavigate} onLogout={onLogout} />
         <main className="dashboard-main" style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>

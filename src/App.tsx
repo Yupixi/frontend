@@ -318,8 +318,12 @@ export default function App() {
   // part of the account shell. It was silently falling into this block's
   // default case (BuyerDashboard) and was never actually reachable.
   if ((page.startsWith('seller-') && page !== 'seller-profile') || page.startsWith('buyer-')) {
+    // A guest identity only exists to hold a conversation open (see
+    // AuthService.guestLogin) — there's no real seller/buyer account behind
+    // it, so every account-shell page except messaging is off-limits.
+    const accountPage = currentUser?.isGuest && page !== 'buyer-messages' ? 'buyer-messages' : page
     const accountContent = (() => {
-      switch (page) {
+      switch (accountPage) {
         case 'seller-dashboard':
         case 'buyer-dashboard':
           return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} onLogout={logout} />

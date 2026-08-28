@@ -24,7 +24,7 @@ type LayoutProps = {
   onToggleDark: () => void
   children: React.ReactNode
   isLoggedIn: boolean
-  currentUser?: { fullName: string; email: string; avatarUrl?: string | null } | null
+  currentUser?: { fullName: string; email: string; avatarUrl?: string | null; isGuest?: boolean } | null
   onToggleLogin: () => void
   onSelectListing?: (id: string) => void
   onSetSearchTerm?: (term: string) => void
@@ -236,25 +236,27 @@ export default function Layout({
                       toggle crowded the header past the viewport width —
                       Favoris/Profil already live in the bottom nav, and
                       Messages/Notifications are one tap away from there. */}
-                  <button
-                    onClick={() => onNavigate('buyer-notifications')}
-                    className="desktop-only"
-                    style={{
-                      background: 'var(--border-subtle)',
-                      border: '1px solid var(--border)',
-                      cursor: 'pointer',
-                      width: 38,
-                      height: 38,
-                      color: 'var(--fg-muted)',
-                      borderRadius: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    title="Notifications"
-                  >
-                    <Bell size={18} />
-                  </button>
+                  {!currentUser?.isGuest && (
+                    <button
+                      onClick={() => onNavigate('buyer-notifications')}
+                      className="desktop-only"
+                      style={{
+                        background: 'var(--border-subtle)',
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        width: 38,
+                        height: 38,
+                        color: 'var(--fg-muted)',
+                        borderRadius: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title="Notifications"
+                    >
+                      <Bell size={18} />
+                    </button>
+                  )}
 
                   {/* Messages */}
                   <button
@@ -278,25 +280,27 @@ export default function Layout({
                   </button>
 
                   {/* Favorites */}
-                  <button
-                    onClick={() => onNavigate('buyer-favorites')}
-                    className="desktop-only"
-                    style={{
-                      background: 'var(--border-subtle)',
-                      border: '1px solid var(--border)',
-                      cursor: 'pointer',
-                      width: 38,
-                      height: 38,
-                      color: 'var(--fg-muted)',
-                      borderRadius: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title="Favoris"
-                  >
-                    <Heart size={18} />
-                  </button>
+                  {!currentUser?.isGuest && (
+                    <button
+                      onClick={() => onNavigate('buyer-favorites')}
+                      className="desktop-only"
+                      style={{
+                        background: 'var(--border-subtle)',
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        width: 38,
+                        height: 38,
+                        color: 'var(--fg-muted)',
+                        borderRadius: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Favoris"
+                    >
+                      <Heart size={18} />
+                    </button>
+                  )}
 
                   {/* User Avatar Menu */}
                   <div style={{ position: 'relative' }}>
@@ -350,14 +354,16 @@ export default function Layout({
 
                         {/* Everyone on Yüpixi can both buy and sell — one
                             unified account space, not two dashboards to
-                            switch between. */}
-                        {[
+                            switch between. A guest identity (see
+                            AuthService.guestLogin) has no such account
+                            behind it, so this space stays hidden. */}
+                        {(currentUser?.isGuest ? [] : [
                           { icon: Home, label: 'Tableau de bord', page: 'buyer-dashboard' as Page },
                           { icon: Package, label: 'Mes Annonces', page: 'seller-listings' as Page },
                           { icon: Heart, label: 'Mes Favoris', page: 'buyer-favorites' as Page },
                           { icon: BarChart2, label: 'Statistiques', page: 'seller-stats' as Page },
                           { icon: Settings, label: 'Paramètres du Compte', page: 'buyer-settings' as Page },
-                        ].map(item => (
+                        ]).map(item => (
                           <button
                             key={item.page}
                             onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
@@ -421,18 +427,21 @@ export default function Layout({
               )}
 
               {/* Action Button "+ Publier" — desktop only; on mobile this
-                  lives in the bottom nav bar instead (see below) */}
-              <button
-                onClick={() => {
-                  onNavigate('seller-post')
-                  triggerToast('Création d\'une nouvelle annonce')
-                }}
-                className="btn-primary desktop-only"
-                style={{ fontSize: '0.875rem', padding: '0.6rem 1.25rem' }}
-              >
-                <Plus size={16} />
-                <span>Publier une annonce</span>
-              </button>
+                  lives in the bottom nav bar instead (see below). Hidden for
+                  guest identities, which have no seller account behind them. */}
+              {!currentUser?.isGuest && (
+                <button
+                  onClick={() => {
+                    onNavigate('seller-post')
+                    triggerToast('Création d\'une nouvelle annonce')
+                  }}
+                  className="btn-primary desktop-only"
+                  style={{ fontSize: '0.875rem', padding: '0.6rem 1.25rem' }}
+                >
+                  <Plus size={16} />
+                  <span>Publier une annonce</span>
+                </button>
+              )}
 
               {/* Mobile menu button */}
               <button
@@ -528,9 +537,9 @@ export default function Layout({
               { label: 'Accueil', icon: Home, page: 'home' as Page },
               { label: 'Offres Flash', icon: Zap, page: 'flash-offers' as Page },
               { label: 'Toutes les Catégories', icon: Grid, page: 'categories' as Page },
-              { label: 'Publier une annonce', icon: Plus, page: 'seller-post' as Page },
+              ...(currentUser?.isGuest ? [] : [{ label: 'Publier une annonce', icon: Plus, page: 'seller-post' as Page }]),
               ...(isLoggedIn ? [
-                { label: 'Mes Favoris', icon: Heart, page: 'buyer-favorites' as Page },
+                ...(currentUser?.isGuest ? [] : [{ label: 'Mes Favoris', icon: Heart, page: 'buyer-favorites' as Page }]),
                 { label: 'Messages', icon: MessageCircle, page: 'buyer-messages' as Page },
               ] : []),
             ].map(item => {
@@ -610,13 +619,13 @@ export default function Layout({
             <div>
               <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Espace Membre</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
+                {(currentUser?.isGuest ? [] : [
                   { label: 'Publier une Annonce Gratuite', page: 'seller-post' as Page },
                   { label: 'Mes Favoris', page: 'buyer-favorites' as Page },
                   { label: 'Mon Tableau de Bord', page: 'buyer-dashboard' as Page },
                   { label: 'Boost & Premium', page: 'seller-premium' as Page },
                   { label: 'Centre de Sécurité', page: 'buyer-settings' as Page },
-                ].map(item => (
+                ]).map(item => (
                   <li key={item.label}>
                     <button onClick={() => onNavigate(isLoggedIn ? item.page : 'auth')} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
                       {item.label}
@@ -686,7 +695,7 @@ export default function Layout({
             { label: 'Recherche', icon: Search, page: 'search' as Page },
             { label: 'Publier', icon: Plus, page: 'seller-post' as Page, primary: true },
             { label: 'Favoris', icon: Heart, page: 'buyer-favorites' as Page },
-            { label: 'Profil', icon: User, page: (isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
+            { label: 'Profil', icon: User, page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
           ].map(item => {
             const IconComp = item.icon
             const isActive = currentPage === item.page

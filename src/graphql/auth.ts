@@ -40,6 +40,7 @@ export const GUEST_LOGIN_MUTATION = gql`
         id
         email
         fullName
+        isGuest
       }
     }
   }
@@ -55,6 +56,7 @@ export const ME_QUERY = gql`
       city
       avatarUrl
       notificationPreferences
+      isGuest
     }
   }
 `
@@ -82,6 +84,7 @@ export type AuthUser = {
   city?: string | null
   avatarUrl?: string | null
   notificationPreferences?: Record<string, boolean>
+  isGuest?: boolean
 }
 
 export type AuthPayload = {
