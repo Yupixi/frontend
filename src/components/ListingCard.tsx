@@ -77,14 +77,20 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   const [done, setDone] = useState(false)
   if (isActivelyBoosted(listing) || done) return null
   return (
-    <div style={{ position: 'relative', marginTop: 8 }} onClick={e => e.stopPropagation()}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', padding: '6px 8px', background: 'rgba(254,0,0,0.06)', border: '1px dashed var(--primary)', borderRadius: 8, color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
-      >
-        <ArrowUp size={12} /> Boostez cette annonce
-      </button>
-      {open && <BoostMenu listingId={listing.id} onDone={() => { setOpen(false); setDone(true) }} />}
+    <div style={{ marginTop: 8 }} onClick={e => e.stopPropagation()}>
+      {open ? (
+        // 'dropdown' would be clipped invisible here — the card root has
+        // overflow: hidden (for the image's rounded corners), which cuts
+        // off anything absolutely positioned past its bounds.
+        <BoostMenu listingId={listing.id} variant="inline" onDone={() => { setOpen(false); setDone(true) }} />
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          style={{ width: '100%', padding: '6px 8px', background: 'rgba(254,0,0,0.06)', border: '1px dashed var(--primary)', borderRadius: 8, color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
+        >
+          <ArrowUp size={12} /> Boostez cette annonce
+        </button>
+      )}
     </div>
   )
 }
