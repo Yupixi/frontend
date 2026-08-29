@@ -4,12 +4,12 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Heart, Share2, MapPin, MessageCircle, ShieldCheck,
   ChevronLeft, ChevronRight, Eye, Tag, Truck, CheckCircle,
-  Calendar, ArrowLeft, Flag, ExternalLink, ArrowUp,
+  Calendar, ArrowLeft, Flag, ExternalLink, ArrowUp, Archive,
 } from 'lucide-react'
 import Price from '../components/Price'
 import InlineConversation from '../components/InlineConversation'
 import BoostMenu from '../components/BoostMenu'
-import { LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
+import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import type { AuthUser } from '../graphql/auth'
@@ -88,6 +88,42 @@ function OwnerBoostPanel({ listingId, isBoosted, boostExpiresAt, boostMenuOpen, 
   )
 }
 
+// The seller's own view of a listing the daily expiry sweep has since
+// archived (see ListingsService.expireStaleListings) — bumpListing doubles
+// as "republish" for an EXPIRED listing, no separate renew endpoint needed.
+function OwnerRenewPanel({ listingId }: { listingId: string }) {
+  const [bumpListing, { loading }] = useMutation(BUMP_LISTING_MUTATION)
+  const [renewed, setRenewed] = useState(false)
+  if (renewed) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: '#059669', fontSize: '0.82rem', fontWeight: 700 }}>
+        <CheckCircle size={16} /> Annonce remise en ligne
+      </div>
+    )
+  }
+  return (
+    <div>
+      <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Cette annonce a expiré après 90 jours et n'est plus visible des acheteurs. Remettez-la en ligne pour reprendre là où vous en étiez.</p>
+      <button className="btn-primary" disabled={loading} style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => void bumpListing({ variables: { id: listingId } }).then(() => setRenewed(true))}>
+        <Archive size={18} /> {loading ? 'Remise en ligne...' : 'Remettre en ligne'}
+      </button>
+    </div>
+  )
+}
+
+// Shown to anyone else who reaches an expired listing (a permalink someone
+// bookmarked, an old search result cached elsewhere) — the listing itself
+// stays fully visible below (that's the point: an archive, not a 404), but
+// contacting the seller or making an offer on a dead listing doesn't.
+function ExpiredListingNotice() {
+  return (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '1rem', borderRadius: 9, background: 'var(--border-subtle)', color: 'var(--fg-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+      <Archive size={20} style={{ flexShrink: 0, marginTop: 1 }} />
+      <span>Cette annonce n'est plus disponible — elle a expiré. Vous consultez une archive ; le vendeur ne peut plus être contacté à ce sujet.</span>
+    </div>
+  )
+}
+
 export default function ListingDetail({ listingId, onNavigate, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [offerOpen, setOfferOpen] = useState(false)
@@ -139,6 +175,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
   const isFav = favorites.includes(listing.id)
   const isOwner = !!currentUser && listing.seller.id === currentUser.id
   const isBoosted = !!listing.boostExpiresAt && new Date(listing.boostExpiresAt) > new Date()
+  const isExpired = listing.status === 'EXPIRED'
 
   // The app never puts state in the URL (see App.tsx), so the shareable
   // link is built here with a `?listing=` param App.tsx knows to read on
@@ -367,19 +404,25 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
         <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
             <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>
-              {isOwner ? 'Votre annonce' : 'Discutez avec le vendeur'}
+              {isOwner ? 'Votre annonce' : isExpired ? 'Annonce expirée' : 'Discutez avec le vendeur'}
             </h3>
 
             {isOwner ? (
-              <OwnerBoostPanel
-                listingId={listing.id}
-                isBoosted={isBoosted}
-                boostExpiresAt={listing.boostExpiresAt}
-                boostMenuOpen={boostMenuOpen}
-                setBoostMenuOpen={setBoostMenuOpen}
-                justBoosted={justBoosted}
-                onBoosted={() => setJustBoosted(true)}
-              />
+              isExpired ? (
+                <OwnerRenewPanel listingId={listing.id} />
+              ) : (
+                <OwnerBoostPanel
+                  listingId={listing.id}
+                  isBoosted={isBoosted}
+                  boostExpiresAt={listing.boostExpiresAt}
+                  boostMenuOpen={boostMenuOpen}
+                  setBoostMenuOpen={setBoostMenuOpen}
+                  justBoosted={justBoosted}
+                  onBoosted={() => setJustBoosted(true)}
+                />
+              )
+            ) : isExpired ? (
+              <ExpiredListingNotice />
             ) : (
               <>
                 {chatOpen ? (
@@ -500,7 +543,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
           </button>
         )}
         <button onClick={() => setSellerSheetOpen(true)} className="btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, fontSize: '0.85rem', fontFamily: "'Outfit', sans-serif", fontWeight: 800 }}>
-          {isOwner ? <><ArrowUp size={16} /> Booster</> : <><MessageCircle size={16} /> Contacter</>}
+          {isOwner
+            ? isExpired ? <><Archive size={16} /> Remettre en ligne</> : <><ArrowUp size={16} /> Booster</>
+            : isExpired ? <><Archive size={16} /> Archivée</> : <><MessageCircle size={16} /> Contacter</>}
         </button>
       </div>
 
@@ -541,15 +586,21 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
               </button>
 
               {isOwner ? (
-                <OwnerBoostPanel
-                  listingId={listing.id}
-                  isBoosted={isBoosted}
-                  boostExpiresAt={listing.boostExpiresAt}
-                  boostMenuOpen={boostMenuOpen}
-                  setBoostMenuOpen={setBoostMenuOpen}
-                  justBoosted={justBoosted}
-                  onBoosted={() => setJustBoosted(true)}
-                />
+                isExpired ? (
+                  <OwnerRenewPanel listingId={listing.id} />
+                ) : (
+                  <OwnerBoostPanel
+                    listingId={listing.id}
+                    isBoosted={isBoosted}
+                    boostExpiresAt={listing.boostExpiresAt}
+                    boostMenuOpen={boostMenuOpen}
+                    setBoostMenuOpen={setBoostMenuOpen}
+                    justBoosted={justBoosted}
+                    onBoosted={() => setJustBoosted(true)}
+                  />
+                )
+              ) : isExpired ? (
+                <ExpiredListingNotice />
               ) : (
                 <>
                   {chatOpen ? (

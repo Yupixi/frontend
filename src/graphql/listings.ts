@@ -166,6 +166,7 @@ export const LISTING_QUERY = gql`
       condition
       negotiable
       deliveryAvailable
+      status
       tags
       attributes
       viewsCount
@@ -396,6 +397,7 @@ export type RemoteListing = {
   createdAt: string
   coverImageUrl: string | null
   boostExpiresAt?: string | null
+  status?: string
   activeCampaignDiscount?: CampaignDiscount | null
   media: { url: string }[]
   category: { slug: string; name: string }
