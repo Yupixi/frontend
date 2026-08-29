@@ -1524,6 +1524,10 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
+  /* Grid's default stretch makes every card in a row match the tallest one
+     — without this, opening a card's inline boost picker (see
+     OwnListingBoostCta) visibly inflates its neighbors with empty space. */
+  align-items: start;
 }
 
 @media (max-width: 640px) {
