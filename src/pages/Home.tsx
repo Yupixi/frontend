@@ -9,6 +9,7 @@ import { LISTINGS_QUERY, RECOMMENDED_LISTINGS_QUERY, type RemoteListing } from '
 import { HOME_BANNERS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteBanner, type ActiveCampaign } from '../graphql/content'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import { followBannerCta } from '../lib/bannerCta'
+import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 
 type HomeProps = {
@@ -18,6 +19,7 @@ type HomeProps = {
   onToggleFavorite: (id: string) => void
   onCategorySelect?: (categoryId: string) => void
   currentUser?: AuthUser | null
+  location?: StoredLocation | null
 }
 
 function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggleFav }: {
@@ -74,7 +76,7 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
   )
 }
 
-export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser }: HomeProps) {
+export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location }: HomeProps) {
   // A cramped 2-column grid reads as cluttered on small screens — default to
   // the single-column list view there; desktop keeps the grid. An explicit
   // choice is remembered (shared with Search) and wins over that default.
@@ -91,8 +93,17 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // meant as a shortcut to the busiest categories, not a duplicate full list.
   const popularCategories = (categoriesData?.categories ?? []).slice(0, 8)
 
+  // A detected/chosen country softly scopes the feed to that market — it's
+  // just a filter value, so a wrong or missing detection simply shows
+  // everything (never an empty feed the user can't get out of; the header's
+  // location pill can also always clear it back to "Tous les pays").
   const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: { sort: 'RECENT', page: 1, pageSize: 12 },
+    variables: {
+      sort: 'RECENT',
+      page: 1,
+      pageSize: 12,
+      filter: location?.countryCode ? { countryCode: location.countryCode } : undefined,
+    },
   })
   const recent = listingsData?.listings.items ?? []
 

@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
+import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush } from './lib/pushNotifications'
 import Home from './pages/Home'
@@ -89,6 +90,27 @@ export default function App() {
   const [showInstallGuide, setShowInstallGuide] = useState(false)
   const [showUpdateBanner, setShowUpdateBanner] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [location, setLocation] = useState<StoredLocation | null>(() => getStoredLocation())
+
+  // Only ever runs the IP lookup once per browser — a stored value (even a
+  // manually-cleared "all countries" one) means we already know what to do
+  // and silently re-detecting would override a deliberate user choice.
+  useEffect(() => {
+    if (location) return
+    let cancelled = false
+    void detectLocationFromIP().then(detected => {
+      if (cancelled || !detected) return
+      setStoredLocation(detected)
+      setLocation(detected)
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const changeLocation = (next: StoredLocation) => {
+    setStoredLocation(next)
+    setLocation(next)
+  }
 
   useEffect(() => {
     const onUpdateAvailable = () => setShowUpdateBanner(true)
@@ -291,7 +313,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} />
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
       case 'listing-detail':
@@ -306,7 +328,7 @@ export default function App() {
         return <Auth onNavigate={navigate} onLogin={handleAuthenticated} />
 
       default:
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} location={location} />
     }
   }
 
@@ -373,6 +395,8 @@ export default function App() {
         onSelectListing={selectListing}
         onSetSearchTerm={setSearchTerm}
         onClearCategoryFilter={() => setCategoryFilter('')}
+        location={location}
+        onLocationChange={changeLocation}
       >
         {renderPage()}
       </Layout>

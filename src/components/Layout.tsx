@@ -9,7 +9,9 @@ import {
 import Logo from './Logo'
 import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
+import LocationPill from './LocationPill'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteFooterSettings, type ActiveCampaign } from '../graphql/content'
+import type { StoredLocation } from '../lib/location'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
@@ -29,6 +31,8 @@ type LayoutProps = {
   onSelectListing?: (id: string) => void
   onSetSearchTerm?: (term: string) => void
   onClearCategoryFilter?: () => void
+  location?: StoredLocation | null
+  onLocationChange?: (location: StoredLocation) => void
 }
 
 export default function Layout({
@@ -43,7 +47,9 @@ export default function Layout({
   onToggleLogin,
   onSelectListing,
   onSetSearchTerm,
-  onClearCategoryFilter
+  onClearCategoryFilter,
+  location,
+  onLocationChange,
 }: LayoutProps) {
   const displayName = currentUser?.fullName || 'Mon compte'
   const displayInitial = displayName.charAt(0).toUpperCase()
@@ -206,6 +212,10 @@ export default function Layout({
               >
                 <Search size={18} />
               </button>
+
+              {onLocationChange && (
+                <LocationPill location={location} onChange={onLocationChange} compact={isMobile} />
+              )}
 
               <div className="desktop-only">
                 <button
