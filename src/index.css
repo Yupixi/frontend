@@ -853,9 +853,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 .hero-mosaic {
   display: grid;
-  grid-template-columns: 2.2fr 1fr 1fr;
-  grid-template-rows: repeat(3, 125px);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+  grid-template-rows: repeat(3, 132px);
+  gap: 12px;
   animation: heroMosaicIn 0.8s ease-out backwards;
 }
 
@@ -866,7 +866,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   cursor: pointer;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  transition: border-color 0.25s ease, transform 0.25s ease;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
   display: flex;
   flex-direction: column;
 }
@@ -876,24 +877,23 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 .hero-mosaic-card:hover {
   transform: translateY(-2px);
-  border-color: var(--primary);
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
   z-index: 5;
 }
 .dark .hero-mosaic-card:hover {
   border-color: #5A3737;
 }
 
-/* Bento grid: one tall featured tile, two small tiles top-right, one
-   medium tile bottom-right spanning both — every tile gets a sane
-   landscape-ish ratio instead of the old wide-short sliver that made the
-   4th card's photo nearly invisible. */
+/* Editorial layout: one strong lead story and three equally weighted
+   discoveries. It is calmer and easier to scan than a mixed-size mosaic. */
 .hero-mosaic-card-main {
   grid-column: 1;
   grid-row: 1 / 4;
 }
 .hero-mosaic-card:nth-child(2) { grid-column: 2; grid-row: 1; }
-.hero-mosaic-card:nth-child(3) { grid-column: 3; grid-row: 1; }
-.hero-mosaic-card:nth-child(4) { grid-column: 2 / 4; grid-row: 2 / 4; }
+.hero-mosaic-card:nth-child(3) { grid-column: 2; grid-row: 2; }
+.hero-mosaic-card:nth-child(4) { grid-column: 2; grid-row: 3; }
 /* A 5th card only exists as the mobile carousel's trailing loop clone
    (see hero-mosaic-dots comment) ÔÇö never shown in the desktop grid. */
 .hero-mosaic-card:nth-child(5) { display: none; }
@@ -1080,22 +1080,27 @@ h1, h2, h3, h4, h5, h6, .font-brand {
    layout untouched. */
 @media (min-width: 641px) {
   .hero-mosaic-card:not(.hero-mosaic-card-main) .hero-mosaic-img-wrap {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    flex: 0 0 42%;
+    height: 100%;
+  }
+  .hero-mosaic-card:not(.hero-mosaic-card-main) {
+    flex-direction: row;
   }
   .hero-mosaic-card:not(.hero-mosaic-card-main) .hero-mosaic-body {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 30px;
-    padding: 0;
-    background: none;
+    position: relative;
+    min-width: 0;
+    flex: 1;
+    padding: 16px 38px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
   .hero-mosaic-card:not(.hero-mosaic-card-main) .hero-mosaic-title {
-    font-size: 0.8rem;
-    margin: 0;
-    color: #FFFFFF;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.55);
+    font-size: 0.86rem;
+    margin: 0 0 8px;
+    color: var(--fg);
+    text-shadow: none;
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -1104,34 +1109,65 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   }
 }
 .hero-mosaic-card:not(.hero-mosaic-card-main) .hero-mosaic-location {
-  display: none;
+  display: flex;
 }
 
 /* --- Espace Boost header --- */
 .hero-boost-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 10px;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
 }
-.hero-boost-pill {
+.featured-heading-copy {
+  min-width: 0;
+}
+.featured-kicker {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #FFDD21;
-  color: #0F172A;
+  color: var(--primary);
   font-family: 'Outfit', sans-serif;
   font-weight: 900;
-  font-size: 0.82rem;
-  padding: 5px 13px;
-  border-radius: 999px;
-  white-space: nowrap;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.featured-title {
+  margin: 0;
+  color: var(--fg);
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
+  line-height: 1.1;
+  font-weight: 900;
 }
 .hero-boost-note {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.75rem;
   color: var(--fg-muted);
-  font-weight: 600;
+  font-weight: 500;
+  margin: 5px 0 0;
+}
+.featured-see-all {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--fg);
+  border-radius: 999px;
+  padding: 9px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.featured-see-all:hover {
+  color: var(--primary);
+  border-color: var(--primary);
 }
 .hero-boost-hint {
   display: none;
@@ -1174,7 +1210,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 /* --- Responsive --- */
 @media (max-width: 1024px) {
   .hero-mosaic {
-    max-width: 600px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+    max-width: 900px;
     margin: 0 auto;
   }
 }
@@ -1264,8 +1301,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
     padding: 6px 15px;
   }
   .hero-boost-note {
-    display: none;
+    font-size: 0.72rem;
   }
+  .featured-see-all { display: none; }
   .hero-boost-hint {
     display: inline-flex;
   }

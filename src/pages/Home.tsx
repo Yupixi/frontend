@@ -532,10 +532,14 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
         <section className="featured-strip">
           <div className="featured-strip-inner">
             <div className="hero-boost-header">
-              <span className="hero-boost-pill">
-                <Zap size={13} fill="#0F172A" /> {featuredHeading?.title || 'À la une'}
-              </span>
-              <span className="hero-boost-note">{featuredHeading?.subtitle || 'Les annonces les plus populaires du moment'}</span>
+              <div className="featured-heading-copy">
+                <span className="featured-kicker"><Zap size={13} /> Sélection du moment</span>
+                <h2 className="featured-title">{featuredHeading?.title || 'À la une'}</h2>
+                <p className="hero-boost-note">{featuredHeading?.subtitle || 'Des annonces qui méritent votre attention près de chez vous'}</p>
+              </div>
+              <button className="featured-see-all" onClick={() => onNavigate('search')}>
+                Tout découvrir <ArrowRight size={15} />
+              </button>
               <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
             </div>
 
