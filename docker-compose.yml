@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: yupixi
+      POSTGRES_PASSWORD: yupixi
+      POSTGRES_DB: yupixi
+    ports:
+      - '5432:5432'
+    volumes:
+      - yupixi_postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://yupixi:yupixi@postgres:5432/yupixi?schema=public
+    ports:
+      - '4000:4000'
+
+volumes:
+  yupixi_postgres_data:
