@@ -56,8 +56,8 @@ export const LISTINGS_QUERY = gql`
 `
 
 export const RECOMMENDED_LISTINGS_QUERY = gql`
-  query RecommendedListings($limit: Float) {
-    recommendedListings(limit: $limit) {
+  query RecommendedListings($limit: Float, $countryCode: String, $city: String) {
+    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city) {
       id
       title
       description

@@ -51,7 +51,7 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
 
         {/* Price */}
         <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-          <Price amount={card.price} />
+          <Price amount={card.price} currency={card.currency} />
         </div>
       </div>
 
@@ -97,15 +97,28 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // just a filter value, so a wrong or missing detection simply shows
   // everything (never an empty feed the user can't get out of; the header's
   // location pill can also always clear it back to "Tous les pays").
-  const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+  const { data: cityListingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+    variables: {
+      sort: 'RECENT',
+      page: 1,
+      pageSize: 12,
+      filter: location?.countryCode && location.city
+        ? { countryCode: location.countryCode, city: location.city }
+        : location?.countryCode ? { countryCode: location.countryCode } : undefined,
+    },
+  })
+  const { data: countryListingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
     variables: {
       sort: 'RECENT',
       page: 1,
       pageSize: 12,
       filter: location?.countryCode ? { countryCode: location.countryCode } : undefined,
     },
+    skip: !location?.countryCode || !location.city,
   })
-  const recent = listingsData?.listings.items ?? []
+  const cityListings = cityListingsData?.listings.items ?? []
+  const countryListings = countryListingsData?.listings.items ?? []
+  const recent = [...cityListings, ...countryListings.filter(item => !cityListings.some(local => local.id === item.id))].slice(0, 12)
 
   // BO-authored content (hero copy, trust bar, partners banner, seller CTA)
   // — each falls back to the default copy below when the slot is empty, so
@@ -161,7 +174,11 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // viewer's views/favorites/offers when signed in with history, boosted
   // listings bumped up, popularity + recency fallback otherwise.
   const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
-    variables: { limit: 8 },
+    variables: {
+      limit: 8,
+      countryCode: location?.countryCode ?? undefined,
+      city: location?.city ?? undefined,
+    },
   })
   const highlighted = (recommendedData?.recommendedListings ?? []).slice(0, 4)
 

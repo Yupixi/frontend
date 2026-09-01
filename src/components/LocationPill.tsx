@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MapPin, ChevronDown } from 'lucide-react'
 import { MARKETS } from '../data/markets'
 import type { StoredLocation } from '../lib/location'
@@ -14,11 +14,23 @@ type LocationPillProps = {
 // filter they can't see or clear.
 export default function LocationPill({ location, onChange, compact }: LocationPillProps) {
   const [open, setOpen] = useState(false)
+  const [city, setCity] = useState(location?.city ?? '')
   const market = location?.countryCode ? MARKETS.find(m => m.countryCode === location.countryCode) : undefined
   const label = market ? (location?.city ? `${location.city}, ${market.country}` : market.country) : 'Tous les pays'
 
+  useEffect(() => setCity(location?.city ?? ''), [location?.city])
+
   const pick = (countryCode: string | null) => {
-    onChange({ countryCode, city: countryCode ? location?.city ?? null : null, source: 'manual' })
+    // A city belongs to the previous market; retaining it would create
+    // impossible pairs such as Dakar/CI and an empty feed.
+    setCity('')
+    onChange({ countryCode, city: null, source: 'manual' })
+    if (!countryCode) setOpen(false)
+  }
+
+  const applyCity = () => {
+    if (!location?.countryCode) return
+    onChange({ countryCode: location.countryCode, city: city.trim() || null, source: 'manual' })
     setOpen(false)
   }
 
@@ -46,7 +58,7 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
           <div style={{
             position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 30,
             background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 6, width: 220, maxHeight: 320, overflowY: 'auto',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 6, width: 250, maxHeight: 380, overflowY: 'auto',
           }}>
             <button
               onClick={() => pick(null)}
@@ -63,6 +75,15 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
                 {m.country}
               </button>
             ))}
+            {market && (
+              <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, padding: '10px 6px 4px' }}>
+                <label style={{ display: 'block', marginBottom: 5, color: 'var(--fg-muted)', fontSize: '0.72rem', fontWeight: 700 }}>Ville ou commune</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input className="input" value={city} onChange={e => setCity(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCity()} placeholder="Ex : Cocody" style={{ minWidth: 0, padding: '7px 8px', fontSize: '0.78rem' }} />
+                  <button className="btn-primary" onClick={applyCity} style={{ padding: '7px 9px', fontSize: '0.75rem' }}>OK</button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
