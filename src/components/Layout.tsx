@@ -217,27 +217,6 @@ export default function Layout({
                 <LocationPill location={location} onChange={onLocationChange} compact={isMobile} />
               )}
 
-              <div className="desktop-only">
-                <button
-                  onClick={onToggleDark}
-                  style={{
-                    background: 'var(--border-subtle)',
-                    border: '1px solid var(--border)',
-                    cursor: 'pointer',
-                    width: 38,
-                    height: 38,
-                    color: 'var(--fg-muted)',
-                    borderRadius: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  title="Changer le thème"
-                >
-                  {dark ? <Sun size={18} style={{ color: '#FFDD21' }} /> : <Moon size={18} />}
-                </button>
-              </div>
-
               {isLoggedIn ? (
                 <>
                   {/* Notifications — badge/dropdown content will return once
@@ -288,29 +267,6 @@ export default function Layout({
                   >
                     <MessageCircle size={18} />
                   </button>
-
-                  {/* Favorites */}
-                  {!currentUser?.isGuest && (
-                    <button
-                      onClick={() => onNavigate('buyer-favorites')}
-                      className="desktop-only"
-                      style={{
-                        background: 'var(--border-subtle)',
-                        border: '1px solid var(--border)',
-                        cursor: 'pointer',
-                        width: 38,
-                        height: 38,
-                        color: 'var(--fg-muted)',
-                        borderRadius: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="Favoris"
-                    >
-                      <Heart size={18} />
-                    </button>
-                  )}
 
                   {/* User Avatar Menu */}
                   <div style={{ position: 'relative' }}>
@@ -399,6 +355,21 @@ export default function Layout({
                             {item.label}
                           </button>
                         ))}
+
+                        <button
+                          onClick={() => { onToggleDark(); setUserMenuOpen(false) }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            width: '100%', padding: '10px 14px', background: 'none',
+                            border: 'none', cursor: 'pointer', color: 'var(--fg)',
+                            fontFamily: 'Outfit, sans-serif', fontWeight: 700,
+                            fontSize: '0.875rem', borderRadius: 8, textAlign: 'left',
+                          }}
+                          className="sidebar-item"
+                        >
+                          {dark ? <Sun size={16} style={{ color: '#D97706' }} /> : <Moon size={16} />}
+                          {dark ? 'Mode clair' : 'Mode sombre'}
+                        </button>
 
                         <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6 }}>
                           <button
