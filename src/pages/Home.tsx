@@ -76,6 +76,44 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
   )
 }
 
+function SponsoredListingCard({ listing, onSelect }: { listing: RemoteListing, onSelect: () => void }) {
+  const expiresAt = listing.boostExpiresAt ? new Date(listing.boostExpiresAt) : null
+  return (
+    <article
+      onClick={onSelect}
+      style={{
+        minWidth: 285, maxWidth: 330, flex: '1 0 285px', overflow: 'hidden', cursor: 'pointer',
+        borderRadius: 18, background: 'var(--bg-card)', border: '1px solid rgba(217,119,6,0.28)',
+        boxShadow: '0 10px 28px rgba(15,23,42,0.08)', position: 'relative',
+      }}
+    >
+      <div style={{ height: 185, position: 'relative', overflow: 'hidden', background: 'var(--border-subtle)' }}>
+        {listingImage(listing) ? (
+          <img src={listingImage(listing)} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}><Tag size={36} /></div>
+        )}
+        <span style={{ position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.94)', color: '#92400E', fontSize: '0.68rem', fontWeight: 900, boxShadow: '0 3px 10px rgba(15,23,42,0.12)' }}>
+          <Sparkles size={12} fill="#FBBF24" color="#D97706" /> Mise en avant
+        </span>
+      </div>
+      <div style={{ padding: '1rem' }}>
+        <div className="price-tag" style={{ fontSize: '1.05rem' }}><Price amount={listing.price} currency={listing.currency} /></div>
+        <h3 style={{ margin: '6px 0 8px', fontFamily: "'Outfit', sans-serif", fontSize: '0.94rem', fontWeight: 850, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--fg-muted)', fontSize: '0.76rem', marginBottom: 12 }}>
+          <MapPin size={13} color="var(--primary)" /> {listingLocation(listing)}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
+          <span style={{ marginRight: 'auto', color: 'var(--fg-subtle)', fontSize: '0.66rem' }}>
+            {expiresAt ? `Mise en avant jusqu’au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}` : 'Annonce mise en avant'}
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--primary)', fontSize: '0.74rem', fontWeight: 850 }}>Voir <ArrowRight size={13} /></span>
+        </div>
+      </div>
+    </article>
+  )
+}
+
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location }: HomeProps) {
   // A cramped 2-column grid reads as cluttered on small screens — default to
   // the single-column list view there; desktop keeps the grid. An explicit
@@ -180,7 +218,13 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
       city: location?.city ?? undefined,
     },
   })
-  const highlighted = (recommendedData?.recommendedListings ?? []).slice(0, 4)
+  const recommendations = recommendedData?.recommendedListings ?? []
+  const sponsored = recommendations
+    .filter(item => item.boostExpiresAt && new Date(item.boostExpiresAt) > new Date())
+    .filter((item, index, items) => items.findIndex(candidate => candidate.seller.id === item.seller.id) === index)
+    .slice(0, 4)
+  const sponsoredIds = new Set(sponsored.map(item => item.id))
+  const highlighted = recommendations.filter(item => !sponsoredIds.has(item.id)).slice(0, 4)
 
   const loopCount = highlighted.length
   const mosaicSlides = loopCount > 1 ? [...highlighted, highlighted[0]] : highlighted
@@ -551,8 +595,28 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </div>
           </div>
 
-          {renderListingsContainer(recent)}
+          {renderListingsContainer(recent.filter(item => !sponsoredIds.has(item.id)))}
         </section>
+
+        {sponsored.length > 0 && (
+          <section style={{ margin: '-0.5rem 0 3.5rem', padding: '1.25rem', borderRadius: 22, background: 'linear-gradient(135deg, rgba(251,191,36,0.10), rgba(255,255,255,0))', border: '1px solid rgba(217,119,6,0.18)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#B45309', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}><Sparkles size={14} /> Sélection locale</div>
+                <h2 className="section-title" style={{ margin: 0 }}>Mis en avant près de chez vous</h2>
+                <p style={{ color: 'var(--fg-muted)', fontSize: '0.84rem', margin: '4px 0 0' }}>Des vendeurs ont choisi de donner plus de visibilité à ces annonces.</p>
+              </div>
+              <span style={{ color: 'var(--fg-subtle)', fontSize: '0.7rem' }}>Contenu sponsorisé par les vendeurs</span>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '2px 2px 12px', scrollSnapType: 'x mandatory' }}>
+              {sponsored.map(listing => (
+                <div key={listing.id} style={{ scrollSnapAlign: 'start', display: 'flex' }}>
+                  <SponsoredListingCard listing={listing} onSelect={() => onSelectListing(listing.id)} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Comment ça marche — BO-authored via HOME_HOW_IT_WORKS (reuses the
             banner stats array as {value: step number, label: title,
