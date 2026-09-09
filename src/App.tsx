@@ -158,6 +158,9 @@ export default function App() {
         if (data?.me) {
           setCurrentUser(data.me)
           setIsLoggedIn(true)
+          // Refresh an existing subscription after restoring the session.
+          // A new permission prompt must be triggered from the settings UI.
+          void subscribeToPush(false)
         } else {
           clearTokens()
           setIsLoggedIn(false)
@@ -284,7 +287,7 @@ export default function App() {
     void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me))
     // Best-effort browser push opt-in — matters most for a guest who just
     // messaged a seller and has no other way to learn about a reply.
-    void subscribeToPush()
+    void subscribeToPush(false)
   }
 
   const toggleFavorite = (id: string) => {
@@ -317,7 +320,7 @@ export default function App() {
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
       case 'listing-detail':
-        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} />
+        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} />
       case 'seller-profile':
         return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn} />
       case 'categories':

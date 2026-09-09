@@ -39,6 +39,7 @@ import {
 } from '../../graphql/account'
 import { formatRelativeDate } from '../../lib/format'
 import { uploadImages } from '../../lib/upload'
+import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } from '../../lib/pushNotifications'
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as PageLayout } from '../account/AccountLayout'
 
@@ -757,6 +758,8 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
   const [city, setCity] = useState(currentUser?.city ?? 'Abidjan')
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl ?? '')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [pushStatus, setPushStatus] = useState<PushSubscriptionResult | 'available'>(() => getPushAvailability())
+  const [enablingPush, setEnablingPush] = useState(false)
   const avatarInitial = (currentUser?.fullName || '?').charAt(0).toUpperCase()
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -784,6 +787,30 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
     setCity(currentUser.city ?? 'Abidjan')
     setAvatarUrl(currentUser.avatarUrl ?? '')
   }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser || getPushAvailability() !== 'available') return
+    void subscribeToPush(false).then(setPushStatus)
+  }, [currentUser])
+
+  const enableMobileNotifications = async () => {
+    setEnablingPush(true)
+    setPushStatus(await subscribeToPush(true))
+    setEnablingPush(false)
+  }
+
+  const pushStatusCopy: Record<PushSubscriptionResult | 'available', { title: string; desc: string; tone: string }> = {
+    subscribed: { title: 'Notifications activées', desc: 'Ce téléphone recevra les nouveaux messages et les alertes importantes.', tone: '#059669' },
+    available: { title: 'Autorisation accordée', desc: 'Activez ce téléphone pour finaliser la réception des notifications.', tone: '#D97706' },
+    'permission-required': { title: 'Notifications désactivées', desc: 'Activez-les pour être prévenu même lorsque Yüpixi est fermé.', tone: '#D97706' },
+    'permission-denied': { title: 'Autorisation bloquée', desc: 'Ouvrez les réglages du navigateur ou du téléphone, autorisez les notifications pour Yüpixi, puis réessayez.', tone: '#DC2626' },
+    'ios-install-required': { title: "Installation requise sur iPhone", desc: "Dans Safari, touchez Partager puis « Sur l’écran d’accueil ». Ouvrez ensuite Yüpixi depuis son icône pour activer les notifications.", tone: '#D97706' },
+    unsupported: { title: 'Mobile non compatible', desc: 'Ce navigateur ne prend pas en charge les notifications web. Essayez une version récente de Safari, Chrome ou Edge.', tone: '#64748B' },
+    'not-configured': { title: 'Service temporairement indisponible', desc: "Les notifications ne sont pas encore configurées sur le serveur. L’équipe technique doit activer les clés d’envoi.", tone: '#DC2626' },
+    error: { title: "Activation impossible", desc: 'Vérifiez votre connexion puis réessayez. Vos notifications restent visibles dans votre espace Yüpixi.', tone: '#DC2626' },
+  }
+  const pushCopy = pushStatusCopy[pushStatus]
+  const canEnablePush = ['available', 'permission-required', 'error'].includes(pushStatus)
 
   const handleAvatarSelected = async (files: FileList | null) => {
     const file = files?.[0]
@@ -883,6 +910,20 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
       icon: Bell,
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem', border: `1px solid ${pushCopy.tone}40`, background: `${pushCopy.tone}0D`, borderRadius: 12 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: pushCopy.tone, background: `${pushCopy.tone}18` }}>
+              <Smartphone size={21} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem', color: pushCopy.tone }}>{pushCopy.title}</div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--fg-muted)', lineHeight: 1.45, marginTop: 2 }}>{pushCopy.desc}</div>
+            </div>
+            {canEnablePush && (
+              <button className="btn-primary" onClick={enableMobileNotifications} disabled={enablingPush} style={{ padding: '0.55rem 0.85rem', fontSize: '0.76rem', flexShrink: 0 }}>
+                {enablingPush ? 'Activation…' : pushStatus === 'error' ? 'Réessayer' : 'Activer'}
+              </button>
+            )}
+          </div>
           {NOTIFICATION_PREFERENCE_ITEMS.map(item => (
             <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--border-subtle)', borderRadius: 10 }}>
               <div>

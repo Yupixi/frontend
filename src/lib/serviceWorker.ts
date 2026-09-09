@@ -34,6 +34,8 @@ export function registerServiceWorker() {
           if (installing.state === 'installed') notifyIfWaiting()
         })
       })
+    }).catch(() => {
+      // Push setup remains recoverable from the notification settings.
     })
   })
 }

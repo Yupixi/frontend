@@ -19,6 +19,7 @@ import { formatRelativeDate } from '../lib/format'
 type ListingDetailProps = {
   listingId: string
   onNavigate: (page: any) => void
+  onSelectListing: (id: string) => void
   onSelectSeller: (id: string) => void
   onAuthenticated: () => void
   favorites: string[]
@@ -124,7 +125,7 @@ function ExpiredListingNotice() {
   )
 }
 
-export default function ListingDetail({ listingId, onNavigate, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser }: ListingDetailProps) {
+export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [offerOpen, setOfferOpen] = useState(false)
   const [offerAmount, setOfferAmount] = useState('')
@@ -385,7 +386,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectSeller, o
               <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', margin: '0 0 1rem' }}>Annonces similaires</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 {similar.map(l => (
-                  <div key={l.id} className="card card-hover" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => onNavigate('listing-detail')}>
+                  <div key={l.id} className="card card-hover" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
                     <div style={{ height: 130, background: 'var(--border-subtle)', overflow: 'hidden' }}>
                       <img src={l.coverImageUrl ?? l.media[0]?.url ?? ''} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     </div>
