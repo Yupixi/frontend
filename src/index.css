@@ -853,15 +853,15 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 .hero-mosaic {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
-  grid-template-rows: repeat(3, 132px);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr);
+  grid-template-rows: repeat(3, 142px);
+  gap: 14px;
   animation: heroMosaicIn 0.8s ease-out backwards;
 }
 
 .hero-mosaic-card {
   position: relative;
-  border-radius: var(--radius);
+  border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
   background: var(--bg-card);
@@ -890,6 +890,37 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .hero-mosaic-card-main {
   grid-column: 1;
   grid-row: 1 / 4;
+}
+.hero-mosaic-card-main .hero-mosaic-img-wrap {
+  position: absolute;
+  inset: 0;
+}
+.hero-mosaic-card-main .hero-mosaic-overlay {
+  background: linear-gradient(180deg, rgba(2,6,23,0.02) 30%, rgba(2,6,23,0.9) 100%);
+}
+.hero-mosaic-card-main .hero-mosaic-body {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 5rem 1.5rem 1.4rem;
+  color: #fff;
+  background: transparent;
+}
+.hero-mosaic-card-main .hero-mosaic-title {
+  max-width: 82%;
+  margin-bottom: 10px;
+  color: #fff;
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  white-space: normal;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.35);
+}
+.hero-mosaic-card-main .hero-mosaic-location { color: rgba(255,255,255,0.82); }
+.hero-mosaic-card-main .hero-mosaic-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .hero-mosaic-card:nth-child(2) { grid-column: 2; grid-row: 1; }
 .hero-mosaic-card:nth-child(3) { grid-column: 2; grid-row: 2; }
@@ -959,16 +990,16 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 .hero-mosaic-category {
   position: absolute;
-  top: 32px;
-  left: 8px;
-  background: rgba(255,255,255,0.92);
+  top: 16px;
+  left: 16px;
+  background: rgba(255,255,255,0.9);
   color: #0F172A;
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
-  font-size: 0.65rem;
-  padding: 2px 8px;
-  border-radius: 6px;
-  backdrop-filter: blur(4px);
+  font-size: 0.7rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
 }
 .dark .hero-mosaic-category {
   background: rgba(42,27,27,0.9);
@@ -994,19 +1025,23 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .hero-mosaic-price {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
+  position: relative;
   font-family: 'Outfit', sans-serif;
   font-weight: 900;
   font-size: 0.8rem;
-  color: #FFFFFF;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+  color: var(--primary);
+  text-shadow: none;
+  white-space: nowrap;
 }
 .hero-mosaic-price-lg {
-  font-size: 1.1rem;
-  bottom: 14px;
-  left: 12px;
+  margin-left: auto;
+  padding: 7px 10px;
+  border-radius: 10px;
+  color: #fff;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px);
+  font-size: 1rem;
 }
 
 .hero-mosaic-fav {
@@ -1026,7 +1061,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   backdrop-filter: blur(4px);
 }
 .hero-mosaic-card-main .hero-mosaic-fav {
-  bottom: 12px;
+  bottom: auto;
+  top: 16px;
   right: 12px;
   width: 30px;
   height: 30px;
@@ -1047,8 +1083,25 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   background: var(--bg-card);
   transition: background 0.2s;
 }
+.hero-mosaic-card-kicker {
+  margin-bottom: 7px;
+  color: var(--primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.63rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-mosaic-meta { min-width: 0; }
 .dark .hero-mosaic-body {
   background: #2A1B1B;
+}
+.dark .hero-mosaic-card-main .hero-mosaic-body {
+  background: transparent;
 }
 
 .hero-mosaic-title {
@@ -1091,7 +1144,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
     position: relative;
     min-width: 0;
     flex: 1;
-    padding: 16px 38px 14px 14px;
+    padding: 14px 42px 12px 16px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1214,6 +1267,12 @@ h1, h2, h3, h4, h5, h6, .font-brand {
     max-width: 900px;
     margin: 0 auto;
   }
+  .hero-mosaic-card:not(.hero-mosaic-card-main) .hero-mosaic-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1255,7 +1314,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
     height: auto;
     scroll-snap-align: start;
     animation: none;
-    border: 1.5px solid var(--border);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 22px rgba(15,23,42,0.07);
   }
   .hero-mosaic-card-main {
     flex-basis: 72%;
@@ -1268,13 +1328,24 @@ h1, h2, h3, h4, h5, h6, .font-brand {
     width: 100%;
     aspect-ratio: 16 / 9;
   }
+  .hero-mosaic-card-main .hero-mosaic-img-wrap {
+    position: relative;
+    inset: auto;
+  }
   .hero-mosaic-card .hero-mosaic-body {
+    position: relative;
+    inset: auto;
     padding: 10px 12px 12px;
+    color: var(--fg);
+    background: var(--bg-card);
   }
   .hero-mosaic-card .hero-mosaic-location {
     display: flex;
   }
   .hero-mosaic-title {
+    max-width: none !important;
+    color: var(--fg) !important;
+    text-shadow: none !important;
     font-size: 0.85rem !important;
     white-space: nowrap;
     overflow: hidden;
@@ -1282,9 +1353,19 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   }
   .hero-mosaic-price,
   .hero-mosaic-price-lg {
-    bottom: 10px;
-    left: 10px;
+    position: relative;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+    color: var(--primary);
     font-size: 0.9rem;
+  }
+  .hero-mosaic-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .hero-mosaic-fav,
   .hero-mosaic-card-main .hero-mosaic-fav {
@@ -1327,7 +1408,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
    creative/GIF the BO puts in the hero above, so it stays legible and
    gets proper room instead of being squeezed into a hero column. */
 .featured-strip {
-  background: var(--bg);
+  background: linear-gradient(180deg, var(--bg) 0%, var(--border-subtle) 100%);
   border-bottom: 1px solid var(--border);
 }
 .dark .featured-strip {
@@ -1337,7 +1418,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .featured-strip-inner {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2.5rem 1rem 3rem;
+  padding: 2.75rem 1rem 3.25rem;
 }
 
 /* ========== TRUST BAR ========== */

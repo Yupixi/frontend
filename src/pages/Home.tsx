@@ -44,23 +44,21 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
         {/* Gradient overlay at bottom */}
         <div className="hero-mosaic-overlay" />
 
-        {/* Category badge */}
-        <div className="hero-mosaic-category">
-          {card.category.name}
-        </div>
-
-        {/* Price */}
-        <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-          <Price amount={card.price} currency={card.currency} />
-        </div>
+        {isMain && <div className="hero-mosaic-category">{card.category.name}</div>}
       </div>
 
       {/* Card body (title + location) */}
       <div className="hero-mosaic-body">
+        {!isMain && <div className="hero-mosaic-card-kicker">{card.category.name}</div>}
         <h3 className="hero-mosaic-title">{card.title}</h3>
-        <div className="hero-mosaic-location">
-          <MapPin size={13} />
-          {listingLocation(card)}
+        <div className="hero-mosaic-meta">
+          <div className="hero-mosaic-location">
+            <MapPin size={13} />
+            {listingLocation(card)}
+          </div>
+          <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
+            <Price amount={card.price} currency={card.currency} />
+          </div>
         </div>
       </div>
 
