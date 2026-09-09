@@ -285,9 +285,9 @@ export default function App() {
   const handleAuthenticated = () => {
     setIsLoggedIn(true)
     void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me))
-    // Best-effort browser push opt-in — matters most for a guest who just
-    // messaged a seller and has no other way to learn about a reply.
-    void subscribeToPush(false)
+    // Ask for mobile notifications by default after an explicit successful
+    // authentication action. The browser/OS still owns the final consent.
+    void subscribeToPush(true)
   }
 
   const toggleFavorite = (id: string) => {
