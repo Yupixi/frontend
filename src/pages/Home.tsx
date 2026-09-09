@@ -82,7 +82,7 @@ function SponsoredListingCard({ listing, onSelect }: { listing: RemoteListing, o
       style={{
         minWidth: 285, maxWidth: 330, flex: '1 0 285px', overflow: 'hidden', cursor: 'pointer',
         borderRadius: 18, background: 'var(--bg-card)', border: '1px solid rgba(217,119,6,0.28)',
-        boxShadow: '0 10px 28px rgba(15,23,42,0.08)', position: 'relative',
+        position: 'relative',
       }}
     >
       <div style={{ height: 185, position: 'relative', overflow: 'hidden', background: 'var(--border-subtle)' }}>
@@ -91,7 +91,7 @@ function SponsoredListingCard({ listing, onSelect }: { listing: RemoteListing, o
         ) : (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}><Tag size={36} /></div>
         )}
-        <span style={{ position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.94)', color: '#92400E', fontSize: '0.68rem', fontWeight: 900, boxShadow: '0 3px 10px rgba(15,23,42,0.12)' }}>
+        <span style={{ position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.94)', color: '#92400E', fontSize: '0.68rem', fontWeight: 900, border: '1px solid rgba(217,119,6,0.18)' }}>
           <Sparkles size={12} fill="#FBBF24" color="#D97706" /> Mise en avant
         </span>
       </div>
