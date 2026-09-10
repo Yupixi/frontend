@@ -1,13 +1,13 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v6'
+const VERSION = 'v7'
 const STATIC_CACHE = `yupixi-static-${VERSION}`
 const PAGE_CACHE = `yupixi-pages-${VERSION}`
 const OFFLINE_URL = '/offline.html'
 
 const APP_SHELL = [
   '/',
-  '/manifest.json',
+  '/manifest.json?v=dilchap-1',
   OFFLINE_URL,
   '/favicon-dilchap.png',
   '/icon-dilchap-192.png',

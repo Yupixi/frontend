@@ -2,6 +2,8 @@
   "name": "Dilchap — Marketplace Côte d'Ivoire",
   "short_name": "Dilchap",
   "description": "Achetez et vendez en Côte d'Ivoire avec Dilchap. Petites annonces et marketplace.",
+  "id": "/?source=pwa",
+  "scope": "/",
   "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#FAFAFC",
