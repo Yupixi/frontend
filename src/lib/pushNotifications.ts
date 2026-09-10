@@ -1,4 +1,5 @@
 import { apolloClient } from './apollo'
+import { registerServiceWorker } from './serviceWorker'
 import { VAPID_PUBLIC_KEY_QUERY, SAVE_PUSH_SUBSCRIPTION_MUTATION } from '../graphql/push'
 
 // VAPID public keys are base64url — the Push API wants a raw Uint8Array.
@@ -24,6 +25,7 @@ export type PushSubscriptionResult =
 
 function isIosBrowser(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
 function isStandalone(): boolean {
@@ -32,8 +34,8 @@ function isStandalone(): boolean {
 }
 
 export function getPushAvailability(): PushSubscriptionResult | 'available' {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'unsupported'
   if (isIosBrowser() && !isStandalone()) return 'ios-install-required'
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'unsupported'
   if (Notification.permission === 'denied') return 'permission-denied'
   if (Notification.permission === 'default') return 'permission-required'
   return 'available'
@@ -56,12 +58,28 @@ export async function subscribeToPush(requestPermission = false): Promise<PushSu
     })
     if (!data?.vapidPublicKey) return 'not-configured'
 
-    const registration = await navigator.serviceWorker.ready
+    registerServiceWorker()
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('Service worker unavailable')), 15000)
+      }),
+    ]).finally(() => clearTimeout(timeout))
     let subscription = await registration.pushManager.getSubscription()
+    const applicationServerKey = urlBase64ToUint8Array(data.vapidPublicKey)
+    const existingKey = subscription?.options.applicationServerKey
+    if (subscription && existingKey && (
+      existingKey.byteLength !== applicationServerKey.byteLength
+      || new Uint8Array(existingKey).some((value, index) => value !== applicationServerKey[index])
+    )) {
+      await subscription.unsubscribe()
+      subscription = null
+    }
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(data.vapidPublicKey) as BufferSource,
+        applicationServerKey: applicationServerKey as BufferSource,
       })
     }
 

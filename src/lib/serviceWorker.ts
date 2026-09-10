@@ -18,7 +18,7 @@ export function applyServiceWorkerUpdate() {
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return
 
-  window.addEventListener('load', () => {
+  const register = () => {
     navigator.serviceWorker.register('/sw.js').then(registration => {
       const notifyIfWaiting = () => {
         if (!registration.waiting || !navigator.serviceWorker.controller) return
@@ -37,5 +37,7 @@ export function registerServiceWorker() {
     }).catch(() => {
       // Push setup remains recoverable from the notification settings.
     })
-  })
+  }
+  if (document.readyState === 'complete') register()
+  else window.addEventListener('load', register, { once: true })
 }

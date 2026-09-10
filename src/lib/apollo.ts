@@ -8,7 +8,13 @@ import { createClient } from 'graphql-ws'
 import { Observable } from 'rxjs'
 import { clearTokens, getAccessToken, getRefreshToken, storeTokens, SESSION_EXPIRED_EVENT } from './auth'
 
-const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || 'http://localhost:3000/graphql'
+// A deployed browser must never call its own `localhost`; only local
+// development uses the separate Nest server. In production the API is served
+// from the same public origin (or can be overridden explicitly).
+const defaultGraphqlUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ? 'http://localhost:3000/graphql'
+  : `${window.location.origin}/graphql`
+const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || defaultGraphqlUrl
 const GRAPHQL_WS_URL = GRAPHQL_URL.replace(/^http/, 'ws')
 
 const httpLink = new HttpLink({ uri: GRAPHQL_URL })

@@ -639,7 +639,10 @@ const NOTIFICATION_ICONS: Record<RemoteNotification['type'], string> = {
 }
 
 export function BuyerNotifications({ onNavigate, onSelectListing, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, onLogout: () => void }) {
-  const { data, refetch } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY)
+  const { data, refetch, loading, error } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY, {
+    fetchPolicy: 'cache-and-network',
+    pollInterval: 10000,
+  })
   const items = data?.myNotifications ?? []
   const [markRead] = useMutation(MARK_NOTIFICATION_READ_MUTATION)
   const [markAllRead] = useMutation(MARK_ALL_NOTIFICATIONS_READ_MUTATION)
@@ -662,7 +665,9 @@ export function BuyerNotifications({ onNavigate, onSelectListing, onLogout }: { 
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
-        {items.length === 0 && (
+        {error && <p role="alert" style={{ padding: '1rem' }}>Impossible de charger les notifications. <button onClick={() => void refetch().catch(() => {})}>Réessayer</button></p>}
+        {loading && items.length === 0 && <p style={{ padding: '1rem' }}>Chargement des notifications…</p>}
+        {!loading && !error && items.length === 0 && (
           <p style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.9rem' }}>Aucune notification pour l'instant.</p>
         )}
         {items.map((n, i) => (

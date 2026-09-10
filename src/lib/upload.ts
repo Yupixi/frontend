@@ -1,6 +1,9 @@
 import { getAccessToken } from './auth'
 
-const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || 'http://localhost:3000/graphql'
+const defaultGraphqlUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ? 'http://localhost:3000/graphql'
+  : `${window.location.origin}/graphql`
+const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || defaultGraphqlUrl
 const UPLOADS_URL = GRAPHQL_URL.replace(/\/graphql\/?$/, '/uploads')
 
 export async function uploadImages(files: File[]): Promise<string[]> {

@@ -6,7 +6,7 @@ import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favor
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
-import { subscribeToPush } from './lib/pushNotifications'
+import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
 import Home from './pages/Home'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
@@ -89,6 +89,9 @@ export default function App() {
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
   const [showUpdateBanner, setShowUpdateBanner] = useState(false)
+  const [pushStatus, setPushStatus] = useState<PushSubscriptionResult | null>(null)
+  const [enablingPush, setEnablingPush] = useState(false)
+  const [pushDismissed, setPushDismissed] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [location, setLocation] = useState<StoredLocation | null>(() => getStoredLocation())
 
@@ -160,7 +163,7 @@ export default function App() {
           setIsLoggedIn(true)
           // Refresh an existing subscription after restoring the session.
           // A new permission prompt must be triggered from the settings UI.
-          void subscribeToPush(false)
+          void subscribeToPush(false).then(result => { if (!cancelled) setPushStatus(result) })
         } else {
           clearTokens()
           setIsLoggedIn(false)
@@ -285,9 +288,18 @@ export default function App() {
   const handleAuthenticated = () => {
     setIsLoggedIn(true)
     void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me))
-    // Ask for mobile notifications by default after an explicit successful
-    // authentication action. The browser/OS still owns the final consent.
-    void subscribeToPush(true)
+    // Permission must be requested by a direct click, not after the async login.
+    setPushDismissed(false)
+    void subscribeToPush(false).then(setPushStatus)
+  }
+
+  const enablePush = async () => {
+    setEnablingPush(true)
+    try {
+      setPushStatus(await subscribeToPush(true))
+    } finally {
+      setEnablingPush(false)
+    }
   }
 
   const toggleFavorite = (id: string) => {
@@ -404,6 +416,21 @@ export default function App() {
         {renderPage()}
       </Layout>
       <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      {isLoggedIn && pushStatus && pushStatus !== 'subscribed' && !pushDismissed && (
+        <div role="status" style={{ position: 'fixed', top: 76, left: 16, right: 16, zIndex: 1000, margin: '0 auto', maxWidth: 600, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
+          <strong>Recevoir les notifications sur cet appareil</strong>
+          <p style={{ margin: '8px 0', fontSize: '0.85rem' }}>{
+            pushStatus === 'ios-install-required' ? 'Sur iPhone ou iPad, ajoutez Dilchap à l’écran d’accueil puis ouvrez-le depuis son icône pour activer les notifications.'
+              : pushStatus === 'permission-denied' ? 'Les notifications sont bloquées. Autorisez-les dans les réglages du navigateur puis réessayez.'
+              : pushStatus === 'not-configured' ? 'Le serveur de notifications n’est pas configuré. L’activation sera possible une fois le service rétabli.'
+              : pushStatus === 'unsupported' ? 'Les notifications ne sont pas disponibles dans ce navigateur. Ouvrez le site en HTTPS dans un navigateur compatible.'
+              : pushStatus === 'error' ? 'Cet appareil n’a pas pu être inscrit aux notifications. Vérifiez la connexion puis réessayez.'
+              : 'Activez les notifications pour recevoir vos nouveaux messages même lorsque Dilchap est fermé.'
+          }</p>
+          {!['ios-install-required', 'unsupported', 'not-configured'].includes(pushStatus) && <button className="btn-primary" disabled={enablingPush} onClick={enablePush}>{enablingPush ? 'Activation…' : pushStatus === 'permission-required' ? 'Activer les notifications' : 'Réessayer'}</button>}
+          <button className="btn-ghost" onClick={() => setPushDismissed(true)} style={{ marginLeft: 8 }}>Plus tard</button>
+        </div>
+      )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
     </div>
   )
