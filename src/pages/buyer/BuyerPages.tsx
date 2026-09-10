@@ -43,6 +43,12 @@ import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } fro
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as PageLayout } from '../account/AccountLayout'
 
+const QUICK_MESSAGES = [
+  'Bonjour, l’article est-il toujours disponible ?',
+  'Bonjour, votre prix est-il négociable ?',
+  'Est-il possible de convenir d’un rendez-vous ?',
+]
+
 type FavoriteListing = {
   id: string
   title: string
@@ -599,6 +605,9 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                       <Tag size={18} />
                     </button>
                   )}
+                  <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 4px', width: '100%' }}>
+                    {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
+                  </div>
                   <input
                     className="input"
                     style={{ flex: 1 }}

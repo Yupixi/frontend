@@ -18,6 +18,12 @@ import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator 
 import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
 
+const QUICK_MESSAGES = [
+  'Bonjour, l’article est-il toujours disponible ?',
+  'Bonjour, votre prix est-il négociable ?',
+  'Est-il possible de convenir d’un rendez-vous ?',
+]
+
 type InlineConversationProps = {
   sellerId: string
   listingId: string
@@ -159,6 +165,9 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
       <MiniField icon={Phone}><input className="input" type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} /></MiniField>
       <MiniField icon={Mail}><input className="input" type="email" placeholder="Email (optionnel)" value={email} onChange={e => setEmail(e.target.value)} /></MiniField>
 
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+        {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMessage(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg-card)', color: 'var(--fg-muted)', padding: '6px 10px', fontSize: '0.72rem', cursor: 'pointer' }}>{text}</button>)}
+      </div>
       <textarea
         className="input"
         placeholder="Votre message..."
@@ -336,6 +345,9 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
               <Tag size={16} />
             </button>
           )}
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 4px' }}>
+            {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
+          </div>
           <input
             className="input"
             style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
