@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation } from '@apollo/client/react'
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, ShieldCheck, Sparkles, Users, TrendingUp } from 'lucide-react'
-import Logo from '../components/Logo'
+import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, type AuthPayload } from '../graphql/auth'
 import { storeTokens } from '../lib/auth'
 

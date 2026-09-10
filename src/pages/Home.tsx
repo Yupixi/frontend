@@ -627,7 +627,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <h2 className="section-title" style={{ margin: 0 }}>{howItWorksBanner?.title || 'Comment ça marche'}</h2>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>
-              {howItWorksBanner?.subtitle || "Acheter et vendre sur Yüpixi en trois étapes simples"}
+              {howItWorksBanner?.subtitle || "Acheter et vendre sur Dilchap en trois étapes simples"}
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
@@ -658,7 +658,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div>
               <h2 className="section-title" style={{ margin: 0 }}>Catégories Populaires</h2>
-              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les catégories les plus recherchées sur Yüpixi</p>
+              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les catégories les plus recherchées sur Dilchap</p>
             </div>
             <button
               onClick={() => onNavigate('categories')}
@@ -757,7 +757,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 </h3>
                 <p style={{ color: '#94A3B8', margin: '0 0 1.5rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
                   {partnersBanner?.body ||
-                    "Sur Yüpixi, vous échangez directement avec l'autre partie. Convenez ensemble des modalités et finalisez votre transaction en toute sérénité."}
+                    "Sur Dilchap, vous échangez directement avec l'autre partie. Convenez ensemble des modalités et finalisez votre transaction en toute sérénité."}
                 </p>
               </div>
 
@@ -786,7 +786,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <h2 className="section-title" style={{ margin: 0 }}>{testimonialsBanner?.title || 'Ils nous font confiance'}</h2>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>
-              {testimonialsBanner?.subtitle || "Ce que disent les membres de la communauté Yüpixi"}
+              {testimonialsBanner?.subtitle || "Ce que disent les membres de la communauté Dilchap"}
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
@@ -870,7 +870,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 <Store size={36} />
               </div>
               <h2 style={{ color: sellerCtaBanner?.textColor || '#FFFFFF', margin: '0 0 0.75rem', fontSize: '2rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
-                {sellerCtaBanner?.title || 'Devenez Vendeur Certifié Yüpixi'}
+                {sellerCtaBanner?.title || 'Devenez Vendeur Certifié Dilchap'}
               </h2>
               <p style={{ color: sellerCtaBanner?.textColor ? `${sellerCtaBanner.textColor}EB` : 'rgba(255,255,255,0.92)', margin: '0 0 1.75rem', fontSize: '1.05rem', lineHeight: 1.6 }}>
                 {sellerCtaBanner?.subtitle || "Publiez gratuitement vos annonces et touchez plus de 1.2M d'acheteurs en Côte d'Ivoire."}

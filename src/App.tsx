@@ -420,7 +420,7 @@ function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onUpdate: 
       fontFamily: "'Outfit', 'Nunito', sans-serif",
     }}>
       <div style={{ flex: 1, fontWeight: 700, fontSize: '0.85rem' }}>
-        Une nouvelle version de Yüpixi est disponible.
+        Une nouvelle version de Dilchap est disponible.
       </div>
       <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.8rem', fontWeight: 600 }}>Plus tard</button>
       <button onClick={onUpdate} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
@@ -447,9 +447,9 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
             padding: '2rem 1.5rem', textAlign: 'center',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 52, height: 52, borderRadius: 14, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-              <img src="/icon-yupixi-white.svg" alt="Yüpixi" style={{ width: 36, height: 36 }} />
+              <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Yüpixi</h3>
+            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Dilchap</h3>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
               {isSafari
                 ? 'Appuyez sur le bouton Partager <span style="font-size:1.2rem">⬆️</span> puis choisissez "Sur l\'écran d\'accueil".'
@@ -471,10 +471,10 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
         fontFamily: "'Outfit', 'Nunito', sans-serif",
       }}>
         <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <img src="/icon-yupixi-white.svg" alt="Yüpixi" style={{ width: 30, height: 30 }} />
+          <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 30, height: 30, objectFit: 'contain' }} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Yüpixi</div>
+          <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Dilchap</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>sur l'écran d'accueil</div>
         </div>
         <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.85rem', fontWeight: 600 }}>Plus tard</button>

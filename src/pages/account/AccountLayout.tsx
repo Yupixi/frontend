@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Plus, Package, BarChart2, Award, Heart, MessageCircle,
   Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ArrowLeft,
 } from 'lucide-react'
-import Logo from '../../components/Logo'
+import Logo from '../../components/DilchapLogo'
 import { MY_LISTINGS_QUERY } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
 import type { AuthUser } from '../../graphql/auth'

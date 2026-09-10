@@ -436,14 +436,14 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   />
                 ) : (
                   <>
-                    <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Yupixi.</p>
+                    <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Dilchap.</p>
 
                     <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
                       <MessageCircle size={18} /> Démarrer la discussion
                     </button>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
                       <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-                      <span>Vos coordonnées restent privées. Gardez vos échanges sur Yupixi pour conserver le contexte de la transaction.</span>
+                      <span>Vos coordonnées restent privées. Gardez vos échanges sur Dilchap pour conserver le contexte de la transaction.</span>
                     </div>
                   </>
                 )}
@@ -619,7 +619,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                       </button>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
                         <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-                        <span>Échangez sur Yupixi : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
+                        <span>Échangez sur Dilchap : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
                       </div>
                     </>
                   )}

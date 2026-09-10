@@ -6,7 +6,7 @@ import {
   Plus, Home, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
   Shirt, Wrench, Grid, User
 } from 'lucide-react'
-import Logo from './Logo'
+import Logo from './DilchapLogo'
 import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
 import LocationPill from './LocationPill'
@@ -186,7 +186,7 @@ export default function Layout({
               minWidth: 240,
             }}>
               <Search size={16} />
-              <span>Rechercher sur Yüpixi...</span>
+              <span>Rechercher sur Dilchap...</span>
             </div>
 
             {/* Right Header Controls */}
@@ -574,7 +574,7 @@ export default function Layout({
               <Logo size="lg" colorMode="white" variant="full" />
               <p style={{ color: '#94A3B8', fontSize: '0.9rem', marginTop: '1.25rem', lineHeight: 1.6 }}>
                 {footer?.tagline ||
-                  "En associant la loupe au smile, Yüpixi offre une expérience d'achat et de vente simple, fluide et sécurisée en Côte d'Ivoire."}
+                  "Dilchap rend l'achat et la vente entre particuliers simples, fluides et sécurisés en Côte d'Ivoire."}
               </p>
             </div>
 
@@ -630,7 +630,7 @@ export default function Layout({
           <div style={{ borderTop: '1px solid #1E293B', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0 }}>
               {footer?.copyrightText ||
-                "© 2026 Yüpixi CI. Tous droits réservés. Charte Graphique Officielle (Rouge #FE0000, Blanc #FFFFFF, Jaune #FFDD21)."}
+                "© 2026 Dilchap. Tous droits réservés."}
             </p>
             <div style={{ display: 'flex', gap: 16 }}>
               <span style={{ color: '#94A3B8', fontSize: '0.85rem', fontWeight: 700 }}>Fait en Côte d'Ivoire</span>

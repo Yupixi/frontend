@@ -7,7 +7,7 @@ import fs from 'node:fs'
 const siteJsonPath = path.resolve(__dirname, './.figma/make/site.json')
 const siteConfiguration = fs.existsSync(siteJsonPath)
   ? JSON.parse(fs.readFileSync(siteJsonPath, 'utf-8'))
-  : { title: "Yüpixi — Marketplace Côte d'Ivoire", description: "Plateforme e-commerce et petites annonces en Côte d'Ivoire" }
+  : { title: "Dilchap — Marketplace Côte d'Ivoire", description: "Plateforme e-commerce et petites annonces en Côte d'Ivoire" }
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -85,7 +85,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
     return html.replace(`<!-- ${slotName} -->`, content)
   }
 
-  const title = config.title ?? "Yüpixi — Marketplace & Annonces"
+  const title = config.title ?? "Dilchap — Marketplace & Annonces"
   const description = config.description ?? ''
   const favicon = config.icons?.icon ?? ''
   const socialImage = config.openGraph?.image ?? ''

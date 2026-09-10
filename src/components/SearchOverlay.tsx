@@ -93,7 +93,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Rechercher sur Yüpixi"
+      aria-label="Rechercher sur Dilchap"
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         display: 'flex', flexDirection: 'column',
@@ -115,7 +115,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                 ref={inputRef}
                 className="input"
                 style={{ paddingLeft: 48, paddingRight: 48, fontSize: '1rem', height: 52, borderRadius: 14, background: 'var(--bg)', borderColor: 'var(--border)' }}
-                placeholder="Rechercher sur Yüpixi..."
+                placeholder="Rechercher sur Dilchap..."
                 value={query}
                 onChange={e => { onQueryChange(e.target.value); setSelectedIdx(-1) }}
                 onKeyDown={handleKeyDown}

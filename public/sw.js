@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v5'
+const VERSION = 'v6'
 const STATIC_CACHE = `yupixi-static-${VERSION}`
 const PAGE_CACHE = `yupixi-pages-${VERSION}`
 const OFFLINE_URL = '/offline.html'
@@ -9,9 +9,9 @@ const APP_SHELL = [
   '/',
   '/manifest.json',
   OFFLINE_URL,
-  '/favicon.svg',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/favicon-dilchap.png',
+  '/icon-dilchap-192.png',
+  '/icon-dilchap-512.png',
 ]
 
 self.addEventListener('install', (event) => {
@@ -39,12 +39,12 @@ self.addEventListener('push', (event) => {
   } catch {
     // ignore malformed payloads
   }
-  const title = data.title || 'Yupixi'
+  const title = data.title || 'Dilchap'
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || '',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon: '/icon-dilchap-192.png',
+      badge: '/icon-dilchap-192.png',
       data: { url: data.url || '/' },
     }),
   )

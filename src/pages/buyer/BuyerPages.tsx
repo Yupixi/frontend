@@ -583,7 +583,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                     {activeConv.otherParticipant.fullName} est en train d'écrire...
                   </div>
                 ) : (
-                  <div style={{ marginBottom: 7, color: 'var(--fg-subtle)', fontSize: '0.7rem', textAlign: 'center' }}>Échange sécurisé sur Yupixi · Ne partagez jamais de code de paiement</div>
+                  <div style={{ marginBottom: 7, color: 'var(--fg-subtle)', fontSize: '0.7rem', textAlign: 'center' }}>Échange sécurisé sur Dilchap · Ne partagez jamais de code de paiement</div>
                 )}
                 {offerFormOpen ? (
                   <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', marginBottom: '0.5rem' }}>
@@ -811,12 +811,12 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
   const pushStatusCopy: Record<PushSubscriptionResult | 'available', { title: string; desc: string; tone: string }> = {
     subscribed: { title: 'Notifications activées', desc: 'Ce téléphone recevra les nouveaux messages et les alertes importantes.', tone: '#059669' },
     available: { title: 'Autorisation accordée', desc: 'Activez ce téléphone pour finaliser la réception des notifications.', tone: '#D97706' },
-    'permission-required': { title: 'Notifications désactivées', desc: 'Activez-les pour être prévenu même lorsque Yüpixi est fermé.', tone: '#D97706' },
-    'permission-denied': { title: 'Autorisation bloquée', desc: 'Ouvrez les réglages du navigateur ou du téléphone, autorisez les notifications pour Yüpixi, puis réessayez.', tone: '#DC2626' },
-    'ios-install-required': { title: "Installation requise sur iPhone", desc: "Dans Safari, touchez Partager puis « Sur l’écran d’accueil ». Ouvrez ensuite Yüpixi depuis son icône pour activer les notifications.", tone: '#D97706' },
+    'permission-required': { title: 'Notifications désactivées', desc: 'Activez-les pour être prévenu même lorsque Dilchap est fermé.', tone: '#D97706' },
+    'permission-denied': { title: 'Autorisation bloquée', desc: 'Ouvrez les réglages du navigateur ou du téléphone, autorisez les notifications pour Dilchap, puis réessayez.', tone: '#DC2626' },
+    'ios-install-required': { title: "Installation requise sur iPhone", desc: "Dans Safari, touchez Partager puis « Sur l’écran d’accueil ». Ouvrez ensuite Dilchap depuis son icône pour activer les notifications.", tone: '#D97706' },
     unsupported: { title: 'Mobile non compatible', desc: 'Ce navigateur ne prend pas en charge les notifications web. Essayez une version récente de Safari, Chrome ou Edge.', tone: '#64748B' },
     'not-configured': { title: 'Service temporairement indisponible', desc: "Les notifications ne sont pas encore configurées sur le serveur. L’équipe technique doit activer les clés d’envoi.", tone: '#DC2626' },
-    error: { title: "Activation impossible", desc: 'Vérifiez votre connexion puis réessayez. Vos notifications restent visibles dans votre espace Yüpixi.', tone: '#DC2626' },
+    error: { title: "Activation impossible", desc: 'Vérifiez votre connexion puis réessayez. Vos notifications restent visibles dans votre espace Dilchap.', tone: '#DC2626' },
   }
   const pushCopy = pushStatusCopy[pushStatus]
   const canEnablePush = ['available', 'permission-required', 'error'].includes(pushStatus)
