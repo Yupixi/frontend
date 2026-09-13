@@ -4,14 +4,14 @@ import {
   Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
   Sun, Moon, LogOut, Settings, Package, BarChart2,
   Plus, Home, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
-  Shirt, Wrench, Grid, User
+  Shirt, Wrench, Grid, User, AlertTriangle, Info, CheckCheck,
 } from 'lucide-react'
 import Logo from './DilchapLogo'
 import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
 import LocationPill from './LocationPill'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteFooterSettings, type ActiveCampaign } from '../graphql/content'
-import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, type RemoteNotification } from '../graphql/account'
+import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification } from '../graphql/account'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
@@ -20,6 +20,13 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
+
+const NOTIFICATION_STYLE: Record<RemoteNotification['type'], { icon: typeof Bell, bg: string, fg: string }> = {
+  MESSAGE: { icon: MessageCircle, bg: 'rgba(59,130,246,0.12)', fg: '#3B82F6' },
+  LISTING_APPROVED: { icon: CheckCircle2, bg: 'rgba(16,185,129,0.12)', fg: '#10B981' },
+  LISTING_REJECTED: { icon: AlertTriangle, bg: 'rgba(254,0,0,0.1)', fg: 'var(--primary)' },
+  LISTING_STATUS_CHANGED: { icon: Info, bg: 'rgba(148,163,184,0.18)', fg: '#64748B' },
+}
 
 type LayoutProps = {
   currentPage: Page
@@ -134,6 +141,8 @@ export default function Layout({
   const notifications = notifData?.myNotifications ?? []
   const unreadNotifCount = notifications.filter(n => !n.readAt).length
   const [markNotificationRead] = useMutation(MARK_NOTIFICATION_READ_MUTATION)
+  const [markAllNotificationsRead] = useMutation(MARK_ALL_NOTIFICATIONS_READ_MUTATION)
+  const markAllRead = () => void markAllNotificationsRead().then(() => refetchNotifs())
 
   const { data: convData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY, {
     skip: !isLoggedIn,
@@ -300,22 +309,49 @@ export default function Layout({
                       </button>
 
                       {notifMenuOpen && (
-                        <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 320, maxWidth: '90vw', zIndex: 200, overflow: 'hidden' }}>
-                          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>Notifications</div>
-                          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-                            {notifications.length === 0 && (
-                              <p style={{ padding: '1.25rem', margin: 0, color: 'var(--fg-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Aucune notification.</p>
+                        <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 340, maxWidth: '90vw', zIndex: 200, overflow: 'hidden', boxShadow: '0 12px 32px rgba(0,0,0,0.12)' }}>
+                          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 900, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Notifications</span>
+                            {unreadNotifCount > 0 && (
+                              <span style={{ background: 'rgba(254,0,0,0.1)', color: 'var(--primary)', fontSize: '0.68rem', fontWeight: 800, borderRadius: 999, padding: '1px 7px' }}>{unreadNotifCount}</span>
                             )}
-                            {notifications.slice(0, 5).map(n => (
+                            {unreadNotifCount > 0 && (
                               <button
-                                key={n.id}
-                                onClick={() => openNotification(n)}
-                                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: n.readAt ? 'none' : 'rgba(254,0,0,0.05)', border: 'none', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', color: 'var(--fg)' }}
+                                onClick={markAllRead}
+                                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '0.72rem', fontWeight: 700, padding: 0 }}
                               >
-                                <div style={{ fontSize: '0.82rem', fontWeight: n.readAt ? 600 : 800, marginBottom: 2 }}>{n.title}</div>
-                                <div style={{ fontSize: '0.76rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.body}</div>
+                                <CheckCheck size={13} /> Tout marquer lu
                               </button>
-                            ))}
+                            )}
+                          </div>
+                          <div style={{ maxHeight: 380, overflowY: 'auto', padding: 6 }}>
+                            {notifications.length === 0 && (
+                              <p style={{ padding: '1.5rem 1rem', margin: 0, color: 'var(--fg-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Aucune notification pour l'instant.</p>
+                            )}
+                            {notifications.slice(0, 5).map(n => {
+                              const style = NOTIFICATION_STYLE[n.type]
+                              return (
+                                <button
+                                  key={n.id}
+                                  onClick={() => openNotification(n)}
+                                  style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', textAlign: 'left', padding: '10px', borderRadius: 10, background: n.readAt ? 'none' : 'rgba(254,0,0,0.045)', border: 'none', cursor: 'pointer', color: 'var(--fg)', marginBottom: 2 }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = n.readAt ? 'var(--border-subtle)' : 'rgba(254,0,0,0.08)' }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = n.readAt ? 'none' : 'rgba(254,0,0,0.045)' }}
+                                >
+                                  <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: style.bg, color: style.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <style.icon size={16} />
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                                      <span style={{ fontSize: '0.8rem', fontWeight: n.readAt ? 600 : 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</span>
+                                      <span style={{ fontSize: '0.68rem', color: 'var(--fg-subtle)', flexShrink: 0, marginTop: 1 }}>{formatRelativeDate(n.createdAt)}</span>
+                                    </div>
+                                    <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.body}</p>
+                                  </div>
+                                  {!n.readAt && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: 6 }} />}
+                                </button>
+                              )
+                            })}
                           </div>
                           <button
                             onClick={() => { setNotifMenuOpen(false); onNavigate('buyer-notifications') }}
