@@ -43,10 +43,18 @@ import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } fro
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as PageLayout } from '../account/AccountLayout'
 
-const QUICK_MESSAGES = [
+// The viewer is the buyer in this thread — questions to ask the seller.
+const BUYER_QUICK_MESSAGES = [
   'Bonjour, l’article est-il toujours disponible ?',
   'Bonjour, votre prix est-il négociable ?',
   'Est-il possible de convenir d’un rendez-vous ?',
+]
+
+// The viewer is the seller (activeConv.canManageDeal) — answers, not questions.
+const SELLER_QUICK_MESSAGES = [
+  'Oui, l’article est toujours disponible.',
+  'Le prix est ferme, désolé.',
+  'Dites-moi vos disponibilités pour un rendez-vous.',
 ]
 
 type FavoriteListing = {
@@ -249,9 +257,34 @@ function messageDayLabel(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })
 }
 
+type ConversationGroup = { key: string, listing: RemoteConversation['listing'], conversations: RemoteConversation[] }
+
+// One seller can hold several buyer threads about the same listing (and one
+// buyer can message several sellers) — bucketing by listing instead of a
+// flat recency list makes "who's interested in this annonce" legible at a
+// glance. Conversations already arrive sorted by lastMessageAt desc, so a
+// group's position is simply where its most recent conversation first
+// appears — no separate sort needed.
+function groupConversationsByListing(conversations: RemoteConversation[]): ConversationGroup[] {
+  const groups: ConversationGroup[] = []
+  const indexByKey = new Map<string, number>()
+  for (const conv of conversations) {
+    const key = conv.listingId ?? conv.id
+    let index = indexByKey.get(key)
+    if (index === undefined) {
+      index = groups.length
+      indexByKey.set(key, index)
+      groups.push({ key, listing: conv.listing, conversations: [] })
+    }
+    groups[index].conversations.push(conv)
+  }
+  return groups
+}
+
 export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed }: { onNavigate: (p: any) => void, onSelectListing?: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void, startWith?: { listingId?: string; sellerId: string } | null, onStartWithConsumed?: () => void }) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = listData?.myConversations ?? []
+  const conversationGroups = groupConversationsByListing(conversations)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showList, setShowList] = useState(true)
   const [msg, setMsg] = useState('')
@@ -351,11 +384,18 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
     void sendMessage({ variables: { conversationId: activeId, body } }).then(() => refetchConv())
   }
 
-  const conversationStarters = [
+  const sellerConversationStarters = [
+    'Bonjour, merci pour votre intérêt ! Avez-vous des questions sur l’article ?',
+    'Bonjour, je peux vous envoyer plus de photos si besoin.',
+    'Bonjour, on peut convenir d’un rendez-vous quand vous voulez.',
+  ]
+  const buyerConversationStarters = [
     'Bonjour, cette annonce est-elle toujours disponible ?',
     "Bonjour, pouvez-vous m’en dire plus sur l’état de l’article ?",
     'Bonjour, la livraison ou une remise en main propre est-elle possible ?',
   ]
+  const conversationStarters = activeConv?.canManageDeal ? sellerConversationStarters : buyerConversationStarters
+  const quickMessages = activeConv?.canManageDeal ? SELLER_QUICK_MESSAGES : BUYER_QUICK_MESSAGES
 
   const closeDeal = (status: 'CONCLUDED' | 'NOT_CONCLUDED') => {
     if (!activeId) return
@@ -405,44 +445,52 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
               Aucune conversation pour l'instant. Contactez un vendeur depuis une annonce pour démarrer une discussion.
             </p>
           )}
-          {conversations.map(conv => (
-            <div
-              key={conv.id}
-              onClick={() => { setActiveId(conv.id); setShowList(false) }}
-              style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: activeId === conv.id ? 'rgba(254,0,0,0.04)' : 'transparent', borderLeft: activeId === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
-            >
-              <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
-                {conv.otherParticipant.avatarUrl ? (
-                  <img src={conv.otherParticipant.avatarUrl} alt={conv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  conv.otherParticipant.fullName.charAt(0).toUpperCase()
-                )}
-                {conv.unreadCount > 0 && <span className="notif-dot" style={{ top: 0, right: 0 }} />}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: conv.unreadCount > 0 ? 800 : 600, fontSize: '0.85rem' }}>{conv.otherParticipant.fullName}</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', flexShrink: 0 }}>{conv.lastMessageAt ? formatRelativeDate(conv.lastMessageAt) : ''}</span>
-                </div>
-                {conv.listing && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2, minWidth: 0 }}>
-                    <div style={{ width: 16, height: 16, borderRadius: 3, overflow: 'hidden', flexShrink: 0, background: 'var(--border-subtle)' }}>
-                      {conv.listing.coverImageUrl && <img src={conv.listing.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {conv.listing.title}
-                    </span>
-                    {conv.dealStatus !== 'DISCUSSING' && (
-                      <span style={{ flexShrink: 0, borderRadius: 999, padding: '1px 5px', fontSize: '0.6rem', fontWeight: 800, background: conv.dealStatus === 'CONCLUDED' ? 'rgba(16,185,129,0.12)' : 'var(--border-subtle)', color: conv.dealStatus === 'CONCLUDED' ? '#059669' : 'var(--fg-muted)' }}>
-                        {conv.dealStatus === 'CONCLUDED' ? 'VENDU' : 'NON CONCLUE'}
-                      </span>
-                    )}
+          {conversationGroups.map(group => (
+            <div key={group.key}>
+              {group.listing && (
+                <div
+                  onClick={() => onSelectListing?.(group.listing!.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 1rem', background: 'var(--bg)', borderBottom: '1px solid var(--border-subtle)', cursor: onSelectListing ? 'pointer' : 'default' }}
+                >
+                  <div style={{ width: 24, height: 24, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'var(--border-subtle)' }}>
+                    {group.listing.coverImageUrl && <img src={group.listing.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                   </div>
-                )}
-                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: conv.unreadCount > 0 ? 700 : 400 }}>
-                  {conv.lastMessage?.body ?? 'Nouvelle conversation'}
-                </p>
-              </div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--primary)', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
+                    {group.listing.title}
+                  </span>
+                  <div className="price-tag" style={{ fontSize: '0.72rem', flexShrink: 0 }}><Price amount={group.listing.price} currency={group.listing.currency} /></div>
+                </div>
+              )}
+              {group.conversations.map(conv => (
+                <div
+                  key={conv.id}
+                  onClick={() => { setActiveId(conv.id); setShowList(false) }}
+                  style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: activeId === conv.id ? 'rgba(254,0,0,0.04)' : 'transparent', borderLeft: activeId === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
+                >
+                  <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
+                    {conv.otherParticipant.avatarUrl ? (
+                      <img src={conv.otherParticipant.avatarUrl} alt={conv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      conv.otherParticipant.fullName.charAt(0).toUpperCase()
+                    )}
+                    {conv.unreadCount > 0 && <span className="notif-dot" style={{ top: 0, right: 0 }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: conv.unreadCount > 0 ? 800 : 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.otherParticipant.fullName}</span>
+                      {conv.dealStatus !== 'DISCUSSING' && (
+                        <span style={{ flexShrink: 0, borderRadius: 999, padding: '1px 5px', fontSize: '0.6rem', fontWeight: 800, background: conv.dealStatus === 'CONCLUDED' ? 'rgba(16,185,129,0.12)' : 'var(--border-subtle)', color: conv.dealStatus === 'CONCLUDED' ? '#059669' : 'var(--fg-muted)' }}>
+                          {conv.dealStatus === 'CONCLUDED' ? 'VENDU' : 'NON CONCLUE'}
+                        </span>
+                      )}
+                      <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', flexShrink: 0 }}>{conv.lastMessageAt ? formatRelativeDate(conv.lastMessageAt) : ''}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: conv.unreadCount > 0 ? 700 : 400 }}>
+                      {conv.lastMessage?.body ?? 'Nouvelle conversation'}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -599,26 +647,28 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  {!activeConv.canManageDeal && activeConv.listing?.negotiable && activeConv.dealStatus === 'DISCUSSING' && (
-                    <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 42, height: 42, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
-                      <Tag size={18} />
-                    </button>
-                  )}
-                  <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 4px', width: '100%' }}>
-                    {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
-                  </div>
-                  <input
-                    className="input"
-                    style={{ flex: 1 }}
-                    placeholder="Écrivez votre message..."
-                    value={msg}
-                    onChange={e => { setMsg(e.target.value); notifyTyping() }}
-                    onKeyDown={e => e.key === 'Enter' && handleSend()}
-                  />
-                  <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1 }} onClick={handleSend}>
-                    <Send size={18} />
-                  </button>
+                  <div>
+                    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 6px' }}>
+                      {quickMessages.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      {!activeConv.canManageDeal && activeConv.listing?.negotiable && activeConv.dealStatus === 'DISCUSSING' && (
+                        <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 42, height: 42, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
+                          <Tag size={18} />
+                        </button>
+                      )}
+                      <input
+                        className="input"
+                        style={{ flex: 1, minWidth: 0 }}
+                        placeholder="Écrivez votre message..."
+                        value={msg}
+                        onChange={e => { setMsg(e.target.value); notifyTyping() }}
+                        onKeyDown={e => e.key === 'Enter' && handleSend()}
+                      />
+                      <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.65rem', borderRadius: '50%', width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1, flexShrink: 0 }} onClick={handleSend}>
+                        <Send size={18} />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
