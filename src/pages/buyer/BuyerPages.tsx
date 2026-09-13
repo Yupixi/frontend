@@ -648,9 +648,14 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                   </div>
                 ) : (
                   <div>
-                    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 6px' }}>
-                      {quickMessages.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
-                    </div>
+                    {/* The empty-thread state above already offers these as
+                        big buttons — repeating them here as chips once a
+                        first message exists is the only place they're useful. */}
+                    {messages.length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 6px' }}>
+                        {quickMessages.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                       {!activeConv.canManageDeal && activeConv.listing?.negotiable && activeConv.dealStatus === 'DISCUSSING' && (
                         <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 42, height: 42, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
