@@ -339,26 +339,28 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 8, marginTop: '0.5rem' }}>
-          {canOffer && (
-            <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 38, height: 38, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
-              <Tag size={16} />
-            </button>
-          )}
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 4px' }}>
+        <div style={{ marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 6px' }}>
             {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
           </div>
-          <input
-            className="input"
-            style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
-            placeholder="Écrivez votre message..."
-            value={msg}
-            onChange={e => { setMsg(e.target.value); notifyTyping() }}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
-          />
-          <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.55rem', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1, flexShrink: 0 }} onClick={handleSend}>
-            <Send size={16} />
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {canOffer && (
+              <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 38, height: 38, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
+                <Tag size={16} />
+              </button>
+            )}
+            <input
+              className="input"
+              style={{ flex: 1, minWidth: 0, padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
+              placeholder="Écrivez votre message..."
+              value={msg}
+              onChange={e => { setMsg(e.target.value); notifyTyping() }}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
+            <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.55rem', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1, flexShrink: 0 }} onClick={handleSend}>
+              <Send size={16} />
+            </button>
+          </div>
         </div>
       )}
     </div>
