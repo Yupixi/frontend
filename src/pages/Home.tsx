@@ -22,14 +22,24 @@ type HomeProps = {
   location?: StoredLocation | null
 }
 
-function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggleFav }: {
-  card: RemoteListing, isMain: boolean, isFav: boolean, animationDelay: string, onSelect: () => void, onToggleFav: () => void
+// 'mosaic-side' is the only variant that keeps the old plain card body
+// (image on top, text below) — every other variant, including the two new
+// bento sizes, is a full-bleed photo with the title/price overlaid at the
+// bottom, which is what actually reads as "bento" instead of "grid of
+// product cards". isMain (bigger type, category badge always shown) covers
+// both the mosaic's lead card and the bento's large tile.
+type MosaicCardVariant = 'mosaic-main' | 'mosaic-side' | 'bento-lg' | 'bento-wide' | 'bento-sm'
+
+function HeroMosaicCard({ card, variant, isFav, animationDelay, onSelect, onToggleFav, className }: {
+  card: RemoteListing, variant: MosaicCardVariant, isFav: boolean, animationDelay: string, onSelect: () => void, onToggleFav: () => void, className?: string
 }) {
   const [imgError, setImgError] = useState(false)
+  const isMain = variant === 'mosaic-main' || variant === 'bento-lg'
+  const overlay = variant !== 'mosaic-side'
 
   return (
     <div
-      className={`hero-mosaic-card${isMain ? ' hero-mosaic-card-main' : ''}`}
+      className={`hero-mosaic-card${isMain ? ' hero-mosaic-card-main' : ''}${overlay ? ' hero-mosaic-card-overlay' : ''}${className ? ` ${className}` : ''}`}
       style={{ animationDelay }}
       onClick={onSelect}
     >
@@ -44,12 +54,12 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
         {/* Gradient overlay at bottom */}
         <div className="hero-mosaic-overlay" />
 
-        {isMain && <div className="hero-mosaic-category">{card.category.name}</div>}
+        {overlay && <div className="hero-mosaic-category">{card.category.name}</div>}
       </div>
 
       {/* Card body (title + location) */}
       <div className="hero-mosaic-body">
-        {!isMain && <div className="hero-mosaic-card-kicker">{card.category.name}</div>}
+        {!overlay && <div className="hero-mosaic-card-kicker">{card.category.name}</div>}
         <h3 className="hero-mosaic-title">{card.title}</h3>
         <div className="hero-mosaic-meta">
           <div className="hero-mosaic-location">
@@ -72,6 +82,15 @@ function HeroMosaicCard({ card, isMain, isFav, animationDelay, onSelect, onToggl
       </button>
     </div>
   )
+}
+
+// One big lead tile, then a wide banner every 4th slot with small squares
+// filling the rest — repeats indefinitely so it holds up whether there are
+// 5 listings or 20, and .hero-bento's grid-auto-flow:dense packs whatever
+// count comes out of it without gaps.
+function bentoVariant(index: number): 'bento-lg' | 'bento-wide' | 'bento-sm' {
+  if (index === 0) return 'bento-lg'
+  return (index - 1) % 4 === 3 ? 'bento-wide' : 'bento-sm'
 }
 
 function SponsoredListingCard({ listing, onSelect }: { listing: RemoteListing, onSelect: () => void }) {
@@ -222,13 +241,12 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     .filter((item, index, items) => items.findIndex(candidate => candidate.seller.id === item.seller.id) === index)
     .slice(0, 4)
   const sponsoredIds = new Set(sponsored.map(item => item.id))
-  // The mosaic itself (1 main + 3 side cards) is a fixed-slot CSS grid, so
-  // only the first 4 ever feed it — the rest fill out a plain grid right
-  // below it, turning "À la une" into a real showcase instead of 4 listings
-  // and done.
+  // Fed to two different presentations: the desktop bento grid gets the
+  // whole pool (see bentoVariant below), the mobile carousel only gets the
+  // first 4 — a swipeable strip with a dozen stops isn't a "highlight reel"
+  // anymore.
   const highlighted = recommendations.filter(item => !sponsoredIds.has(item.id)).slice(0, 12)
   const heroHighlighted = highlighted.slice(0, 4)
-  const moreHighlighted = highlighted.slice(4)
   const highlightedIds = new Set(highlighted.map(item => item.id))
 
   const loopCount = heroHighlighted.length
@@ -548,6 +566,29 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
             </div>
 
+            {/* Desktop: one asymmetric bento grid across the whole
+                recommended pool (up to 9) — a big lead tile, two wide
+                banners, and small squares, packed with grid-auto-flow:dense
+                so it stays gap-free whatever the count. Mobile keeps the
+                swipeable carousel below instead (a dense multi-size grid
+                doesn't work as a one-thumb swipe strip), limited to a
+                focused top-4 highlight reel. CSS toggles which one is
+                visible per breakpoint (.hero-bento / .hero-mosaic). */}
+            <div className="hero-bento">
+              {highlighted.slice(0, 9).map((card, i) => (
+                <HeroMosaicCard
+                  key={card.id}
+                  card={card}
+                  variant={bentoVariant(i)}
+                  className={`hero-bento-${bentoVariant(i).replace('bento-', '')}`}
+                  isFav={favorites.includes(card.id)}
+                  animationDelay="0s"
+                  onSelect={() => onSelectListing(card.id)}
+                  onToggleFav={() => onToggleFavorite(card.id)}
+                />
+              ))}
+            </div>
+
             <div
               className="hero-mosaic"
               ref={mosaicRef}
@@ -558,7 +599,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 <HeroMosaicCard
                   key={i < loopCount ? card.id : `${card.id}-loop`}
                   card={card}
-                  isMain={i === 0}
+                  variant={i === 0 ? 'mosaic-main' : 'mosaic-side'}
                   isFav={favorites.includes(card.id)}
                   animationDelay="0s"
                   onSelect={() => onSelectListing(card.id)}
@@ -576,17 +617,6 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                     onClick={() => { pauseAutoplay(); scrollMosaicTo(i) }}
                     aria-label={`Aller à l'annonce ${i + 1}`}
                   />
-                ))}
-              </div>
-            )}
-
-            {/* The mosaic above only ever has room for 4 (fixed CSS grid
-                slots) — the rest of the recommended pool shows here as a
-                normal grid so "À la une" isn't capped at 4 listings. */}
-            {moreHighlighted.length > 0 && (
-              <div className="listing-grid" style={{ marginTop: '1.75rem' }}>
-                {moreHighlighted.map(l => (
-                  <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
                 ))}
               </div>
             )}

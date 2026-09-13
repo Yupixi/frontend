@@ -851,8 +851,70 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   font-weight: 600;
 }
 
-.hero-mosaic {
+/* Desktop "À la une" — an actual bento: one lead tile, wide banners every
+   4th slot, small squares filling the rest (see bentoVariant in Home.tsx).
+   grid-auto-flow:dense repacks around whatever count comes in so it never
+   shows a half-empty trailing row. Mobile keeps the swipeable .hero-mosaic
+   carousel below instead — dense multi-size packing doesn't translate to a
+   one-thumb swipe strip, so this is hidden there. */
+.hero-bento {
   display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 170px;
+  grid-auto-flow: dense;
+  gap: 14px;
+  animation: heroMosaicIn 0.8s ease-out backwards;
+}
+.hero-bento-lg { grid-column: span 2; grid-row: span 2; }
+.hero-bento-wide { grid-column: span 2; grid-row: span 1; }
+.hero-bento-sm { grid-column: span 1; grid-row: span 1; }
+
+/* Shared full-bleed treatment for every bento tile (and the mosaic's lead
+   card) — image edge to edge, title/price overlaid at the bottom. Written
+   before .hero-mosaic-card-main below so main's larger type/padding still
+   wins where both classes land on the same (lead) card. */
+.hero-mosaic-card-overlay .hero-mosaic-img-wrap { position: absolute; inset: 0; }
+.hero-mosaic-card-overlay .hero-mosaic-overlay {
+  background: linear-gradient(180deg, rgba(2,6,23,0.02) 40%, rgba(2,6,23,0.88) 100%);
+}
+.hero-mosaic-card-overlay .hero-mosaic-body {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.1rem 1rem 0.85rem;
+  color: #fff;
+  background: transparent;
+}
+.hero-mosaic-card-overlay .hero-mosaic-title {
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero-mosaic-card-overlay .hero-mosaic-location { display: none; }
+.hero-mosaic-card-overlay .hero-mosaic-price { color: #fff; }
+.hero-mosaic-card-overlay .hero-mosaic-fav { background: rgba(255,255,255,0.85); }
+/* Wide tiles have the width to spare — let the title breathe on two lines
+   instead of ellipsizing what's usually still a short product title. */
+.hero-bento-wide .hero-mosaic-title {
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .hero-bento { display: none; }
+}
+
+.hero-mosaic {
+  display: none;
   grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr);
   grid-template-rows: repeat(3, 142px);
   gap: 14px;
@@ -992,6 +1054,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   position: absolute;
   top: 16px;
   left: 16px;
+  max-width: calc(100% - 60px);
   background: rgba(255,255,255,0.9);
   color: #0F172A;
   font-family: 'Outfit', sans-serif;
@@ -1000,6 +1063,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   padding: 6px 10px;
   border-radius: 999px;
   backdrop-filter: blur(10px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .dark .hero-mosaic-category {
   background: rgba(42,27,27,0.9);
@@ -1261,6 +1327,13 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 /* --- Responsive --- */
+@media (max-width: 1024px) and (min-width: 641px) {
+  .hero-bento {
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 160px;
+  }
+}
+
 @media (max-width: 1024px) {
   .hero-mosaic {
     grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
