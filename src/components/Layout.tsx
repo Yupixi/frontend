@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useQuery } from '@apollo/client/react'
+import { useState, useEffect, useRef } from 'react'
+import { useQuery, useMutation } from '@apollo/client/react'
 import {
   Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
   Sun, Moon, LogOut, Settings, Package, BarChart2,
@@ -11,6 +11,9 @@ import SearchOverlay from './SearchOverlay'
 import FlashIcon from './FlashIcon'
 import LocationPill from './LocationPill'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteFooterSettings, type ActiveCampaign } from '../graphql/content'
+import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, type RemoteNotification } from '../graphql/account'
+import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
+import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 
 type Page =
@@ -57,6 +60,11 @@ export default function Layout({
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false)
+  const [msgMenuOpen, setMsgMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+  const notifMenuRef = useRef<HTMLDivElement>(null)
+  const msgMenuRef = useRef<HTMLDivElement>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<string>('Accueil')
@@ -99,6 +107,48 @@ export default function Layout({
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  // Closing on an outside click, not just re-toggling the same button, is
+  // what makes three independent header dropdowns feel like one coherent
+  // menu system instead of stacking on top of each other.
+  useEffect(() => {
+    if (!userMenuOpen && !notifMenuOpen && !msgMenuOpen) return
+    const onPointerDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (userMenuRef.current?.contains(target)) return
+      if (notifMenuRef.current?.contains(target)) return
+      if (msgMenuRef.current?.contains(target)) return
+      setUserMenuOpen(false)
+      setNotifMenuOpen(false)
+      setMsgMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [userMenuOpen, notifMenuOpen, msgMenuOpen])
+
+  const showNotifBell = isLoggedIn && !currentUser?.isGuest
+  const { data: notifData, refetch: refetchNotifs } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY, {
+    skip: !showNotifBell,
+    pollInterval: 30_000,
+  })
+  const notifications = notifData?.myNotifications ?? []
+  const unreadNotifCount = notifications.filter(n => !n.readAt).length
+  const [markNotificationRead] = useMutation(MARK_NOTIFICATION_READ_MUTATION)
+
+  const { data: convData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY, {
+    skip: !isLoggedIn,
+    pollInterval: 30_000,
+  })
+  const conversations = convData?.myConversations ?? []
+  const unreadMsgCount = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
+
+  const openNotification = (n: RemoteNotification) => {
+    if (!n.readAt) void markNotificationRead({ variables: { id: n.id } }).then(() => refetchNotifs())
+    setNotifMenuOpen(false)
+    if (n.type === 'MESSAGE') onNavigate('buyer-messages')
+    else if (n.listingId) onSelectListing?.(n.listingId)
+    else onNavigate('buyer-notifications')
+  }
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg)
@@ -219,17 +269,71 @@ export default function Layout({
 
               {isLoggedIn ? (
                 <>
-                  {/* Notifications — badge/dropdown content will return once
-                      real notifications ship; for now just navigate.
-                      Desktop only: on mobile these three plus the dark-mode
-                      toggle crowded the header past the viewport width —
-                      Favoris/Profil already live in the bottom nav, and
-                      Messages/Notifications are one tap away from there. */}
+                  {/* Notifications — a short preview dropdown, not a jump
+                      straight to the full page: a click should let you see
+                      what's new before committing to leaving the current
+                      page. Desktop only: on mobile these three plus the
+                      dark-mode toggle crowded the header past the viewport
+                      width — Favoris/Profil already live in the bottom nav,
+                      and Messages/Notifications are one tap away from there. */}
                   {!currentUser?.isGuest && (
+                    <div ref={notifMenuRef} style={{ position: 'relative' }} className="desktop-only">
+                      <button
+                        onClick={() => { setNotifMenuOpen(o => !o); setMsgMenuOpen(false); setUserMenuOpen(false) }}
+                        style={{
+                          position: 'relative',
+                          background: 'var(--border-subtle)',
+                          border: '1px solid var(--border)',
+                          cursor: 'pointer',
+                          width: 38,
+                          height: 38,
+                          color: 'var(--fg-muted)',
+                          borderRadius: 10,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        title="Notifications"
+                      >
+                        <Bell size={18} />
+                        {unreadNotifCount > 0 && <span className="notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
+                      </button>
+
+                      {notifMenuOpen && (
+                        <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 320, maxWidth: '90vw', zIndex: 200, overflow: 'hidden' }}>
+                          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>Notifications</div>
+                          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                            {notifications.length === 0 && (
+                              <p style={{ padding: '1.25rem', margin: 0, color: 'var(--fg-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Aucune notification.</p>
+                            )}
+                            {notifications.slice(0, 5).map(n => (
+                              <button
+                                key={n.id}
+                                onClick={() => openNotification(n)}
+                                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: n.readAt ? 'none' : 'rgba(254,0,0,0.05)', border: 'none', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', color: 'var(--fg)' }}
+                              >
+                                <div style={{ fontSize: '0.82rem', fontWeight: n.readAt ? 600 : 800, marginBottom: 2 }}>{n.title}</div>
+                                <div style={{ fontSize: '0.76rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.body}</div>
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => { setNotifMenuOpen(false); onNavigate('buyer-notifications') }}
+                            style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', color: 'var(--primary)', fontWeight: 800, fontSize: '0.82rem', textAlign: 'center' }}
+                          >
+                            Voir tout
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Messages */}
+                  <div ref={msgMenuRef} style={{ position: 'relative' }} className="desktop-only">
                     <button
-                      onClick={() => onNavigate('buyer-notifications')}
-                      className="desktop-only"
+                      onClick={() => { setMsgMenuOpen(o => !o); setNotifMenuOpen(false); setUserMenuOpen(false) }}
                       style={{
+                        position: 'relative',
                         background: 'var(--border-subtle)',
                         border: '1px solid var(--border)',
                         cursor: 'pointer',
@@ -241,37 +345,54 @@ export default function Layout({
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
-                      title="Notifications"
+                      title="Messages"
                     >
-                      <Bell size={18} />
+                      <MessageCircle size={18} />
+                      {unreadMsgCount > 0 && <span className="notif-dot">{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>}
                     </button>
-                  )}
 
-                  {/* Messages */}
-                  <button
-                    onClick={() => onNavigate('buyer-messages')}
-                    className="desktop-only"
-                    style={{
-                      background: 'var(--border-subtle)',
-                      border: '1px solid var(--border)',
-                      cursor: 'pointer',
-                      width: 38,
-                      height: 38,
-                      color: 'var(--fg-muted)',
-                      borderRadius: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    title="Messages"
-                  >
-                    <MessageCircle size={18} />
-                  </button>
+                    {msgMenuOpen && (
+                      <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 320, maxWidth: '90vw', zIndex: 200, overflow: 'hidden' }}>
+                        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>Messages</div>
+                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                          {conversations.length === 0 && (
+                            <p style={{ padding: '1.25rem', margin: 0, color: 'var(--fg-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Aucune conversation.</p>
+                          )}
+                          {conversations.slice(0, 5).map(c => (
+                            <button
+                              key={c.id}
+                              onClick={() => { setMsgMenuOpen(false); onNavigate('buyer-messages') }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 14px', background: c.unreadCount > 0 ? 'rgba(254,0,0,0.05)' : 'none', border: 'none', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', color: 'var(--fg)' }}
+                            >
+                              <div style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
+                                {c.otherParticipant.avatarUrl
+                                  ? <img src={c.otherParticipant.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  : c.otherParticipant.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+                                  <span style={{ fontSize: '0.82rem', fontWeight: c.unreadCount > 0 ? 800 : 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.otherParticipant.fullName}</span>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', flexShrink: 0 }}>{c.lastMessageAt ? formatRelativeDate(c.lastMessageAt) : ''}</span>
+                                </div>
+                                <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.lastMessage?.body ?? 'Nouvelle conversation'}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => { setMsgMenuOpen(false); onNavigate('buyer-messages') }}
+                          style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', color: 'var(--primary)', fontWeight: 800, fontSize: '0.82rem', textAlign: 'center' }}
+                        >
+                          Voir tout
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   {/* User Avatar Menu */}
-                  <div style={{ position: 'relative' }}>
+                  <div ref={userMenuRef} style={{ position: 'relative' }}>
                     <button
-                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      onClick={() => { setUserMenuOpen(o => !o); setNotifMenuOpen(false); setMsgMenuOpen(false) }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
