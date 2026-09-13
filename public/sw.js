@@ -1,6 +1,11 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v7'
+const VERSION = 'v8'
+
+// Set by the app (see src/lib/activeConversation.ts) whenever a conversation
+// thread mounts/unmounts on screen — lets the push handler below know not
+// to alert for a message the recipient is already looking at.
+let activeConversationId = null
 const STATIC_CACHE = `yupixi-static-${VERSION}`
 const PAGE_CACHE = `yupixi-pages-${VERSION}`
 const OFFLINE_URL = '/offline.html'
@@ -27,6 +32,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
+  if (event.data?.type === 'ACTIVE_CONVERSATION') activeConversationId = event.data.conversationId || null
 })
 
 // Fires even when no tab is open — this is what lets an anonymous guest
@@ -41,12 +47,22 @@ self.addEventListener('push', (event) => {
   }
   const title = data.title || 'Dilchap'
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: data.body || '',
-      icon: '/icon-dilchap-192.png',
-      badge: '/icon-dilchap-192.png',
-      data: { url: data.url || '/' },
-    }),
+    (async () => {
+      // Skip the OS-level alert only when a focused tab is already showing
+      // this exact conversation — the message still lands live there via
+      // the messageAdded subscription, so a push on top would be a
+      // duplicate. A matching but unfocused/backgrounded tab still notifies.
+      if (data.conversationId && data.conversationId === activeConversationId) {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        if (windows.some((client) => client.focused)) return
+      }
+      await self.registration.showNotification(title, {
+        body: data.body || '',
+        icon: '/icon-dilchap-192.png',
+        badge: '/icon-dilchap-192.png',
+        data: { url: data.url || '/' },
+      })
+    })(),
   )
 })
 

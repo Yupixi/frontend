@@ -40,6 +40,7 @@ import {
 import { formatRelativeDate } from '../../lib/format'
 import { uploadImages } from '../../lib/upload'
 import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } from '../../lib/pushNotifications'
+import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as PageLayout } from '../account/AccountLayout'
 
@@ -321,6 +322,15 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
   useEffect(() => {
     if (!activeId && conversations.length > 0) setActiveId(conversations[0].id)
   }, [conversations, activeId])
+
+  // Lets the service worker skip the push alert for whichever conversation
+  // is open here in a focused tab — see src/lib/activeConversation.ts. Clears
+  // on unmount (leaving the Messages page) so a later push isn't wrongly
+  // suppressed for a thread that's no longer on screen.
+  useEffect(() => {
+    setActiveConversation(activeId)
+    return () => setActiveConversation(null)
+  }, [activeId])
 
   const { data: convData, loading: convLoading, refetch: refetchConv } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, {
     variables: { id: activeId },

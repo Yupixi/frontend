@@ -14,6 +14,7 @@ import { GUEST_LOGIN_MUTATION } from '../graphql/auth'
 import type { AuthPayload } from '../graphql/auth'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import { storeTokens, getAccessToken } from '../lib/auth'
+import { setActiveConversation } from '../lib/activeConversation'
 import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../lib/useMessagingLive'
 import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
@@ -224,6 +225,13 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
   const { otherIsTyping, notifyTyping, notifyStoppedTyping } = useTypingIndicator(conversationId, otherId)
   useConversationReadRefresh(conversationId, refetch)
   useOfferUpdatedRefresh(conversationId, refetch)
+
+  // Lets the service worker skip the push alert while this thread is open
+  // here in a focused tab — see src/lib/activeConversation.ts.
+  useEffect(() => {
+    setActiveConversation(conversationId)
+    return () => setActiveConversation(null)
+  }, [conversationId])
 
   useSubscription(MESSAGE_ADDED_SUBSCRIPTION, {
     variables: { conversationId },
