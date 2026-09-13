@@ -211,7 +211,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // listings bumped up, popularity + recency fallback otherwise.
   const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
     variables: {
-      limit: 8,
+      limit: 20,
       countryCode: location?.countryCode ?? undefined,
       city: location?.city ?? undefined,
     },
@@ -222,10 +222,17 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     .filter((item, index, items) => items.findIndex(candidate => candidate.seller.id === item.seller.id) === index)
     .slice(0, 4)
   const sponsoredIds = new Set(sponsored.map(item => item.id))
-  const highlighted = recommendations.filter(item => !sponsoredIds.has(item.id)).slice(0, 4)
+  // The mosaic itself (1 main + 3 side cards) is a fixed-slot CSS grid, so
+  // only the first 4 ever feed it — the rest fill out a plain grid right
+  // below it, turning "À la une" into a real showcase instead of 4 listings
+  // and done.
+  const highlighted = recommendations.filter(item => !sponsoredIds.has(item.id)).slice(0, 12)
+  const heroHighlighted = highlighted.slice(0, 4)
+  const moreHighlighted = highlighted.slice(4)
+  const highlightedIds = new Set(highlighted.map(item => item.id))
 
-  const loopCount = highlighted.length
-  const mosaicSlides = loopCount > 1 ? [...highlighted, highlighted[0]] : highlighted
+  const loopCount = heroHighlighted.length
+  const mosaicSlides = loopCount > 1 ? [...heroHighlighted, heroHighlighted[0]] : heroHighlighted
 
   const mosaicRef = useRef<HTMLDivElement>(null)
   const [activeSlide, setActiveSlide] = useState(0)
@@ -560,15 +567,26 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               ))}
             </div>
 
-            {highlighted.length > 1 && (
+            {heroHighlighted.length > 1 && (
               <div className="hero-mosaic-dots">
-                {highlighted.map((card, i) => (
+                {heroHighlighted.map((card, i) => (
                   <button
                     key={card.id}
                     className={`hero-mosaic-dot${i === activeSlide ? ' active' : ''}`}
                     onClick={() => { pauseAutoplay(); scrollMosaicTo(i) }}
                     aria-label={`Aller à l'annonce ${i + 1}`}
                   />
+                ))}
+              </div>
+            )}
+
+            {/* The mosaic above only ever has room for 4 (fixed CSS grid
+                slots) — the rest of the recommended pool shows here as a
+                normal grid so "À la une" isn't capped at 4 listings. */}
+            {moreHighlighted.length > 0 && (
+              <div className="listing-grid" style={{ marginTop: '1.75rem' }}>
+                {moreHighlighted.map(l => (
+                  <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
                 ))}
               </div>
             )}
@@ -597,7 +615,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </div>
           </div>
 
-          {renderListingsContainer(recent.filter(item => !sponsoredIds.has(item.id)))}
+          {renderListingsContainer(recent.filter(item => !sponsoredIds.has(item.id) && !highlightedIds.has(item.id)))}
         </section>
 
         {sponsored.length > 0 && (
