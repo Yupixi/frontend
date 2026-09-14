@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         UserRole @default(BUYER)
+  city         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  listings Listing[]
+
+  @@map("users")
+}
+
+model Category {
+  id       String     @id @default(uuid())
+  name     String     @unique
+  slug     String     @unique
+  listings Listing[]
+
+  @@map("categories")
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Listing {
+  id          String        @id @default(uuid())
+  title       String
+  description String
+  price       Int
+  city        String
+  status      ListingStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  seller     User     @relation(fields: [sellerId], references: [id])
+  sellerId   String
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+
+  @@map("listings")
+  @@index([sellerId])
+  @@index([categoryId])
+}
