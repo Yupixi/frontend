@@ -22,5 +22,5 @@ export default function DilchapLogo({ size = 'md', variant = 'wordmark', colorMo
     )
   }
   const height = { sm: 32, md: 42, lg: 56, xl: 72 }[size]
-  return <img src={variant === 'icon' ? '/icon-dilchap-192.png' : '/logo-dilchap.png'} alt="Dilchap" className={className} style={{ display: 'block', width: variant === 'icon' ? height : 'auto', height, objectFit: 'contain', flexShrink: 0, userSelect: 'none', ...style }} />
+  return <img src={variant === 'icon' ? '/icon-192.png' : '/logo-dilchap.png'} alt="Dilchap" className={className} style={{ display: 'block', width: variant === 'icon' ? height : 'auto', height, objectFit: 'contain', flexShrink: 0, userSelect: 'none', ...style }} />
 }

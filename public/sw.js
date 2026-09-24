@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v8'
+const VERSION = 'v9'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -12,11 +12,11 @@ const OFFLINE_URL = '/offline.html'
 
 const APP_SHELL = [
   '/',
-  '/manifest.json?v=dilchap-1',
+  '/manifest.json?v=dilchap-2',
   OFFLINE_URL,
-  '/favicon-dilchap.png',
-  '/icon-dilchap-192.png',
-  '/icon-dilchap-512.png',
+  '/favicon.png',
+  '/icon-192.png',
+  '/icon-512.png',
 ]
 
 self.addEventListener('install', (event) => {
@@ -58,8 +58,8 @@ self.addEventListener('push', (event) => {
       }
       await self.registration.showNotification(title, {
         body: data.body || '',
-        icon: '/icon-dilchap-192.png',
-        badge: '/icon-dilchap-192.png',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
         data: { url: data.url || '/' },
       })
     })(),

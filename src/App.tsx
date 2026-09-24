@@ -475,7 +475,7 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
             padding: '2rem 1.5rem', textAlign: 'center',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 52, height: 52, borderRadius: 14, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-              <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+              <img src="/icon-192.png" alt="Dilchap" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
             <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Dilchap</h3>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
@@ -499,7 +499,7 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
         fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}>
         <div style={{ width: 44, height: 44, borderRadius: 12, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+          <img src="/icon-192.png" alt="Dilchap" style={{ width: 30, height: 30, objectFit: 'contain' }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Dilchap</div>
