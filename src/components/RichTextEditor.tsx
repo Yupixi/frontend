@@ -8,7 +8,6 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Heading1, Heading2, Heading3, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, Link, Undo2, Redo2,
-  Pilcrow,
 } from 'lucide-react'
 
 type RichTextEditorProps = {
@@ -27,7 +26,7 @@ function ToolbarBtn({ onClick, active, icon: Icon, label }: { onClick: () => voi
       style={{
         width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
         border: 'none', borderRadius: 6, cursor: 'pointer',
-        background: active ? 'rgba(254,0,0,0.1)' : 'transparent',
+        background: active ? 'rgba(187, 0, 19,0.1)' : 'transparent',
         color: active ? 'var(--primary)' : 'var(--fg-muted)',
         transition: 'all 0.1s',
       }}

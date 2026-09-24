@@ -25,7 +25,7 @@ export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: B
       : { border: '1px solid var(--border)', borderRadius: 10, padding: 6 }
     }>
       {BOOST_TIERS.map(t => (
-        <button key={t.tier} disabled={loading} onClick={() => pick(t.tier)} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg)' }}
+        <button key={t.tier} disabled={loading} onClick={() => pick(t.tier)} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--fg)' }}
           onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >

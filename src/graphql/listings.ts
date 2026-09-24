@@ -49,6 +49,7 @@ export const LISTINGS_QUERY = gql`
         seller {
           id
           fullName
+          avatarUrl
         }
       }
     }
@@ -99,6 +100,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       seller {
         id
         fullName
+        avatarUrl
       }
     }
   }
@@ -147,6 +149,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       seller {
         id
         fullName
+        avatarUrl
       }
     }
   }
@@ -402,7 +405,7 @@ export type RemoteListing = {
   media: { url: string }[]
   category: { slug: string; name: string }
   subcategory: { slug: string; name: string } | null
-  seller: { id: string; fullName: string }
+  seller: { id: string; fullName: string; avatarUrl?: string | null }
 }
 
 export type ListingFilterInput = {

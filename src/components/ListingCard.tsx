@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Heart, MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type LucideIcon } from 'lucide-react'
+import { Heart, MapPin, Eye, Tag, Handshake, MessageSquare, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type LucideIcon } from 'lucide-react'
 import Price from './Price'
 import BoostMenu from './BoostMenu'
 import type { RemoteListing } from '../graphql/listings'
@@ -86,7 +86,7 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
       ) : (
         <button
           onClick={() => setOpen(true)}
-          style={{ width: '100%', padding: '6px 8px', background: 'rgba(254,0,0,0.06)', border: '1px dashed var(--primary)', borderRadius: 8, color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
+          style={{ width: '100%', padding: '6px 8px', background: 'rgba(187, 0, 19,0.06)', border: '1px dashed var(--primary)', borderRadius: 8, color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
         >
           <ArrowUp size={12} /> Boostez cette annonce
         </button>
@@ -100,15 +100,8 @@ function PromoBadge({ listing }: { listing: RemoteListing }) {
   if (!discount) return null
   return (
     <span
-      className="badge"
-      style={{
-        background: discount.themeColor || '#FE0000',
-        color: '#FFF',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        fontWeight: 800,
-      }}
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"
+      style={{ background: discount.themeColor || 'var(--primary)' }}
       title={discount.campaignName}
     >
       <Tag size={11} />
@@ -117,116 +110,131 @@ function PromoBadge({ listing }: { listing: RemoteListing }) {
   )
 }
 
-export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {
+function SellerChip({ listing }: { listing: RemoteListing }) {
+  const name = listing.seller.fullName
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-container-high text-[10px] font-bold text-on-surface-variant">
+        {listing.seller.avatarUrl ? <img src={listing.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+      </span>
+      <span className="truncate">{name}</span>
+    </span>
+  )
+}
+
+export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact }: {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
+  // Opens the chat with the seller straight from the card (mockup
+  // "Contacter" / "Discuter"). Falls back to opening the listing.
+  onContact?: () => void
 }) {
   const [imgError, setImgError] = useState(false)
   const salePrice = discountedPrice(listing)
   const priceSuffix = archetypePriceSuffix(listing)
   const isRoute = getArchetype(listing) === 'route'
   const isOwn = !!currentUserId && listing.seller.id === currentUserId
+  const eyebrow = listing.subcategory?.name ?? listing.category.name
 
   return (
-    <div className="card card-hover listing-card" style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative', background: 'var(--bg-card)' }} onClick={onSelect}>
-
-      {/* Badges Overlay */}
-      {(listing.activeCampaignDiscount || listing.negotiable) && (
-        <div className="listing-card-badges" style={{ position: 'absolute', top: 12, left: 12, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-          <PromoBadge listing={listing} />
-          {listing.negotiable && (
-            <span className="badge badge-red" style={{ background: '#FE0000', color: '#FFF' }}>
-              Négociable
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Heart Favorite Button */}
-      <button
-        className="listing-card-fav"
-        onClick={e => { e.stopPropagation(); onToggleFav() }}
-        style={{
-          position: 'absolute', top: 12, right: 12, zIndex: 2,
-          background: 'rgba(255,255,255,0.95)', border: '1px solid var(--border)', borderRadius: '50%',
-          width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-        }}
-        title="Ajouter aux favoris"
-      >
-        <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : '#64748B'} />
-      </button>
-
-      {/* Image Preview Container */}
-      <div className="listing-card-img" style={{ height: 190, background: 'var(--border-subtle)', overflow: 'hidden', position: 'relative' }}>
+    <div
+      className="listing-card group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover"
+      onClick={onSelect}
+    >
+      {/* Image — soft gray backdrop so second-hand photos read as
+          "detoured" (design system: Cartes Produits). */}
+      <div className="relative aspect-square overflow-hidden bg-surface-container-low">
         {!imgError && listingImage(listing) ? (
           <img
             src={listingImage(listing)}
             alt={listing.title}
-            className="listing-img"
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             onError={() => setImgError(true)}
           />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
+          <div className="flex h-full w-full items-center justify-center text-outline">
             <Tag size={40} />
           </div>
         )}
-      </div>
 
-      {/* Card Content Details */}
-      <div className="listing-card-body" style={{ padding: '14px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-          <div className="price-tag">
-            <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
-            {priceSuffix && <span style={{ fontSize: '0.7em', fontWeight: 600, color: 'var(--fg-muted)' }}> {priceSuffix}</span>}
-          </div>
-          {salePrice != null && (
-            <div style={{ fontSize: '0.78rem', color: 'var(--fg-subtle)', textDecoration: 'line-through' }}>
-              <Price amount={listing.price} currency={listing.currency} />
-            </div>
+        <div className="absolute left-2 top-2 z-[2] flex flex-col items-start gap-1 md:left-3 md:top-3">
+          {listing.condition && (
+            <span className="rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface md:px-2 md:text-label-sm">{listing.condition}</span>
           )}
+          <PromoBadge listing={listing} />
         </div>
 
-        <h3 style={{
-          margin: '4px 0 8px',
-          fontSize: '0.95rem',
-          fontWeight: 800,
-          fontFamily: "'Outfit', sans-serif",
-          color: 'var(--fg)',
-          lineHeight: 1.3,
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical'
-        }}>
+        <button
+          onClick={e => { e.stopPropagation(); onToggleFav() }}
+          className="absolute right-2 top-2 z-[2] flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm md:right-3 md:top-3 md:h-9 md:w-9"
+          title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        >
+          <Heart size={17} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
+        </button>
+
+        {listing.negotiable && (
+          <span className="absolute bottom-2 left-2 z-[2] flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-bold text-white md:bottom-3 md:left-3 md:text-label-sm">
+            <Handshake size={12} /> Négociable
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col p-2.5 md:p-3.5">
+        <div className="mb-0.5 truncate text-[10px] font-bold uppercase tracking-wide text-on-surface-variant md:text-label-sm">{eyebrow}</div>
+        <h3 className="m-0 line-clamp-2 text-[13px] font-semibold leading-snug text-on-surface md:text-label-lg">
           {listing.title}
         </h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div className="mt-1.5 flex items-end justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-[16px] font-extrabold leading-tight tracking-tight text-primary md:text-headline-sm md:font-extrabold">
+              <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
+              {priceSuffix && <span className="text-[0.7em] font-semibold text-on-surface-variant"> {priceSuffix}</span>}
+            </div>
+            {salePrice != null && (
+              <div className="text-body-sm text-outline line-through">
+                <Price amount={listing.price} currency={listing.currency} />
+              </div>
+            )}
+          </div>
+          {!isOwn && (
+            <button
+              onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }}
+              className="hidden h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-primary text-white transition-colors hover:bg-primary-dark md:flex"
+              title="Discuter avec le vendeur"
+            >
+              <MessageSquare size={17} />
+            </button>
+          )}
+        </div>
+
+        <div className="mt-1.5 flex flex-col gap-0.5 text-[11px] md:text-body-sm">
           <ArchetypeLine listing={listing} />
           {!isRoute && (
-            <div className="listing-card-location" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--fg-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
-              <MapPin size={13} style={{ color: 'var(--primary)' }} />
-              <span>{listingLocation(listing)}</span>
+            <div className="flex min-w-0 items-center gap-1 text-tertiary">
+              <MapPin size={12} className="shrink-0" />
+              <span className="truncate">{listingLocation(listing)}</span>
             </div>
           )}
         </div>
 
-        {/* Card Footer Info */}
-        <div className="listing-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>
-            {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}
+        <div className="min-h-2.5 flex-1" />
+        <div className="flex items-center justify-between gap-2 border-0 border-t border-solid border-surface-container-low pt-2 text-[11px] text-on-surface-variant md:text-label-sm md:font-medium">
+          <SellerChip listing={listing} />
+          <span className="flex shrink-0 items-center gap-2">
+            <span className="hidden items-center gap-0.5 sm:flex"><Eye size={12} />{listing.viewsCount}</span>
+            <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
           </span>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.75rem', color: 'var(--fg-subtle)', fontWeight: 600 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Eye size={13} />{listing.viewsCount}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Heart size={13} />{listing.favoritesCount}
-            </span>
-          </div>
         </div>
 
+        {!isOwn && (
+          <button
+            onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }}
+            className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-1.5 text-label-md text-on-surface hover:bg-surface-container md:hidden"
+          >
+            <MessageSquare size={14} /> Contacter
+          </button>
+        )}
         {isOwn && <OwnListingBoostCta listing={listing} />}
       </div>
     </div>

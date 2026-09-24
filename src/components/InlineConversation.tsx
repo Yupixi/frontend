@@ -157,7 +157,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
       </p>
 
       {error && (
-        <div style={{ background: 'rgba(254,0,0,0.06)', border: '1px solid rgba(254,0,0,0.2)', borderRadius: 8, padding: '0.6rem 0.75rem', color: 'var(--primary-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
+        <div style={{ background: 'rgba(187, 0, 19,0.06)', border: '1px solid rgba(187, 0, 19,0.2)', borderRadius: 8, padding: '0.6rem 0.75rem', color: 'var(--primary-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
           {error}
         </div>
       )}
@@ -281,7 +281,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 380 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <p style={{ margin: 0, fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '0.88rem' }}>Discussion avec {sellerName}</p>
+        <p style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.88rem' }}>Discussion avec {sellerName}</p>
         <button onClick={onClose} aria-label="Fermer" style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
           <X size={13} />
         </button>
@@ -335,7 +335,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
 
       {offerFormOpen ? (
         <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.65rem', marginTop: '0.5rem' }}>
-          <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.78rem', display: 'block', marginBottom: 5 }}>
+          <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.78rem', display: 'block', marginBottom: 5 }}>
             Votre offre ({data?.conversation?.listing?.currency ?? 'XOF'})
           </label>
           <PriceSuggestionHint listingId={data?.conversation?.listingId} onUseAmount={amount => setOfferAmount(String(amount))} />

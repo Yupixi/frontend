@@ -90,7 +90,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       {/* Profile header */}
       <div className="card" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <div style={{ width: 100, height: 100, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--border)', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '2rem', color: 'var(--fg-muted)' }}>
+          <div style={{ width: 100, height: 100, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--border)', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '2rem', color: 'var(--fg-muted)' }}>
             {seller.avatarUrl ? (
               <img src={seller.avatarUrl} alt={seller.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
@@ -99,7 +99,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           </div>
 
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 6px' }}>{seller.fullName}</h1>
+            <h1 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 6px' }}>{seller.fullName}</h1>
 
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               {seller.city && (
@@ -118,7 +118,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                 { label: 'Avis', value: seller.reviewsCount },
               ].map(stat => (
                 <div key={stat.label} style={{ background: 'var(--border-subtle)', borderRadius: 10, padding: '0.5rem 1rem', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.1rem', color: 'var(--fg)' }}>{stat.value}</div>
+                  <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.1rem', color: 'var(--fg)' }}>{stat.value}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>{stat.label}</div>
                 </div>
               ))}
@@ -133,7 +133,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
             {seller.reviewsCount > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Stars rating={seller.averageRating} size={18} />
-                <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.1rem' }}>{seller.averageRating.toFixed(1)}</span>
+                <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.1rem' }}>{seller.averageRating.toFixed(1)}</span>
                 <span style={{ color: 'var(--fg-muted)', fontSize: '0.875rem' }}>/ 5 ({seller.reviewsCount} avis)</span>
               </div>
             )}
@@ -155,7 +155,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
               border: 'none',
               borderRadius: 8,
               cursor: 'pointer',
-              fontFamily: 'Nunito, sans-serif',
+              fontFamily: 'Plus Jakarta Sans, sans-serif',
               fontWeight: 700,
               fontSize: '0.875rem',
               background: tab === t.key ? 'var(--bg-card)' : 'transparent',
@@ -184,7 +184,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                 </div>
                 <div style={{ padding: '12px 14px' }}>
                   <div className="price-tag" style={{ fontSize: '1rem' }}><Price amount={l.price} currency={l.currency} /></div>
-                  <p style={{ margin: '4px 0 6px', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'Nunito, sans-serif', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
+                  <p style={{ margin: '4px 0 6px', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'Plus Jakarta Sans, sans-serif', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--fg-muted)' }}>
                     <span>{l.publishedAt ? formatRelativeDate(l.publishedAt) : ''}</span>
                     <span style={{ display: 'flex', gap: 8 }}>
@@ -205,7 +205,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           {seller.reviewsCount > 0 && (
             <div className="card" style={{ padding: '1.5rem', display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '3rem', color: 'var(--fg)' }}>{seller.averageRating.toFixed(1)}</div>
+                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '3rem', color: 'var(--fg)' }}>{seller.averageRating.toFixed(1)}</div>
                 <Stars rating={seller.averageRating} size={20} />
                 <div style={{ color: 'var(--fg-muted)', fontSize: '0.8rem', marginTop: 4 }}>{seller.reviewsCount} avis</div>
               </div>
@@ -227,7 +227,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           {/* Leave a review */}
           {seller.canReview && !reviewSubmitted && (
             <div className="card" style={{ padding: '1.25rem' }}>
-              <h3 style={{ margin: '0 0 0.75rem', fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.95rem' }}>Laisser un avis</h3>
+              <h3 style={{ margin: '0 0 0.75rem', fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '0.95rem' }}>Laisser un avis</h3>
               <div style={{ display: 'flex', gap: 4, marginBottom: '0.75rem' }}>
                 {[1, 2, 3, 4, 5].map(s => (
                   <button key={s} onClick={() => setReviewRating(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
@@ -259,7 +259,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
             reviews.map(r => (
               <div key={r.id} className="card" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>
                     {r.author.avatarUrl ? (
                       <img src={r.author.avatarUrl} alt={r.author.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -267,7 +267,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                     )}
                   </div>
                   <div>
-                    <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.9rem' }}>{r.author.fullName}</div>
+                    <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.9rem' }}>{r.author.fullName}</div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
                       <Stars rating={r.rating} size={13} />
                       <span style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>{formatRelativeDate(r.createdAt)}</span>

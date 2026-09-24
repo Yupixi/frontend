@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import {
-  Search, Bell, Heart, MessageCircle, Menu, X, ChevronDown,
-  Sun, Moon, LogOut, Settings, Package, BarChart2,
-  Plus, Home, CheckCircle2, Zap, Car, Home as HomeIcon, Smartphone,
-  Shirt, Wrench, Grid, User, AlertTriangle, Info, CheckCheck,
+  Search, Bell, Heart, MessageCircle, ChevronDown, SlidersHorizontal,
+  Sun, Moon, LogOut, Settings, Package, BarChart2, PlusCircle,
+  Plus, Home, CheckCircle2, Zap, User, AlertTriangle, Info, CheckCheck,
+  BadgeCheck, Handshake, ShieldCheck, Percent, Rocket,
 } from 'lucide-react'
 import Logo from './DilchapLogo'
 import SearchOverlay from './SearchOverlay'
-import FlashIcon from './FlashIcon'
 import LocationPill from './LocationPill'
+import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteFooterSettings, type ActiveCampaign } from '../graphql/content'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification } from '../graphql/account'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
@@ -24,7 +24,7 @@ type Page =
 const NOTIFICATION_STYLE: Record<RemoteNotification['type'], { icon: typeof Bell, bg: string, fg: string }> = {
   MESSAGE: { icon: MessageCircle, bg: 'rgba(59,130,246,0.12)', fg: '#3B82F6' },
   LISTING_APPROVED: { icon: CheckCircle2, bg: 'rgba(16,185,129,0.12)', fg: '#10B981' },
-  LISTING_REJECTED: { icon: AlertTriangle, bg: 'rgba(254,0,0,0.1)', fg: 'var(--primary)' },
+  LISTING_REJECTED: { icon: AlertTriangle, bg: 'rgba(187, 0, 19,0.1)', fg: 'var(--primary)' },
   LISTING_STATUS_CHANGED: { icon: Info, bg: 'rgba(148,163,184,0.18)', fg: '#64748B' },
 }
 
@@ -32,6 +32,7 @@ type LayoutProps = {
   currentPage: Page
   onNavigate: (page: Page) => void
   onNavigateCategory: (categoryId: string) => void
+  activeCategory?: string
   dark: boolean
   onToggleDark: () => void
   children: React.ReactNode
@@ -49,6 +50,7 @@ export default function Layout({
   currentPage,
   onNavigate,
   onNavigateCategory,
+  activeCategory = '',
   dark,
   onToggleDark,
   children,
@@ -65,18 +67,16 @@ export default function Layout({
   const displayInitial = displayName.charAt(0).toUpperCase()
   const [search, setSearch] = useState('')
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notifMenuOpen, setNotifMenuOpen] = useState(false)
   const [msgMenuOpen, setMsgMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
   const msgMenuRef = useRef<HTMLDivElement>(null)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const [activeCategory, setActiveCategory] = useState<string>('Accueil')
-  const flashTexts = ['Offres Flash', 'Jusqu\'à -50%', 'Livraison Offerte', 'Stock Limitė']
-  const [flashIdx, setFlashIdx] = useState(0)
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const navCategories = (categoriesData?.categories ?? []).slice(0, 8)
 
   // BO-authored footer copy — falls back to the default copy below when
   // unconfigured, same convention as the Banner slots.
@@ -105,12 +105,7 @@ export default function Layout({
     : 0
 
   useEffect(() => {
-    const t = setInterval(() => setFlashIdx(i => (i + 1) % flashTexts.length), 5000)
-    return () => clearInterval(t)
-  }, [])
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768)
+    const onResize = () => setIsMobile(window.innerWidth < 1024)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -176,8 +171,20 @@ export default function Layout({
     onNavigate('search')
   }
 
+  const accountLinks = currentUser?.isGuest ? [] : [
+    { icon: Home, label: 'Tableau de bord', page: 'buyer-dashboard' as Page },
+    { icon: Package, label: 'Mes annonces', page: 'seller-listings' as Page },
+    { icon: Rocket, label: 'Booster mes annonces', page: 'seller-premium' as Page },
+    { icon: Heart, label: 'Mes favoris', page: 'buyer-favorites' as Page },
+    { icon: BarChart2, label: 'Statistiques', page: 'seller-stats' as Page },
+    { icon: Settings, label: 'Paramètres du compte', page: 'buyer-settings' as Page },
+  ]
+
+  const iconBtn = 'relative flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface'
+  const dropdown = 'absolute right-0 top-full z-[200] mt-2.5 overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest shadow-float'
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--fg)', display: 'flex', flexDirection: 'column' }}>
+    <div className="flex min-h-screen flex-col bg-surface text-on-surface">
 
       {/* Campaign announcement bar — appears automatically on every page
           while a campaign is ACTIVE and inside its date window, themed with
@@ -186,147 +193,163 @@ export default function Layout({
       {activeCampaign && (
         <button
           onClick={() => onNavigate('flash-offers')}
-          style={{
-            width: '100%', border: 'none', cursor: 'pointer',
-            background: 'var(--campaign-accent, var(--primary))', color: '#FFFFFF',
-            padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem', textAlign: 'left',
-          }}
+          className="flex w-full cursor-pointer items-center justify-center gap-2 border-none px-4 py-2 text-left text-label-md text-white"
+          style={{ background: 'var(--campaign-accent, var(--primary))' }}
         >
-          <Zap size={14} style={{ flexShrink: 0 }} fill="#FFFFFF" />
+          <Zap size={14} className="shrink-0" fill="#FFFFFF" />
           {/* Name + description truncate together on one line rather than
               wrapping to several — a long campaign name/description
               shouldn't push a persistent site-wide bar to 3+ lines on a
               narrow screen. */}
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-bold">
             {activeCampaign.name}
             {activeCampaign.description && (
-              <span style={{ fontWeight: 600, opacity: 0.9 }}> — {activeCampaign.description}</span>
+              <span className="font-medium opacity-90"> — {activeCampaign.description}</span>
             )}
           </span>
           {daysRemaining > 0 && (
-            <span style={{ opacity: 0.85, flexShrink: 0 }}>· se termine dans {daysRemaining}j</span>
+            <span className="shrink-0 opacity-85">· se termine dans {daysRemaining}j</span>
           )}
         </button>
       )}
 
-      {/* Main Header */}
-      <header className="glass-header" style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        borderBottom: '1px solid var(--border)',
-      }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', height: 72 }}>
+      <header className="sticky top-0 z-[100] bg-surface/95 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-md">
+        {/* Reassurance strip — desktop only */}
+        <div className="hidden h-9 items-center justify-between bg-surface-container-low px-4 text-label-sm text-on-surface-variant lg:flex lg:px-12">
+          <div className="flex items-center gap-6">
+            <span className="flex items-center gap-1 text-tertiary"><BadgeCheck size={15} /> Mise en relation directe 100% gratuite</span>
+            <span className="hidden items-center gap-1 lg:flex"><MessageCircle size={15} /> Chat direct &amp; négociation instantanée</span>
+            <span className="hidden items-center gap-1 xl:flex"><Handshake size={15} /> Remise en mains propres</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={() => onNavigate('categories')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Toutes les catégories</button>
+            <span className="text-outline-variant">•</span>
+            <button onClick={() => onNavigate('flash-offers')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Bonnes affaires</button>
+          </div>
+        </div>
 
-            {/* Official Yüpixi Logo */}
+        {/* Main row */}
+        <div className="flex h-16 items-center gap-3 px-4 lg:h-20 lg:gap-6 lg:px-12">
+          <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label="Accueil Dilchap">
+            <Logo size="md" />
+            <span className="hidden rounded bg-surface-container-high px-2 py-0.5 text-label-sm uppercase tracking-wider text-on-surface-variant xl:inline-block">Seconde main</span>
+          </button>
+
+          {/* Desktop search — opens the overlay (suggestions, recent
+              searches, categories) rather than being a bare input. */}
+          <div className="hidden max-w-3xl flex-1 items-center rounded-xl bg-surface-container-low p-1 lg:flex">
+            {onLocationChange && (
+              <>
+                <LocationPill location={location} onChange={onLocationChange} />
+                <div className="mx-1 h-6 w-px bg-outline-variant" />
+              </>
+            )}
             <button
-              onClick={() => onNavigate('home')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+              onClick={openSearchOverlay}
+              className="flex min-w-0 flex-1 cursor-text items-center border-none bg-transparent px-3 py-2 text-left text-body-md text-on-surface-variant/70"
             >
-              <Logo size="md" colorMode="red" />
+              <span className="truncate">Rechercher un iPhone, une moto, un appartement…</span>
+            </button>
+            <button onClick={() => onNavigate('search')} className="cursor-pointer border-none bg-transparent p-2 text-on-surface-variant hover:text-on-surface" title="Filtres">
+              <SlidersHorizontal size={19} />
+            </button>
+            <button onClick={openSearchOverlay} className="ml-1 flex cursor-pointer items-center justify-center rounded-lg border-none bg-primary p-2 text-white transition-colors hover:bg-primary-dark" title="Rechercher">
+              <Search size={20} />
+            </button>
+          </div>
+
+          <div className="ml-auto flex items-center gap-1 lg:gap-3">
+            {/* Mobile: location + search icon */}
+            {onLocationChange && isMobile && (
+              <LocationPill location={location} onChange={onLocationChange} compact />
+            )}
+            <button onClick={openSearchOverlay} className={`${iconBtn} lg:hidden`} title="Rechercher">
+              <Search size={21} />
             </button>
 
-            {/* Search button — opens overlay */}
-            <div onClick={openSearchOverlay} className="desktop-only" style={{
-              background: 'var(--bg-card)',
-              border: '1.5px solid var(--border)',
-              borderRadius: 12,
-              padding: '0 16px',
-              height: 42,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              cursor: 'pointer',
-              color: 'var(--fg-subtle)',
-              fontSize: '0.85rem',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              minWidth: 240,
-            }}>
-              <Search size={16} />
-              <span>Rechercher sur Dilchap...</span>
-            </div>
-
-            {/* Right Header Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
-
-              {/* Mobile search icon */}
+            {!currentUser?.isGuest && (
               <button
-                onClick={openSearchOverlay}
-                className="mobile-search-btn"
-                style={{
-                  background: 'var(--border-subtle)',
-                  border: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  width: 38,
-                  height: 38,
-                  color: 'var(--fg-muted)',
-                  borderRadius: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                title="Rechercher"
+                onClick={() => { onNavigate('seller-post'); triggerToast('Création d\'une nouvelle annonce') }}
+                className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-lg text-white transition-all hover:bg-primary-dark active:scale-95 lg:flex"
               >
-                <Search size={18} />
+                <PlusCircle size={19} />
+                <span>Vendre un article</span>
               </button>
+            )}
 
-              {onLocationChange && (
-                <LocationPill location={location} onChange={onLocationChange} compact={isMobile} />
-              )}
-
-              {isLoggedIn ? (
-                <>
-                  {/* Notifications — a short preview dropdown, not a jump
-                      straight to the full page: a click should let you see
-                      what's new before committing to leaving the current
-                      page. Desktop only: on mobile these three plus the
-                      dark-mode toggle crowded the header past the viewport
-                      width — Favoris/Profil already live in the bottom nav,
-                      and Messages/Notifications are one tap away from there. */}
+            {isLoggedIn ? (
+              <>
+                <div className="hidden items-center gap-1 lg:flex">
                   {!currentUser?.isGuest && (
-                    <div ref={notifMenuRef} style={{ position: 'relative' }} className="desktop-only">
-                      <button
-                        onClick={() => { setNotifMenuOpen(o => !o); setMsgMenuOpen(false); setUserMenuOpen(false) }}
-                        style={{
-                          position: 'relative',
-                          background: 'var(--border-subtle)',
-                          border: '1px solid var(--border)',
-                          cursor: 'pointer',
-                          width: 38,
-                          height: 38,
-                          color: 'var(--fg-muted)',
-                          borderRadius: 10,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                        title="Notifications"
-                      >
-                        <Bell size={18} />
+                    <button onClick={() => onNavigate('buyer-favorites')} className={iconBtn} title="Favoris">
+                      <Heart size={22} />
+                    </button>
+                  )}
+
+                  {/* Messages — short preview dropdown */}
+                  <div ref={msgMenuRef} className="relative">
+                    <button onClick={() => { setMsgMenuOpen(o => !o); setNotifMenuOpen(false); setUserMenuOpen(false) }} className={iconBtn} title="Messages">
+                      <MessageCircle size={22} />
+                      {unreadMsgCount > 0 && <span className="notif-dot" style={{ background: 'var(--tertiary)' }}>{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>}
+                    </button>
+                    {msgMenuOpen && (
+                      <div className={`${dropdown} w-80 max-w-[90vw]`}>
+                        <div className="border-b border-outline-variant px-4 py-3 text-label-lg">Messages</div>
+                        <div className="max-h-[360px] overflow-y-auto">
+                          {conversations.length === 0 && (
+                            <p className="m-0 p-5 text-center text-body-sm text-on-surface-variant">Aucune conversation.</p>
+                          )}
+                          {conversations.slice(0, 5).map(c => (
+                            <button
+                              key={c.id}
+                              onClick={() => { setMsgMenuOpen(false); onNavigate('buyer-messages') }}
+                              className={`flex w-full cursor-pointer items-center gap-2.5 border-0 border-b border-solid border-surface-container-low px-4 py-2.5 text-left text-on-surface ${c.unreadCount > 0 ? 'bg-primary-fixed/40' : 'bg-transparent'} hover:bg-surface-container-low`}
+                            >
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-container-high font-bold text-on-surface-variant">
+                                {c.otherParticipant.avatarUrl
+                                  ? <img src={c.otherParticipant.avatarUrl} alt="" className="h-full w-full object-cover" />
+                                  : c.otherParticipant.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex justify-between gap-1.5">
+                                  <span className={`truncate text-label-md ${c.unreadCount > 0 ? 'font-extrabold' : ''}`}>{c.otherParticipant.fullName}</span>
+                                  <span className="shrink-0 text-[11px] text-outline">{c.lastMessageAt ? formatRelativeDate(c.lastMessageAt) : ''}</span>
+                                </div>
+                                <p className="m-0 truncate text-body-sm text-on-surface-variant">{c.lastMessage?.body ?? 'Nouvelle conversation'}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <button onClick={() => { setMsgMenuOpen(false); onNavigate('buyer-messages') }} className="block w-full cursor-pointer border-0 border-t border-solid border-outline-variant bg-transparent px-4 py-2.5 text-center text-label-md text-primary">
+                          Voir tout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notifications — preview before committing to leave the page */}
+                  {!currentUser?.isGuest && (
+                    <div ref={notifMenuRef} className="relative">
+                      <button onClick={() => { setNotifMenuOpen(o => !o); setMsgMenuOpen(false); setUserMenuOpen(false) }} className={iconBtn} title="Notifications">
+                        <Bell size={22} />
                         {unreadNotifCount > 0 && <span className="notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
                       </button>
-
                       {notifMenuOpen && (
-                        <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 340, maxWidth: '90vw', zIndex: 200, overflow: 'hidden', boxShadow: '0 12px 32px rgba(0,0,0,0.12)' }}>
-                          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontWeight: 900, fontFamily: 'Outfit, sans-serif', fontSize: '0.9rem' }}>Notifications</span>
+                        <div className={`${dropdown} w-[340px] max-w-[90vw]`}>
+                          <div className="flex items-center gap-2 border-b border-outline-variant px-4 py-3">
+                            <span className="text-label-lg">Notifications</span>
                             {unreadNotifCount > 0 && (
-                              <span style={{ background: 'rgba(254,0,0,0.1)', color: 'var(--primary)', fontSize: '0.68rem', fontWeight: 800, borderRadius: 999, padding: '1px 7px' }}>{unreadNotifCount}</span>
+                              <span className="rounded-full bg-primary-fixed px-2 text-[11px] font-bold text-primary">{unreadNotifCount}</span>
                             )}
                             {unreadNotifCount > 0 && (
-                              <button
-                                onClick={markAllRead}
-                                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '0.72rem', fontWeight: 700, padding: 0 }}
-                              >
+                              <button onClick={markAllRead} className="ml-auto flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-[12px] font-bold text-on-surface-variant">
                                 <CheckCheck size={13} /> Tout marquer lu
                               </button>
                             )}
                           </div>
-                          <div style={{ maxHeight: 380, overflowY: 'auto', padding: 6 }}>
+                          <div className="max-h-[380px] overflow-y-auto p-1.5">
                             {notifications.length === 0 && (
-                              <p style={{ padding: '1.5rem 1rem', margin: 0, color: 'var(--fg-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Aucune notification pour l'instant.</p>
+                              <p className="m-0 px-4 py-6 text-center text-body-sm text-on-surface-variant">Aucune notification pour l'instant.</p>
                             )}
                             {notifications.slice(0, 5).map(n => {
                               const style = NOTIFICATION_STYLE[n.type]
@@ -334,382 +357,137 @@ export default function Layout({
                                 <button
                                   key={n.id}
                                   onClick={() => openNotification(n)}
-                                  style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', textAlign: 'left', padding: '10px', borderRadius: 10, background: n.readAt ? 'none' : 'rgba(254,0,0,0.045)', border: 'none', cursor: 'pointer', color: 'var(--fg)', marginBottom: 2 }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = n.readAt ? 'var(--border-subtle)' : 'rgba(254,0,0,0.08)' }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = n.readAt ? 'none' : 'rgba(254,0,0,0.045)' }}
+                                  className={`mb-0.5 flex w-full cursor-pointer items-start gap-2.5 rounded-xl border-none p-2.5 text-left text-on-surface ${n.readAt ? 'bg-transparent hover:bg-surface-container-low' : 'bg-primary-fixed/40 hover:bg-primary-fixed/70'}`}
                                 >
-                                  <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: style.bg, color: style.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: style.bg, color: style.fg }}>
                                     <style.icon size={16} />
                                   </div>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                                      <span style={{ fontSize: '0.8rem', fontWeight: n.readAt ? 600 : 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</span>
-                                      <span style={{ fontSize: '0.68rem', color: 'var(--fg-subtle)', flexShrink: 0, marginTop: 1 }}>{formatRelativeDate(n.createdAt)}</span>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex justify-between gap-2">
+                                      <span className={`truncate text-label-md ${n.readAt ? '' : 'font-extrabold'}`}>{n.title}</span>
+                                      <span className="mt-px shrink-0 text-[11px] text-outline">{formatRelativeDate(n.createdAt)}</span>
                                     </div>
-                                    <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.body}</p>
+                                    <p className="m-0 mt-0.5 truncate text-body-sm text-on-surface-variant">{n.body}</p>
                                   </div>
-                                  {!n.readAt && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: 6 }} />}
+                                  {!n.readAt && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
                                 </button>
                               )
                             })}
                           </div>
-                          <button
-                            onClick={() => { setNotifMenuOpen(false); onNavigate('buyer-notifications') }}
-                            style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', color: 'var(--primary)', fontWeight: 800, fontSize: '0.82rem', textAlign: 'center' }}
-                          >
+                          <button onClick={() => { setNotifMenuOpen(false); onNavigate('buyer-notifications') }} className="block w-full cursor-pointer border-0 border-t border-solid border-outline-variant bg-transparent px-4 py-2.5 text-center text-label-md text-primary">
                             Voir tout
                           </button>
                         </div>
                       )}
                     </div>
                   )}
+                </div>
 
-                  {/* Messages */}
-                  <div ref={msgMenuRef} style={{ position: 'relative' }} className="desktop-only">
-                    <button
-                      onClick={() => { setMsgMenuOpen(o => !o); setNotifMenuOpen(false); setUserMenuOpen(false) }}
-                      style={{
-                        position: 'relative',
-                        background: 'var(--border-subtle)',
-                        border: '1px solid var(--border)',
-                        cursor: 'pointer',
-                        width: 38,
-                        height: 38,
-                        color: 'var(--fg-muted)',
-                        borderRadius: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="Messages"
-                    >
-                      <MessageCircle size={18} />
-                      {unreadMsgCount > 0 && <span className="notif-dot">{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>}
-                    </button>
+                {/* Mobile bell — straight to the page, no dropdown */}
+                {!currentUser?.isGuest && (
+                  <button onClick={() => onNavigate('buyer-notifications')} className={`${iconBtn} lg:hidden`} title="Notifications">
+                    <Bell size={21} />
+                    {unreadNotifCount > 0 && <span className="notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
+                  </button>
+                )}
 
-                    {msgMenuOpen && (
-                      <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 320, maxWidth: '90vw', zIndex: 200, overflow: 'hidden' }}>
-                        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>Messages</div>
-                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-                          {conversations.length === 0 && (
-                            <p style={{ padding: '1.25rem', margin: 0, color: 'var(--fg-muted)', fontSize: '0.85rem', textAlign: 'center' }}>Aucune conversation.</p>
-                          )}
-                          {conversations.slice(0, 5).map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => { setMsgMenuOpen(false); onNavigate('buyer-messages') }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 14px', background: c.unreadCount > 0 ? 'rgba(254,0,0,0.05)' : 'none', border: 'none', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', color: 'var(--fg)' }}
-                            >
-                              <div style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
-                                {c.otherParticipant.avatarUrl
-                                  ? <img src={c.otherParticipant.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  : c.otherParticipant.fullName.charAt(0).toUpperCase()}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-                                  <span style={{ fontSize: '0.82rem', fontWeight: c.unreadCount > 0 ? 800 : 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.otherParticipant.fullName}</span>
-                                  <span style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', flexShrink: 0 }}>{c.lastMessageAt ? formatRelativeDate(c.lastMessageAt) : ''}</span>
-                                </div>
-                                <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.lastMessage?.body ?? 'Nouvelle conversation'}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
+                <div className="mx-1 hidden h-7 w-px bg-surface-container-high lg:block" />
+
+                {/* Account menu */}
+                <div ref={userMenuRef} className="relative">
+                  <button
+                    onClick={() => { setUserMenuOpen(o => !o); setNotifMenuOpen(false); setMsgMenuOpen(false) }}
+                    className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent py-1 pl-1 pr-1 transition-colors hover:bg-surface-container-low lg:pr-2"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-[14px] font-bold text-white">
+                      {currentUser?.avatarUrl
+                        ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" />
+                        : displayInitial}
+                    </div>
+                    <div className="hidden flex-col text-left lg:flex">
+                      <span className="text-label-md leading-tight text-on-surface">Mon compte</span>
+                      <span className="max-w-[120px] truncate text-label-sm leading-tight text-tertiary">{displayName.split(' ')[0]}</span>
+                    </div>
+                    <ChevronDown size={15} className="hidden text-on-surface-variant lg:inline" />
+                  </button>
+
+                  {userMenuOpen && (
+                    <div className={`${dropdown} w-64 p-2`}>
+                      <div className="mb-1.5 border-b border-outline-variant px-3 py-3">
+                        <div className="text-label-lg">{displayName}</div>
+                        <div className="mt-0.5 truncate text-body-sm text-on-surface-variant">{currentUser?.email ?? ''}</div>
+                      </div>
+
+                      {/* Everyone on Dilchap can both buy and sell — one
+                          unified account space. A guest identity (see
+                          AuthService.guestLogin) has no such account
+                          behind it, so this space stays hidden. */}
+                      {accountLinks.map(item => (
                         <button
-                          onClick={() => { setMsgMenuOpen(false); onNavigate('buyer-messages') }}
-                          style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', color: 'var(--primary)', fontWeight: 800, fontSize: '0.82rem', textAlign: 'center' }}
+                          key={item.page}
+                          onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
+                          className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
                         >
-                          Voir tout
+                          <item.icon size={17} className="text-on-surface-variant" />
+                          {item.label}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => { onToggleDark(); setUserMenuOpen(false) }}
+                        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
+                      >
+                        {dark ? <Sun size={17} className="text-amber-600" /> : <Moon size={17} className="text-on-surface-variant" />}
+                        {dark ? 'Mode clair' : 'Mode sombre'}
+                      </button>
+
+                      <div className="mt-1.5 border-t border-outline-variant pt-1.5">
+                        <button
+                          onClick={() => { onToggleLogin(); setUserMenuOpen(false) }}
+                          className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-primary hover:bg-primary-fixed/40"
+                        >
+                          <LogOut size={17} />
+                          Se déconnecter
                         </button>
                       </div>
-                    )}
-                  </div>
-
-                  {/* User Avatar Menu */}
-                  <div ref={userMenuRef} style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => { setUserMenuOpen(o => !o); setNotifMenuOpen(false); setMsgMenuOpen(false) }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        background: 'var(--bg-card)',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: 999,
-                        padding: 4,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <div style={{
-                        width: 32,
-                        height: 32,
-                        flexShrink: 0,
-                        borderRadius: '50%',
-                        background: 'var(--primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#FFF',
-                        fontSize: '0.85rem',
-                        fontWeight: 900,
-                        fontFamily: 'Outfit, sans-serif',
-                        overflow: 'hidden'
-                      }}>
-                        {currentUser?.avatarUrl
-                          ? <img src={currentUser.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : displayInitial}
-                      </div>
-                      <span className="desktop-only" style={{ fontSize: '0.875rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--fg)' }}>{displayName.split(' ')[0]}</span>
-                      <ChevronDown size={14} className="desktop-only" style={{ color: 'var(--fg-muted)' }} />
-                    </button>
-
-                    {userMenuOpen && (
-                      <div style={{
-                        position: 'absolute', right: 0, top: '100%', marginTop: 10,
-                        background: 'var(--bg-card)', border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius)',
-                        width: 240, zIndex: 200, padding: 8
-                      }}>
-                        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', marginBottom: 6 }}>
-                          <div style={{ fontWeight: 900, fontFamily: 'Outfit, sans-serif' }}>{displayName}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>{currentUser?.email ?? ''}</div>
-                        </div>
-
-                        {/* Everyone on Yüpixi can both buy and sell — one
-                            unified account space, not two dashboards to
-                            switch between. A guest identity (see
-                            AuthService.guestLogin) has no such account
-                            behind it, so this space stays hidden. */}
-                        {(currentUser?.isGuest ? [] : [
-                          { icon: Home, label: 'Tableau de bord', page: 'buyer-dashboard' as Page },
-                          { icon: Package, label: 'Mes Annonces', page: 'seller-listings' as Page },
-                          { icon: Heart, label: 'Mes Favoris', page: 'buyer-favorites' as Page },
-                          { icon: BarChart2, label: 'Statistiques', page: 'seller-stats' as Page },
-                          { icon: Settings, label: 'Paramètres du Compte', page: 'buyer-settings' as Page },
-                        ]).map(item => (
-                          <button
-                            key={item.page}
-                            onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 10,
-                              width: '100%',
-                              padding: '10px 14px',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: 'var(--fg)',
-                              fontFamily: 'Outfit, sans-serif',
-                              fontWeight: 700,
-                              fontSize: '0.875rem',
-                              borderRadius: 8,
-                              textAlign: 'left'
-                            }}
-                            className="sidebar-item"
-                          >
-                            <item.icon size={16} />
-                            {item.label}
-                          </button>
-                        ))}
-
-                        <button
-                          onClick={() => { onToggleDark(); setUserMenuOpen(false) }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            width: '100%', padding: '10px 14px', background: 'none',
-                            border: 'none', cursor: 'pointer', color: 'var(--fg)',
-                            fontFamily: 'Outfit, sans-serif', fontWeight: 700,
-                            fontSize: '0.875rem', borderRadius: 8, textAlign: 'left',
-                          }}
-                          className="sidebar-item"
-                        >
-                          {dark ? <Sun size={16} style={{ color: '#D97706' }} /> : <Moon size={16} />}
-                          {dark ? 'Mode clair' : 'Mode sombre'}
-                        </button>
-
-                        <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6 }}>
-                          <button
-                            onClick={() => { onToggleLogin(); setUserMenuOpen(false) }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 10,
-                              width: '100%',
-                              padding: '10px 14px',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: 'var(--primary)',
-                              fontFamily: 'Outfit, sans-serif',
-                              fontWeight: 800,
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            <LogOut size={16} />
-                            Se Déconnecter
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <button
-                  onClick={() => onNavigate('auth')}
-                  className="btn-outline"
-                  style={{ fontSize: '0.85rem', padding: '0.55rem 1.1rem' }}
-                >
-                  Se Connecter
-                </button>
-              )}
-
-              {/* Action Button "+ Publier" — desktop only; on mobile this
-                  lives in the bottom nav bar instead (see below). Hidden for
-                  guest identities, which have no seller account behind them. */}
-              {!currentUser?.isGuest && (
-                <button
-                  onClick={() => {
-                    onNavigate('seller-post')
-                    triggerToast('Création d\'une nouvelle annonce')
-                  }}
-                  className="btn-primary desktop-only"
-                  style={{ fontSize: '0.875rem', padding: '0.6rem 1.25rem' }}
-                >
-                  <Plus size={16} />
-                  <span>Publier une annonce</span>
-                </button>
-              )}
-
-              {/* Mobile menu button */}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, color: 'var(--fg)' }}
-                className="mobile-menu-btn"
+                onClick={() => onNavigate('auth')}
+                className="cursor-pointer whitespace-nowrap rounded-lg border-[1.5px] border-solid border-on-surface bg-surface-lowest px-3 py-2 text-label-md text-on-surface transition-colors hover:bg-surface-container-low lg:px-4 lg:py-2.5"
               >
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                Se connecter
               </button>
-            </div>
+            )}
           </div>
-
-          {/* Sub Navbar with Clean Lucide SVG Icons (No AI emojis!) */}
-          <nav style={{ display: 'flex', gap: '0.35rem', padding: '0.4rem 0 0.8rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {[
-              { label: 'Offres Flash', icon: Zap, page: 'flash-offers' as Page, catId: '', highlight: true, flash: true },
-              { label: 'Accueil', icon: Home, page: 'home' as Page, catId: '', highlight: false },
-              { label: 'Véhicules', icon: Car, page: 'search' as Page, catId: 'vehicules', highlight: false },
-              { label: 'Immobilier', icon: HomeIcon, page: 'search' as Page, catId: 'immobilier', highlight: false },
-              { label: 'Électronique & Phones', icon: Smartphone, page: 'search' as Page, catId: 'electronique', highlight: false },
-              { label: 'Mode & Beauté', icon: Shirt, page: 'search' as Page, catId: 'mode', highlight: false },
-              { label: 'Services & Emploi', icon: Wrench, page: 'search' as Page, catId: 'services', highlight: false },
-              { label: 'Toutes les Catégories', icon: Grid, page: 'categories' as Page, catId: '', highlight: false },
-            ].map(item => {
-              const IconComp = item.icon
-              const isActive = item.highlight ? false : activeCategory === item.label
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => {
-                    setActiveCategory(item.label)
-                    if (item.page === 'flash-offers' || item.page === 'categories' || item.page === 'home') {
-                      onNavigate(item.page)
-                    } else {
-                      onNavigateCategory(item.catId)
-                    }
-                  }}
-                  style={{
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: item.highlight ? '8px 18px' : '6px 14px',
-                    borderRadius: 999,
-                    fontSize: item.highlight ? '0.9rem' : '0.825rem',
-                    fontFamily: "'Outfit', sans-serif",
-                    fontWeight: 800,
-                    color: item.highlight ? '#FFFFFF' : isActive ? 'var(--primary)' : 'var(--fg-muted)',
-                    background: item.highlight ? 'var(--primary)' : isActive ? 'rgba(254,0,0,0.08)' : 'transparent',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                  onMouseEnter={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'var(--border-subtle)' }}
-                  onMouseLeave={e => { if (!isActive && !item.highlight) e.currentTarget.style.background = 'transparent' }}
-                >
-                  <span className={item.highlight ? 'flash-icon' : ''} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                    {item.highlight ? <FlashIcon size={18} /> : <IconComp size={15} style={{ color: isActive ? 'var(--primary)' : 'var(--fg-muted)' }} />}
-                  </span>
-                  <span className={item.highlight ? 'flash-btn-text' : ''} key={flashIdx}>{item.highlight ? flashTexts[flashIdx] : item.label}</span>
-                </button>
-              )
-            })}
-          </nav>
         </div>
+
+        {/* Category nav — real categories, desktop only (mobile reaches
+            them from the home rail and the search page). */}
+        <nav className="hidden h-11 items-center gap-8 overflow-x-auto whitespace-nowrap px-4 [scrollbar-width:none] lg:flex lg:px-12">
+          {[
+            { key: 'home', label: 'Nouveautés', active: currentPage === 'home', onClick: () => onNavigate('home') },
+            ...navCategories.map(c => ({
+              key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
+            })),
+            { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => onNavigate('flash-offers') },
+          ].map(item => (
+            <button
+              key={item.key}
+              onClick={item.onClick}
+              className={`cursor-pointer border-0 border-b-2 border-solid bg-transparent px-0 pb-2 pt-1 text-label-md transition-colors ${item.active ? 'border-primary font-bold text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div style={{
-          position: 'fixed', inset: 0, top: 71, zIndex: 99,
-          background: 'rgba(0,0,0,0.4)', animation: 'fadeIn 0.15s ease'
-        }} onClick={() => setMobileMenuOpen(false)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--bg-card)', width: '85%', maxWidth: 320,
-            height: '100%', padding: '1rem', overflowY: 'auto',
-            borderRight: '1px solid var(--border)', animation: 'slideIn 0.2s ease'
-          }}>
-            {isLoggedIn && (
-              <div style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 900, fontSize: '0.9rem', overflow: 'hidden' }}>
-                  {currentUser?.avatarUrl
-                    ? <img src={currentUser.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : displayInitial}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem', fontFamily: 'Outfit, sans-serif' }}>{displayName}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>{currentUser?.email ?? ''}</div>
-                </div>
-              </div>
-            )}
-            {[
-              { label: 'Accueil', icon: Home, page: 'home' as Page },
-              { label: 'Offres Flash', icon: Zap, page: 'flash-offers' as Page },
-              { label: 'Toutes les Catégories', icon: Grid, page: 'categories' as Page },
-              ...(currentUser?.isGuest ? [] : [{ label: 'Publier une annonce', icon: Plus, page: 'seller-post' as Page }]),
-              ...(isLoggedIn ? [
-                ...(currentUser?.isGuest ? [] : [{ label: 'Mes Favoris', icon: Heart, page: 'buyer-favorites' as Page }]),
-                { label: 'Messages', icon: MessageCircle, page: 'buyer-messages' as Page },
-              ] : []),
-            ].map(item => {
-              const IconComp = item.icon
-              return (
-                <button
-                  key={item.page}
-                  onClick={() => { onNavigate(item.page); setMobileMenuOpen(false) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    width: '100%', padding: '0.85rem 0.75rem',
-                    background: item.page === 'flash-offers' ? 'var(--primary)' : 'none',
-                    border: 'none', cursor: 'pointer',
-                    color: item.page === 'flash-offers' ? '#FFFFFF' : 'var(--fg)',
-                    fontFamily: 'Outfit, sans-serif',
-                    fontWeight: 700, fontSize: '0.9rem', borderRadius: 8,
-                    textAlign: 'left'
-                  }}
-                >
-                  <span className={item.page === 'flash-offers' ? 'flash-icon' : ''} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                    {item.page === 'flash-offers' ? <FlashIcon size={22} /> : <IconComp size={18} style={{ color: 'var(--fg-muted)' }} />}
-                  </span>
-                  <span key={item.page === 'flash-offers' ? flashIdx : undefined}>{item.page === 'flash-offers' ? flashTexts[flashIdx] : item.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Main Content View */}
-      <main className="page-enter" style={{ flex: 1 }}>
+      <main className="page-enter flex-1">
         {children}
       </main>
 
@@ -717,36 +495,58 @@ export default function Layout({
       {toastMessage && (
         <div className="toast-container">
           <div className="toast">
-            <CheckCircle2 size={18} style={{ color: '#FFDD21' }} />
+            <CheckCircle2 size={18} style={{ color: 'var(--tertiary)' }} />
             <span>{toastMessage}</span>
           </div>
         </div>
       )}
 
-      {/* Official Footer */}
-      <footer style={{ background: '#090D16', color: '#FFFFFF', padding: `3.5rem 1rem ${isMobile ? '5.5rem' : '2rem'}`, marginTop: '4rem', borderTop: '3px solid #FE0000' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2.5rem', marginBottom: '2.5rem' }}>
+      {/* Reassurance band */}
+      <section className="mt-16 bg-surface-container px-4 py-8 lg:px-12">
+        <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: Percent, title: '0% Commission', text: 'Publiez et achetez librement, sans frais cachés ni commission prélevée.', accent: true },
+            { icon: MessageCircle, title: 'Négociation par chat', text: 'Discutez directement avec le vendeur et convenez du meilleur prix.' },
+            { icon: Handshake, title: 'Remise en main propre', text: 'Inspectez l\'article en personne avant de payer, dans un lieu public.' },
+            { icon: ShieldCheck, title: 'Profils vérifiés', text: 'Vendeurs notés par la communauté pour échanger en toute confiance.' },
+          ].map(item => (
+            <div key={item.title} className="flex items-start gap-3">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${item.accent ? 'bg-tertiary text-white' : 'bg-surface-container-highest text-on-surface'}`}>
+                <item.icon size={20} />
+              </div>
+              <div>
+                <div className="text-headline-sm text-on-surface">{item.title}</div>
+                <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">{item.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer — copy is BO-editable (FooterSettings), with fallbacks */}
+      <footer className={`bg-surface px-4 pt-12 lg:px-12 ${isMobile ? 'pb-28' : 'pb-8'}`}>
+        <div className="mx-auto max-w-[1320px]">
+          <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
             <div>
-              <Logo size="lg" colorMode="white" variant="full" />
-              <p style={{ color: '#94A3B8', fontSize: '0.9rem', marginTop: '1.25rem', lineHeight: 1.6 }}>
+              <Logo size="lg" />
+              <p className="mt-4 max-w-md text-body-md text-on-surface-variant">
                 {footer?.tagline ||
                   "Dilchap rend l'achat et la vente entre particuliers simples, fluides et sécurisés en Côte d'Ivoire."}
               </p>
             </div>
 
             <div>
-              <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Recherche Rapide</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Recherches rapides</h4>
+              <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
                 {(footer?.quickLinks?.length ? footer.quickLinks : [
                   { label: 'Appartements à Abidjan Cocody', query: 'appartement' },
-                  { label: 'iPhone 15 Pro Max Neufs', query: 'iPhone 15' },
+                  { label: 'iPhone 15 Pro Max', query: 'iPhone 15' },
                   { label: 'Toyota RAV4 & Hilux', query: 'Toyota' },
-                  { label: 'Robes & Sacs de Marque', query: 'robe' },
-                  { label: 'Services de Déménagement', query: 'déménagement' },
+                  { label: 'Robes & sacs de marque', query: 'robe' },
+                  { label: 'Services de déménagement', query: 'déménagement' },
                 ]).map(item => (
                   <li key={item.label}>
-                    <button onClick={() => { onClearCategoryFilter?.(); onSetSearchTerm?.(item.query); onNavigate('search') }} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                    <button onClick={() => { onClearCategoryFilter?.(); onSetSearchTerm?.(item.query); onNavigate('search') }} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">
                       {item.label}
                     </button>
                   </li>
@@ -755,17 +555,17 @@ export default function Layout({
             </div>
 
             <div>
-              <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Espace Membre</h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Espace membre</h4>
+              <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
                 {(currentUser?.isGuest ? [] : [
-                  { label: 'Publier une Annonce Gratuite', page: 'seller-post' as Page },
-                  { label: 'Mes Favoris', page: 'buyer-favorites' as Page },
-                  { label: 'Mon Tableau de Bord', page: 'buyer-dashboard' as Page },
-                  { label: 'Boost & Premium', page: 'seller-premium' as Page },
-                  { label: 'Centre de Sécurité', page: 'buyer-settings' as Page },
+                  { label: 'Vendre un article', page: 'seller-post' as Page },
+                  { label: 'Mes favoris', page: 'buyer-favorites' as Page },
+                  { label: 'Mon tableau de bord', page: 'buyer-dashboard' as Page },
+                  { label: 'Booster mes annonces', page: 'seller-premium' as Page },
+                  { label: 'Paramètres & sécurité', page: 'buyer-settings' as Page },
                 ]).map(item => (
                   <li key={item.label}>
-                    <button onClick={() => onNavigate(isLoggedIn ? item.page : 'auth')} style={{ background: 'none', border: 'none', padding: 0, color: '#94A3B8', fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                    <button onClick={() => onNavigate(isLoggedIn ? item.page : 'auth')} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">
                       {item.label}
                     </button>
                   </li>
@@ -774,24 +574,19 @@ export default function Layout({
             </div>
 
             <div>
-              <h4 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1rem', color: '#FFDD21', marginBottom: '1rem' }}>Support & Villes</h4>
-              <p style={{ color: '#94A3B8', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Assistance</h4>
+              <p className="m-0 text-body-sm text-on-surface-variant">
                 {footer?.supportCities || 'Abidjan • Bouaké • Yamoussoukro • San-Pédro • Daloa • Korhogo'}
               </p>
-              <div style={{ marginTop: 14 }}>
-                <span style={{ color: '#FE0000', fontWeight: 800, fontSize: '0.85rem' }}>Support 7j/7 : {footer?.supportPhone || '+225 07 00 00 00 00'}</span>
-              </div>
+              <p className="mb-0 mt-3 text-label-md text-primary">Support 7j/7 : {footer?.supportPhone || '+225 07 00 00 00 00'}</p>
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid #1E293B', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0 }}>
-              {footer?.copyrightText ||
-                "© 2026 Dilchap. Tous droits réservés."}
+          <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant pt-6 text-label-sm text-on-surface-variant">
+            <p className="m-0">
+              {footer?.copyrightText || '© 2026 Dilchap. Tous droits réservés.'}
             </p>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <span style={{ color: '#94A3B8', fontSize: '0.85rem', fontWeight: 700 }}>Fait en Côte d'Ivoire</span>
-            </div>
+            <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> Mise en relation sécurisée · Fait en Côte d'Ivoire</span>
           </div>
         </div>
       </footer>
@@ -802,7 +597,7 @@ export default function Layout({
           query={search}
           onQueryChange={setSearch}
           onSearch={handleSearchSubmit}
-          onSelectListing={onSelectListing || onNavigate}
+          onSelectListing={onSelectListing ?? (() => onNavigate('search'))}
           onSelectCategory={onNavigateCategory}
           onClose={() => setSearchOverlayOpen(false)}
           onNavigate={onNavigate}
@@ -814,63 +609,24 @@ export default function Layout({
       {isMobile && currentPage !== 'listing-detail' && (
         <nav
           aria-label="Navigation principale"
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 300,
-            background: 'var(--bg-card)',
-            borderTop: '1px solid var(--border)',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            paddingBottom: 'env(safe-area-inset-bottom)',
-            boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-          }}
+          className="fixed inset-x-0 bottom-0 z-[300] grid grid-cols-5 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 backdrop-blur-md"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           {[
             { label: 'Accueil', icon: Home, page: 'home' as Page },
             { label: 'Recherche', icon: Search, page: 'search' as Page },
-            { label: 'Publier', icon: Plus, page: 'seller-post' as Page, primary: true },
-            { label: 'Favoris', icon: Heart, page: 'buyer-favorites' as Page },
-            { label: 'Profil', icon: User, page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
+            { label: 'Vendre', icon: Plus, page: 'seller-post' as Page, primary: true },
+            { label: 'Messages', icon: MessageCircle, page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount },
+            { label: 'Compte', icon: User, page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
           ].map(item => {
             const IconComp = item.icon
             const isActive = currentPage === item.page
 
             if (item.primary) {
               return (
-                <button
-                  key={item.label}
-                  onClick={() => onNavigate(item.page)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 3,
-                    padding: '0 0 6px',
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    fontFamily: "'Outfit', sans-serif",
-                    fontWeight: 800,
-                    fontSize: '0.62rem',
-                    color: 'var(--primary)',
-                  }}
-                >
-                  <span style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 46,
-                    height: 46,
-                    borderRadius: '50%',
-                    background: 'var(--primary)',
-                    marginTop: -20,
-                    boxShadow: '0 4px 14px rgba(254,0,0,0.4)',
-                    border: '3px solid var(--bg-card)',
-                  }}>
-                    <IconComp size={22} strokeWidth={2.6} color="#fff" />
+                <button key={item.label} onClick={() => onNavigate(item.page)} className="flex cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
+                  <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(187,0,19,0.4)]">
+                    <IconComp size={26} strokeWidth={2.6} color="#fff" />
                   </span>
                   {item.label}
                 </button>
@@ -881,22 +637,12 @@ export default function Layout({
               <button
                 key={item.label}
                 onClick={() => onNavigate(item.page)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 3,
-                  padding: '8px 0 6px',
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  fontFamily: "'Outfit', sans-serif",
-                  fontWeight: isActive ? 800 : 600,
-                  fontSize: '0.62rem',
-                  color: isActive ? 'var(--primary)' : 'var(--fg-muted)',
-                }}
+                className={`relative flex cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}
               >
-                <IconComp size={20} strokeWidth={isActive ? 2.4 : 2} />
+                <span className="relative">
+                  <IconComp size={22} strokeWidth={isActive ? 2.4 : 2} />
+                  {!!item.badge && <span className="notif-dot" style={{ top: -6, right: -10 }}>{item.badge > 9 ? '9+' : item.badge}</span>}
+                </span>
                 {item.label}
               </button>
             )

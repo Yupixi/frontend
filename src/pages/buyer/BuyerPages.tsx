@@ -77,13 +77,13 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
   const recentConversations = (conversationsData?.myConversations ?? []).slice(0, 5)
   const unreadMessages = recentConversations.reduce((sum, c) => sum + c.unreadCount, 0)
   const stats = [
-    { label: 'Favoris', value: favorites.length, icon: Heart, color: '#FE0000', bg: 'rgba(254,0,0,0.08)' },
+    { label: 'Favoris', value: favorites.length, icon: Heart, color: '#BB0013', bg: 'rgba(187, 0, 19,0.08)' },
     { label: 'Messages non lus', value: unreadMessages, icon: MessageCircle, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)' },
   ]
 
   return (
     <PageLayout active="buyer-dashboard" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <h1 className="buyer-page-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>
+      <h1 className="buyer-page-title" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>
         Bonjour{currentUser?.fullName ? `, ${currentUser.fullName.split(' ')[0]}` : ''} 👋
       </h1>
 
@@ -97,7 +97,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
                 <s.icon size={22} color={s.color} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', color: 'var(--fg)' }}>{s.value}</div>
+                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.5rem', color: 'var(--fg)' }}>{s.value}</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>{s.label}</div>
               </div>
             </div>
@@ -107,7 +107,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
 
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Annonces sauvegardées</h2>
+          <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Annonces sauvegardées</h2>
           <button onClick={() => onNavigate('buyer-favorites')} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 4 }}>
             Voir tout <ChevronRight size={15} />
           </button>
@@ -124,7 +124,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
                   )}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.title}</p>
+                  <p style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.title}</p>
                   <div className="price-tag" style={{ fontSize: '0.9rem', marginTop: 2 }}><Price amount={l.price} currency={l.currency} /></div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--fg-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
                     <MapPin size={10} />{l.city}
@@ -138,7 +138,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
 
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Messages récents</h2>
+          <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Messages récents</h2>
           <button onClick={() => onNavigate('buyer-messages')} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 4 }}>
             Voir tout <ChevronRight size={15} />
           </button>
@@ -150,10 +150,10 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
           {recentConversations.map((conv, i) => (
             <div
               key={conv.id}
-              style={{ display: 'flex', gap: '0.75rem', padding: '0.875rem 1rem', borderBottom: i < recentConversations.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: conv.unreadCount > 0 ? 'rgba(254,0,0,0.02)' : 'transparent' }}
+              style={{ display: 'flex', gap: '0.75rem', padding: '0.875rem 1rem', borderBottom: i < recentConversations.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', background: conv.unreadCount > 0 ? 'rgba(187, 0, 19,0.02)' : 'transparent' }}
               onClick={() => onNavigate('buyer-messages')}
             >
-              <div style={{ position: 'relative', flexShrink: 0, width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
+              <div style={{ position: 'relative', flexShrink: 0, width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
                 {conv.otherParticipant.avatarUrl ? (
                   <img src={conv.otherParticipant.avatarUrl} alt={conv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
@@ -163,7 +163,7 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{conv.otherParticipant.fullName}</span>
+                  <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{conv.otherParticipant.fullName}</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>{conv.lastMessageAt ? formatRelativeDate(conv.lastMessageAt) : ''}</span>
                 </div>
                 <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.lastMessage?.body ?? 'Nouvelle conversation'}</p>
@@ -200,7 +200,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
   return (
     <PageLayout active="buyer-favorites" onNavigate={onNavigate} onLogout={onLogout}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
+        <h1 className="buyer-page-title" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
           Mes favoris <span style={{ color: 'var(--fg-muted)', fontSize: '1rem', fontWeight: 600 }}>({favListings.length})</span>
         </h1>
       </div>
@@ -208,7 +208,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
       {favListings.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💔</div>
-          <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: '0 0 0.5rem' }}>Aucun favori pour l'instant</h3>
+          <h3 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, margin: '0 0 0.5rem' }}>Aucun favori pour l'instant</h3>
           <p style={{ color: 'var(--fg-muted)', marginBottom: '1.5rem' }}>Sauvegardez des annonces en cliquant sur le cœur ❤️</p>
           <button className="btn-primary" onClick={() => onNavigate('search')}>Parcourir les annonces</button>
         </div>
@@ -220,7 +220,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
                 onClick={() => handleToggle(l.id)}
                 style={{ position: 'absolute', top: 10, right: 10, zIndex: 2, background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
-                <Heart size={16} fill="#FE0000" color="#FE0000" />
+                <Heart size={16} fill="#BB0013" color="#BB0013" />
               </button>
               <div style={{ height: 170, background: 'var(--border-subtle)', overflow: 'hidden', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
                 {l.coverImageUrl && (
@@ -229,7 +229,7 @@ export function BuyerFavorites({ onNavigate, onSelectListing, onToggleFavorite, 
               </div>
               <div style={{ padding: '12px 14px' }}>
                 <div className="price-tag"><Price amount={l.price} currency={l.currency} /></div>
-                <p style={{ margin: '4px 0 6px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.3 }}>{l.title}</p>
+                <p style={{ margin: '4px 0 6px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.3 }}>{l.title}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.78rem' }}>
                   <MapPin size={11} />{l.city}
                 </div>
@@ -448,7 +448,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
         {/* Conversation list */}
         <div className={`buyer-msg-list ${showList ? '' : 'buyer-msg-list-hidden'}`} style={{ width: 300, borderRight: '1px solid var(--border)', background: 'var(--bg-card)', flexShrink: 0, overflowY: 'auto' }}>
           <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-            <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Messages</h2>
+            <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Messages</h2>
           </div>
           {conversations.length === 0 && (
             <p style={{ padding: '1.25rem', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
@@ -475,9 +475,9 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                 <div
                   key={conv.id}
                   onClick={() => { setActiveId(conv.id); setShowList(false) }}
-                  style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: activeId === conv.id ? 'rgba(254,0,0,0.04)' : 'transparent', borderLeft: activeId === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
+                  style={{ display: 'flex', gap: '0.7rem', padding: '0.875rem 1rem', cursor: 'pointer', background: activeId === conv.id ? 'rgba(187, 0, 19,0.04)' : 'transparent', borderLeft: activeId === conv.id ? '3px solid var(--primary)' : '3px solid transparent', borderBottom: '1px solid var(--border-subtle)' }}
                 >
-                  <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
+                  <div style={{ position: 'relative', flexShrink: 0, width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: 'var(--fg-muted)' }}>
                     {conv.otherParticipant.avatarUrl ? (
                       <img src={conv.otherParticipant.avatarUrl} alt={conv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -487,7 +487,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                      <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: conv.unreadCount > 0 ? 800 : 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.otherParticipant.fullName}</span>
+                      <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: conv.unreadCount > 0 ? 800 : 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.otherParticipant.fullName}</span>
                       {conv.dealStatus !== 'DISCUSSING' && (
                         <span style={{ flexShrink: 0, borderRadius: 999, padding: '1px 5px', fontSize: '0.6rem', fontWeight: 800, background: conv.dealStatus === 'CONCLUDED' ? 'rgba(16,185,129,0.12)' : 'var(--border-subtle)', color: conv.dealStatus === 'CONCLUDED' ? '#059669' : 'var(--fg-muted)' }}>
                           {conv.dealStatus === 'CONCLUDED' ? 'VENDU' : 'NON CONCLUE'}
@@ -524,7 +524,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                 <button className="buyer-msg-back" onClick={() => setShowList(true)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 0, marginRight: 4 }}>
                   <ArrowLeft size={20} />
                 </button>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: 'var(--fg-muted)', flexShrink: 0 }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: 'var(--fg-muted)', flexShrink: 0 }}>
                   {activeConv.otherParticipant.avatarUrl ? (
                     <img src={activeConv.otherParticipant.avatarUrl} alt={activeConv.otherParticipant.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -532,7 +532,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.otherParticipant.fullName}</div>
+                  <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '0.9rem' }}>{activeConv.otherParticipant.fullName}</div>
                   <div style={{ fontSize: '0.7rem', color: activeConv.dealStatus === 'CONCLUDED' ? '#059669' : activeConv.dealStatus === 'NOT_CONCLUDED' ? '#64748B' : '#D97706', fontWeight: 700 }}>
                     {activeConv.dealStatus === 'CONCLUDED' ? 'Vente conclue' : activeConv.dealStatus === 'NOT_CONCLUDED' ? 'Vente non conclue' : 'Discussion en cours'}
                   </div>
@@ -584,7 +584,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
               <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {messages.length === 0 && (
                   <div style={{ maxWidth: 520, width: '100%', margin: 'auto', textAlign: 'center' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 0.75rem', background: 'rgba(254,0,0,0.08)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 0.75rem', background: 'rgba(187, 0, 19,0.08)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <MessageCircle size={23} />
                     </div>
                     <h3 style={{ margin: '0 0 0.35rem', fontSize: '1rem', fontWeight: 800 }}>Commencez la discussion</h3>
@@ -645,7 +645,7 @@ export function BuyerMessages({ onNavigate, onSelectListing, currentUser, onLogo
                 )}
                 {offerFormOpen ? (
                   <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', marginBottom: '0.5rem' }}>
-                    <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.82rem', display: 'block', marginBottom: 6 }}>
+                    <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.82rem', display: 'block', marginBottom: 6 }}>
                       Votre offre ({activeConv.listing?.currency ?? 'XOF'})
                     </label>
                     <PriceSuggestionHint listingId={activeConv.listingId} onUseAmount={amount => setOfferAmount(String(amount))} />
@@ -721,10 +721,10 @@ export function BuyerNotifications({ onNavigate, onSelectListing, onLogout }: { 
   return (
     <PageLayout active="buyer-notifications" onNavigate={onNavigate} onLogout={onLogout}>
       <div className="buyer-notifications-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', gap: '0.75rem' }}>
-        <h1 className="buyer-page-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
+        <h1 className="buyer-page-title" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
           Notifications <span style={{ color: 'var(--fg-muted)', fontSize: '1rem', fontWeight: 600 }}>({items.filter(n => !n.readAt).length} non lues)</span>
         </h1>
-        <button onClick={() => void markAllRead().then(() => refetch())} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', flexShrink: 0 }}>
+        <button onClick={() => void markAllRead().then(() => refetch())} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', flexShrink: 0 }}>
           Tout marquer comme lu
         </button>
       </div>
@@ -741,15 +741,15 @@ export function BuyerNotifications({ onNavigate, onSelectListing, onLogout }: { 
             onClick={() => handleOpen(n)}
             style={{
               display: 'flex', gap: '0.75rem', padding: '1rem', borderBottom: i < items.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-              background: n.readAt ? 'transparent' : 'rgba(254,0,0,0.02)', cursor: 'pointer',
+              background: n.readAt ? 'transparent' : 'rgba(187, 0, 19,0.02)', cursor: 'pointer',
             }}
           >
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: n.readAt ? 'var(--border-subtle)' : 'rgba(254,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: n.readAt ? 'var(--border-subtle)' : 'rgba(187, 0, 19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
               {NOTIFICATION_ICONS[n.type]}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontFamily: 'Nunito, sans-serif', fontWeight: n.readAt ? 600 : 800, fontSize: '0.9rem' }}>{n.title}</span>
+                <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: n.readAt ? 600 : 800, fontSize: '0.9rem' }}>{n.title}</span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>{formatRelativeDate(n.createdAt)}</span>
               </div>
               <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--fg-muted)', lineHeight: 1.4 }}>{n.body}</p>
@@ -776,9 +776,9 @@ export function BuyerHistory({ onNavigate, onSelectListing, onLogout }: { onNavi
   return (
     <PageLayout active="buyer-history" onNavigate={onNavigate} onLogout={onLogout}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Historique de navigation</h1>
+        <h1 className="buyer-page-title" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Historique de navigation</h1>
         {history.length > 0 && (
-          <button onClick={handleClear} disabled={clearing} style={{ color: 'var(--fg-muted)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, opacity: clearing ? 0.6 : 1 }}>
+          <button onClick={handleClear} disabled={clearing} style={{ color: 'var(--fg-muted)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer', fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, opacity: clearing ? 0.6 : 1 }}>
             <Trash2 size={15} /> Effacer
           </button>
         )}
@@ -804,7 +804,7 @@ export function BuyerHistory({ onNavigate, onSelectListing, onLogout }: { onNavi
               )}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', marginBottom: 3 }}>{v.listing.title}</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem', marginBottom: 3 }}>{v.listing.title}</div>
               <div className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={v.listing.price} currency={v.listing.currency} /></div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -948,7 +948,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', flexShrink: 0, overflow: 'hidden' }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', flexShrink: 0, overflow: 'hidden' }}>
               {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : avatarInitial}
             </div>
             <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={e => { void handleAvatarSelected(e.target.files); e.target.value = '' }} />
@@ -958,19 +958,19 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
           </div>
           <div className="buyer-settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Nom complet</label>
+              <label style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Nom complet</label>
               <input className="input" value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Téléphone</label>
+              <label style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Téléphone</label>
               <input className="input" placeholder="+225 XX XX XX XX XX" value={phone} onChange={e => setPhone(e.target.value)} />
             </div>
             <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Email</label>
+              <label style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Email</label>
               <input className="input" value={currentUser?.email ?? ''} disabled title="La modification de l'email n'est pas encore disponible." style={{ opacity: 0.6, cursor: 'not-allowed' }} />
             </div>
             <div>
-              <label style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
+              <label style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
               <select className="input" value={city} onChange={e => setCity(e.target.value)}>
                 {['Abidjan', 'Bouaké', 'Daloa', 'Korhogo', 'Yamoussoukro'].map(c => <option key={c}>{c}</option>)}
               </select>
@@ -994,7 +994,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
               <Smartphone size={21} />
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '0.9rem', color: pushCopy.tone }}>{pushCopy.title}</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '0.9rem', color: pushCopy.tone }}>{pushCopy.title}</div>
               <div style={{ fontSize: '0.76rem', color: 'var(--fg-muted)', lineHeight: 1.45, marginTop: 2 }}>{pushCopy.desc}</div>
             </div>
             {canEnablePush && (
@@ -1006,7 +1006,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
           {NOTIFICATION_PREFERENCE_ITEMS.map(item => (
             <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: 'var(--border-subtle)', borderRadius: 10 }}>
               <div>
-                <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{item.label}</div>
+                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{item.label}</div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{item.desc}</div>
               </div>
               <label className="toggle">
@@ -1026,7 +1026,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             {dark ? <Moon size={20} /> : <Sun size={20} />}
             <div>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{dark ? 'Mode sombre' : 'Mode clair'}</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem' }}>{dark ? 'Mode sombre' : 'Mode clair'}</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>Choisissez votre thème d'affichage</div>
             </div>
           </div>
@@ -1062,7 +1062,7 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
               </div>
             </div>
           )}
-          <button disabled style={{ alignSelf: 'flex-start', color: 'var(--fg-subtle)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem 1.25rem', cursor: 'not-allowed', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button disabled style={{ alignSelf: 'flex-start', color: 'var(--fg-subtle)', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem 1.25rem', cursor: 'not-allowed', fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Smartphone size={15} /> Vérification 2 étapes — bientôt disponible
           </button>
         </div>
@@ -1072,13 +1072,13 @@ export function BuyerSettings({ onNavigate, dark, onToggleDark, currentUser, onL
 
   return (
     <PageLayout active="buyer-settings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <h1 className="buyer-page-title" style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Paramètres</h1>
+      <h1 className="buyer-page-title" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>Paramètres</h1>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {settingSections.map(section => (
           <div key={section.title} className="card" style={{ padding: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem' }}>
               <section.icon size={20} color="var(--primary)" />
-              <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: 0 }}>{section.title}</h2>
+              <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '1rem', margin: 0 }}>{section.title}</h2>
             </div>
             {section.content}
           </div>

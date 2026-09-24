@@ -46,7 +46,7 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
   const totalFavorites = myListings.reduce((sum, l) => sum + l.favoritesCount, 0)
 
   const stats = [
-    { label: 'Annonces actives', value: activeCount, icon: Package, color: '#FE0000', bg: 'rgba(254,0,0,0.08)' },
+    { label: 'Annonces actives', value: activeCount, icon: Package, color: '#BB0013', bg: 'rgba(187, 0, 19,0.08)' },
     { label: 'Vues totales', value: totalViews, icon: Eye, color: '#3B82F6', bg: 'rgba(59,130,246,0.08)' },
     { label: 'En attente de validation', value: pendingCount, icon: Clock, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
     { label: 'Favoris reçus', value: totalFavorites, icon: Heart, color: '#EC4899', bg: 'rgba(236,72,153,0.08)' },
@@ -59,7 +59,7 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
     <DashboardLayout active="seller-dashboard" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
-          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Tableau de bord</h1>
+          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Tableau de bord</h1>
           <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Bienvenue sur votre espace vendeur</p>
         </div>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => onNavigate('seller-post')}>
@@ -73,14 +73,14 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
             <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
               <s.icon size={20} color={s.color} />
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{loading ? '—' : s.value}</div>
+            <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{loading ? '—' : s.value}</div>
             <div style={{ fontSize: '0.8rem', color: 'var(--fg-muted)', marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues par annonce</h2>
+        <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues par annonce</h2>
         {!loading && chartData.length === 0 ? (
           <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Publiez une annonce pour voir vos statistiques de vues.</p>
         ) : (
@@ -88,15 +88,15 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FE0000" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#BB0013" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#BB0013" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: "'Outfit', sans-serif" }} />
-              <Area type="monotone" dataKey="vues" stroke="#FE0000" strokeWidth={2.5} fill="url(#colorViews)" />
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: "'Plus Jakarta Sans', sans-serif" }} />
+              <Area type="monotone" dataKey="vues" stroke="#BB0013" strokeWidth={2.5} fill="url(#colorViews)" />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -104,7 +104,7 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
 
       <div className="card" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: 0, fontSize: '1rem' }}>Meilleures annonces</h2>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: 0, fontSize: '1rem' }}>Meilleures annonces</h2>
           <button onClick={() => onNavigate('seller-listings')} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 4 }}>
             Voir tout <ChevronRight size={15} />
           </button>
@@ -114,14 +114,14 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
         )}
         {topListings.map((l, i) => (
           <div key={l.id} style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem 1.25rem', borderBottom: i < topListings.length - 1 ? '1px solid var(--border-subtle)' : 'none', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: i < 3 ? 'var(--primary)' : 'var(--fg-muted)', width: 22, textAlign: 'center' }}>#{i + 1}</span>
+            <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1rem', color: i < 3 ? 'var(--primary)' : 'var(--fg-muted)', width: 22, textAlign: 'center' }}>#{i + 1}</span>
             <div style={{ width: 48, height: 40, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0 }}>
               {l.coverImageUrl && (
                 <img src={l.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.title}</p>
+              <p style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.title}</p>
               <span style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}><Price amount={l.price} /></span>
             </div>
             <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--fg-muted)' }}>
@@ -217,7 +217,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
           <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <CheckCircle size={40} color="#10B981" />
           </div>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>{isEditing ? 'Annonce mise à jour !' : 'Annonce soumise !'}</h2>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.75rem', margin: '0 0 0.75rem' }}>{isEditing ? 'Annonce mise à jour !' : 'Annonce soumise !'}</h2>
           <p style={{ color: 'var(--fg-muted)', marginBottom: '2rem' }}>
             {isEditing
               ? 'Vos modifications ont été enregistrées.'
@@ -235,7 +235,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.5rem' }}>
                     <ArrowUp size={18} color="var(--primary)" />
-                    <h3 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>Boostez votre annonce</h3>
+                    <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1rem' }}>Boostez votre annonce</h3>
                   </div>
                   <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
                     Passez devant les autres annonces dès votre approbation — jusqu'à {BOOST_TIERS[BOOST_TIERS.length - 1].days} jours de visibilité prioritaire.
@@ -359,7 +359,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
   return (
     <DashboardLayout active={isEditing ? 'seller-listings' : 'seller-post'} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>{isEditing ? "Modifier l'annonce" : 'Publier une annonce'}</h1>
+        <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 1.5rem' }}>{isEditing ? "Modifier l'annonce" : 'Publier une annonce'}</h1>
 
         <div className="seller-steps-desktop" style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', alignItems: 'center', background: 'var(--border-subtle)', borderRadius: 12, padding: '0.75rem 1rem' }}>
           {steps.map((s, i) => (
@@ -376,14 +376,14 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
         </div>
         <div className="seller-steps-mobile" style={{ display: 'none', marginBottom: '1.25rem', background: 'var(--border-subtle)', borderRadius: 10, padding: '0.6rem 1rem', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 800, flexShrink: 0 }}>{step}</div>
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', color: 'var(--fg)' }}>Étape {step} sur {stepsCount}</span>
+          <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.85rem', color: 'var(--fg)' }}>Étape {step} sur {stepsCount}</span>
           <span style={{ color: 'var(--fg-muted)', fontSize: '0.82rem', marginLeft: 'auto' }}>{steps[step - 1]}</span>
         </div>
 
         <div className="card postlisting-step-card" style={{ padding: '2rem' }}>
           {step === 1 && (
             <div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
+              <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Choisissez une catégorie</h2>
               <div className="postlisting-category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '1rem' }}>
                 {categories.map(cat => {
                   const selected = categoryId === cat.id
@@ -404,7 +404,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                         <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
                           {cat.icon}
                         </div>
-                        <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem', color: selected ? cat.color : 'var(--fg)', textAlign: 'center', lineHeight: 1.2 }}>{cat.name}</span>
+                        <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.82rem', color: selected ? cat.color : 'var(--fg)', textAlign: 'center', lineHeight: 1.2 }}>{cat.name}</span>
                       </div>
                     </button>
                   )
@@ -420,7 +420,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                   {catData.icon}
                 </div>
                 <div>
-                  <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{catData.name}</div>
+                  <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{catData.name}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>Choisissez une sous-catégorie</div>
                 </div>
               </div>
@@ -434,7 +434,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                       borderColor: subcategoryId === sub.id ? catData.color : 'var(--border)',
                       borderRadius: 'var(--radius-sm)',
                       background: subcategoryId === sub.id ? catData.color + '0A' : 'var(--bg-card)',
-                      fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', color: subcategoryId === sub.id ? catData.color : 'var(--fg)',
+                      fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', color: subcategoryId === sub.id ? catData.color : 'var(--fg)',
                       transition: 'all 0.12s',
                     }}
                     onMouseEnter={e => { if (subcategoryId !== sub.id) e.currentTarget.style.borderColor = catData.color + '60' }}
@@ -455,21 +455,21 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                   {catData.icon}
                 </div>
                 <div>
-                  <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1.05rem' }}>{catData.name}</div>
+                  <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1.05rem' }}>{catData.name}</div>
                   <div style={{ fontSize: '0.78rem', color: catData.color, fontWeight: 600 }}>{subData?.name}</div>
                 </div>
               </div>
 
               <div className="postlisting-fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
+                  <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Titre de l'annonce *</label>
                   <input className="input" placeholder={titlePlaceholders[catSlug] || 'Ex: Titre de votre annonce'} value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
                   <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', marginTop: 4 }}>{title.length}/100 caractères</div>
                 </div>
 
                 {requiresPrice && (
                   <div>
-                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix ({currency}) *</label>
+                    <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Prix ({currency}) *</label>
                     <div style={{ position: 'relative' }}>
                       <Tag size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
                       <input className="input" style={{ paddingLeft: 40 }} placeholder="Ex: 150 000" value={price} onChange={e => setPrice(e.target.value)} type="number" />
@@ -481,7 +481,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                 )}
 
                 <div>
-                  <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Pays</label>
+                  <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Pays</label>
                   <select className="input" value={countryCode} onChange={e => {
                     const nextCountry = e.target.value
                     setCountryCode(nextCountry)
@@ -494,7 +494,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
 
                 {requiresPrice && (
                   <div>
-                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Devise</label>
+                    <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Devise</label>
                     <select className="input" value={currency} onChange={e => setCurrency(e.target.value)}>
                       {CURRENCIES.map(code => <option key={code} value={code}>{code}</option>)}
                     </select>
@@ -502,7 +502,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                 )}
 
                 <div>
-                  <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
+                  <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Ville</label>
                   <div style={{ position: 'relative' }}>
                     <MapPin size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: catData.color }} />
                     <input className="input" style={{ paddingLeft: 40 }} list="market-cities" value={city} onChange={e => setCity(e.target.value)} />
@@ -512,7 +512,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
 
                 {catData.attributes.map(field => (
                   <div key={field.key}>
-                    <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>
+                    <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>
                       {field.label}{field.required ? ' *' : ''}
                     </label>
                     {field.type === 'SELECT' && field.options.length > 0 ? (
@@ -530,7 +530,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
               </div>
 
               <div style={{ marginTop: '1.5rem' }}>
-                <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Description *</label>
+                <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Description *</label>
                 <RichTextEditor content={description} onChange={onChange => setDescription(onChange)} placeholder="Décrivez votre article en détail... (gras, titres, listes, liens...)" />
               </div>
             </div>
@@ -538,7 +538,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
 
           {step === 4 && (
             <div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 0.5rem', fontSize: '1.1rem' }}>Ajoutez vos photos</h2>
+              <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 0.5rem', fontSize: '1.1rem' }}>Ajoutez vos photos</h2>
               <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>La première photo sera la photo principale. Maximum 8 photos.</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '1rem' }}>
                 {existingMedia.map((m, i) => (
@@ -570,7 +570,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                   </div>
                 ))}
                 {existingMedia.length + imageFiles.length < 8 && (
-                  <label style={{ aspectRatio: '1', border: '2px dashed var(--primary)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', background: 'rgba(254,0,0,0.02)' }}>
+                  <label style={{ aspectRatio: '1', border: '2px dashed var(--primary)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', background: 'rgba(187, 0, 19,0.02)' }}>
                     <Upload size={28} color="var(--primary)" />
                     <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>Ajouter</span>
                     <input
@@ -588,7 +588,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
 
           {step === 5 && catData && (
             <div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Aperçu de votre annonce</h2>
+              <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 1.5rem', fontSize: '1.1rem' }}>Aperçu de votre annonce</h2>
               <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div className="card" style={{ overflow: 'hidden' }}>
                   <div style={{ height: 220, background: `linear-gradient(135deg, ${catData.color}10 0%, var(--border) 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -601,7 +601,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                   <div style={{ padding: '1.25rem' }}>
                     {requiresPrice && <div className="price-tag" style={{ fontSize: '1.1rem' }}><Price amount={price ? parseInt(price) : 0} currency={currency} /></div>}
                     {!requiresPrice && customFields.salaire && <div className="price-tag" style={{ fontSize: '1.1rem', color: '#6366F1' }}><Price amount={Number(customFields.salaire)} currency={currency} />/mois</div>}
-                    <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '8px 0 10px', fontSize: '1.1rem' }}>{title || 'Titre de votre annonce'}</h3>
+                    <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '8px 0 10px', fontSize: '1.1rem' }}>{title || 'Titre de votre annonce'}</h3>
                     <div style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} />{city}</span>
                       <span className="badge" style={{ background: catData.color + '15', color: catData.color }}>{catData.name}</span>
@@ -609,7 +609,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                     <div style={{ marginTop: 12, fontSize: '0.875rem', color: 'var(--fg)', lineHeight: 1.7, maxHeight: 200, overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: description || '<em>Aucune description</em>' }} />
                   </div>
                 </div>
-                <div className="card" style={{ padding: '1.25rem', background: 'rgba(254,0,0,0.03)', border: '1px solid rgba(254,0,0,0.15)', alignSelf: 'start' }}>
+                <div className="card" style={{ padding: '1.25rem', background: 'rgba(187, 0, 19,0.03)', border: '1px solid rgba(187, 0, 19,0.15)', alignSelf: 'start' }}>
                   {submitError && (
                     <div style={{ marginBottom: 12, padding: '0.6rem 0.75rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontSize: '0.85rem', fontWeight: 600 }}>
                       {submitError}
@@ -618,7 +618,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <AlertCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.95rem', marginBottom: 8 }}>{isEditing ? 'Avant d\'enregistrer' : 'Avant de publier'}</div>
+                      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.95rem', marginBottom: 8 }}>{isEditing ? 'Avant d\'enregistrer' : 'Avant de publier'}</div>
                       <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem', color: 'var(--fg-muted)', lineHeight: 1.8 }}>
                         {isEditing ? (
                           <>
@@ -768,7 +768,7 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
-          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
+          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
           <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos annonces</p>
         </div>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => onNavigate('seller-post')}>
@@ -778,7 +778,7 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
 
       <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'var(--border-subtle)', borderRadius: 10, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
         {filterTabs.map(t => (
-          <button key={t.key} onClick={() => setFilter(t.key)} style={{ padding: '0.55rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.82rem', background: filter === t.key ? 'var(--bg-card)' : 'transparent', color: filter === t.key ? 'var(--primary)' : 'var(--fg-muted)', boxShadow: filter === t.key ? '0 1px 3px rgba(0,0,0,0.06)' : 'none' }}>
+          <button key={t.key} onClick={() => setFilter(t.key)} style={{ padding: '0.55rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.82rem', background: filter === t.key ? 'var(--bg-card)' : 'transparent', color: filter === t.key ? 'var(--primary)' : 'var(--fg-muted)', boxShadow: filter === t.key ? '0 1px 3px rgba(0,0,0,0.06)' : 'none' }}>
             {t.label}
           </button>
         ))}
@@ -805,10 +805,10 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
               </div>
               <div className="seller-listing-content" style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3, flexWrap: 'wrap' }}>
-                  <p style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
+                  <p style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
                   <span className="badge" style={{ background: s.bg, color: s.color, flexShrink: 0, fontSize: '0.72rem' }}>{s.label}</span>
                   {l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date() && (
-                    <span className="badge" style={{ background: 'rgba(254,0,0,0.08)', color: 'var(--primary)', flexShrink: 0, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span className="badge" style={{ background: 'rgba(187, 0, 19,0.08)', color: 'var(--primary)', flexShrink: 0, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 3 }}>
                       <ArrowUp size={11} /> Boosté jusqu'au {new Date(l.boostExpiresAt).toLocaleDateString('fr-FR')}
                     </span>
                   )}
@@ -821,13 +821,13 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                 </div>
               </div>
               <div className="seller-listing-actions" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => onEditListing(l.id)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
+                <button onClick={() => onEditListing(l.id)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Edit3 size={14} /> Modifier
                 </button>
                 <button onClick={() => handleDelete(l.id, l.title)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444' }}>
                   <Trash2 size={15} />
                 </button>
-                <button onClick={() => setExpandedOffers(offersExpanded ? null : l.id)} style={{ background: offersExpanded ? 'var(--border-subtle)' : 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
+                <button onClick={() => setExpandedOffers(offersExpanded ? null : l.id)} style={{ background: offersExpanded ? 'var(--border-subtle)' : 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Tag size={14} /> Offres <ChevronDown size={13} style={{ transform: offersExpanded ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
                 </button>
                 {l.status === 'APPROVED' && (
@@ -836,7 +836,7 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                       onClick={() => handleBump(l.id)}
                       disabled={bumping || !canBump(l)}
                       title={canBump(l) ? 'Remettre en tête du fil' : `Disponible le ${nextBumpAt(l).toLocaleString('fr-FR')}`}
-                      style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: canBump(l) ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: canBump(l) ? 'var(--fg-muted)' : 'var(--fg-subtle)', opacity: canBump(l) ? 1 : 0.6 }}
+                      style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: canBump(l) ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: canBump(l) ? 'var(--fg-muted)' : 'var(--fg-subtle)', opacity: canBump(l) ? 1 : 0.6 }}
                     >
                       <TrendingUp size={14} /> Remonter
                     </button>
@@ -847,7 +847,7 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                 )}
                 {l.status === 'APPROVED' && (
                   <div style={{ position: 'relative' }}>
-                    <button onClick={() => setBoostMenuFor(boostMenuFor === l.id ? null : l.id)} style={{ background: 'rgba(254,0,0,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
+                    <button onClick={() => setBoostMenuFor(boostMenuFor === l.id ? null : l.id)} style={{ background: 'rgba(187, 0, 19,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
                       <ArrowUp size={14} /> Booster
                     </button>
                     {boostMenuFor === l.id && (
@@ -888,12 +888,12 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
 
   return (
     <DashboardLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Statistiques</h1>
+      <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Statistiques</h1>
       <p style={{ margin: '0 0 1.5rem', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Analysez les performances de vos annonces</p>
 
       <div className="dashboard-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: 'Annonces actives', value: activeCount, icon: Package, color: '#FE0000' },
+          { label: 'Annonces actives', value: activeCount, icon: Package, color: '#BB0013' },
           { label: 'Vues totales', value: totalViews, icon: Eye, color: '#3B82F6' },
           { label: 'Favoris reçus', value: totalFavorites, icon: Heart, color: '#EC4899' },
           { label: "Taux d'engagement", value: engagementRate, icon: Users, color: '#10B981' },
@@ -902,7 +902,7 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
             <div style={{ width: 40, height: 40, borderRadius: 10, background: s.color + '12', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
               <s.icon size={20} color={s.color} />
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{loading ? '—' : s.value}</div>
+            <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.6rem' }}>{loading ? '—' : s.value}</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{s.label}</div>
           </div>
         ))}
@@ -910,7 +910,7 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
 
       <div className="dashboard-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues par annonce</h2>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Vues par annonce</h2>
           {!loading && byViews.length === 0 ? (
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune donnée pour le moment.</p>
           ) : (
@@ -918,21 +918,21 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
               <AreaChart data={byViews}>
                 <defs>
                   <linearGradient id="gViews" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FE0000" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#FE0000" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#BB0013" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#BB0013" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--fg-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
-                <Area type="monotone" dataKey="value" stroke="#FE0000" strokeWidth={2} fill="url(#gViews)" />
+                <Area type="monotone" dataKey="value" stroke="#BB0013" strokeWidth={2} fill="url(#gViews)" />
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
         <div className="card" style={{ padding: '1.5rem' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Favoris par annonce</h2>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 1.25rem', fontSize: '1rem' }}>Favoris par annonce</h2>
           {!loading && byFavorites.length === 0 ? (
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>Aucune donnée pour le moment.</p>
           ) : (
@@ -971,7 +971,7 @@ const PLANS: { tier: SubscriptionTier, name: string, price: number, color: strin
     tier: 'PRO',
     name: 'Pro',
     price: 25000,
-    color: '#FE0000',
+    color: '#BB0013',
     features: ['Annonces illimitées', '10 photos par annonce', 'Statistiques avancées', '3 boosts par mois', 'Badge Vendeur Pro', 'Support prioritaire', 'Mise en avant dans la recherche'],
     highlight: true,
   },
@@ -1005,7 +1005,7 @@ export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigat
     <DashboardLayout active="seller-premium" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div className="badge badge-orange" style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>⭐ Plans Premium</div>
-        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>
+        <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>
         <p style={{ color: 'var(--fg-muted)', fontSize: '1rem' }}>Choisissez le plan qui correspond à vos besoins</p>
         {expiresAt && currentTier !== 'FREE' && (
           <p style={{ color: 'var(--fg-subtle)', fontSize: '0.8rem', marginTop: 4 }}>Actif jusqu'au {new Date(expiresAt).toLocaleDateString('fr-FR')}</p>
@@ -1024,9 +1024,9 @@ export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigat
             {isCurrent && (
               <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#6B7280', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>Plan actuel</div>
             )}
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', color: plan.color, margin: '0 0 0.75rem' }}>{plan.name}</h2>
+            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.2rem', color: plan.color, margin: '0 0 0.75rem' }}>{plan.name}</h2>
             <div style={{ marginBottom: '1.25rem' }}>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: plan.price === 0 ? '1.5rem' : '2rem' }}>
+              <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: plan.price === 0 ? '1.5rem' : '2rem' }}>
                 {plan.price === 0 ? 'Gratuit' : <Price amount={plan.price} />}
               </span>
               {plan.price > 0 && <span style={{ color: 'var(--fg-muted)', fontSize: '0.875rem' }}> / mois</span>}

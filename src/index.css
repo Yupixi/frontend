@@ -1,57 +1,132 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta Sans:wght@400;500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
+/* "Circulaire Dynamique" design system (Stitch — SecondHand Marketplace).
+   Tailwind utilities (bg-surface-container-low, text-on-surface-variant,
+   text-tertiary, rounded-lg…) resolve to the runtime CSS vars below so they
+   follow the .dark theme too. */
 @theme {
-  --color-primary: #FE0000;
-  --color-primary-dark: #D90000;
-  --color-primary-light: #FF3333;
-  --color-secondary: #FFDD21;
-  --color-secondary-hover: #ECC900;
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-container: var(--primary-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-on-primary-fixed: #410002;
+  --color-secondary: var(--secondary);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-tertiary-soft: var(--tertiary-soft);
+  --color-surface: var(--bg);
+  --color-surface-lowest: var(--bg-card);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-on-surface: var(--fg);
+  --color-on-surface-variant: var(--fg-muted);
+  --color-outline: var(--fg-subtle);
+  --color-outline-variant: var(--border);
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
   --font-family-sans: 'Plus Jakarta Sans', sans-serif;
-  --font-family-brand: 'Outfit', 'Nunito', sans-serif;
+  --font-family-brand: 'Plus Jakarta Sans', sans-serif;
+  --text-display: 48px;
+  --text-display--line-height: 56px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 800;
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.015em;
+  --text-headline-lg--font-weight: 700;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 700;
+  --text-headline-sm: 20px;
+  --text-headline-sm--line-height: 28px;
+  --text-headline-sm--font-weight: 600;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-md: 15px;
+  --text-body-md--line-height: 24px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 20px;
+  --text-label-lg: 15px;
+  --text-label-lg--line-height: 20px;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 13px;
+  --text-label-md--line-height: 18px;
+  --text-label-md--font-weight: 600;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--letter-spacing: 0.04em;
+  --text-label-sm--font-weight: 700;
+  --shadow-card-hover: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
+  --shadow-float: 0 12px 32px -4px rgba(26, 26, 26, 0.12);
+  --shadow-modal: 0 20px 48px -8px rgba(26, 26, 26, 0.18);
 }
 
 :root {
-  --bg: #FAFAFC;
+  --bg: #FCF9F8;
   --bg-card: #FFFFFF;
-  --fg: #0F172A;
-  --fg-muted: #64748B;
-  --fg-subtle: #94A3B8;
-  --border: #E2E8F0;
-  --border-subtle: #F1F5F9;
-  --primary: #FE0000;
-  --primary-dark: #D90000;
-  --primary-light: #FF3333;
+  --surface-container-low: #F6F3F2;
+  --surface-container: #F0EDED;
+  --surface-container-high: #EAE7E7;
+  --surface-container-highest: #E5E2E1;
+  --inverse-surface: #313030;
+  --fg: #1C1B1B;
+  --fg-muted: #5E3F3C;
+  --fg-subtle: #936E6A;
+  --border: #EAE7E7;
+  --border-subtle: #F6F3F2;
+  --primary: #BB0013;
+  --primary-dark: #93000D;
+  --primary-light: #E71520;
+  --primary-container: #E71520;
+  --primary-fixed: #FFDAD6;
   --primary-fg: #FFFFFF;
-  --secondary: #FFDD21;
-  --secondary-hover: #ECC900;
-  --secondary-fg: #0F172A;
-  --accent: #FF6B35;
-  --success: #10B981;
+  --secondary: #1C1B1B;
+  --secondary-hover: #313030;
+  --secondary-fg: #FFFFFF;
+  --tertiary: #006947;
+  --tertiary-container: #00855B;
+  --tertiary-soft: #E3F5EC;
+  --accent: #E71520;
+  --success: #006947;
   --warning: #F59E0B;
   --info: #00A3E0;
   --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
+  --shadow-md: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
+  --shadow-lg: 0 12px 32px -4px rgba(26, 26, 26, 0.12);
   --shadow-primary: none;
   --shadow-yellow: none;
-  --radius: 14px;
+  --radius: 16px;
   --radius-sm: 8px;
-  --radius-lg: 18px;
+  --radius-lg: 16px;
   --radius-xl: 24px;
 }
 
 .dark {
-  --bg: #090D16;
-  --bg-card: #121826;
-  --fg: #F8FAFC;
-  --fg-muted: #94A3B8;
-  --fg-subtle: #64748B;
-  --border: #1E293B;
-  --border-subtle: #161F32;
+  --bg: #141212;
+  --bg-card: #1C1A1A;
+  --surface-container-low: #211F1F;
+  --surface-container: #262323;
+  --surface-container-high: #2E2B2B;
+  --surface-container-highest: #383434;
+  --inverse-surface: #E5E2E1;
+  --fg: #F3F0EF;
+  --fg-muted: #D6C2BF;
+  --fg-subtle: #A08C89;
+  --border: #332F2F;
+  --border-subtle: #242121;
+  --primary-fixed: #410002;
+  --secondary: #F3F0EF;
+  --secondary-hover: #E5E2E1;
+  --secondary-fg: #1C1B1B;
+  --tertiary: #4EDEA3;
+  --tertiary-soft: rgba(78, 222, 163, 0.12);
   --shadow-sm: none;
   --shadow-md: none;
-  --shadow-lg: none;
+  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.5);
   --shadow-primary: none;
   --shadow-yellow: none;
 }
@@ -76,8 +151,8 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6, .font-brand {
-  font-family: 'Outfit', 'Nunito', sans-serif;
-  font-weight: 800;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -117,8 +192,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .card-hover:hover {
-  border-color: var(--primary);
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
 }
 
 /* Chat bubbles (buyer/seller messaging) */
@@ -164,7 +239,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .btn-primary {
   background-color: var(--primary);
   color: #FFFFFF;
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   border-radius: var(--radius-sm);
   padding: 0.65rem 1.35rem;
@@ -186,7 +261,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .btn-secondary {
   background-color: var(--secondary);
   color: var(--secondary-fg);
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   border-radius: var(--radius-sm);
   padding: 0.65rem 1.35rem;
@@ -209,7 +284,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   background: transparent;
   color: var(--primary);
   border: 2px solid var(--primary);
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   border-radius: var(--radius-sm);
   padding: 0.6rem 1.3rem;
@@ -251,13 +326,13 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 800;
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
-.badge-red { background: rgba(254, 0, 0, 0.1); color: var(--primary); border: 1px solid rgba(254, 0, 0, 0.2); }
-.badge-yellow { background: var(--secondary); color: #0F172A; border: 1px solid rgba(255, 221, 33, 0.8); }
-.badge-green { background: rgba(16, 185, 129, 0.12); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.25); }
+.badge-red { background: var(--primary-fixed); color: var(--primary); border: 1px solid transparent; }
+.badge-yellow { background: #FEF3C7; color: #92400E; border: 1px solid transparent; }
+.badge-green { background: var(--tertiary-soft); color: var(--tertiary); border: 1px solid transparent; }
 .badge-blue { background: rgba(0, 163, 224, 0.12); color: #00A3E0; border: 1px solid rgba(0, 163, 224, 0.25); }
-.badge-gray { background: var(--border-subtle); color: var(--fg-muted); border: 1px solid var(--border); }
+.badge-gray { background: var(--surface-container-high); color: var(--fg); border: 1px solid transparent; }
 
 .map-placeholder {
   position: relative;
@@ -286,7 +361,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .dark .map-placeholder::before { opacity: 0.09; }
 
 .section-title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   font-size: 1.65rem;
   color: var(--fg);
@@ -337,7 +412,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   padding: 0.6rem 1rem;
   background: transparent;
   color: var(--fg-muted);
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
@@ -349,7 +424,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: var(--fg);
 }
 .sidebar-item.active {
-  background: rgba(254, 0, 0, 0.06);
+  background: rgba(187, 0, 19, 0.06);
   color: var(--primary);
 }
 .sidebar-item.active::before {
@@ -365,7 +440,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 /* Price tag */
 .price-tag {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   color: var(--primary);
   font-size: 1.35rem;
@@ -375,11 +450,11 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 /* Currency unit â€” sized relative to the amount it follows (em), so it
    stays proportionally small wherever the price itself is rendered at. */
 .price-unit {
-  font-size: 0.55em;
+  font-size: 0.85em;
   font-weight: 700;
   letter-spacing: 0;
-  opacity: 0.75;
-  margin-left: 0.2em;
+  opacity: 1;
+  margin-left: 0.25em;
 }
 
 /* Listing image */
@@ -402,7 +477,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: #FFFFFF;
   border-radius: 999px;
   border: 2px solid var(--bg-card);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.65rem;
   font-weight: 900;
   display: flex;
@@ -424,7 +499,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   border-radius: 999px;
   font-size: 0.775rem;
   font-weight: 800;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -451,7 +526,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: var(--bg);
   padding: 12px 20px;
   border-radius: var(--radius-sm);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   display: flex;
@@ -465,9 +540,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: var(--fg);
 }
 .tiptap p { margin: 0 0 0.5em; }
-.tiptap h1 { font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 900; margin: 0 0 0.4em; letter-spacing: -0.02em; }
-.tiptap h2 { font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 800; margin: 0 0 0.3em; letter-spacing: -0.01em; }
-.tiptap h3 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; margin: 0 0 0.3em; }
+.tiptap h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.5rem; font-weight: 900; margin: 0 0 0.4em; letter-spacing: -0.02em; }
+.tiptap h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.25rem; font-weight: 800; margin: 0 0 0.3em; letter-spacing: -0.01em; }
+.tiptap h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.1rem; font-weight: 800; margin: 0 0 0.3em; }
 .tiptap ul, .tiptap ol { padding-left: 1.5em; margin: 0 0 0.5em; }
 .tiptap li { margin-bottom: 0.25em; }
 .tiptap a { color: var(--primary); text-decoration: underline; cursor: pointer; }
@@ -601,10 +676,10 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(254,0,0,0.04) 0%, transparent 70%);
+  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(187, 0, 19,0.04) 0%, transparent 70%);
 }
 .dark .hero-premium-glow {
-  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(254,0,0,0.08) 0%, transparent 70%);
+  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(187, 0, 19,0.08) 0%, transparent 70%);
 }
 
 .hero-premium-inner {
@@ -729,7 +804,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   border: 1px solid var(--border);
   padding: 6px 14px;
   border-radius: 999px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   font-size: 0.82rem;
   color: var(--fg-muted);
@@ -743,7 +818,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .hero-title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: 1.1;
@@ -771,7 +846,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .hero-btn {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   border-radius: 12px;
   padding: 0.85rem 1.75rem;
@@ -790,7 +865,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .hero-btn-primary:hover {
   background: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(254,0,0,0.25);
+  box-shadow: 0 8px 24px rgba(187, 0, 19,0.25);
 }
 .hero-btn-outline {
   background: transparent;
@@ -838,7 +913,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .hero-stat-value {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   font-size: 1.2rem;
   color: var(--primary);
@@ -1045,7 +1120,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   z-index: 3;
   background: #FFDD21;
   color: #0F172A;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   font-size: 0.6rem;
   letter-spacing: 0.04em;
@@ -1064,7 +1139,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   max-width: calc(100% - 60px);
   background: rgba(255,255,255,0.9);
   color: #0F172A;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   font-size: 0.7rem;
   padding: 6px 10px;
@@ -1099,7 +1174,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 .hero-mosaic-price {
   position: relative;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   font-size: 0.8rem;
   color: var(--primary);
@@ -1159,7 +1234,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .hero-mosaic-card-kicker {
   margin-bottom: 7px;
   color: var(--primary);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.63rem;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -1178,7 +1253,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .hero-mosaic-title {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   font-size: 0.85rem;
   color: var(--fg);
@@ -1220,7 +1295,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   align-items: center;
   gap: 6px;
   color: var(--primary);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   font-size: 0.7rem;
   letter-spacing: 0.08em;
@@ -1230,7 +1305,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .featured-title {
   margin: 0;
   color: var(--fg);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: clamp(1.45rem, 2.5vw, 2rem);
   line-height: 1.1;
   font-weight: 900;
@@ -1251,7 +1326,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
@@ -1511,7 +1586,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: rgba(254,0,0,0.08);
+  background: rgba(187, 0, 19,0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1526,7 +1601,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .trust-bar-text {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   font-size: 0.85rem;
   color: var(--fg);
@@ -1557,7 +1632,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
 /* --- Filter chips & labels (search) --- */
 .filter-label {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
   color: var(--fg);
@@ -1573,7 +1648,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   border: 1.5px solid var(--border);
   background: var(--bg-card);
   color: var(--fg-muted);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
@@ -1586,7 +1661,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 .filter-chip.active {
   border-color: var(--primary);
-  background: rgba(254,0,0,0.08);
+  background: rgba(187, 0, 19,0.08);
   color: var(--primary);
 }
 
@@ -1610,7 +1685,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   cursor: pointer;
   background: transparent;
   color: var(--fg-muted);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
   transition: all 0.15s ease;
@@ -1648,7 +1723,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .listing-list-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .listing-list-title {
   margin: 0 0 4px;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--fg);
@@ -1699,59 +1774,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .listing-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.6rem;
-  }
-  .listing-card-img {
-    height: 110px !important;
-  }
-  .listing-card-img .listing-img {
-    height: 110px;
-  }
-  .listing-card-body {
-    padding: 8px 10px !important;
-  }
-  .listing-card-body .price-tag {
-    font-size: 0.9rem;
-  }
-  .listing-card-body h3 {
-    font-size: 0.75rem !important;
-    margin: 2px 0 4px !important;
-  }
-  .listing-card-location {
-    font-size: 0.7rem !important;
-    gap: 3px !important;
-  }
-  .listing-card-location svg {
-    width: 11px !important;
-    height: 11px !important;
-  }
-  .listing-card-footer {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 4px !important;
-    margin-top: 6px !important;
-    padding-top: 5px !important;
-  }
-  .listing-card-footer > div:last-child {
-    font-size: 0.65rem !important;
-  }
-  .listing-card-badges {
-    top: 6px !important;
-    left: 6px !important;
-    gap: 3px !important;
-  }
-  .listing-card-badges [class*="badge"] {
-    font-size: 0.55rem !important;
-    padding: 1px 5px !important;
-  }
-  .listing-card-fav {
-    width: 26px !important;
-    height: 26px !important;
-    top: 6px !important;
-    right: 6px !important;
-  }
-  .listing-card-fav svg {
-    width: 13px !important;
-    height: 13px !important;
   }
 }
 

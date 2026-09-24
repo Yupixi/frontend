@@ -53,16 +53,16 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
         overflow: 'hidden',
         border: '1px solid rgba(255,221,33,0.15)',
       }}>
-        <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(254,0,0,0.08)', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(187, 0, 19,0.08)', filter: 'blur(40px)' }} />
         <div style={{ position: 'absolute', bottom: -80, left: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,221,33,0.06)', filter: 'blur(40px)' }} />
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <div style={{ background: campaign?.themeColor || '#FE0000', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ background: campaign?.themeColor || '#BB0013', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Zap size={24} color="#FFDD21" fill="#FFDD21" />
               </div>
               <div>
-                <h1 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1.8rem', color: '#FFDD21', margin: 0, letterSpacing: '0.02em' }}>
+                <h1 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.8rem', color: '#FFDD21', margin: 0, letterSpacing: '0.02em' }}>
                   {campaign?.name || 'Offres Flash'}
                 </h1>
                 <p style={{ color: '#94A3B8', fontSize: '0.9rem', margin: '2px 0 0' }}>
@@ -85,7 +85,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                       borderRadius: 8,
                       padding: '6px 10px',
                       minWidth: 40,
-                      fontFamily: 'Outfit, sans-serif',
+                      fontFamily: 'Plus Jakarta Sans, sans-serif',
                       fontWeight: 900,
                       fontSize: '1.2rem',
                       color: '#FFDD21',
@@ -104,8 +104,8 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
       {/* Flash Deals Grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Flame size={20} color="#FE0000" fill="#FE0000" />
-          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1.3rem', margin: 0 }}>
+          <Flame size={20} color="#BB0013" fill="#BB0013" />
+          <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.3rem', margin: 0 }}>
             {loading
               ? 'Chargement...'
               : entries.length === 0
@@ -139,13 +139,13 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                   {/* Flash badge */}
                   <div style={{
                     position: 'absolute', top: 10, left: 10, zIndex: 2,
-                    background: '#FE0000', borderRadius: 6,
+                    background: '#BB0013', borderRadius: 6,
                     padding: '3px 10px',
                     display: 'flex', alignItems: 'center', gap: 4,
-                    boxShadow: '0 2px 8px rgba(254,0,0,0.3)',
+                    boxShadow: '0 2px 8px rgba(187, 0, 19,0.3)',
                   }}>
                     <Zap size={12} color="#FFDD21" fill="#FFDD21" />
-                    <span style={{ color: '#FFDD21', fontWeight: 900, fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif' }}>OFFRE FLASH</span>
+                    <span style={{ color: '#FFDD21', fontWeight: 900, fontSize: '0.72rem', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>OFFRE FLASH</span>
                   </div>
 
                   {/* Promo ribbon */}
@@ -154,7 +154,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                       position: 'absolute', top: 10, right: 10, zIndex: 2,
                       background: '#FFDD21', borderRadius: 6,
                       padding: '3px 8px', fontSize: '0.7rem',
-                      fontWeight: 900, fontFamily: 'Outfit, sans-serif',
+                      fontWeight: 900, fontFamily: 'Plus Jakarta Sans, sans-serif',
                       color: '#0F172A',
                       display: 'flex', alignItems: 'center', gap: 3,
                     }}>
@@ -167,7 +167,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                     onClick={e => { e.stopPropagation(); onToggleFavorite(listing.id) }}
                     style={{ position: 'absolute', top: 46, right: 10, zIndex: 2, background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                   >
-                    <Heart size={13} fill={favorites.includes(listing.id) ? '#FE0000' : 'none'} color={favorites.includes(listing.id) ? '#FE0000' : '#666'} />
+                    <Heart size={13} fill={favorites.includes(listing.id) ? '#BB0013' : 'none'} color={favorites.includes(listing.id) ? '#BB0013' : '#666'} />
                   </button>
 
                   <div style={{ height: 180, background: 'var(--border-subtle)', overflow: 'hidden' }}>
@@ -179,7 +179,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
 
                   <div style={{ padding: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div className="price-tag" style={{ fontSize: '1.15rem', color: '#FE0000' }}>
+                      <div className="price-tag" style={{ fontSize: '1.15rem', color: '#BB0013' }}>
                         <Price amount={salePrice ?? listing.price} currency={listing.currency} />
                       </div>
                       {salePrice != null && listing.price != null && (
@@ -189,7 +189,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                       )}
                     </div>
 
-                    <p style={{ margin: '4px 0 6px', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'Nunito, sans-serif', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>
+                    <p style={{ margin: '4px 0 6px', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'Plus Jakarta Sans, sans-serif', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>
                       {listing.title}
                     </p>
 
@@ -219,7 +219,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
             style={{
               background: 'none', border: '1.5px solid var(--border)', borderRadius: 999,
               padding: '0.7rem 2rem', cursor: 'pointer', color: 'var(--fg)',
-              fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '0.9rem',
+              fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '0.9rem',
               display: 'inline-flex', alignItems: 'center', gap: 8,
             }}
           >

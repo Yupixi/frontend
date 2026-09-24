@@ -31,7 +31,7 @@ export default function Logo({
   }
 
   const colors: Record<NonNullable<LogoProps['colorMode']>, string> = {
-    red: '#FE0000',
+    red: '#BB0013',
     white: '#FFFFFF',
     yellow: '#FFDD21',
   }
@@ -63,7 +63,7 @@ export default function Logo({
           ? 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18))'
           : colorMode === 'yellow'
               ? 'drop-shadow(0 4px 12px rgba(255, 221, 33, 0.25))'
-              : 'drop-shadow(0 4px 14px rgba(254, 0, 0, 0.25))'
+              : 'drop-shadow(0 4px 14px rgba(187, 0, 19, 0.25))'
 
   return (
       <svg

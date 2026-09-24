@@ -70,9 +70,9 @@ function SidebarNav({ active, onNavigate, onClose, listingsCount, unreadMessages
               width: '100%', display: 'flex', alignItems: 'center', gap: 10,
               padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
               cursor: 'pointer', marginBottom: 2,
-              background: active === item.key ? 'rgba(254,0,0,0.07)' : 'transparent',
-              color: active === item.key ? '#FE0000' : 'var(--fg-muted)',
-              fontFamily: "'Outfit', 'Nunito', sans-serif",
+              background: active === item.key ? 'rgba(187, 0, 19,0.07)' : 'transparent',
+              color: active === item.key ? '#BB0013' : 'var(--fg-muted)',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
               fontWeight: active === item.key ? 800 : 600,
               fontSize: '0.85rem',
               transition: 'all 0.12s',
@@ -84,7 +84,7 @@ function SidebarNav({ active, onNavigate, onClose, listingsCount, unreadMessages
             <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
             {!!badge && (
               <span style={{
-                background: active === item.key ? '#FE0000' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
+                background: active === item.key ? '#BB0013' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
                 borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
               }}>{badge}</span>
             )}
@@ -111,7 +111,7 @@ function AccountSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCoun
           <SidebarNav active={active} onNavigate={onNavigate} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
         </div>
         <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-          <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
+          <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
@@ -133,7 +133,7 @@ function AccountSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCoun
               <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
             </div>
             <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-              <button onClick={() => { onNavigate('home'); onClose?.() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
+              <button onClick={() => { onNavigate('home'); onClose?.() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
                 <LogOut size={16} />
                 <span>Retour au site</span>
               </button>
@@ -167,7 +167,7 @@ function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNa
       >
         <ArrowLeft size={18} />
       </button>
-      <h1 className="desktop-only" style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>{activeLabel}</h1>
+      <h1 className="desktop-only" style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>{activeLabel}</h1>
       <div style={{ flex: 1 }} />
       {!isGuest && (
         <button onClick={() => onNavigate('buyer-notifications')} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
@@ -183,13 +183,13 @@ function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNa
           onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-          <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #FE0000, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Outfit', sans-serif", overflow: 'hidden' }}>
+          <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #BB0013, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", overflow: 'hidden' }}>
             {currentUser?.avatarUrl
               ? <img src={currentUser.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : displayInitial}
           </div>
           <div className="desktop-only" style={{ textAlign: 'left' }}>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>{displayName}</div>
+            <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>{displayName}</div>
             <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>{currentUser?.email ?? ''}</div>
           </div>
           <ChevronDown size={14} style={{ color: 'var(--fg-subtle)' }} />
@@ -204,7 +204,7 @@ function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNa
               <button
                 key={item.page}
                 onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -215,7 +215,7 @@ function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNa
             <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6 }}>
               <button
                 onClick={() => { setUserMenuOpen(false); onLogout() }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >

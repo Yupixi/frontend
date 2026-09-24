@@ -1,14 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { ArrowRight, Star, Zap, MapPin, Heart, ChevronRight, Award, Sparkles, Store, ShieldCheck, CreditCard, Tag } from 'lucide-react'
+import { ArrowDown, ChevronRight, Search, SlidersHorizontal, ShieldCheck, Handshake, Timer, Flame, Loader2 } from 'lucide-react'
 import ViewToggle from '../components/ViewToggle'
-import Price from '../components/Price'
-import { ListingCard, ListingListCard, listingImage, listingLocation } from '../components/ListingCard'
+import { ListingCard, ListingListCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, RECOMMENDED_LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
-import { HOME_BANNERS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteBanner, type ActiveCampaign } from '../graphql/content'
+import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign } from '../graphql/content'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
-import { followBannerCta } from '../lib/bannerCta'
 import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 
@@ -20,923 +18,200 @@ type HomeProps = {
   onCategorySelect?: (categoryId: string) => void
   currentUser?: AuthUser | null
   location?: StoredLocation | null
+  onContactSeller?: (sellerId: string, listingId?: string) => void
 }
 
-// 'mosaic-side' is the only variant that keeps the old plain card body
-// (image on top, text below) — every other variant, including the two new
-// bento sizes, is a full-bleed photo with the title/price overlaid at the
-// bottom, which is what actually reads as "bento" instead of "grid of
-// product cards". isMain (bigger type, category badge always shown) covers
-// both the mosaic's lead card and the bento's large tile.
-type MosaicCardVariant = 'mosaic-main' | 'mosaic-side' | 'bento-lg' | 'bento-wide' | 'bento-sm'
+const PAGE_SIZE = 12
 
-function HeroMosaicCard({ card, variant, isFav, animationDelay, onSelect, onToggleFav, className }: {
-  card: RemoteListing, variant: MosaicCardVariant, isFav: boolean, animationDelay: string, onSelect: () => void, onToggleFav: () => void, className?: string
-}) {
-  const [imgError, setImgError] = useState(false)
-  const isMain = variant === 'mosaic-main' || variant === 'bento-lg'
-  const overlay = variant !== 'mosaic-side'
+// hh:mm:ss (or "Xj hh:mm") until a campaign's end — ticks every second.
+export function useCountdown(endsAt?: string | null) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!endsAt) return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [endsAt])
+  if (!endsAt) return null
+  const ms = Math.max(0, new Date(endsAt).getTime() - now)
+  const days = Math.floor(ms / 86_400_000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const h = pad(Math.floor(ms / 3_600_000) % 24), m = pad(Math.floor(ms / 60_000) % 60), sec = pad(Math.floor(ms / 1000) % 60)
+  return days > 0 ? `${days}j ${h}h : ${m}m` : `${h}h : ${m}m : ${sec}s`
+}
 
+function SectionHeading({ title, action }: { title: React.ReactNode, action?: React.ReactNode }) {
   return (
-    <div
-      className={`hero-mosaic-card${isMain ? ' hero-mosaic-card-main' : ''}${overlay ? ' hero-mosaic-card-overlay' : ''}${className ? ` ${className}` : ''}`}
-      style={{ animationDelay }}
-      onClick={onSelect}
-    >
-      <div className="hero-mosaic-img-wrap">
-        {!imgError && listingImage(card) ? (
-          <img src={listingImage(card)} alt={card.title} className="hero-mosaic-img" onError={() => setImgError(true)} />
-        ) : (
-          <div className="hero-mosaic-img-fallback">
-            <Tag size={isMain ? 36 : 24} />
-          </div>
-        )}
-        {/* Gradient overlay at bottom */}
-        <div className="hero-mosaic-overlay" />
-
-        {overlay && <div className="hero-mosaic-category">{card.category.name}</div>}
-      </div>
-
-      {/* Card body (title + location) */}
-      <div className="hero-mosaic-body">
-        {!overlay && <div className="hero-mosaic-card-kicker">{card.category.name}</div>}
-        <h3 className="hero-mosaic-title">{card.title}</h3>
-        <div className="hero-mosaic-meta">
-          <div className="hero-mosaic-location">
-            <MapPin size={13} />
-            {listingLocation(card)}
-          </div>
-          <div className={`hero-mosaic-price${isMain ? ' hero-mosaic-price-lg' : ''}`}>
-            <Price amount={card.price} currency={card.currency} />
-          </div>
-        </div>
-      </div>
-
-      {/* Heart icon */}
-      <button
-        className="hero-mosaic-fav"
-        onClick={e => { e.stopPropagation(); onToggleFav() }}
-        style={{ color: isFav ? 'var(--primary)' : 'var(--fg-subtle)' }}
-      >
-        <Heart size={isMain ? 16 : 12} fill={isFav ? 'var(--primary)' : 'none'} />
-      </button>
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface md:text-headline-md">{title}</h2>
+      {action}
     </div>
   )
 }
 
-// One big lead tile, then a wide banner every 4th slot with small squares
-// filling the rest — repeats indefinitely so it holds up whether there are
-// 5 listings or 20, and .hero-bento's grid-auto-flow:dense packs whatever
-// count comes out of it without gaps.
-function bentoVariant(index: number): 'bento-lg' | 'bento-wide' | 'bento-sm' {
-  if (index === 0) return 'bento-lg'
-  return (index - 1) % 4 === 3 ? 'bento-wide' : 'bento-sm'
-}
+// Mockup "Dilchap Mobile – Accueil & Découverte": search, P2P promise,
+// rayons, campaign card with countdown, boosted "Pépites à la Une" rail,
+// hand-over safety nudge, then "Dernières annonces" with load-more.
+export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, onContactSeller }: HomeProps) {
+  const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
+  const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
 
-function SponsoredListingCard({ listing, onSelect }: { listing: RemoteListing, onSelect: () => void }) {
-  const expiresAt = listing.boostExpiresAt ? new Date(listing.boostExpiresAt) : null
-  return (
-    <article
-      onClick={onSelect}
-      style={{
-        minWidth: 285, maxWidth: 330, flex: '1 0 285px', overflow: 'hidden', cursor: 'pointer',
-        borderRadius: 18, background: 'var(--bg-card)', border: '1px solid rgba(217,119,6,0.28)',
-        position: 'relative',
-      }}
-    >
-      <div style={{ height: 185, position: 'relative', overflow: 'hidden', background: 'var(--border-subtle)' }}>
-        {listingImage(listing) ? (
-          <img src={listingImage(listing)} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}><Tag size={36} /></div>
-        )}
-        <span style={{ position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.94)', color: '#92400E', fontSize: '0.68rem', fontWeight: 900, border: '1px solid rgba(217,119,6,0.18)' }}>
-          <Sparkles size={12} fill="#FBBF24" color="#D97706" /> Mise en avant
-        </span>
-      </div>
-      <div style={{ padding: '1rem' }}>
-        <div className="price-tag" style={{ fontSize: '1.05rem' }}><Price amount={listing.price} currency={listing.currency} /></div>
-        <h3 style={{ margin: '6px 0 8px', fontFamily: "'Outfit', sans-serif", fontSize: '0.94rem', fontWeight: 850, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.title}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--fg-muted)', fontSize: '0.76rem', marginBottom: 12 }}>
-          <MapPin size={13} color="var(--primary)" /> {listingLocation(listing)}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
-          <span style={{ marginRight: 'auto', color: 'var(--fg-subtle)', fontSize: '0.66rem' }}>
-            {expiresAt ? `Mise en avant jusqu’au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}` : 'Annonce mise en avant'}
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--primary)', fontSize: '0.74rem', fontWeight: 850 }}>Voir <ArrowRight size={13} /></span>
-        </div>
-      </div>
-    </article>
-  )
-}
-
-export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location }: HomeProps) {
-  // A cramped 2-column grid reads as cluttered on small screens — default to
-  // the single-column list view there; desktop keeps the grid. An explicit
-  // choice is remembered (shared with Search) and wins over that default.
-  const [homeViewMode, setHomeViewModeState] = useState<'grid' | 'list'>(() =>
-    getStoredViewMode() ?? (typeof window !== 'undefined' && window.innerWidth <= 640 ? 'list' : 'grid'),
-  )
-  const setHomeViewMode = (mode: 'grid' | 'list') => {
-    setHomeViewModeState(mode)
-    setStoredViewMode(mode)
-  }
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
-  // Highlight a curated subset (staff-ordered via sortOrder) on the homepage —
-  // the header nav already covers full category browsing, so this section is
-  // meant as a shortcut to the busiest categories, not a duplicate full list.
-  const popularCategories = (categoriesData?.categories ?? []).slice(0, 8)
+  const categories = categoriesData?.categories ?? []
 
-  // A detected/chosen country softly scopes the feed to that market — it's
-  // just a filter value, so a wrong or missing detection simply shows
-  // everything (never an empty feed the user can't get out of; the header's
-  // location pill can also always clear it back to "Tous les pays").
-  const { data: cityListingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: {
-      sort: 'RECENT',
-      page: 1,
-      pageSize: 12,
-      filter: location?.countryCode && location.city
-        ? { countryCode: location.countryCode, city: location.city }
-        : location?.countryCode ? { countryCode: location.countryCode } : undefined,
-    },
-  })
-  const { data: countryListingsData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: {
-      sort: 'RECENT',
-      page: 1,
-      pageSize: 12,
-      filter: location?.countryCode ? { countryCode: location.countryCode } : undefined,
-    },
-    skip: !location?.countryCode || !location.city,
-  })
-  const cityListings = cityListingsData?.listings.items ?? []
-  const countryListings = countryListingsData?.listings.items ?? []
-  const recent = [...cityListings, ...countryListings.filter(item => !cityListings.some(local => local.id === item.id))].slice(0, 12)
-
-  // BO-authored content (hero copy, trust bar, partners banner, seller CTA)
-  // — each falls back to the default copy below when the slot is empty, so
-  // the homepage never renders a blank section before the BO configures one.
-  const { data: bannersData } = useQuery<{
-    hero: RemoteBanner[]
-    trustBar: RemoteBanner[]
-    partners: RemoteBanner[]
-    sellerCta: RemoteBanner[]
-    featuredToggle: RemoteBanner | null
-    promoStrip: RemoteBanner[]
-    howItWorks: RemoteBanner[]
-    testimonials: RemoteBanner[]
-  }>(HOME_BANNERS_QUERY)
-  const heroBanner = bannersData?.hero[0]
-  const trustBarBanners = bannersData?.trustBar ?? []
-  const partnersBanner = bannersData?.partners[0]
-  const sellerCtaBanner = bannersData?.sellerCta[0]
-  const promoStripBanner = bannersData?.promoStrip[0]
-  const howItWorksBanner = bannersData?.howItWorks[0]
-  const steps = howItWorksBanner?.stats?.length ? howItWorksBanner.stats : [
-    { value: '1', label: 'Publiez votre annonce', description: 'Ajoutez photos et description en quelques minutes, c\'est gratuit.' },
-    { value: '2', label: 'Échangez avec les acheteurs', description: 'Répondez aux messages et négociez directement, en toute sécurité.' },
-    { value: '3', label: 'Vendez en toute confiance', description: 'Finalisez la transaction avec un membre vérifié.' },
-  ]
-
-  // "value" carries the star rating, "label" the author line, "description"
-  // the quote — same free-form stats array as the how-it-works steps above,
-  // interpreted differently for this slot.
-  const testimonialsBanner = bannersData?.testimonials[0]
-  const testimonials = testimonialsBanner?.stats?.length ? testimonialsBanner.stats : [
-    { value: '5', label: 'Aminata K. — Vendeuse à Abidjan', description: "Vendu mon iPhone en moins de 24h, l'acheteur était sérieux et la transaction s'est faite en toute confiance." },
-    { value: '5', label: 'Yves T. — Acheteur à Cocody', description: "Interface simple, annonces vérifiées, j'ai trouvé mon appartement en une semaine." },
-    { value: '4', label: 'Fatou D. — Vendeuse à Bouaké', description: 'Le support client est très réactif, on sent que la sécurité des utilisateurs est prise au sérieux.' },
-  ]
-  // No row for this slot = section on by default; a row lets the BO turn
-  // it off (isActive) and/or override its heading — distinct from
-  // activeBanners' filtering, which can't tell "unconfigured" from "off".
-  const featuredEnabled = bannersData?.featuredToggle ? bannersData.featuredToggle.isActive : true
-  const featuredHeading = bannersData?.featuredToggle?.isActive ? bannersData.featuredToggle : undefined
-
-  // Campaign rail — appears automatically the moment a campaign goes ACTIVE
-  // and inside its window (see Backend's activeCampaignWhere), with zero BO
-  // authoring beyond creating the campaign and attaching discounted
-  // listings. Distinct from promoStripBanner above, which is a manually
-  // written banner.
   const { data: campaignData } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
-  const activeCampaign = campaignData?.activeCampaign
-  const campaignListings = activeCampaign?.listings ?? []
+  const campaign = campaignData?.activeCampaign
+  const countdown = useCountdown(campaign?.endsAt)
+  const bestDiscount = Math.max(0, ...(campaign?.listings ?? []).map(l => l.discountPercent ?? 0))
+  const campaignColor = campaign?.themeColor || 'var(--primary)'
 
-  // "À la une" — driven by the backend's recommendedListings algorithm
-  // (see ListingsService.findRecommended): category affinity from the
-  // viewer's views/favorites/offers when signed in with history, boosted
-  // listings bumped up, popularity + recency fallback otherwise.
+  // Pépites à la Une — the recommendation algorithm, boosted listings first.
   const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
+    variables: { limit: 12, countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined },
+  })
+  const isBoosted = (l: RemoteListing) => !!l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()
+  const pepites = [...(recommendedData?.recommendedListings ?? [])].sort((a, b) => Number(isBoosted(b)) - Number(isBoosted(a)))
+  const hasBoosted = pepites.some(isBoosted)
+
+  // Dernières annonces — scoped to the chosen market, grown in place.
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [location?.countryCode, location?.city])
+  const { data: feedData, previousData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: {
-      limit: 20,
-      countryCode: location?.countryCode ?? undefined,
-      city: location?.city ?? undefined,
+      sort: 'RECENT',
+      page: 1,
+      pageSize: PAGE_SIZE * page,
+      filter: location?.countryCode
+        ? { countryCode: location.countryCode, ...(location.city ? { city: location.city } : {}) }
+        : undefined,
     },
   })
-  const recommendations = recommendedData?.recommendedListings ?? []
-  const sponsored = recommendations
-    .filter(item => item.boostExpiresAt && new Date(item.boostExpiresAt) > new Date())
-    .filter((item, index, items) => items.findIndex(candidate => candidate.seller.id === item.seller.id) === index)
-    .slice(0, 4)
-  const sponsoredIds = new Set(sponsored.map(item => item.id))
-  // Fed to two different presentations: the desktop bento grid gets the
-  // whole pool (see bentoVariant below), the mobile carousel only gets the
-  // first 4 — a swipeable strip with a dozen stops isn't a "highlight reel"
-  // anymore.
-  const highlighted = recommendations.filter(item => !sponsoredIds.has(item.id)).slice(0, 12)
-  const heroHighlighted = highlighted.slice(0, 4)
-  const highlightedIds = new Set(highlighted.map(item => item.id))
+  const feed = (feedData ?? previousData)?.listings
+  const latest = feed?.items ?? []
+  const canLoadMore = !!feed && feed.totalCount > latest.length
 
-  const loopCount = heroHighlighted.length
-  const mosaicSlides = loopCount > 1 ? [...heroHighlighted, heroHighlighted[0]] : heroHighlighted
+  const contact = (l: RemoteListing) => () =>
+    currentUser && !currentUser.isGuest && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id)
 
-  const mosaicRef = useRef<HTMLDivElement>(null)
-  const [activeSlide, setActiveSlide] = useState(0)
-  const activeSlideRef = useRef(0)
-  const resumeAutoplayAtRef = useRef(0)
-  const scrollRafRef = useRef<number | null>(null)
-  const scrollEndTimerRef = useRef<number | null>(null)
-
-  const setActiveSlideSynced = (index: number) => {
-    activeSlideRef.current = index
-    setActiveSlide(index)
-  }
-
-  const scrollMosaicTo = (index: number, smooth = true) => {
-    const container = mosaicRef.current
-    const target = container?.children[index] as HTMLElement | undefined
-    if (!container || !target) return
-    container.scrollTo({ left: target.offsetLeft - container.offsetLeft, behavior: smooth ? 'smooth' : 'auto' })
-  }
-
-  const pauseAutoplay = () => {
-    resumeAutoplayAtRef.current = Date.now() + 5000
-  }
-
-  const closestSlideIndex = (container: HTMLDivElement) => {
-    const cards = Array.from(container.children) as HTMLElement[]
-    let closest = 0
-    let minDist = Infinity
-    cards.forEach((el, i) => {
-      const dist = Math.abs(el.offsetLeft - container.offsetLeft - container.scrollLeft)
-      if (dist < minDist) { minDist = dist; closest = i }
-    })
-    return closest
-  }
-
-  const handleMosaicScroll = () => {
-    if (scrollRafRef.current != null) return
-    scrollRafRef.current = requestAnimationFrame(() => {
-      scrollRafRef.current = null
-      const container = mosaicRef.current
-      if (!container) return
-      setActiveSlideSynced(closestSlideIndex(container) % Math.max(loopCount, 1))
-    })
-
-    // Debounced "scroll has settled" check: if it settled on the trailing
-    // clone, jump back to the real first card without animating.
-    if (scrollEndTimerRef.current != null) window.clearTimeout(scrollEndTimerRef.current)
-    scrollEndTimerRef.current = window.setTimeout(() => {
-      const container = mosaicRef.current
-      if (!container) return
-      if (loopCount > 1 && closestSlideIndex(container) === loopCount) {
-        scrollMosaicTo(0, false)
-        setActiveSlideSynced(0)
-      }
-    }, 150)
-  }
-
-  // Set up the autoplay timer once per loopCount (not per slide change) —
-  // it reads the current index from a ref so it never needs to re-arm and
-  // drift/restart every time a scroll event nudges the displayed dot.
-  useEffect(() => {
-    if (loopCount <= 1) return
-    const interval = setInterval(() => {
-      if (window.innerWidth > 640) return
-      if (Date.now() < resumeAutoplayAtRef.current) return
-      scrollMosaicTo(activeSlideRef.current + 1)
-    }, 4000)
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loopCount])
-
-  const renderListings = (items: RemoteListing[]) =>
-    homeViewMode === 'grid'
-      ? items.map(l => (
-        <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
-      ))
-      : items.map(l => (
-        <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
-      ))
-
-  const renderListingsContainer = (items: RemoteListing[]) =>
-    homeViewMode === 'grid'
-      ? <div className="listing-grid">{renderListings(items)}</div>
-      : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>{renderListings(items)}</div>
-
-
-
-  const [searchQuery, setSearchQuery] = useState('')
+  const card = (l: RemoteListing) => (
+    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} />
+  )
 
   return (
-    <div>
+    <div className="mx-auto max-w-[1320px] px-4 pb-4 pt-4 md:px-8 md:pt-6 lg:px-12">
 
-      {/* Hero — either a BO-supplied creative (image/GIF, shown as-is like
-          the big marketplaces do) or the default generated text hero when
-          no creative is configured for this slot. */}
-      <section className="hero-premium" style={{ position: 'relative', overflow: 'hidden' }}>
-        <div className="hero-premium-glow" />
-
-        <div className="hero-premium-inner">
-          {heroBanner?.imageUrl ? (
-            <div className="hero-creative">
-              <div className="hero-creative-media">
-                <button
-                  type="button"
-                  className="hero-creative-link"
-                  onClick={() =>
-                    heroBanner.ctaUrl ? followBannerCta(heroBanner.ctaUrl, onNavigate) : onNavigate('search')
-                  }
-                >
-                  <img src={heroBanner.imageUrl} alt={heroBanner.title} className="hero-creative-img" />
-                </button>
-
-                {(heroBanner.ctaLabel || heroBanner.secondaryCtaLabel) && (
-                  <>
-                    <div className="hero-creative-scrim" />
-                    <div className="hero-creative-actions">
-                      {heroBanner.ctaLabel && (
-                        <button
-                          className="hero-btn hero-btn-primary"
-                          onClick={() =>
-                            heroBanner.ctaUrl ? followBannerCta(heroBanner.ctaUrl, onNavigate) : onNavigate('search')
-                          }
-                        >
-                          {heroBanner.ctaLabel} <ArrowRight size={18} />
-                        </button>
-                      )}
-                      {heroBanner.secondaryCtaLabel && (
-                        <button
-                          className="hero-btn hero-btn-outline"
-                          onClick={() =>
-                            heroBanner.secondaryCtaUrl
-                              ? followBannerCta(heroBanner.secondaryCtaUrl, onNavigate)
-                              : onNavigate('seller-post')
-                          }
-                        >
-                          {heroBanner.secondaryCtaLabel}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="hero-stats hero-stats-standalone">
-                {(heroBanner.stats?.length ? heroBanner.stats : [
-                  { value: '85 000+', label: 'Annonces Actives' },
-                  { value: '42 000+', label: 'Vendeurs Vérifiés' },
-                  { value: '24/7', label: 'Support Client' },
-                ]).map(s => (
-                  <div key={s.label} className="hero-stat-item">
-                    <div className="hero-stat-value">{s.value}</div>
-                    <div className="hero-stat-label">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="hero-left hero-left-solo">
-              <div className="hero-badge">
-                <Sparkles size={14} />
-                {heroBanner?.body || 'La marketplace nouvelle génération'}
-              </div>
-
-              <h1 className="hero-title">
-                {heroBanner ? heroBanner.title : (
-                  <>Trouvez, <span className="hero-title-accent">Achetez</span> & Vendez<br />en Côte d'Ivoire</>
-                )}
-              </h1>
-
-              <p className="hero-subtitle">
-                {heroBanner?.subtitle ||
-                  "La plus grande plateforme de petites annonces certifiées en Côte d'Ivoire. Parcourez des milliers d'offres et échangez directement avec les vendeurs en toute confiance."}
-              </p>
-
-              <div className="hero-buttons">
-                <button
-                  className="hero-btn hero-btn-primary"
-                  onClick={() =>
-                    heroBanner?.ctaUrl ? followBannerCta(heroBanner.ctaUrl, onNavigate) : onNavigate('search')
-                  }
-                >
-                  {heroBanner?.ctaLabel || 'Explorer les annonces'} <ArrowRight size={18} />
-                </button>
-                <button
-                  className="hero-btn hero-btn-outline"
-                  onClick={() =>
-                    heroBanner?.secondaryCtaUrl
-                      ? followBannerCta(heroBanner.secondaryCtaUrl, onNavigate)
-                      : onNavigate('seller-post')
-                  }
-                >
-                  {heroBanner?.secondaryCtaLabel || '+ Publier une annonce'}
-                </button>
-              </div>
-
-              <div className="hero-stats hero-stats-standalone hero-stats-hide-mobile">
-                {(heroBanner?.stats?.length ? heroBanner.stats : [
-                  { value: '85 000+', label: 'Annonces Actives' },
-                  { value: '42 000+', label: 'Vendeurs Vérifiés' },
-                  { value: '24/7', label: 'Support Client' },
-                ]).map(s => (
-                  <div key={s.label} className="hero-stat-item">
-                    <div className="hero-stat-value">{s.value}</div>
-                    <div className="hero-stat-label">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Promo strip — purely BO-authored (HOME_PROMO_STRIP), absent unless
-          an admin configures one; a thin announcement bar for things that
-          don't warrant a whole banner (a policy change, a seasonal note). */}
-      {promoStripBanner && (
-        <section
-          style={{
-            background: promoStripBanner.backgroundColor || '#0F172A',
-            color: promoStripBanner.textColor || '#FFFFFF',
-          }}
+      {/* Search + P2P promise */}
+      <div className="mb-6 flex flex-col gap-3">
+        <button
+          onClick={() => onNavigate('search')}
+          className="flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest px-4 text-left text-body-md text-on-surface-variant/80 lg:hidden"
         >
-          <button
-            type="button"
-            onClick={() => promoStripBanner.ctaUrl ? followBannerCta(promoStripBanner.ctaUrl, onNavigate) : undefined}
-            style={{
-              width: '100%', maxWidth: 1280, margin: '0 auto', padding: '0.65rem 1rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              background: 'none', border: 'none', cursor: promoStripBanner.ctaUrl ? 'pointer' : 'default',
-              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.85rem', color: 'inherit', textAlign: 'left',
-            }}
-          >
-            {/* Truncates rather than wrapping to several lines — a long
-                admin-authored title shouldn't push this thin strip tall on
-                a narrow screen. */}
-            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {promoStripBanner.title}
-            </span>
-            {promoStripBanner.ctaLabel && (
-              <span style={{ textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                {promoStripBanner.ctaLabel} <ArrowRight size={14} />
-              </span>
-            )}
-          </button>
-        </section>
-      )}
+          <Search size={20} className="text-primary" />
+          <span className="flex-1 truncate">Que recherchez-vous aujourd'hui ?</span>
+          <SlidersHorizontal size={19} className="text-on-surface-variant" />
+        </button>
+        <div className="flex items-center gap-3 rounded-xl bg-surface-container px-3 py-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><ShieldCheck size={18} /></span>
+          <div className="min-w-0 text-body-sm leading-tight">
+            <div className="font-bold text-on-surface">100% P2P • 0% Commission</div>
+            <div className="text-on-surface-variant">Remise directe • Paiement à la rencontre</div>
+          </div>
+        </div>
+      </div>
 
-      {/* Campaign rail — appears automatically while a campaign (Black
-          Friday, soldes...) is ACTIVE and inside its date window, no manual
-          banner authoring required beyond the campaign + its discounted
-          listings. */}
-      {campaignListings.length > 0 && (
-        <section className="featured-strip" style={{ background: activeCampaign?.themeColor ? `${activeCampaign.themeColor}14` : undefined }}>
-          <div className="featured-strip-inner" style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1rem 0.5rem' }}>
-            <div className="hero-boost-header">
-              <span className="hero-boost-pill" style={{ background: activeCampaign?.themeColor || undefined }}>
-                <Zap size={13} fill="#0F172A" /> {activeCampaign?.name}
-              </span>
-              <span className="hero-boost-note">{activeCampaign?.description || 'Offres à durée limitée'}</span>
+      {/* Explorer par rayon */}
+      {categories.length > 0 && (
+        <section className="mb-8">
+          <SectionHeading
+            title="Explorer par rayon"
+            action={
+              <button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">
+                Tout voir <ChevronRight size={16} />
+              </button>
+            }
+          />
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
+            {categories.map(cat => (
               <button
-                onClick={() => onNavigate('flash-offers')}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: activeCampaign?.themeColor || 'var(--primary)', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 4 }}
+                key={cat.id}
+                onClick={() => onCategorySelect?.(cat.slug)}
+                className="group flex w-[72px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0 md:w-[88px]"
               >
-                Voir tout <ChevronRight size={16} />
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl text-[26px] transition-transform group-hover:-translate-y-0.5 md:h-[72px] md:w-[72px]" style={{ background: `${cat.color}1A` }}>
+                  {cat.icon}
+                </span>
+                <span className="line-clamp-2 text-center text-label-md text-on-surface">{cat.name}</span>
               </button>
-            </div>
-
-            <div className="listing-grid" style={{ marginTop: '1.25rem' }}>
-              {campaignListings.slice(0, 4).map(entry => (
-                <ListingCard
-                  key={entry.id}
-                  listing={{
-                    ...entry.listing,
-                    // The badge reads discount/theme off this field — the
-                    // main listings queries get it from CampaignFieldsResolver,
-                    // but the campaign query already has everything it needs
-                    // inline, so it's assembled here instead of re-fetched.
-                    activeCampaignDiscount: {
-                      campaignId: activeCampaign!.id,
-                      campaignName: activeCampaign!.name,
-                      campaignSlug: activeCampaign!.slug,
-                      themeColor: activeCampaign!.themeColor,
-                      discountPercent: entry.discountPercent,
-                      salePrice: entry.salePrice,
-                    },
-                  }}
-                  onSelect={() => onSelectListing(entry.listing.id)}
-                  onToggleFav={() => onToggleFavorite(entry.listing.id)}
-                  isFav={favorites.includes(entry.listing.id)}
-                  currentUserId={currentUser?.id}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* "À la une" — its own section so it stays clearly visible no matter
-          what's in the hero above; the BO can turn it off entirely (or
-          retitle it) via the HOME_FEATURED slot. */}
-      {featuredEnabled && highlighted.length > 0 && (
-        <section className="featured-strip">
-          <div className="featured-strip-inner">
-            <div className="hero-boost-header">
-              <div className="featured-heading-copy">
-                <span className="featured-kicker"><Zap size={13} /> Sélection du moment</span>
-                <h2 className="featured-title">{featuredHeading?.title || 'À la une'}</h2>
-                <p className="hero-boost-note">{featuredHeading?.subtitle || 'Des annonces qui méritent votre attention près de chez vous'}</p>
-              </div>
-              <button className="featured-see-all" onClick={() => onNavigate('search')}>
-                Tout découvrir <ArrowRight size={15} />
-              </button>
-              <span className="hero-boost-hint">Glissez pour voir plus <ChevronRight size={12} /></span>
-            </div>
-
-            {/* Desktop: one asymmetric bento grid across the whole
-                recommended pool (up to 9) — a big lead tile, two wide
-                banners, and small squares, packed with grid-auto-flow:dense
-                so it stays gap-free whatever the count. Mobile keeps the
-                swipeable carousel below instead (a dense multi-size grid
-                doesn't work as a one-thumb swipe strip), limited to a
-                focused top-4 highlight reel. CSS toggles which one is
-                visible per breakpoint (.hero-bento / .hero-mosaic). */}
-            <div className="hero-bento">
-              {highlighted.slice(0, 9).map((card, i) => (
-                <HeroMosaicCard
-                  key={card.id}
-                  card={card}
-                  variant={bentoVariant(i)}
-                  className={`hero-bento-${bentoVariant(i).replace('bento-', '')}`}
-                  isFav={favorites.includes(card.id)}
-                  animationDelay="0s"
-                  onSelect={() => onSelectListing(card.id)}
-                  onToggleFav={() => onToggleFavorite(card.id)}
-                />
-              ))}
-            </div>
-
-            <div
-              className="hero-mosaic"
-              ref={mosaicRef}
-              onScroll={handleMosaicScroll}
-              onTouchStart={pauseAutoplay}
-            >
-              {mosaicSlides.map((card, i) => (
-                <HeroMosaicCard
-                  key={i < loopCount ? card.id : `${card.id}-loop`}
-                  card={card}
-                  variant={i === 0 ? 'mosaic-main' : 'mosaic-side'}
-                  isFav={favorites.includes(card.id)}
-                  animationDelay="0s"
-                  onSelect={() => onSelectListing(card.id)}
-                  onToggleFav={() => onToggleFavorite(card.id)}
-                />
-              ))}
-            </div>
-
-            {heroHighlighted.length > 1 && (
-              <div className="hero-mosaic-dots">
-                {heroHighlighted.map((card, i) => (
-                  <button
-                    key={card.id}
-                    className={`hero-mosaic-dot${i === activeSlide ? ' active' : ''}`}
-                    onClick={() => { pauseAutoplay(); scrollMosaicTo(i) }}
-                    aria-label={`Aller à l'annonce ${i + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Content Container */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem 0' }}>
-
-        {/* Recent Listings */}
-        <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div>
-              <h2 className="section-title" style={{ margin: 0 }}>Récemment Publiées</h2>
-              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les dernières opportunités ajoutées à Abidjan & villes de Côte d'Ivoire</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <ViewToggle viewMode={homeViewMode} onChange={setHomeViewMode} />
-              <button
-                onClick={() => onNavigate('search')}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.9rem' }}
-              >
-                Voir toutes les annonces <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-
-          {renderListingsContainer(recent.filter(item => !sponsoredIds.has(item.id) && !highlightedIds.has(item.id)))}
-        </section>
-
-        {sponsored.length > 0 && (
-          <section style={{ margin: '-0.5rem 0 3.5rem', padding: '1.25rem', borderRadius: 22, background: 'linear-gradient(135deg, rgba(251,191,36,0.10), rgba(255,255,255,0))', border: '1px solid rgba(217,119,6,0.18)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, marginBottom: '1rem', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#B45309', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}><Sparkles size={14} /> Sélection locale</div>
-                <h2 className="section-title" style={{ margin: 0 }}>Mis en avant près de chez vous</h2>
-                <p style={{ color: 'var(--fg-muted)', fontSize: '0.84rem', margin: '4px 0 0' }}>Des vendeurs ont choisi de donner plus de visibilité à ces annonces.</p>
-              </div>
-              <span style={{ color: 'var(--fg-subtle)', fontSize: '0.7rem' }}>Contenu sponsorisé par les vendeurs</span>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '2px 2px 12px', scrollSnapType: 'x mandatory' }}>
-              {sponsored.map(listing => (
-                <div key={listing.id} style={{ scrollSnapAlign: 'start', display: 'flex' }}>
-                  <SponsoredListingCard listing={listing} onSelect={() => onSelectListing(listing.id)} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Comment ça marche — BO-authored via HOME_HOW_IT_WORKS (reuses the
-            banner stats array as {value: step number, label: title,
-            description}), falls back to the default 3 steps below. */}
-        <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 className="section-title" style={{ margin: 0 }}>{howItWorksBanner?.title || 'Comment ça marche'}</h2>
-            <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>
-              {howItWorksBanner?.subtitle || "Acheter et vendre sur Dilchap en trois étapes simples"}
-            </p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-            {steps.map((step, i) => (
-              <div key={i} style={{ textAlign: 'center', padding: '0 0.5rem' }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: '50%', margin: '0 auto 1rem',
-                  background: 'var(--primary)', color: '#FFFFFF',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem',
-                }}>
-                  {step.value}
-                </div>
-                <h3 style={{ margin: '0 0 6px', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{step.label}</h3>
-                {step.description && (
-                  <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>{step.description}</p>
-                )}
-              </div>
             ))}
           </div>
         </section>
+      )}
 
-        {/* Popular Categories Grid — placed after the recent listings on
-            purpose: a visitor who scrolls this far hasn't found what they
-            want yet, so offer category browsing as the next way to narrow
-            it down rather than leading with it. */}
-        <section style={{ marginBottom: '3.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div>
-              <h2 className="section-title" style={{ margin: 0 }}>Catégories Populaires</h2>
-              <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>Les catégories les plus recherchées sur Dilchap</p>
+      {/* Campaign card — live campaign only, with countdown */}
+      {campaign && (
+        <section className="relative mb-8 overflow-hidden rounded-2xl p-5 text-white md:p-8" style={{ background: campaignColor }}>
+          <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10" />
+          <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-md bg-white px-2 py-0.5 text-label-sm uppercase" style={{ color: campaignColor }}>{campaign.name}</span>
+                {countdown && <span className="flex items-center gap-1 rounded-md bg-black/20 px-2 py-0.5 text-label-sm tabular-nums"><Timer size={13} /> {countdown}</span>}
+              </div>
+              <div className="text-headline-lg">{bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Offres à prix cassés'}</div>
+              {campaign.description && <p className="m-0 mt-1 text-body-sm opacity-90">{campaign.description}</p>}
             </div>
-            <button
-              onClick={() => onNavigate('categories')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.9rem' }}
-            >
-              Voir tout le catalogue <ChevronRight size={18} />
+            <button onClick={() => onNavigate('flash-offers')} className="shrink-0 cursor-pointer rounded-lg border-none bg-white px-5 py-2.5 text-label-lg" style={{ color: campaignColor }}>
+              Profiter
             </button>
           </div>
+        </section>
+      )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
-            {popularCategories.map(cat => {
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => onCategorySelect?.(cat.slug)}
-                  style={{
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '0',
-                    borderRadius: 'var(--radius)',
-                    background: 'transparent',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div style={{
-                    background: cat.color + '12',
-                    padding: '1rem 0.75rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.15s ease',
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.background = cat.color + '20' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = cat.color + '12' }}
-                  >
-                    <div style={{
-                      width: 42, height: 42, borderRadius: 12,
-                      background: cat.color + '20',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.2rem',
-                    }}>
-                      {cat.icon}
-                    </div>
-                    <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.78rem', color: 'var(--fg)', textAlign: 'center', lineHeight: 1.15 }}>{cat.name}</span>
-                    <span style={{ fontSize: '0.65rem', color: cat.color, fontWeight: 700 }}>{cat.subcategories.length} sous-catégories</span>
-                  </div>
-                </button>
-              )
-            })}
+      {/* Pépites à la Une */}
+      {pepites.length > 0 && (
+        <section className="mb-8">
+          <SectionHeading
+            title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
+            action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2.5 py-0.5 text-label-sm text-tertiary">Boostées</span> : undefined}
+          />
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:gap-4 md:px-0">
+            {pepites.map(l => <div key={l.id} className="w-[210px] shrink-0 snap-start md:w-[250px]">{card(l)}</div>)}
           </div>
         </section>
+      )}
 
-        {/* Trusted Partners Section — a BO-supplied creative replaces the
-            whole card (it's typically a self-contained graphic with its
-            own heading/icons/badges already baked in, same reasoning as
-            the hero); otherwise the generated dark card below, still
-            BO-editable via text fields. */}
-        <section style={{ marginBottom: '3.5rem' }} className="desktop-only">
-          {partnersBanner?.imageUrl ? (
-            partnersBanner.ctaUrl ? (
-              <button
-                type="button"
-                onClick={() => followBannerCta(partnersBanner.ctaUrl!, onNavigate)}
-                style={{ display: 'block', width: '100%', aspectRatio: '3.6 / 1', border: 'none', padding: 0, cursor: 'pointer', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}
-              >
-                {/* Same story as the boost ribbon: these creatives are
-                    exported on a canvas much taller than the actual card,
-                    so cover-crop to the card's own ratio instead of
-                    showing the blank margin around it. */}
-                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              </button>
-            ) : (
-              <div style={{ width: '100%', aspectRatio: '3.6 / 1', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
-                <img src={partnersBanner.imageUrl} alt={partnersBanner.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              </div>
-            )
-          ) : (
-            <div className="card" style={{
-              background: 'linear-gradient(135deg, #090D16 0%, #121826 100%)',
-              border: '2px solid #FE0000',
-              borderRadius: 'var(--radius-xl)',
-              padding: '2.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2.5rem',
-              flexWrap: 'wrap',
-              color: '#FFFFFF'
-            }}>
-              <div style={{ flex: 1, minWidth: 260 }}>
-                <div style={{ display: 'inline-flex', gap: 6, background: '#FFDD21', color: '#0F172A', padding: '4px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 900, fontFamily: 'Outfit, sans-serif', marginBottom: '1rem' }}>
-                  {partnersBanner?.subtitle || 'TRANSACTIONS DIRECTES ENTRE PARTICULIERS'}
-                </div>
-                <h3 style={{ color: '#FFFFFF', margin: '0 0 0.75rem', fontSize: '1.8rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
-                  {partnersBanner?.title || 'Achetez et Vendez en Toute Confiance'}
-                </h3>
-                <p style={{ color: '#94A3B8', margin: '0 0 1.5rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
-                  {partnersBanner?.body ||
-                    "Sur Dilchap, vous échangez directement avec l'autre partie. Convenez ensemble des modalités et finalisez votre transaction en toute sérénité."}
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 240, background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                {[
-                  { icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce d\'Identité' },
-                  { icon: Zap, text: 'Confirmation SMS & Notification Instantanée' },
-                  { icon: Tag, text: '0% de Commission sur vos 3 Premières Ventes' },
-                ].map(item => (
-                  <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem', fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
-                    <div style={{ width: 34, height: 34, background: '#FE0000', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <item.icon size={18} color="#FFFFFF" />
-                    </div>
-                    {item.text}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* Témoignages — BO-authored via HOME_TESTIMONIALS (reuses the
-            banner stats array as {value: rating, label: author line,
-            description: quote}), falls back to the default 3 below. */}
-        <section style={{ marginTop: '3.5rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 className="section-title" style={{ margin: 0 }}>{testimonialsBanner?.title || 'Ils nous font confiance'}</h2>
-            <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: '4px 0 0' }}>
-              {testimonialsBanner?.subtitle || "Ce que disent les membres de la communauté Dilchap"}
-            </p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-            {testimonials.map((t, i) => {
-              const rating = Math.max(0, Math.min(5, Math.round(Number(t.value)) || 0))
-              return (
-                <div key={i} className="card" style={{ padding: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: 2, marginBottom: 10 }}>
-                    {Array.from({ length: 5 }).map((_, s) => (
-                      <Star key={s} size={15} fill={s < rating ? '#FFDD21' : 'none'} color={s < rating ? '#FFDD21' : 'var(--border)'} />
-                    ))}
-                  </div>
-                  {t.description && (
-                    <p style={{ fontSize: '0.9rem', color: 'var(--fg)', lineHeight: 1.6, margin: '0 0 14px' }}>
-                      « {t.description} »
-                    </p>
-                  )}
-                  <p style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--fg-muted)', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
-                    {t.label}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-      </div>
-
-      {/* Trust Bar — desktop/tablet only (hidden below 768px in index.css);
-          the certified-badge row crowds a small screen without adding much,
-          and on desktop it reads better as reassurance right before the
-          seller CTA than as the very first thing under the hero. */}
-      <section className="trust-bar desktop-only">
-        <div className="trust-bar-inner">
-          {(trustBarBanners.length > 0
-            ? trustBarBanners.map((b) => ({ key: b.id, icon: Award, text: b.title, desc: b.subtitle || '', image: b.imageUrl }))
-            : [
-                { key: 'verified', icon: ShieldCheck, text: 'Vendeurs Vérifiés avec Pièce ID', desc: 'Identité certifiée' },
-                { key: 'direct', icon: CreditCard, text: 'Échanges Directs Entre Membres', desc: 'Vous gérez la transaction ensemble' },
-                { key: 'reviews', icon: Star, text: 'Avis Clients Certifiés', desc: 'Recommandations vérifiées' },
-                { key: 'support', icon: Award, text: "Support 7j/7 en Côte d'Ivoire", desc: 'Assistance dédiée' },
-              ]
-          ).map((item) => (
-            <div key={item.key} className="trust-bar-item">
-              <div className="trust-bar-icon">
-                {'image' in item && item.image ? (
-                  <img src={item.image} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
-                ) : (
-                  <item.icon size={20} />
-                )}
-              </div>
-              <div>
-                <div className="trust-bar-text">{item.text}</div>
-                <div className="trust-bar-desc">{item.desc}</div>
-              </div>
-            </div>
-          ))}
+      {/* Remise en main propre conseillée */}
+      <section className="mb-8 flex items-center gap-4 rounded-2xl border border-outline-variant bg-surface-lowest p-4 md:p-5">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Handshake size={24} /></span>
+        <div className="min-w-0">
+          <div className="text-label-lg text-on-surface">Remise en main propre conseillée</div>
+          <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Vérifiez l'article ensemble dans un lieu public avant de payer.</p>
         </div>
       </section>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem' }}>
-        {/* CTA Seller Banner */}
-        <section>
-          <div
-            className={sellerCtaBanner?.imageUrl ? undefined : 'pattern-yupixi'}
-            style={{
-              borderRadius: 'var(--radius-xl)',
-              padding: '3rem 2rem',
-              textAlign: 'center',
-              position: 'relative',
-              backgroundColor: sellerCtaBanner?.backgroundColor || undefined,
-              backgroundImage: sellerCtaBanner?.imageUrl
-                ? `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${sellerCtaBanner.imageUrl})`
-                : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
+      {/* Dernières annonces */}
+      <section>
+        <SectionHeading
+          title={<>Dernières annonces <span className="h-2 w-2 rounded-full bg-primary" /></>}
+          action={<ViewToggle viewMode={viewMode} onChange={setViewMode} />}
+        />
+        {viewMode === 'grid'
+          ? <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5">{latest.map(card)}</div>
+          : <div className="flex flex-col gap-3">{latest.map(l => (
+              <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
+            ))}</div>}
+        {latest.length === 0 && !feedLoading && (
+          <p className="rounded-2xl bg-surface-container-low p-8 text-center text-body-md text-on-surface-variant">Aucune annonce pour l'instant dans cette zone.</p>
+        )}
+        {canLoadMore && (
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={feedLoading}
+            className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container-low py-3.5 text-label-lg text-on-surface hover:bg-surface-container disabled:opacity-60"
           >
-            <div style={{ maxWidth: 640, margin: '0 auto', position: 'relative' }}>
-              <div style={{ display: 'inline-flex', padding: 12, background: '#FFFFFF', borderRadius: 16, color: '#FE0000', marginBottom: '1rem' }}>
-                <Store size={36} />
-              </div>
-              <h2 style={{ color: sellerCtaBanner?.textColor || '#FFFFFF', margin: '0 0 0.75rem', fontSize: '2rem', fontFamily: 'Outfit, sans-serif', fontWeight: 900 }}>
-                {sellerCtaBanner?.title || 'Devenez Vendeur Certifié Dilchap'}
-              </h2>
-              <p style={{ color: sellerCtaBanner?.textColor ? `${sellerCtaBanner.textColor}EB` : 'rgba(255,255,255,0.92)', margin: '0 0 1.75rem', fontSize: '1.05rem', lineHeight: 1.6 }}>
-                {sellerCtaBanner?.subtitle || "Publiez gratuitement vos annonces et touchez plus de 1.2M d'acheteurs en Côte d'Ivoire."}
-              </p>
-              <button
-                className="btn-secondary"
-                style={{ fontSize: '1.05rem', padding: '0.85rem 2.25rem' }}
-                onClick={() =>
-                  sellerCtaBanner?.ctaUrl ? followBannerCta(sellerCtaBanner.ctaUrl, onNavigate) : onNavigate('seller-post')
-                }
-              >
-                {sellerCtaBanner?.ctaLabel || 'Créer ma boutique gratuitement'} →
-              </button>
-            </div>
-          </div>
-        </section>
-
-      </div>
+            {feedLoading ? <Loader2 size={17} className="animate-spin" /> : <>Charger plus d'annonces <ArrowDown size={17} /></>}
+          </button>
+        )}
+      </section>
     </div>
   )
 }

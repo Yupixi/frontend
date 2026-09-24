@@ -39,13 +39,13 @@ export default function Categories({ onNavigate, onCategorySelect }: CategoriesP
             color: topBanner.imageUrl ? '#FFFFFF' : (topBanner.textColor || 'var(--fg)'),
           }}
         >
-          <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1.3rem' }}>{topBanner.title}</h2>
+          <h2 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.3rem' }}>{topBanner.title}</h2>
           {topBanner.subtitle && <p style={{ margin: '6px 0 0', fontSize: '0.9rem', opacity: 0.85 }}>{topBanner.subtitle}</p>}
         </div>
       )}
 
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>
+        <h1 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>
           Toutes les catégories
         </h1>
         <p style={{ color: 'var(--fg-muted)', fontSize: '1rem', margin: '0 0 1.5rem' }}>
@@ -66,7 +66,7 @@ export default function Categories({ onNavigate, onCategorySelect }: CategoriesP
                   {cat.icon}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: 'var(--fg)' }}>{cat.name}</h2>
+                  <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: 'var(--fg)' }}>{cat.name}</h2>
                   <span style={{ fontSize: '0.8rem', color: cat.color, fontWeight: 700 }}>{cat.subcategories.length} sous-catégories</span>
                 </div>
                 <ChevronRight size={18} style={{ color: 'var(--fg-subtle)' }} />
@@ -80,7 +80,7 @@ export default function Categories({ onNavigate, onCategorySelect }: CategoriesP
                     style={{
                       cursor: 'pointer', border: 'none', borderRadius: 999,
                       padding: '4px 12px', fontSize: '0.78rem', fontWeight: 700,
-                      fontFamily: 'Outfit, sans-serif',
+                      fontFamily: 'Plus Jakarta Sans, sans-serif',
                       background: cat.color + '12', color: cat.color,
                       transition: 'background 0.15s',
                     }}

@@ -209,7 +209,7 @@ export default function SearchPage({ onSelectListing, favorites, onToggleFavorit
       {/* Results header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
+          <h1 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
             {headerTitle}
           </h1>
           <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', margin: '4px 0 0' }}>
@@ -278,7 +278,7 @@ export default function SearchPage({ onSelectListing, favorites, onToggleFavorit
           filtersOpen && (
             <aside className="card" style={{ width: 260, flexShrink: 0, padding: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Filtrer les résultats</h3>
+                <h3 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Filtrer les résultats</h3>
                 <button onClick={() => setFiltersOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
               </div>
               {filterFields}

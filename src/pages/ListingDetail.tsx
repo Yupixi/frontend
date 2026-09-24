@@ -51,7 +51,7 @@ function SpecItem({ icon, label, value }: { icon: ReactNode, label: string, valu
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: '0.82rem', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', lineHeight: 1.25, wordBreak: 'break-word' }}>{value}</div>
+        <div style={{ fontSize: '0.82rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: 'var(--fg)', lineHeight: 1.25, wordBreak: 'break-word' }}>{value}</div>
       </div>
     </div>
   )
@@ -272,7 +272,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <button onClick={() => setImgIdx(i => Math.min(images.length - 1, i + 1))} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
                     <ChevronRight size={20} />
                   </button>
-                  <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 800, fontFamily: "'Outfit', 'Nunito', sans-serif" }}>
+                  <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     {imgIdx + 1} / {images.length}
                   </div>
                 </>
@@ -297,13 +297,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           <div className="card listing-detail-card" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
             <div className="listing-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: '1rem' }}>
               <div style={{ minWidth: 0 }}>
-                <h1 className="listing-detail-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
+                <h1 className="listing-detail-title" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
                 <div className="price-tag" style={{ fontSize: '1.75rem' }}><Price amount={listing.price} currency={listing.currency} /></div>
                 {listing.negotiable && <span className="badge badge-green" style={{ marginTop: 6 }}>Prix négociable</span>}
               </div>
               <div className="listing-detail-actions" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => onToggleFavorite(listing.id)} style={{ background: isFav ? 'rgba(254,0,0,0.08)' : 'var(--border-subtle)', border: isFav ? '1.5px solid rgba(254,0,0,0.3)' : '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
+                <button onClick={() => onToggleFavorite(listing.id)} style={{ background: isFav ? 'rgba(187, 0, 19,0.08)' : 'var(--border-subtle)', border: isFav ? '1.5px solid rgba(187, 0, 19,0.3)' : '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Heart size={18} fill={isFav ? '#BB0013' : 'none'} color={isFav ? '#BB0013' : 'var(--fg-muted)'} />
                 </button>
                 <div style={{ position: 'relative' }}>
                   <button onClick={() => void shareListing()} title="Partager l'annonce" style={{ background: 'var(--border-subtle)', border: '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -337,7 +337,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <SpecItem icon={<Truck size={15} />} label="Livraison" value={listing.deliveryAvailable ? 'Disponible' : 'Non disponible'} />
             </div>
 
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Description</h3>
+            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Description</h3>
             <div
               style={{ color: 'var(--fg)', lineHeight: 1.7, fontSize: '0.9rem' }}
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }}
@@ -345,7 +345,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
             {listing.tags.length > 0 && (
               <div style={{ borderTop: '1px solid var(--border)', marginTop: '1.25rem', paddingTop: '1.25rem' }}>
-                <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Mots-clés</h3>
+                <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Mots-clés</h3>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {listing.tags.map(t => <span key={t} className="badge badge-gray">{t}</span>)}
                 </div>
@@ -355,13 +355,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
           {/* Map */}
           <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 1rem' }}>Localisation</h3>
+            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 1rem' }}>Localisation</h3>
             <div className="map-placeholder" style={{ height: 220 }}>
               <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', color: 'var(--primary)' }}>
                   <MapPin size={22} />
                 </div>
-                <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', fontSize: '0.9rem' }}>{listingLocation(listing)}</div>
+                <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: 'var(--fg)', fontSize: '0.9rem' }}>{listingLocation(listing)}</div>
                 <div style={{ color: 'var(--fg-muted)', fontSize: '0.8rem', marginTop: 4 }}>Carte interactive — Côte d'Ivoire</div>
                 <button
                   className="btn-outline"
@@ -383,7 +383,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           {/* Similar listings */}
           {similar.length > 0 && (
             <div>
-              <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', margin: '0 0 1rem' }}>Annonces similaires</h3>
+              <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1.1rem', margin: '0 0 1rem' }}>Annonces similaires</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 {similar.map(l => (
                   <div key={l.id} className="card card-hover" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
@@ -392,7 +392,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                     </div>
                     <div style={{ padding: '10px 12px' }}>
                       <div className="price-tag" style={{ fontSize: '0.95rem' }}><Price amount={l.price} currency={l.currency} /></div>
-                      <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--fg)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--fg)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
                     </div>
                   </div>
                 ))}
@@ -404,7 +404,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         {/* Right sidebar: desktop only */}
         <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>
+            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>
               {isOwner ? 'Votre annonce' : isExpired ? 'Annonce expirée' : 'Discutez avec le vendeur'}
             </h3>
 
@@ -453,7 +453,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                     <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
                   ) : offerOpen ? (
                     <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                      <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
+                      <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
                       <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
                       {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
                       <div style={{ display: 'flex', gap: 6 }}>
@@ -462,7 +462,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                       <Tag size={15} /> Faire une offre
                     </button>
                   )
@@ -480,12 +480,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   </div>
                 )}
                 <div>
-                  <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '0.9rem', color: 'var(--fg)' }}>{listing.seller.fullName}</div>
+                  <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.9rem', color: 'var(--fg)' }}>{listing.seller.fullName}</div>
                   {listing.seller.city && <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{listing.seller.city}</div>}
                 </div>
               </button>
 
-              <button onClick={() => onSelectSeller(listing.seller.id)} style={{ marginTop: '0.75rem', width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem' }}>
+              <button onClick={() => onSelectSeller(listing.seller.id)} style={{ marginTop: '0.75rem', width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.85rem' }}>
                 Voir le profil complet →
               </button>
             </div>
@@ -495,7 +495,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 <p style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>Merci, votre signalement a été transmis.</p>
               ) : reportOpen ? (
                 <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem', textAlign: 'left' }}>
-                  <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.8rem', display: 'block', marginBottom: 6 }}>Motif</label>
+                  <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.8rem', display: 'block', marginBottom: 6 }}>Motif</label>
                   <select className="input" value={reportReason} onChange={e => setReportReason(e.target.value)} style={{ marginBottom: 8 }}>
                     {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
@@ -516,7 +516,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           </div>
 
           <div className="card" style={{ padding: '1.25rem' }}>
-            <h4 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--fg)' }}>🔒 Conseils de sécurité</h4>
+            <h4 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--fg)' }}>🔒 Conseils de sécurité</h4>
             <ul style={{ margin: 0, padding: '0 0 0 16px', color: 'var(--fg-muted)', fontSize: '0.8rem', lineHeight: 1.8 }}>
               <li>Rencontrez le vendeur dans un lieu public</li>
               <li>Vérifiez le produit avant de payer</li>
@@ -535,15 +535,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}><Price amount={listing.price} currency={listing.currency} /></div>
+          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}><Price amount={listing.price} currency={listing.currency} /></div>
           {listing.negotiable && <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>Prix négociable</div>}
         </div>
         {!isOwner && (
           <button onClick={() => onToggleFavorite(listing.id)} style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
+            <Heart size={18} fill={isFav ? '#BB0013' : 'none'} color={isFav ? '#BB0013' : 'var(--fg-muted)'} />
           </button>
         )}
-        <button onClick={() => setSellerSheetOpen(true)} className="btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, fontSize: '0.85rem', fontFamily: "'Outfit', sans-serif", fontWeight: 800 }}>
+        <button onClick={() => setSellerSheetOpen(true)} className="btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, fontSize: '0.85rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800 }}>
           {isOwner
             ? isExpired ? <><Archive size={16} /> Remettre en ligne</> : <><ArrowUp size={16} /> Booster</>
             : isExpired ? <><Archive size={16} /> Archivée</> : <><MessageCircle size={16} /> Contacter</>}
@@ -562,7 +562,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
             maxHeight: '85vh', overflow: 'auto',
             animation: 'slideUp 0.25s ease-out',
-            fontFamily: "'Outfit', 'Nunito', sans-serif",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
           }}>
             {/* Handle */}
             <div style={{ padding: '12px 0 4px', display: 'flex', justifyContent: 'center' }}>

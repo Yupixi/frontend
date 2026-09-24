@@ -77,7 +77,7 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
         </div>
         {title && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 12px' }}>
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: 0, fontSize: '1.05rem' }}>{title}</h3>
+            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: 0, fontSize: '1.05rem' }}>{title}</h3>
             <button
               onClick={() => onCloseRef.current()}
               aria-label="Fermer"

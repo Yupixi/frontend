@@ -328,7 +328,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} onContactSeller={contactSellerAbout} />
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
       case 'listing-detail':
@@ -402,6 +402,7 @@ export default function App() {
         currentPage={page}
         onNavigate={navigate}
         onNavigateCategory={navigateToCategory}
+        activeCategory={page === 'search' ? categoryFilter : ''}
         dark={dark}
         onToggleDark={() => setDark(d => !d)}
         isLoggedIn={isLoggedIn}
@@ -444,13 +445,13 @@ function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onUpdate: 
       background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
       padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12,
       boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      fontFamily: "'Outfit', 'Nunito', sans-serif",
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
       <div style={{ flex: 1, fontWeight: 700, fontSize: '0.85rem' }}>
         Une nouvelle version de Dilchap est disponible.
       </div>
       <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.8rem', fontWeight: 600 }}>Plus tard</button>
-      <button onClick={onUpdate} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+      <button onClick={onUpdate} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
         Mettre à jour
       </button>
     </div>
@@ -467,16 +468,16 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
         <div style={{
           position: 'fixed', inset: 0, zIndex: 10000,
           background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          fontFamily: "'Outfit', 'Nunito', sans-serif",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
         }} onClick={onDismiss}>
           <div style={{
             background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 420,
             padding: '2rem 1.5rem', textAlign: 'center',
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
               <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Dilchap</h3>
+            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Dilchap</h3>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
               {isSafari
                 ? 'Appuyez sur le bouton Partager <span style="font-size:1.2rem">⬆️</span> puis choisissez "Sur l\'écran d\'accueil".'
@@ -484,7 +485,7 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
                   ? 'Appuyez sur le menu ⋮ puis choisissez "Ajouter à l\'écran d\'accueil".'
                   : 'Utilisez le menu du navigateur pour ajouter à l\'écran d\'accueil.'}
             </p>
-            <button onClick={onDismiss} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', width: '100%' }}>
+            <button onClick={onDismiss} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', width: '100%' }}>
               J'ai compris
             </button>
           </div>
@@ -495,9 +496,9 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
         background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
         padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-        fontFamily: "'Outfit', 'Nunito', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 30, height: 30, objectFit: 'contain' }} />
         </div>
         <div style={{ flex: 1 }}>
@@ -505,7 +506,7 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
           <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>sur l'écran d'accueil</div>
         </div>
         <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.85rem', fontWeight: 600 }}>Plus tard</button>
-        <button onClick={onInstall} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+        <button onClick={onInstall} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
           Installer
         </button>
       </div>

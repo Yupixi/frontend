@@ -138,7 +138,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                 </button>
               )}
             </div>
-            <button type="button" onClick={onClose} aria-label="Fermer la recherche" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 700, fontSize: '0.9rem', padding: '8px 12px', fontFamily: "'Outfit', sans-serif" }}>
+            <button type="button" onClick={onClose} aria-label="Fermer la recherche" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 700, fontSize: '0.9rem', padding: '8px 12px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               Annuler
             </button>
           </div>
@@ -186,7 +186,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                   >
                     <Search size={15} style={{ color: 'var(--fg-subtle)', flexShrink: 0 }} aria-hidden="true" />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {before}<span style={{ fontWeight: 900, fontSize: '0.95rem', color: 'var(--primary)' }}>{match}</span>{after}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--fg-subtle)', marginTop: 1 }}>
@@ -203,7 +203,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                   width: '100%', padding: '0.75rem', border: '1.5px solid var(--border)', borderRadius: 12,
                   cursor: 'pointer', textAlign: 'center', marginTop: 8,
                   background: 'var(--bg-card)', color: 'var(--primary)',
-                  fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.85rem',
+                  fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.85rem',
                   transition: 'all 0.12s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
@@ -217,7 +217,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
           {q && !suggestLoading && suggestions.length === 0 && (
             <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--fg-muted)' }}>
               <Search size={40} style={{ opacity: 0.3, marginBottom: 12 }} aria-hidden="true" />
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '1rem', margin: '0 0 4px' }}>Aucun résultat</p>
+              <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '1rem', margin: '0 0 4px' }}>Aucun résultat</p>
               <p style={{ fontSize: '0.85rem', margin: 0 }}>Essayez avec d'autres termes</p>
             </div>
           )}
@@ -237,7 +237,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                     style={{
                       padding: '8px 18px', border: '1.5px solid var(--border)', borderRadius: 999,
                       cursor: 'pointer', background: 'var(--bg-card)', color: 'var(--fg-muted)',
-                      fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.82rem',
+                      fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.82rem',
                       transition: 'all 0.12s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
@@ -262,7 +262,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                     style={{
                       padding: '8px 18px', border: 'none', borderRadius: 999,
                       cursor: 'pointer', background: cat.color + '12', color: cat.color,
-                      fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: '0.82rem',
+                      fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.82rem',
                       transition: 'all 0.12s',
                     }}
                     onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
