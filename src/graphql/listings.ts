@@ -17,6 +17,14 @@ export const LISTINGS_QUERY = gql`
         city
         locationLabel
         condition
+        brand
+        modelName
+        size
+        originalPrice
+        meetupSpot
+        paymentMethods
+        minOfferPrice
+        urgentUntil
         negotiable
         deliveryAvailable
         tags
@@ -50,6 +58,9 @@ export const LISTINGS_QUERY = gql`
           id
           fullName
           avatarUrl
+          isVerified
+          averageRating
+          reviewsCount
         }
       }
     }
@@ -68,6 +79,14 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       city
       locationLabel
       condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
       negotiable
       deliveryAvailable
       tags
@@ -101,6 +120,9 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
         id
         fullName
         avatarUrl
+        isVerified
+        averageRating
+        reviewsCount
       }
     }
   }
@@ -118,6 +140,14 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       city
       locationLabel
       condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
       negotiable
       deliveryAvailable
       tags
@@ -150,6 +180,9 @@ export const SIMILAR_LISTINGS_QUERY = gql`
         id
         fullName
         avatarUrl
+        isVerified
+        averageRating
+        reviewsCount
       }
     }
   }
@@ -167,6 +200,14 @@ export const LISTING_QUERY = gql`
       city
       locationLabel
       condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
       negotiable
       deliveryAvailable
       status
@@ -390,6 +431,14 @@ export type RemoteListing = {
   city: string
   locationLabel: string | null
   condition: string | null
+  brand?: string | null
+  modelName?: string | null
+  size?: string | null
+  originalPrice?: number | null
+  meetupSpot?: string | null
+  paymentMethods?: string[]
+  minOfferPrice?: number | null
+  urgentUntil?: string | null
   negotiable: boolean
   deliveryAvailable: boolean
   tags: string[]
@@ -405,7 +454,7 @@ export type RemoteListing = {
   media: { url: string }[]
   category: { slug: string; name: string }
   subcategory: { slug: string; name: string } | null
-  seller: { id: string; fullName: string; avatarUrl?: string | null }
+  seller: { id: string; fullName: string; avatarUrl?: string | null; isVerified?: boolean; averageRating?: number; reviewsCount?: number }
 }
 
 export type ListingFilterInput = {
@@ -419,6 +468,33 @@ export type ListingFilterInput = {
   minPrice?: number
   maxPrice?: number
   sellerId?: string
+  subcategorySlugs?: string[]
+  conditions?: string[]
+  brands?: string[]
+  sizes?: string[]
+  cities?: string[]
+  verifiedSellersOnly?: boolean
 }
 
-export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC'
+export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'
+
+export const LISTING_FACETS_QUERY = gql`
+  query ListingFacets($filter: ListingFilterInput) {
+    listingFacets(filter: $filter) {
+      subcategories { value label count }
+      conditions { value label count }
+      brands { value label count }
+      sizes { value label count }
+      cities { value label count }
+    }
+  }
+`
+
+export type FacetCount = { value: string; label: string; count: number }
+export type ListingFacets = Record<'subcategories' | 'conditions' | 'brands' | 'sizes' | 'cities', FacetCount[]>
+
+export const CREATE_SAVED_SEARCH_MUTATION = gql`
+  mutation CreateSavedSearch($label: String!, $filter: ListingFilterInput!) {
+    createSavedSearch(label: $label, filter: $filter) { id label }
+  }
+`

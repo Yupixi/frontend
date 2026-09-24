@@ -330,7 +330,7 @@ export default function App() {
       case 'home':
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} onContactSeller={contactSellerAbout} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={location?.city ?? ''} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} />
       case 'seller-profile':

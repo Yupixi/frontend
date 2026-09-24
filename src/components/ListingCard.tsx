@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Heart, MapPin, Eye, Tag, Handshake, MessageSquare, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type LucideIcon } from 'lucide-react'
+import { Heart, MapPin, Eye, Tag, Handshake, MessageSquare, BadgeCheck, Star, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type LucideIcon } from 'lucide-react'
 import Price from './Price'
 import BoostMenu from './BoostMenu'
 import type { RemoteListing } from '../graphql/listings'
@@ -118,8 +118,13 @@ function SellerChip({ listing }: { listing: RemoteListing }) {
         {listing.seller.avatarUrl ? <img src={listing.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
       </span>
       <span className="truncate">{name}</span>
+      {listing.seller.isVerified && <BadgeCheck size={13} className="shrink-0 text-tertiary" aria-label="Vendeur certifié" />}
     </span>
   )
+}
+
+function isUrgent(listing: RemoteListing) {
+  return !!listing.urgentUntil && new Date(listing.urgentUntil) > new Date()
 }
 
 export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact }: {
@@ -133,7 +138,10 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   const priceSuffix = archetypePriceSuffix(listing)
   const isRoute = getArchetype(listing) === 'route'
   const isOwn = !!currentUserId && listing.seller.id === currentUserId
-  const eyebrow = listing.subcategory?.name ?? listing.category.name
+  const eyebrow = listing.brand || listing.subcategory?.name || listing.category.name
+  // Campaign price wins; otherwise the seller's "prix neuf" is struck through.
+  const struck = salePrice != null ? listing.price : (listing.originalPrice && listing.price != null && listing.originalPrice > listing.price ? listing.originalPrice : null)
+  const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
 
   return (
     <div
@@ -162,6 +170,9 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <span className="rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface md:px-2 md:text-label-sm">{listing.condition}</span>
           )}
           <PromoBadge listing={listing} />
+          {isUrgent(listing) && (
+            <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm">Urgent</span>
+          )}
         </div>
 
         <button
@@ -180,7 +191,10 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       </div>
 
       <div className="flex flex-1 flex-col p-2.5 md:p-3.5">
-        <div className="mb-0.5 truncate text-[10px] font-bold uppercase tracking-wide text-on-surface-variant md:text-label-sm">{eyebrow}</div>
+        <div className="mb-0.5 flex items-center justify-between gap-2">
+          <span className="truncate text-[10px] font-bold uppercase tracking-wide text-on-surface-variant md:text-label-sm">{eyebrow}</span>
+          {listing.size && <span className="shrink-0 rounded bg-surface-container-low px-1.5 text-[10px] font-semibold text-on-surface-variant md:text-[11px]">Taille {listing.size}</span>}
+        </div>
         <h3 className="m-0 line-clamp-2 text-[13px] font-semibold leading-snug text-on-surface md:text-label-lg">
           {listing.title}
         </h3>
@@ -191,9 +205,9 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
               <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
               {priceSuffix && <span className="text-[0.7em] font-semibold text-on-surface-variant"> {priceSuffix}</span>}
             </div>
-            {salePrice != null && (
+            {struck != null && (
               <div className="text-body-sm text-outline line-through">
-                <Price amount={listing.price} currency={listing.currency} />
+                <Price amount={struck} currency={listing.currency} />
               </div>
             )}
           </div>
@@ -221,10 +235,14 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
         <div className="min-h-2.5 flex-1" />
         <div className="flex items-center justify-between gap-2 border-0 border-t border-solid border-surface-container-low pt-2 text-[11px] text-on-surface-variant md:text-label-sm md:font-medium">
           <SellerChip listing={listing} />
-          <span className="flex shrink-0 items-center gap-2">
-            <span className="hidden items-center gap-0.5 sm:flex"><Eye size={12} />{listing.viewsCount}</span>
-            <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
-          </span>
+          {rating != null ? (
+            <span className="flex shrink-0 items-center gap-0.5 font-semibold text-on-surface">
+              <Star size={12} fill="#F59E0B" color="#F59E0B" />{rating.toFixed(1)}
+              <span className="font-normal text-on-surface-variant">({listing.seller.reviewsCount})</span>
+            </span>
+          ) : (
+            <span className="shrink-0">{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
+          )}
         </div>
 
         {!isOwn && (
