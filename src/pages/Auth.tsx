@@ -114,7 +114,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
         <span className="mt-1.5 block"><PasswordInput value={form.password} onChange={v => setForm(f => ({ ...f, password: v }))} placeholder="8 caractères minimum" autoComplete="new-password" /></span>
       </label>
       <label className="flex cursor-pointer items-start gap-2 text-body-sm text-on-surface-variant">
-        <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#BB0013]" />
+        <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
         J'accepte les conditions d'utilisation et la charte de confiance Dilchap.
       </label>
       {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{readable(error.message)}</p>}

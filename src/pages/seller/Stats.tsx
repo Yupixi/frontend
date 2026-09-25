@@ -174,14 +174,14 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chart} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="gBoost" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#BB0013" stopOpacity={0.35} /><stop offset="95%" stopColor="#BB0013" stopOpacity={0.02} /></linearGradient>
+                    <linearGradient id="gBoost" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FE0000" stopOpacity={0.35} /><stop offset="95%" stopColor="#FE0000" stopOpacity={0.02} /></linearGradient>
                     <linearGradient id="gOrg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#9c6b6b" stopOpacity={0.25} /><stop offset="95%" stopColor="#9c6b6b" stopOpacity={0.02} /></linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke="var(--color-outline-variant)" strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-on-surface-variant)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
                   <Tooltip contentStyle={{ background: 'var(--color-surface-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 12, fontSize: 12 }} />
                   <Area type="monotone" dataKey="organique" name="Organique" stackId="1" stroke="#9c6b6b" strokeWidth={2} fill="url(#gOrg)" />
-                  <Area type="monotone" dataKey="boost" name="Boosté" stackId="1" stroke="#BB0013" strokeWidth={2.5} fill="url(#gBoost)" />
+                  <Area type="monotone" dataKey="boost" name="Boosté" stackId="1" stroke="#FE0000" strokeWidth={2.5} fill="url(#gBoost)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

@@ -87,7 +87,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, verified, on
             <AreaChart data={chart} margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
               <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--color-on-surface-variant)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={30} />
               <Tooltip contentStyle={{ background: 'var(--color-surface-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 12, fontSize: 12 }} />
-              <Area type="monotone" dataKey="Vues" stroke="#BB0013" strokeWidth={2.5} fill="#BB0013" fillOpacity={0.12} />
+              <Area type="monotone" dataKey="Vues" stroke="#FE0000" strokeWidth={2.5} fill="#FE0000" fillOpacity={0.12} />
               <Area type="monotone" dataKey="Contacts" stroke="#006947" strokeWidth={2.5} fill="#006947" fillOpacity={0.08} />
             </AreaChart>
           </ResponsiveContainer>

@@ -165,7 +165,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
                   const on = state.conditions.includes(c.value)
                   return (
                     <label key={c.value} className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3">
-                      <input type="checkbox" checked={on} onChange={() => onChange({ conditions: toggle(state.conditions, c.value) })} className="mt-0.5 h-5 w-5 accent-[#BB0013]" />
+                      <input type="checkbox" checked={on} onChange={() => onChange({ conditions: toggle(state.conditions, c.value) })} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
                       <span>
                         <span className="block text-label-md text-on-surface">{c.label} <span className="text-label-sm text-on-surface-variant">({c.count})</span></span>
                         {CONDITION_HINTS[c.value] && <span className="block text-body-sm text-on-surface-variant">{CONDITION_HINTS[c.value]}</span>}

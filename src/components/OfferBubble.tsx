@@ -1,4 +1,4 @@
-import { Check, Tag, X as XIcon } from './icons'
+import Icon from './Icon'
 import Price from './Price'
 import PriceSuggestionHint from './PriceSuggestionHint'
 import type { RemoteMessageOffer } from '../graphql/messaging'
@@ -14,47 +14,30 @@ type OfferBubbleProps = {
   listingId?: string | null
 }
 
-const STATUS_LABEL: Record<RemoteMessageOffer['status'], string> = {
-  PENDING: 'En attente de réponse',
-  ACCEPTED: 'Offre acceptée',
-  REJECTED: 'Offre refusée',
-  EXPIRED: 'Offre expirée',
+const STATUS: Record<RemoteMessageOffer['status'], { label: string; cls: string; icon: string }> = {
+  PENDING: { label: 'En attente de réponse', cls: 'text-on-surface-variant', icon: 'hourglass_top' },
+  ACCEPTED: { label: 'Offre acceptée', cls: 'text-tertiary', icon: 'check_circle' },
+  REJECTED: { label: 'Offre refusée', cls: 'text-primary', icon: 'cancel' },
+  EXPIRED: { label: 'Offre expirée', cls: 'text-on-surface-variant', icon: 'schedule' },
 }
 
-const STATUS_COLOR: Record<RemoteMessageOffer['status'], string> = {
-  PENDING: 'var(--fg-muted)',
-  ACCEPTED: '#10B981',
-  REJECTED: 'var(--primary)',
-  EXPIRED: 'var(--fg-subtle)',
-}
-
+// Price offer card inside a chat thread.
 export default function OfferBubble({ offer, currency, isMine, canRespond, responding, onAccept, onReject, listingId }: OfferBubbleProps) {
-  const showSuggestion = canRespond && offer.status === 'PENDING'
+  const status = STATUS[offer.status]
+  const pending = offer.status === 'PENDING'
   return (
-    <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.75rem 0.9rem', minWidth: 200, background: isMine ? 'var(--bg-card)' : 'var(--bg)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', fontWeight: 700, color: 'var(--fg-muted)', marginBottom: 4 }}>
-        <Tag size={13} /> Offre
-      </div>
-      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1.1rem' }}>
-        <Price amount={offer.amount} currency={currency} />
-      </div>
-      <div style={{ fontSize: '0.74rem', fontWeight: 700, color: STATUS_COLOR[offer.status], marginTop: 4 }}>
-        {STATUS_LABEL[offer.status]}
-      </div>
-      {showSuggestion && (
-        <div style={{ marginTop: 6 }}>
-          <PriceSuggestionHint listingId={listingId} />
-        </div>
-      )}
-      {canRespond && offer.status === 'PENDING' && (
-        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-          <button className="btn-primary" disabled={responding} onClick={onAccept} style={{ flex: 1, padding: '0.4rem', fontSize: '0.76rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: '#10B981', borderColor: '#10B981' }}>
-            <Check size={13} /> Accepter
-          </button>
-          <button className="btn-outline" disabled={responding} onClick={onReject} style={{ flex: 1, padding: '0.4rem', fontSize: '0.76rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <XIcon size={13} /> Refuser
-          </button>
-        </div>
+    <div className={`min-w-[210px] rounded-2xl border border-outline-variant p-3 ${isMine ? 'bg-surface-lowest' : 'bg-surface-container-low'}`}>
+      <div className="flex items-center gap-1.5 text-label-sm uppercase text-on-surface-variant"><Icon name="sell" size={15} className="text-primary" /> Offre de prix</div>
+      <div className="mt-1 text-headline-sm font-extrabold text-on-surface"><Price amount={offer.amount} currency={currency} /></div>
+      <div className={`mt-1 flex items-center gap-1 text-label-sm ${status.cls}`}><Icon name={status.icon} size={14} /> {status.label}</div>
+      {canRespond && pending && (
+        <>
+          <div className="mt-2"><PriceSuggestionHint listingId={listingId} /></div>
+          <div className="flex gap-2">
+            <button disabled={responding} onClick={onAccept} className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-tertiary py-2 text-label-md text-white disabled:opacity-60"><Icon name="check" size={16} /> Accepter</button>
+            <button disabled={responding} onClick={onReject} className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-surface-container-high py-2 text-label-md text-on-surface disabled:opacity-60"><Icon name="close" size={16} /> Refuser</button>
+          </div>
+        </>
       )}
     </div>
   )
