@@ -148,7 +148,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
         </section>
 
         {/* Traffic + origin */}
-        <section className="mt-5 grid gap-4 lg:grid-cols-[1.75fr_1fr]">
+        <section className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -316,7 +316,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
         </section>
 
         {/* Boost ROI + advice */}
-        <section className="mt-5 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <section className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="rocket_launch" size={19} /></span>

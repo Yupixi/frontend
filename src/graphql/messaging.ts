@@ -23,6 +23,8 @@ const MESSAGE_FIELDS = `
     place
     scheduledAt
     status
+    handoverCode
+    handedOverAt
   }
 `
 
@@ -182,6 +184,8 @@ export type RemoteMeetup = {
   place: string
   scheduledAt: string
   status: 'PROPOSED' | 'CONFIRMED' | 'DECLINED'
+  handoverCode?: string | null
+  handedOverAt?: string | null
 }
 
 export type RemoteMessageOffer = {

@@ -52,7 +52,7 @@ export const NOTIFICATION_META: Record<NotificationKind, { icon: string; cls: st
 // purchases, told apart by their (server-side) wording.
 export const notificationTarget = (n: { type: NotificationKind; title: string }) =>
   n.type === 'MESSAGE' ? 'buyer-messages'
-    : n.type === 'DISPUTE' ? (/vente|L'acheteur/.test(n.title) ? 'seller-disputes' : 'buyer-purchases')
+    : n.type === 'DISPUTE' ? (/vente|L'acheteur/.test(n.title) ? 'seller-disputes' : 'buyer-disputes')
       : null
 
 export type RemoteNotification = {

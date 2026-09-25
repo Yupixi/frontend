@@ -60,7 +60,7 @@ function Avatar({ url, name, size = 40, verified }: { url?: string | null, name:
   )
 }
 
-function MeetupCard({ meetup, mine, busy, onConfirm, onChange }: { meetup: RemoteMeetup, mine: boolean, busy: boolean, onConfirm: () => void, onChange: () => void }) {
+function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action }: { meetup: RemoteMeetup, mine: boolean, busy: boolean, onConfirm: () => void, onChange: () => void, action?: { label: string, icon: string, onClick: () => void } }) {
   const when = new Date(meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
   return (
     <div className="w-72 max-w-full rounded-2xl border border-outline-variant bg-surface-lowest p-3">
@@ -82,8 +82,11 @@ function MeetupCard({ meetup, mine, busy, onConfirm, onChange }: { meetup: Remot
         )
       ) : (
         <p className={`m-0 mt-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-label-md ${meetup.status === 'CONFIRMED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
-          {meetup.status === 'CONFIRMED' ? <><CheckCircle2 size={16} /> Rendez-vous confirmé</> : <><CircleX size={16} /> Proposition remplacée ou déclinée</>}
+          {meetup.status === 'CONFIRMED' ? <><CheckCircle2 size={16} /> {meetup.handedOverAt ? 'Remise effectuée' : 'Rendez-vous confirmé'}</> : <><CircleX size={16} /> Proposition remplacée ou déclinée</>}
         </p>
+      )}
+      {meetup.status === 'CONFIRMED' && action && (
+        <button onClick={action.onClick} className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-2 text-label-md text-white"><Icon name={action.icon} size={17} /> {action.label}</button>
       )}
     </div>
   )
@@ -96,10 +99,13 @@ type Props = {
   onLogout: () => void
   startWith?: { listingId?: string; sellerId: string } | null
   onStartWithConsumed?: () => void
+  // Confirmed meet-up shortcuts: seller → "Confirmation de remise",
+  // buyer → "Mon code de remise" (the sale id is the conversation id).
+  onOpenHandover?: (conversationId: string, as: 'SELLER' | 'BUYER') => void
 }
 
 // "Boîte de réception & Chat" mockups (desktop 3 columns, mobile thread).
-export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed }: Props) {
+export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, onOpenHandover }: Props) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = listData?.myConversations ?? []
   const [filter, setFilter] = useState<'all' | 'buy' | 'sell'>('all')
@@ -385,7 +391,12 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                             {m.offer ? (
                               <OfferBubble offer={m.offer} currency={conv.listing?.currency ?? 'XOF'} isMine={mine} canRespond={!mine && conv.canManageDeal} responding={busyId === m.offer.id} onAccept={() => respondOffer(m.offer!.id, true)} onReject={() => respondOffer(m.offer!.id, false)} listingId={conv.listingId} />
                             ) : m.meetup ? (
-                              <MeetupCard meetup={m.meetup} mine={mine} busy={busyId === m.meetup.id} onConfirm={() => answerMeetup(m.meetup!.id, true)} onChange={() => answerMeetup(m.meetup!.id, false)} />
+                              <MeetupCard
+                                meetup={m.meetup} mine={mine} busy={busyId === m.meetup.id} onConfirm={() => answerMeetup(m.meetup!.id, true)} onChange={() => answerMeetup(m.meetup!.id, false)}
+                                action={!onOpenHandover || !conv?.listing ? undefined
+                                  : conv.canManageDeal ? (m.meetup.handedOverAt ? undefined : { label: 'Valider la remise', icon: 'task_alt', onClick: () => onOpenHandover(conv.id, 'SELLER') })
+                                    : m.meetup.handoverCode || m.meetup.handedOverAt ? { label: m.meetup.handedOverAt ? 'Voir mon reçu' : 'Mon code de remise', icon: m.meetup.handedOverAt ? 'receipt_long' : 'qr_code_2', onClick: () => onOpenHandover(conv.id, 'BUYER') } : undefined}
+                              />
                             ) : (
                               <div className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-body-md ${mine ? 'rounded-br-md bg-primary text-white' : 'rounded-bl-md border border-outline-variant bg-surface-lowest text-on-surface'}`}>{m.body}</div>
                             )}

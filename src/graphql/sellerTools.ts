@@ -74,7 +74,7 @@ export const ANSWER_DISPUTE_PROPOSAL_MUTATION = gql`
 `
 
 export type DisputeStatus = 'AWAITING_SELLER' | 'AWAITING_BUYER' | 'IN_MEDIATION' | 'RESOLVED_AMICABLY' | 'CANCELLED' | 'REJECTED'
-export type DisputeReason = 'FAKE_PAYMENT' | 'NOT_AS_DESCRIBED' | 'NO_SHOW' | 'LATE' | 'OTHER'
+export type DisputeReason = 'FAKE_PAYMENT' | 'NOT_AS_DESCRIBED' | 'NO_SHOW' | 'LATE' | 'COUNTERFEIT' | 'PAYMENT_PRESSURE' | 'OTHER'
 export type DisputeProposal = 'COURTESY_DISCOUNT' | 'CANCEL_RELIST' | 'ARBITRATION'
 export type Dispute = {
   id: string; reference: string; orderReference: string; conversationId: string; openedBy: 'BUYER' | 'SELLER'
@@ -96,6 +96,8 @@ export const DISPUTE_REASON_LABELS: Record<DisputeReason, string> = {
   NOT_AS_DESCRIBED: "Non-conformité présumée de l'article",
   NO_SHOW: 'Désistement sans préavis au point de remise',
   LATE: 'Retard excessif au lieu de rendez-vous (> 45min)',
+  COUNTERFEIT: "Suspicion d'article contrefait",
+  PAYMENT_PRESSURE: 'Pression pour un paiement hors application',
   OTHER: 'Autre motif',
 }
 export const DISPUTE_REASON_ICONS: Record<DisputeReason, string> = {
@@ -103,6 +105,8 @@ export const DISPUTE_REASON_ICONS: Record<DisputeReason, string> = {
   NOT_AS_DESCRIBED: 'flag',
   NO_SHOW: 'person_off',
   LATE: 'schedule',
+  COUNTERFEIT: 'new_releases',
+  PAYMENT_PRESSURE: 'warning',
   OTHER: 'help',
 }
 export const disputeIsOpen = (s: DisputeStatus) => s === 'AWAITING_SELLER' || s === 'AWAITING_BUYER' || s === 'IN_MEDIATION'
@@ -111,7 +115,7 @@ export const disputeIsOpen = (s: DisputeStatus) => s === 'AWAITING_SELLER' || s 
 export const SALES_ORDER_QUERY = gql`
   query SalesOrder($id: String!) {
     salesOrder(id: $id) {
-      id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId
+      id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus sellerPhone paymentMethod
       acceptedOffer { id amount }
       meetup { id place scheduledAt status proposedById handoverCode handedOverAt }
       buyer { id fullName avatarUrl city isVerified buyerRating buyerReviewsCount }
@@ -126,10 +130,10 @@ export const SALES_ORDER_QUERY = gql`
 export const MY_PURCHASE_ORDERS_QUERY = gql`
   query MyPurchaseOrders {
     myPurchaseOrders {
-      id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId
+      id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus paymentMethod
       meetup { id place scheduledAt status handoverCode handedOverAt }
       seller { id fullName avatarUrl isVerified averageRating reviewsCount }
-      listing { id title price currency coverImageUrl paymentMethods category { name } }
+      listing { id title price currency condition coverImageUrl paymentMethods category { name } }
     }
   }
 `
@@ -140,7 +144,8 @@ export const CONFIRM_HANDOVER_MUTATION = gql`
   mutation ConfirmHandover($input: ConfirmHandoverInput!) { confirmHandover(input: $input) { id dealStatus } }
 `
 export type HandoverOrder = {
-  id: string; reference: string; stage: string; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string; disputeId: string | null
+  id: string; reference: string; stage: string; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string
+  disputeId: string | null; disputeStatus: DisputeStatus | null; sellerPhone?: string | null; paymentMethod?: string | null
   acceptedOffer: { id: string; amount: number } | null
   meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null } | null
   buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; buyerRating: number; buyerReviewsCount: number }
@@ -187,3 +192,11 @@ export const DELETE_MY_ACCOUNT_MUTATION = gql`
   mutation DeleteMyAccount($password: String!) { deleteMyAccount(password: $password) }
 `
 export type UserSession = { id: string; userAgent: string | null; createdAt: string; current: boolean }
+
+export type PurchaseOrder = {
+  id: string; reference: string; stage: string; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string
+  disputeId: string | null; disputeStatus: DisputeStatus | null; paymentMethod: string | null
+  meetup: { id: string; place: string; scheduledAt: string; status: string; handoverCode: string | null; handedOverAt: string | null } | null
+  seller: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
+  listing: { id: string; title: string; price: number | null; currency: string; condition: string | null; coverImageUrl: string | null; paymentMethods: string[]; category: { name: string } }
+}

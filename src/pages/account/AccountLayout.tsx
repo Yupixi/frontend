@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare, Truck, Wallet, Star,
-  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store, Gavel,
+  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store, Gavel, Handshake,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import { MY_DISPUTE_STATS_QUERY } from '../../graphql/sellerTools'
@@ -32,6 +32,8 @@ const SECTIONS = [
   {
     title: 'Acheter & Explorer',
     items: [
+      { key: 'buyer-purchases', icon: Handshake, label: 'Mes achats & remises' },
+      { key: 'buyer-disputes', icon: Gavel, label: 'Mes litiges' },
       { key: 'buyer-favorites', icon: Heart, label: 'Mes favoris' },
       { key: 'buyer-notifications', icon: Bell, label: 'Notifications' },
       { key: 'buyer-history', icon: History, label: 'Historique' },
@@ -56,7 +58,22 @@ export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-settings': 'Paramètres',
   'seller-disputes': 'Sécurité & Litiges',
   'seller-handover': 'Confirmation de remise',
+  'buyer-purchases': 'Mes achats',
+  'buyer-receipts': 'Reçus & Clôtures',
+  'buyer-handover': 'Mon code de remise',
+  'buyer-receipt': 'Reçu de remise',
+  'buyer-dispute-new': 'Déclaration de litige',
+  'buyer-disputes': 'Suivi des litiges',
 }
+
+// Buyer hand-over pages get their own bar ("Vendeur / Handshake / Reçus /
+// Litiges" in the mobile buyer mockups).
+const BUYER_MOBILE_TABS = [
+  { key: 'buyer-dashboard', icon: 'storefront', label: 'Vendeur', match: [] as string[] },
+  { key: 'buyer-purchases', icon: 'qr_code_scanner', label: 'Handshake', match: ['buyer-purchases', 'buyer-handover'] },
+  { key: 'buyer-receipts', icon: 'receipt_long', label: 'Reçus', match: ['buyer-receipts', 'buyer-receipt'] },
+  { key: 'buyer-disputes', icon: 'gavel', label: 'Litiges', match: ['buyer-disputes', 'buyer-dispute-new'] },
+]
 
 // Mobile seller bar ("Accueil / Annonces / Messages / Ventes" in the mobile
 // Seller Hub mockups). "Ventes" covers every sales-side page.
@@ -222,7 +239,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
         </main>
         {!isGuest && (
           <nav className="fixed inset-x-0 bottom-0 z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest pb-[env(safe-area-inset-bottom)] lg:hidden">
-            {MOBILE_TABS.map(t => {
+            {(BUYER_MOBILE_TABS.some(t => t.match.includes(active)) ? BUYER_MOBILE_TABS : MOBILE_TABS).map(t => {
               const on = t.match.includes(active)
               return (
                 <button key={t.key} onClick={() => go(t.key)} className={`relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent py-2 text-label-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>

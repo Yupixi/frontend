@@ -15,6 +15,11 @@ import SellerStats from './pages/seller/Stats'
 import Disputes from './pages/seller/Disputes'
 import Handover from './pages/seller/Handover'
 import Settings from './pages/seller/Settings'
+import Purchases from './pages/buyer/Purchases'
+import HandoverCode from './pages/buyer/HandoverCode'
+import Receipt from './pages/buyer/Receipt'
+import OpenDispute from './pages/buyer/OpenDispute'
+import DisputeFollow from './pages/buyer/DisputeFollow'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
 import SellerProfile from './pages/SellerProfile'
@@ -38,7 +43,8 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'buyer-purchases'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover'
+  | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -310,6 +316,16 @@ export default function App() {
     navigate('seller-disputes')
   }
 
+  const openPurchase = (orderId: string, target: Page) => {
+    setSelectedOrderId(orderId)
+    navigate(target)
+  }
+
+  const openBuyerDispute = (disputeId: string) => {
+    setSelectedDisputeId(disputeId)
+    navigate('buyer-disputes')
+  }
+
   const contactSellerAbout = (sellerId: string, listingId?: string) => {
     setContactSeller({ listingId, sellerId })
     navigate('buyer-messages')
@@ -417,10 +433,21 @@ export default function App() {
           return <SellerReviews onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-premium':
           return <SellerPremium onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-purchases':
+        case 'buyer-receipts':
+          return <Purchases mode={accountPage === 'buyer-receipts' ? 'receipts' : 'purchases'} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-handover':
+          return <HandoverCode orderId={selectedOrderId} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-receipt':
+          return <Receipt orderId={selectedOrderId} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-dispute-new':
+          return <OpenDispute orderId={selectedOrderId} onNavigate={navigate} onSelectOrder={id => setSelectedOrderId(id)} onOpened={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-disputes':
+          return <DisputeFollow focusDisputeId={selectedDisputeId} onNavigate={navigate} onSelectDispute={id => setSelectedDisputeId(id)} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
         case 'buyer-favorites':
           return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onLogout={logout} />
         case 'buyer-messages':
-          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} />
+          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} onOpenHandover={(id, as) => as === 'SELLER' ? openHandover(id) : openPurchase(id, 'buyer-handover')} />
         case 'buyer-notifications':
           return <BuyerNotifications onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
         case 'buyer-history':

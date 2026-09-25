@@ -126,7 +126,7 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
         ) : <DisputeStatusChip d={d} />}
       </div>
 
-      <div className="grid gap-5 p-5 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div>
           {d.listing && (
             <button onClick={() => onSelectListing(d.listing!.id)} className="flex w-full cursor-pointer gap-4 rounded-2xl border-none bg-surface-container-low p-4 text-left">
@@ -412,7 +412,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
         </section>
 
         {/* Rules + mediation */}
-        <section ref={rulesRef} className="mt-6 grid scroll-mt-4 gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <section ref={rulesRef} className="mt-6 grid scroll-mt-4 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
             <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="shield" size={22} className="text-primary" /> Règles d'or anti-fraude Vendeur Dilchap</h2>
             <p className="m-0 mt-1 text-body-sm text-on-surface-variant">La remise en main propre sécurisée repose sur 3 principes stricts recommandés par notre charte de confiance :</p>
