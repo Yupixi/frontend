@@ -9,12 +9,12 @@ import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import ListingOffersPanel from '../../components/ListingOffersPanel'
 import { MY_LISTINGS_QUERY, DELETE_LISTING_MUTATION, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
-import { CREATE_BOOST_MUTATION } from '../../graphql/promotions'
 import { MY_REPUTATION_QUERY, MY_WALLET_QUERY, type Reputation, type WalletSummary } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import BottomSheet from '../../components/BottomSheet'
 import ConfirmSheet from '../../components/ConfirmSheet'
+import PaymentSheet from '../../components/PaymentSheet'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -64,7 +64,6 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const credits = walletData?.myWallet.credits ?? 0
   const [deleteListing] = useMutation(DELETE_LISTING_MUTATION)
   const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
-  const [createBoost, { loading: boosting }] = useMutation(CREATE_BOOST_MUTATION)
 
   const [tab, setTab] = useState<typeof TABS[number]['key']>('live')
   const [q, setQ] = useState('')
@@ -106,9 +105,6 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
     const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a'); a.href = url; a.download = 'mes-annonces-dilchap.csv'; a.click(); URL.revokeObjectURL(url)
   }
-  const boostFlash = (l: MyListingRow) => void createBoost({ variables: { input: { listingId: l.id, pack: 'BUMP_FLASH' } } })
-    .then(() => { setConfirm(null); setFlash(`« ${l.title} » est remontée en tête.`); void refetch() })
-    .catch((e: Error) => { setConfirm(null); setFlash(e.message) })
   const [deleting, setDeleting] = useState(false)
   const remove = (l: MyListingRow) => {
     setDeleting(true)
@@ -301,7 +297,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                     ) : credits > 0 ? (
                       <button onClick={() => setConfirm({ kind: 'bump', l })} className={`${mainBtn} bg-primary text-white`}><Rocket size={16} /> Remonter (1 crédit)</button>
                     ) : (
-                      <button disabled={boosting} onClick={() => setConfirm({ kind: 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Booster (500 F)</button>
+                      <button onClick={() => setConfirm({ kind: 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Booster (500 F)</button>
                     ))}
                     {l.status === 'EXPIRED' && <button onClick={() => republish(l)} className={`${mainBtn} bg-primary text-white`}><Archive size={16} /> Remettre en ligne</button>}
                     {l.status === 'DRAFT' && <button onClick={() => onEditListing(l.id)} className={`${mainBtn} bg-primary text-white`}><Edit3 size={16} /> Compléter</button>}
@@ -335,16 +331,16 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         >
           « {confirm?.l.title} » sera définitivement supprimée. Cette action est irréversible.
         </ConfirmSheet>
-        <ConfirmSheet
+        <PaymentSheet
           open={confirm?.kind === 'boost'}
           title="Remontée flash"
-          confirmLabel="Booster pour 500 F"
-          loading={boosting}
-          onConfirm={() => confirm && boostFlash(confirm.l)}
+          amount={500}
+          request={confirm?.kind === 'boost' ? { kind: 'BOOST_PACK', product: 'BUMP_FLASH', listingId: confirm.l.id } : null}
           onClose={() => setConfirm(null)}
+          onPaid={() => { if (confirm) setFlash(`« ${confirm.l.title} » est remontée en tête.`); void refetch() }}
         >
-          « {confirm?.l.title} » repasse en tête du catalogue. <b className="text-on-surface">500 F</b> seront débités de votre solde publicitaire.
-        </ConfirmSheet>
+          <p className="m-0 rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant">« {confirm?.l.title} » repasse en tête du catalogue pour <b className="text-on-surface">500 F</b>.</p>
+        </PaymentSheet>
 
         <ConfirmSheet
           open={confirm?.kind === 'bump'}

@@ -3,14 +3,15 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Rocket, Eye, Heart, MessageSquare, ArrowUp, ArrowRight, Star, CheckCircle2, ShieldCheck, Percent, Handshake,
-  Wallet, Flame, Clock, TrendingUp, Tag, MapPin, Loader2,
+  Wallet, Flame, Clock, TrendingUp, Tag, MapPin,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import ConfirmSheet from '../../components/ConfirmSheet'
+import PaymentSheet from '../../components/PaymentSheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { MY_LISTINGS_QUERY, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
-import { BOOST_PACKS_QUERY, CREATE_BOOST_MUTATION, MY_BOOSTS_QUERY, type BoostPack, type BoostPackInfo, type RemoteBoost } from '../../graphql/promotions'
+import { BOOST_PACKS_QUERY, MY_BOOSTS_QUERY, type BoostPack, type BoostPackInfo, type RemoteBoost } from '../../graphql/promotions'
 import type { AuthUser } from '../../graphql/auth'
 import { MY_WALLET_QUERY, type WalletSummary } from '../../graphql/sellerHub'
 import Select from '../../components/Select'
@@ -25,8 +26,8 @@ function formatDate(iso: string) {
 }
 
 // "Booster mes annonces & Remontées en tête" mockup. Packs and prices come
-// from the backend (boostPacks); activation is immediate (no payment gate
-// yet — Mobile Money is deferred).
+// from the backend (boostPacks); packs are paid by Mobile Money (Paytic,
+// PaymentSheet) and activated by the server once the payment is confirmed.
 export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const { data: listingsData, refetch: refetchListings } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 100 } })
   const live = (listingsData?.myListings.items ?? []).filter(l => l.status === 'APPROVED')
@@ -45,7 +46,6 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const [featuredChoice, setFeaturedChoice] = useState<BoostPack>('FEATURED_48H')
   const [done, setDone] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [createBoost, { loading: activating }] = useMutation(CREATE_BOOST_MUTATION)
   const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
 
   const pack = (p: BoostPack) => packs.find(x => x.pack === p)
@@ -53,17 +53,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   // confirmation sheet recapping pack, listing and price first.
   const [confirmPack, setConfirmPack] = useState<BoostPack | null>(null)
   const activate = (p: BoostPack) => { if (listing) setConfirmPack(p) }
-  const confirmActivate = async (p: BoostPack) => {
-    setConfirmPack(null)
+  const paid = (p: BoostPack) => {
     if (!listing) return
-    setError(null); setDone(null)
-    try {
-      await createBoost({ variables: { input: { listingId: listing.id, pack: p } } })
-      setDone(`${pack(p)?.label ?? 'Formule'} activée sur « ${listing.title} »`)
-      void refetchListings(); void refetchBoosts(); void refetchWallet()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Impossible d'activer la formule.")
-    }
+    setError(null)
+    setDone(`${pack(p)?.label ?? 'Formule'} activée sur « ${listing.title} »`)
+    void refetchListings(); void refetchBoosts(); void refetchWallet()
   }
   const [confirmBump, setConfirmBump] = useState(false)
   const spendCredit = async () => {
@@ -108,7 +102,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           onSelectListing={setListingId}
           packs={packs}
           credits={credits}
-          busy={activating || bumping}
+          busy={bumping}
           done={done}
           error={error}
           onChoose={activate}
@@ -232,7 +226,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 {radio('BUMP_PACK_3', bumpChoice, setBumpChoice, 'À la demande')}
                 {radio('BUMP_DAILY_7', bumpChoice, setBumpChoice, 'À 18h00 pile')}
               </div>
-              <button disabled={!listing || activating} onClick={() => activate(bumpChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
+              <button disabled={!listing} onClick={() => activate(bumpChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                 Activer maintenant <ArrowRight size={16} />
               </button>
             </div>
@@ -246,7 +240,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 {radio('FEATURED_48H', featuredChoice, setFeaturedChoice)}
                 {radio('FEATURED_7D', featuredChoice, setFeaturedChoice, '1 semaine complète')}
               </div>
-              <button disabled={!listing || activating} onClick={() => activate(featuredChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
+              <button disabled={!listing} onClick={() => activate(featuredChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                 Choisir En Vedette <ArrowRight size={16} />
               </button>
             </div>
@@ -269,8 +263,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                     <span className="text-label-sm text-tertiary">pour 7 jours</span>
                   </div>
                 </div>
-                <button disabled={!listing || activating} onClick={() => activate('TURBO_7D')} className="mt-4 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-50">
-                  {activating ? <Loader2 size={18} className="animate-spin" /> : <Rocket size={18} />} Activer le Pack Turbo
+                <button disabled={!listing} onClick={() => activate('TURBO_7D')} className="mt-4 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-50">
+                  <Rocket size={18} /> Activer le Pack Turbo
                 </button>
               </div>
             )}
@@ -285,7 +279,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                   <span className="text-on-surface-variant">Validité continue</span><span className="text-right font-semibold text-on-surface">{urgent.durationHours} heures</span>
                   <span className="text-on-surface-variant">Tarif unique</span><span className="text-right font-extrabold text-primary"><Price amount={urgent.price} /></span>
                 </div>
-                <button disabled={!listing || activating} onClick={() => activate('URGENT_72H')} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
+                <button disabled={!listing} onClick={() => activate('URGENT_72H')} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                   {/* One text node: flex gap would otherwise space out "(", amount, "F" and ")". */}
                   <span>Prendre le badge (<Price amount={urgent.price} />)</span> <ArrowRight size={16} />
                 </button>
@@ -415,21 +409,21 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
       >
         {listing && <p className="m-0">« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">1 crédit</b> sera utilisé.</p>}
       </ConfirmSheet>
-      <ConfirmSheet
+      <PaymentSheet
         open={!!confirmPack}
-        title="Confirmer le boost"
-        confirmLabel={`Activer · ${(pack(confirmPack ?? 'BUMP_FLASH')?.price ?? 0).toLocaleString('fr-FR')} F`}
-        loading={activating}
+        title="Payer le boost"
+        amount={pack(confirmPack ?? 'BUMP_FLASH')?.price ?? 0}
+        request={confirmPack && listing ? { kind: 'BOOST_PACK', product: confirmPack, listingId: listing.id } : null}
         onClose={() => setConfirmPack(null)}
-        onConfirm={() => confirmPack && void confirmActivate(confirmPack)}
+        onPaid={() => confirmPack && paid(confirmPack)}
       >
         {confirmPack && listing && (
-          <>
+          <div className="rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant">
             <p className="m-0"><b className="text-on-surface">{pack(confirmPack)?.label ?? 'Formule'}</b> sur « {listing.title} ».</p>
-            <p className="m-0 mt-2">Montant : <b className="text-primary"><Price amount={pack(confirmPack)?.price ?? 0} /></b>. La mise en avant démarre dès la confirmation.</p>
-          </>
+            <p className="m-0 mt-1">Montant : <b className="text-primary"><Price amount={pack(confirmPack)?.price ?? 0} /></b> — la mise en avant démarre dès la confirmation du paiement.</p>
+          </div>
         )}
-      </ConfirmSheet>
+      </PaymentSheet>
     </AccountLayout>
   )
 }

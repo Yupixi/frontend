@@ -7,6 +7,7 @@ import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 import { storeTokens } from '../lib/auth'
 import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
+import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -121,7 +122,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
       </label>
       <label className="flex cursor-pointer items-start gap-2 text-body-sm text-on-surface-variant">
         <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
-        J'accepte les conditions d'utilisation et la charte de confiance Dilchap.
+        <span>J'accepte les <a href="/?legal=cgu" target="_blank" rel="noreferrer" className="text-primary">conditions d'utilisation</a> et la <a href="/?legal=remise-en-main-propre" target="_blank" rel="noreferrer" className="text-primary">charte de confiance</a> Dilchap.</span>
       </label>
       {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{readable(error.message)}</p>}
       <button type="submit" disabled={loading || !accepted || form.fullName.trim().length < 2 || !form.email || form.password.length < 8} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
@@ -215,7 +216,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
               <a href={`https://wa.me/${supportPhone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer" className="text-label-md text-primary no-underline">Contacter le support</a>
             </p>
           )}
-          <p className="m-0 mt-4 text-center text-label-sm text-on-surface-variant lg:text-left">Plateforme sécurisée • En continuant, vous acceptez les conditions d'utilisation et la charte de confiance Dilchap.</p>
+          <p className="m-0 mt-4 text-center text-label-sm text-on-surface-variant lg:text-left">Plateforme sécurisée • En continuant, vous acceptez les <a href="/?legal=cgu" target="_blank" rel="noreferrer" className="text-primary">conditions d'utilisation</a> et la <a href="/?legal=remise-en-main-propre" target="_blank" rel="noreferrer" className="text-primary">charte de confiance</a> Dilchap.</p>
         </section>
 
         <aside className="relative hidden overflow-hidden bg-surface-container-low p-10 lg:block">
@@ -234,8 +235,8 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
             </div>
             <div className="mt-8 text-label-sm uppercase text-on-surface-variant">Paiement direct de main à main compatible :</div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {[['bg-sky-400', 'Wave CI'], ['bg-orange-500', 'Orange Money'], ['bg-yellow-400', 'MTN MoMo']].map(([dot, label]) => (
-                <span key={label} className="flex items-center gap-1.5 rounded-lg bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface"><span className={`h-2 w-2 rounded-full ${dot}`} /> {label}</span>
+              {['WAVE', 'ORANGE_MONEY', 'MTN_MOMO'].map(code => (
+                <span key={code} className="flex items-center gap-1.5 rounded-lg bg-surface-lowest py-1 pl-1 pr-3 text-label-md text-on-surface"><PaymentLogo method={code} size={24} /> {paymentLabel(code)}</span>
               ))}
               <span className="flex items-center gap-1.5 rounded-lg bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface"><Icon name="payments" size={16} /> Espèces</span>
             </div>

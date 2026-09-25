@@ -31,7 +31,8 @@ import Logo from './DilchapLogo'
 import SearchOverlay from './SearchOverlay'
 import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
+import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, LEGAL_PAGES, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
+import { PaymentLogos } from './PaymentLogo'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationTarget } from '../graphql/account'
 import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
@@ -44,11 +45,13 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
+  | 'legal'
 
 
 type LayoutProps = {
   currentPage: Page
   onNavigate: (page: Page) => void
+  onOpenLegal?: (slug: string) => void
   onNavigateCategory: (categoryId: string) => void
   activeCategory?: string
   dark: boolean
@@ -67,6 +70,7 @@ type LayoutProps = {
 export default function Layout({
   currentPage,
   onNavigate,
+  onOpenLegal,
   onNavigateCategory,
   activeCategory = '',
   dark,
@@ -603,6 +607,14 @@ export default function Layout({
                 {footer?.supportCities || 'Abidjan • Bouaké • Yamoussoukro • San-Pédro • Daloa • Korhogo'}
               </p>
               <p className="mb-0 mt-3 text-label-md text-primary">Support 7j/7 : {footer?.supportPhone || '+225 07 00 00 00 00'}</p>
+              <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
+                {LEGAL_PAGES.map(p => (
+                  <li key={p.slug}>
+                    <button onClick={() => onOpenLegal?.(p.slug)} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">{p.label}</button>
+                  </li>
+                ))}
+              </ul>
+              <PaymentLogos className="mt-4" size={26} />
             </div>
           </div>
 

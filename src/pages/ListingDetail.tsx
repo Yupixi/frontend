@@ -24,7 +24,6 @@ import {
   Rocket,
   Archive,
   CheckCircle2,
-  Wallet,
   Truck,
   X,
   UserPlus,
@@ -48,6 +47,7 @@ import { formatRelativeDate } from '../lib/format'
 import { thumbnailUrl } from '../lib/media'
 import Select from '../components/Select'
 import Icon from '../components/Icon'
+import PaymentLogo from '../components/PaymentLogo'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -470,7 +470,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <div className="mt-4">
                 <div className="mb-2 text-label-sm uppercase text-on-surface-variant">Règlement accepté à la rencontre</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {listing.paymentMethods.map(p => <span key={p} className="flex items-center gap-1 rounded-lg bg-surface-container px-2 py-1 text-label-md text-on-surface"><Wallet size={13} /> {PAYMENT_LABELS[p] ?? p}</span>)}
+                  {listing.paymentMethods.map(p => <span key={p} className="flex items-center gap-1.5 rounded-lg bg-surface-container py-1 pl-1 pr-2 text-label-md text-on-surface"><PaymentLogo method={p} size={22} /> {PAYMENT_LABELS[p] ?? p}</span>)}
                 </div>
               </div>
             )}
