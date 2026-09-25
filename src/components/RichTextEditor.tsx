@@ -23,20 +23,16 @@ function ToolbarBtn({ onClick, active, icon: Icon, label }: { onClick: () => voi
       type="button"
       onClick={onClick}
       title={label}
-      style={{
-        width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        border: 'none', borderRadius: 6, cursor: 'pointer',
-        background: active ? 'rgba(187, 0, 19,0.1)' : 'transparent',
-        color: active ? 'var(--primary)' : 'var(--fg-muted)',
-        transition: 'all 0.1s',
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--border-subtle)' }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+      aria-label={label}
+      aria-pressed={active}
+      className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none ${active ? 'bg-primary-fixed text-primary' : 'bg-transparent text-on-surface-variant hover:bg-surface-container'}`}
     >
-      <Icon size={16} />
+      <Icon size={17} />
     </button>
   )
 }
+
+const Divider = () => <span className="mx-1 my-1 w-px self-stretch bg-outline-variant" aria-hidden />
 
 export default function RichTextEditor({ content, onChange, placeholder, minHeight = 200 }: RichTextEditorProps) {
   const editor = useEditor({
@@ -55,7 +51,7 @@ export default function RichTextEditor({ content, onChange, placeholder, minHeig
     },
     editorProps: {
       attributes: {
-        style: `min-height: ${minHeight}px; padding: 0.75rem 1rem; outline: none; font-size: 0.925rem; line-height: 1.7;`,
+        style: `min-height: ${minHeight}px; padding: 0.75rem 1rem; outline: none; font-size: 0.95rem; line-height: 1.7;`,
       },
     },
   })
@@ -70,26 +66,26 @@ export default function RichTextEditor({ content, onChange, placeholder, minHeig
   }
 
   return (
-    <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: 'var(--bg-card)' }}>
-      <div style={{ display: 'flex', gap: 2, padding: '0.4rem 0.5rem', borderBottom: '1px solid var(--border)', background: 'var(--border-subtle)', flexWrap: 'wrap' }}>
+    <div className="overflow-hidden rounded-xl border border-transparent bg-surface-container-low focus-within:border-primary">
+      <div className="flex flex-wrap items-center gap-0.5 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-2 py-1.5">
         <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} icon={Bold} label="Gras" />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} icon={Italic} label="Italique" />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} icon={UnderlineIcon} label="Souligné" />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} icon={Strikethrough} label="Barré" />
-        <div style={{ width: 1, background: 'var(--border)', margin: '4px 4px' }} />
+        <Divider />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} icon={Heading1} label="Titre 1" />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} icon={Heading2} label="Titre 2" />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} icon={Heading3} label="Titre 3" />
-        <div style={{ width: 1, background: 'var(--border)', margin: '4px 4px' }} />
+        <Divider />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} icon={List} label="Liste à puces" />
         <ToolbarBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} icon={ListOrdered} label="Liste numérotée" />
-        <div style={{ width: 1, background: 'var(--border)', margin: '4px 4px' }} />
+        <Divider />
         <ToolbarBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} icon={AlignLeft} label="Aligné à gauche" />
         <ToolbarBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} icon={AlignCenter} label="Centré" />
         <ToolbarBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} icon={AlignRight} label="Aligné à droite" />
-        <div style={{ width: 1, background: 'var(--border)', margin: '4px 4px' }} />
+        <Divider />
         <ToolbarBtn onClick={addLink} active={editor.isActive('link')} icon={Link} label="Lien" />
-        <div style={{ flex: 1 }} />
+        <span className="flex-1" />
         <ToolbarBtn onClick={() => editor.chain().focus().undo().run()} active={false} icon={Undo2} label="Annuler" />
         <ToolbarBtn onClick={() => editor.chain().focus().redo().run()} active={false} icon={Redo2} label="Refaire" />
       </div>

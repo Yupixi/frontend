@@ -9,6 +9,8 @@ export const CATEGORIES_QUERY = gql`
       icon
       listingsCount
       color
+      description
+      highlight
       requiresPrice
       subcategories {
         id
@@ -47,7 +49,27 @@ export type RemoteCategory = {
   icon: string
   listingsCount?: number
   color: string
+  description?: string | null
+  highlight?: string | null
   requiresPrice: boolean
   subcategories: CategorySubcategory[]
   attributes: CategoryAttribute[]
+}
+
+export const POPULAR_SEARCHES_QUERY = gql`
+  query PopularSearches($limit: Int) { popularSearches(limit: $limit) { term count growth } }
+`
+export type PopularSearch = { term: string; count: number; growth: number }
+
+export const ACTIVE_CAMPAIGNS_QUERY = gql`
+  query ActiveCampaigns {
+    activeCampaigns {
+      id name slug description type themeColor endsAt
+      listings { listing { id coverImageUrl } }
+    }
+  }
+`
+export type ActiveCampaignTile = {
+  id: string; name: string; slug: string; description: string | null; type: string; themeColor: string | null; endsAt: string
+  listings: { listing: { id: string; coverImageUrl: string | null } }[]
 }

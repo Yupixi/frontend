@@ -4,7 +4,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import { PhotoPicker } from '../../components/DisputeParts'
-import { BuyerTabs, Breadcrumb, TrustFooter } from './Purchases'
+import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
 import {
   MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, OPEN_DISPUTE_MUTATION, SALES_ORDER_QUERY,
   type Dispute, type DisputeReason, type DisputeStats, type HandoverOrder, type PurchaseOrder,
@@ -128,7 +128,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
                 {error && <p className="m-0 mt-2 text-body-sm text-primary">{error.message}</p>}
                 <div className="mt-5 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-between">
                   <button onClick={() => onNavigate('buyer-handover')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface">Annuler et retourner au récapitulatif</button>
-                  <button onClick={submit} disabled={sending || description.trim().length < 20} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white shadow-float disabled:opacity-50 sm:w-auto">
+                  <button onClick={submit} disabled={sending || description.trim().length < 20} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white disabled:opacity-50 sm:w-auto">
                     <Icon name="report" size={19} /> Ouvrir le litige et notifier le vendeur
                   </button>
                 </div>

@@ -7,7 +7,7 @@
   "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#FCF9F8",
-  "theme_color": "#BB0013",
+  "theme_color": "#FE0000",
   "orientation": "portrait-primary",
   "categories": ["shopping", "lifestyle"],
   "icons": [

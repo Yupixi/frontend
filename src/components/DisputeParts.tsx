@@ -157,7 +157,7 @@ export function OpenDisputeModal({ conversationId, perspective, onClose, onOpene
         <div className="mt-2 flex flex-col gap-2">
           {reasons.map(r => (
             <label key={r} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${reason === r ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant'}`}>
-              <input type="radio" checked={reason === r} onChange={() => setReason(r)} className="accent-[#BB0013]" />
+              <input type="radio" checked={reason === r} onChange={() => setReason(r)} className="accent-[var(--primary)]" />
               <Icon name={DISPUTE_REASON_ICONS[r]} size={18} className="text-primary" />
               <span className="text-label-md text-on-surface">{DISPUTE_REASON_LABELS[r]}</span>
             </label>

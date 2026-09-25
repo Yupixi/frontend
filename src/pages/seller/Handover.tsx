@@ -189,7 +189,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                     </div>
                   )}
                   <label className="mt-3 flex cursor-pointer items-start gap-3">
-                    <input type="checkbox" checked={attested} onChange={e => setAttested(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#BB0013]" />
+                    <input type="checkbox" checked={attested} onChange={e => setAttested(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
                     <span className="text-body-md text-on-surface">J'atteste sur l'honneur avoir {method === 'CASH' ? 'reçu' : 'visualisé et encaissé'} <Price amount={amount} currency={o.listing.currency} /> nets {method === 'CASH' ? 'en espèces' : `sur mon compte ${PAYMENT_LABELS[method] ?? ''}`}.</span>
                   </label>
                 </section>
@@ -213,7 +213,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                 </section>
 
                 {confirmError && <p className="m-0 text-center text-body-sm text-primary">{confirmError.message}</p>}
-                <button onClick={submit} disabled={!ready || confirming} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-primary px-4 py-4 text-label-lg text-white shadow-float hover:bg-primary-dark disabled:opacity-50">
+                <button onClick={submit} disabled={!ready || confirming} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-primary px-4 py-4 text-label-lg text-white hover:bg-primary-dark disabled:opacity-50">
                   <Icon name="task_alt" size={22} /> Valider la remise &amp; Clôturer la vente
                 </button>
               </>

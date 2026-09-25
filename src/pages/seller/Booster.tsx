@@ -99,7 +99,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               <h1 className="m-0 mt-3 text-headline-lg-mobile text-on-surface md:text-[40px] md:font-extrabold md:leading-[48px]">Boostez vos ventes &amp; dominez le fil d'affichage</h1>
               <p className="m-0 mt-2 text-body-md text-on-surface-variant">Vendez plus vite grâce aux options de visibilité ciblées. <b className="text-tertiary">100% du produit de la vente reste pour vous</b> (0% de commission Dilchap).</p>
             </div>
-            <div className="rounded-2xl bg-surface-lowest p-4 shadow-card-hover">
+            <div className="rounded-2xl bg-surface-lowest p-4 border border-outline-variant">
               <div className="flex items-center justify-between">
                 <span className="text-label-sm uppercase text-on-surface-variant">État de votre visibilité</span>
                 <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${visible ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>● {visible ? 'Actif' : 'Standard'}</span>
@@ -225,7 +225,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
 
             {/* Turbo */}
             {turbo && (
-              <div className="relative flex flex-col rounded-2xl border-2 border-solid border-primary bg-surface-lowest p-4 shadow-card-hover">
+              <div className="relative flex flex-col rounded-2xl border-2 border-solid border-primary bg-surface-lowest p-4">
                 <span className="absolute -top-3 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-primary px-3 py-1 text-label-sm uppercase text-white"><Flame size={13} /> Formule pro rentabilité</span>
                 <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><Rocket size={22} className="text-primary" /> {turbo.label}</div>
                 <p className="m-0 mt-1 text-body-sm text-on-surface-variant">La formule tout-en-un pour déclencher la vente sous 72h chrono.</p>

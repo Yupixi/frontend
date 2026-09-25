@@ -136,7 +136,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
             {packs.map(p => {
               const top = p.pack === recommended
               return (
-                <div key={p.pack} className={`relative flex flex-col rounded-2xl bg-surface-lowest p-5 ${top ? 'border-2 border-solid border-primary shadow-card-hover' : 'border border-outline-variant'}`}>
+                <div key={p.pack} className={`relative flex flex-col rounded-2xl bg-surface-lowest p-5 ${top ? 'border-2 border-solid border-primary' : 'border border-outline-variant'}`}>
                   {top && <span className="absolute -top-3 right-4 flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-label-sm uppercase text-white"><Flame size={13} /> Le plus populaire</span>}
                   <div className="flex items-center justify-between">
                     <span className={`text-label-sm uppercase ${top ? 'text-primary' : 'text-on-surface-variant'}`}>{p.tagline}</span>

@@ -74,7 +74,7 @@ export const ARCHETYPE_ACCENT: Record<ArchetypeKey, string> = {
   fashion: '#EC4899',
   job: '#6366F1',
   animal: '#84CC16',
-  default: '#BB0013',
+  default: '#FE0000',
 }
 
 function attr(listing: RemoteListing, key: string): string | undefined {

@@ -80,7 +80,7 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
       <div className="mt-2 flex flex-col gap-2">
         {options.map(o => (
           <label key={o.key} className={`flex cursor-pointer gap-3 rounded-xl border bg-surface-lowest p-3 ${proposal === o.key ? 'border-primary' : 'border-outline-variant'}`}>
-            <input type="radio" name={`proposal-${d.id}`} checked={proposal === o.key} onChange={() => setProposal(o.key)} className="mt-1 accent-[#BB0013]" />
+            <input type="radio" name={`proposal-${d.id}`} checked={proposal === o.key} onChange={() => setProposal(o.key)} className="mt-1 accent-[var(--primary)]" />
             <span>
               <span className="block text-label-md text-on-surface">{o.title}</span>
               <span className="block text-body-sm text-on-surface-variant">{o.sub}</span>

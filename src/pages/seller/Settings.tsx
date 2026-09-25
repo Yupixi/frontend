@@ -15,6 +15,7 @@ import type { AuthUser } from '../../graphql/auth'
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
   onProfileUpdated: (u: AuthUser) => void; dark: boolean; onToggleDark: () => void
+  onViewShop?: (sellerId: string) => void
 }
 
 type Channel = 'push' | 'whatsapp' | 'email'
@@ -95,7 +96,7 @@ const deviceLabel = (ua: string | null) => {
 // "Paramètres & Notifications" mockup — one form saved at once ("Enregistrer
 // les modifications" / unsaved-changes bar), plus the security & account
 // actions that apply immediately.
-export default function Settings({ onNavigate, currentUser, onLogout, onProfileUpdated, dark, onToggleDark }: Props) {
+export default function Settings({ onNavigate, currentUser, onLogout, onProfileUpdated, dark, onToggleDark, onViewShop }: Props) {
   const { data, refetch } = useQuery<SettingsData>(SELLER_SETTINGS_QUERY)
   const me = data?.me
   const rep = data?.myReputation
@@ -214,7 +215,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
         </div>
 
         {!form || !me ? <p className="text-body-md text-on-surface-variant">Chargement…</p> : (
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-w-0 flex-col gap-5">
               {/* Profil */}
               <Card id="profil" icon="store" title="Profil Public du Vendeur" sub={`Visible par les acheteurs sur vos ${rep?.activeListings ?? 0} annonce${(rep?.activeListings ?? 0) > 1 ? 's' : ''} en ligne.`}
@@ -237,7 +238,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="mt-3 grid grid-cols-2 gap-2 md:hidden">
+                  <button onClick={() => document.getElementById('settings-profil-form')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="edit" size={17} /> Modifier profil</button>
+                  <button onClick={() => currentUser && onViewShop?.(currentUser.id)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary-fixed py-2.5 text-label-md text-primary"><Icon name="storefront" size={17} /> Voir boutique</button>
+                </div>
+                <div id="settings-profil-form" className="mt-4 grid scroll-mt-24 gap-4 sm:grid-cols-2">
                   <label className="text-label-md text-on-surface">Nom officiel de la boutique<input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={`${field} mt-1`} /></label>
                   <label className="text-label-md text-on-surface">Commune principale de référence
                     <select value={form.city} onChange={e => set('city', e.target.value)} className={`${field} mt-1`}>
@@ -266,8 +271,29 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <span className="flex-1 text-body-sm text-on-surface">{pushStatus === 'subscribed' ? 'Notifications push actives sur cet appareil.' : pushStatus === 'permission-denied' ? 'Notifications bloquées dans le navigateur — autorisez-les dans ses réglages.' : pushStatus === 'ios-install-required' ? "Sur iPhone, ajoutez Dilchap à l'écran d'accueil pour recevoir les notifications." : 'Notifications push non activées sur cet appareil.'}</span>
                   {['available', 'permission-required', 'error'].includes(pushStatus) && <button onClick={() => void subscribeToPush(true).then(setPushStatus)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white">Activer</button>}
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[520px] border-collapse">
+                {/* The card adapts to its own width (container query): full channel
+                    matrix when it fits, otherwise one row per alert with 3 switches. */}
+                <div className="@container">
+                <div className="flex flex-col divide-y divide-outline-variant/50 @2xl:hidden">
+                  {ALERTS.map(a => (
+                    <div key={a.key} className="py-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container-low text-primary"><Icon name={a.icon} size={18} /></span>
+                        <div className="min-w-0 flex-1"><div className="text-label-md text-on-surface">{a.title}</div><div className="text-body-sm text-on-surface-variant">{a.sub}</div></div>
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2 sm:pl-12">
+                        {([['push', 'Push'], ['whatsapp', 'WhatsApp'], ['email', 'E-mail']] as [Channel, string][]).map(([ch, label]) => (
+                          <label key={ch} className="flex items-center justify-between gap-2 rounded-lg bg-surface-container-low px-2.5 py-1.5 text-label-sm text-on-surface-variant">
+                            {label}
+                            <Toggle label={`${a.title} — ${label}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden @2xl:block">
+                  <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
                         <th className="rounded-l-xl px-3 py-2.5 text-left font-semibold">Type d'alerte transactionnelle</th>
@@ -290,6 +316,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                       ))}
                     </tbody>
                   </table>
+                </div>
                 </div>
                 <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Les alertes push sont actives aujourd'hui ; les envois WhatsApp/SMS et e-mail suivront vos préférences dès l'ouverture de ces canaux.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
@@ -316,7 +343,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     const on = form.meetupSpots.includes(s.name)
                     return (
                       <label key={s.name} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${on ? 'border-primary/40 bg-primary-fixed/20' : 'border-outline-variant bg-surface-container-low'}`}>
-                        <input type="checkbox" checked={on} onChange={e => set('meetupSpots', e.target.checked ? [...form.meetupSpots, s.name] : form.meetupSpots.filter(x => x !== s.name))} className="mt-0.5 h-4 w-4 accent-[#BB0013]" />
+                        <input type="checkbox" checked={on} onChange={e => set('meetupSpots', e.target.checked ? [...form.meetupSpots, s.name] : form.meetupSpots.filter(x => x !== s.name))} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
                         <span><span className="block text-label-md text-on-surface">{s.name}</span><span className="block text-body-sm text-on-surface-variant">{s.sub}</span></span>
                       </label>
                     )
@@ -332,7 +359,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     const on = form.paymentMethods.includes(p.code)
                     return (
                       <label key={p.code} className={`relative flex cursor-pointer flex-col gap-1 rounded-xl border p-3 ${on ? 'border-primary/40 bg-surface-lowest' : 'border-outline-variant bg-surface-container-low'}`}>
-                        <span className="flex items-start justify-between"><Icon name={p.icon} size={22} className="text-primary" /><input type="checkbox" checked={on} onChange={e => set('paymentMethods', e.target.checked ? [...form.paymentMethods, p.code] : form.paymentMethods.filter(x => x !== p.code))} className="h-4 w-4 accent-[#BB0013]" /></span>
+                        <span className="flex items-start justify-between"><Icon name={p.icon} size={22} className="text-primary" /><input type="checkbox" checked={on} onChange={e => set('paymentMethods', e.target.checked ? [...form.paymentMethods, p.code] : form.paymentMethods.filter(x => x !== p.code))} className="h-4 w-4 accent-[var(--primary)]" /></span>
                         <span className="text-label-md text-on-surface">{p.title}</span>
                         <span className="text-body-sm text-on-surface-variant">{p.sub}</span>
                       </label>
@@ -415,10 +442,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <button onClick={() => setDeleteOpen(true)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white">Supprimer mon compte</button>
                 </div>
               </Card>
+              <button onClick={onLogout} className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-surface-container-high py-3.5 text-label-lg text-on-surface md:hidden"><Icon name="logout" size={19} /> Se déconnecter de Dilchap</button>
             </div>
 
             {/* Aside */}
-            <aside className="flex flex-col gap-4">
+            <aside className="order-first hidden grid-cols-[minmax(0,1fr)] content-start gap-4 md:grid md:grid-cols-3 2xl:sticky 2xl:top-24 2xl:order-none 2xl:flex 2xl:flex-col 2xl:self-start">
               <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                 <div className="flex items-center justify-between text-label-sm uppercase text-on-surface-variant">Aperçu badge acheteur <span className="h-2 w-2 rounded-full bg-tertiary" /></div>
                 <div className="mt-3 rounded-xl bg-surface-container-low p-3">

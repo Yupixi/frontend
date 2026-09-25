@@ -7,6 +7,11 @@
    text-tertiary, rounded-lg…) resolve to the runtime CSS vars below so they
    follow the .dark theme too. */
 @theme {
+  /* Cards stay flat: a barely-there shadow by default, a soft one on hover
+     only. Strong shadows are for floating layers (menus, modals). */
+  --shadow-sm: 0 1px 2px 0 rgb(26 26 26 / 0.035);
+  --shadow-md: 0 2px 6px -1px rgb(26 26 26 / 0.06);
+  --shadow-xl: 0 6px 18px -6px rgb(26 26 26 / 0.12);
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
   --color-primary-container: var(--primary-container);
@@ -61,7 +66,7 @@
   --text-label-sm--line-height: 16px;
   --text-label-sm--letter-spacing: 0.04em;
   --text-label-sm--font-weight: 700;
-  --shadow-card-hover: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
+  --shadow-card-hover: 0 4px 14px -4px rgba(26, 26, 26, 0.07);
   --shadow-float: 0 12px 32px -4px rgba(26, 26, 26, 0.12);
   --shadow-modal: 0 20px 48px -8px rgba(26, 26, 26, 0.18);
 }
@@ -79,11 +84,11 @@
   --fg-subtle: #936E6A;
   --border: #EAE7E7;
   --border-subtle: #F6F3F2;
-  --primary: #BB0013;
-  --primary-dark: #93000D;
-  --primary-light: #E71520;
-  --primary-container: #E71520;
-  --primary-fixed: #FFDAD6;
+  --primary: #FE0000;
+  --primary-dark: #D90000;
+  --primary-light: #FF3333;
+  --primary-container: #FF3333;
+  --primary-fixed: #FFE3E3;
   --primary-fg: #FFFFFF;
   --secondary: #1C1B1B;
   --secondary-hover: #313030;
@@ -91,7 +96,7 @@
   --tertiary: #006947;
   --tertiary-container: #00855B;
   --tertiary-soft: #E3F5EC;
-  --accent: #E71520;
+  --accent: #FF3333;
   --success: #006947;
   --warning: #F59E0B;
   --info: #00A3E0;
@@ -157,14 +162,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   letter-spacing: -0.02em;
 }
 
-/* YÃ¼pixi Pattern Overlay */
-.pattern-yupixi {
-  background-color: var(--primary);
-  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px), radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, var(--primary) 1.5px);
-  background-size: 28px 28px;
-  background-position: 0 0, 14px 14px;
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -180,98 +177,11 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
-}
-
-/* Chat bubbles (buyer/seller messaging) */
-.chat-bubble {
-  max-width: 70ch;
-  padding: 0.6rem 0.9rem;
-  border-radius: var(--radius-lg);
-  font-size: 0.88rem;
-  line-height: 1.45;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
-.chat-bubble-me {
-  background: var(--primary);
-  color: #FFFFFF;
-  border-bottom-right-radius: 4px;
-}
-.chat-bubble-other {
-  background: var(--bg-card);
-  color: var(--fg);
-  border: 1px solid var(--border);
-  border-bottom-left-radius: 4px;
-}
-.chat-day-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0.5rem 0;
-  color: var(--fg-subtle);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.chat-day-divider::before,
-.chat-day-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.btn-primary {
-  background-color: var(--primary);
-  color: #FFFFFF;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 700;
-  border-radius: var(--radius-sm);
-  padding: 0.65rem 1.35rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: none;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-1px);
-}
-.btn-primary:active { transform: translateY(0); }
-
-.btn-outline {
-  background: transparent;
-  color: var(--primary);
-  border: 2px solid var(--primary);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 700;
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 1.3rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn-outline:hover {
-  background-color: var(--primary);
-  color: #FFFFFF;
-}
-
 .input {
-  background: var(--bg-card);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.7rem 1rem;
+  background: var(--surface-container-low);
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
   color: var(--fg);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.925rem;
@@ -547,64 +457,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .view-toggle-btn { padding: 7px 10px; }
   .view-toggle-label { display: none; }}
 
-/* --- List view cards (search + home) --- */
-.listing-list-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  cursor: pointer;
-  overflow: hidden;
-  background: var(--bg-card);
-}
-.listing-list-card:hover { background: var(--bg-card-hover, var(--bg-card)); }
-.listing-list-thumb {
-  width: 150px;
-  height: 110px;
-  flex-shrink: 0;
-  background: var(--border-subtle);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-.listing-list-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.listing-list-title {
-  margin: 0 0 4px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--fg);
-  line-height: 1.35;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.listing-list-desc {
-  margin: 6px 0 0;
-  color: var(--fg-muted);
-  font-size: 0.82rem;
-  line-height: 1.4;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.listing-list-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin-top: 8px;
-  font-size: 0.78rem;
-  color: var(--fg-muted);
-  align-items: center;
-}
-.listing-list-meta span { display: inline-flex; align-items: center; gap: 3px; }
-@media (max-width: 640px) {
-  .listing-list-card { gap: 0.75rem; padding: 0.6rem; }
-  .listing-list-thumb { width: 120px !important; height: 120px !important; }
-  .listing-list-desc { display: none; }
-  .listing-list-title { font-size: 0.85rem; -webkit-line-clamp: 2; }}
-
 /* --- Animations --- */
 @keyframes heroFloat {
   0%, 100% { transform: translateY(0); }
@@ -676,30 +528,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   35% { stroke: #FFFFFF; }
   50% { stroke: #FFFFFF; }
 }
-
-/* ========== AUTH PAGE ========== */
-.auth-shell-brand {
-  display: none;
-}
-.auth-shell-brand-inner {
-  max-width: 420px;
-  padding: 3rem 2.5rem;
-}
-
-@media (min-width: 1024px) {
-  .auth-shell {
-    grid-template-columns: 1.05fr 1fr !important;
-    min-height: calc(100vh - 64px);
-  }
-  .auth-shell-brand {
-    display: flex;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .auth-shell-form {
-    padding: 3rem 2.5rem !important;
-  }}
 
 /* Material Symbols — the icon set of the Stitch mockups (see <Icon>). */
 .ms {

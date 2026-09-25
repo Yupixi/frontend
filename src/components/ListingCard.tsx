@@ -39,9 +39,9 @@ function ArchetypeLine({ listing }: { listing: RemoteListing }) {
   const archetype = getArchetype(listing)
   const color = ARCHETYPE_ACCENT[archetype]
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, color, fontSize: '0.8rem', fontWeight: 700 }}>
+    <div className="flex items-center gap-1 text-label-sm" style={{ color }}>
       <ArchetypeIcon archetype={archetype} size={13} />
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{highlight}</span>
+      <span className="truncate">{highlight}</span>
     </div>
   )
 }
@@ -77,18 +77,15 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   const [done, setDone] = useState(false)
   if (isActivelyBoosted(listing) || done) return null
   return (
-    <div style={{ marginTop: 8 }} onClick={e => e.stopPropagation()}>
+    <div className="mt-2" onClick={e => e.stopPropagation()}>
       {open ? (
         // 'dropdown' would be clipped invisible here — the card root has
         // overflow: hidden (for the image's rounded corners), which cuts
         // off anything absolutely positioned past its bounds.
         <BoostMenu listingId={listing.id} variant="inline" onDone={() => { setOpen(false); setDone(true) }} />
       ) : (
-        <button
-          onClick={() => setOpen(true)}
-          style={{ width: '100%', padding: '6px 8px', background: 'rgba(187, 0, 19,0.06)', border: '1px dashed var(--primary)', borderRadius: 8, color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer' }}
-        >
-          <ArrowUp size={12} /> Boostez cette annonce
+        <button onClick={() => setOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border border-dashed border-primary bg-primary-fixed/40 px-2 py-1.5 text-label-sm text-primary">
+          <ArrowUp size={13} /> Boostez cette annonce
         </button>
       )}
     </div>
@@ -285,64 +282,48 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
   const isOwn = !!currentUserId && listing.seller.id === currentUserId
 
   return (
-    <div className="card card-hover listing-list-card" onClick={onSelect}>
-      <div className="listing-list-thumb">
-        {!imgError && listingImage(listing) ? (
-          <img src={listingImage(listing)} alt={listing.title} onError={() => setImgError(true)} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
-            <Tag size={28} />
-          </div>
-        )}
+    <div onClick={onSelect} className="flex cursor-pointer gap-4 overflow-hidden rounded-2xl bg-surface-lowest p-3 shadow-sm transition-shadow hover:shadow-card-hover">
+      <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-32 md:w-40">
+        {!imgError && listingImage(listing)
+          ? <img src={listingImage(listing)} alt={listing.title} onError={() => setImgError(true)} className="h-full w-full object-cover" />
+          : <span className="flex h-full items-center justify-center text-on-surface-variant"><Tag size={28} /></span>}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <div style={{ minWidth: 0 }}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
             {(listing.activeCampaignDiscount || listing.negotiable) && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+              <div className="mb-1 flex flex-wrap gap-1.5">
                 <PromoBadge listing={listing} />
-                {listing.negotiable && (
-                  <div className="listing-list-meta" style={{ marginTop: 0, color: 'var(--primary)' }}>
-                    <span>Négociable</span>
-                  </div>
-                )}
+                {listing.negotiable && <span className="rounded bg-primary-fixed/60 px-1.5 text-label-sm text-primary">Négociable</span>}
               </div>
             )}
-            <h3 className="listing-list-title">{listing.title}</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 8 }}>
-              <div className="price-tag">
+            <h3 className="m-0 truncate text-label-lg text-on-surface">{listing.title}</h3>
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="text-headline-sm font-extrabold text-primary">
                 <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
-                {priceSuffix && <span style={{ fontSize: '0.7em', fontWeight: 600, color: 'var(--fg-muted)' }}> {priceSuffix}</span>}
-              </div>
-              {salePrice != null && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--fg-subtle)', textDecoration: 'line-through' }}>
-                  <Price amount={listing.price} currency={listing.currency} />
-                </div>
-              )}
+                {priceSuffix && <span className="text-label-sm font-semibold text-on-surface-variant"> {priceSuffix}</span>}
+              </span>
+              {salePrice != null && <span className="text-body-sm text-on-surface-variant line-through"><Price amount={listing.price} currency={listing.currency} /></span>}
             </div>
           </div>
           <button
             onClick={e => { e.stopPropagation(); onToggleFav() }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, color: isFav ? 'var(--primary)' : 'var(--fg-muted)' }}
             title="Ajouter aux favoris"
+            aria-label="Ajouter aux favoris"
+            className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-low ${isFav ? 'text-primary' : 'text-on-surface-variant'}`}
           >
-            <Heart size={18} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : '#999'} />
+            <Heart size={18} fill={isFav ? 'var(--primary)' : 'none'} />
           </button>
         </div>
 
-        <p className="listing-list-desc">{listing.description}</p>
+        <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{listing.description}</p>
 
-        <div className="listing-list-meta">
-          {highlight && (
-            <span style={{ color: accent, fontWeight: 700 }}>
-              <ArchetypeIcon archetype={getArchetype(listing)} size={12} />
-              {highlight}
-            </span>
-          )}
-          {!isRoute && <span><MapPin size={12} />{listingLocation(listing)}</span>}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-label-sm text-on-surface-variant">
+          {highlight && <span className="flex items-center gap-1" style={{ color: accent }}><ArchetypeIcon archetype={getArchetype(listing)} size={13} />{highlight}</span>}
+          {!isRoute && <span className="flex items-center gap-1"><MapPin size={13} />{listingLocation(listing)}</span>}
           <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
-          <span><Eye size={12} />{listing.viewsCount}</span>
+          <span className="flex items-center gap-1"><Eye size={13} />{listing.viewsCount}</span>
         </div>
 
         {isOwn && <OwnListingBoostCta listing={listing} />}

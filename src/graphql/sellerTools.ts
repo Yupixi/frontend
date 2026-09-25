@@ -6,7 +6,7 @@ export const SELLER_STATS_QUERY = gql`
     sellerStats(days: $days) {
       days views viewsPrev contacts contactsPrev conversionRate conversionRatePrev
       revenue revenuePrev savedCommission avgSaleDays avgSaleDaysBoosted
-      series { day views boostedViews }
+      series { day views boostedViews contacts }
       origins { city share sales }
       favoritePlace favoritePlaceShare
       funnel { impressions views favorites contacts sales }
@@ -31,7 +31,7 @@ export type SellerStats = {
   days: number; views: number; viewsPrev: number; contacts: number; contactsPrev: number
   conversionRate: number | null; conversionRatePrev: number | null
   revenue: number; revenuePrev: number; savedCommission: number; avgSaleDays: number | null; avgSaleDaysBoosted: number | null
-  series: { day: string; views: number; boostedViews: number }[]
+  series: { day: string; views: number; boostedViews: number; contacts: number }[]
   origins: { city: string; share: number; sales: number }[]
   favoritePlace: string | null; favoritePlaceShare: number | null
   funnel: { impressions: number; views: number; favorites: number; contacts: number; sales: number }
@@ -131,9 +131,9 @@ export const MY_PURCHASE_ORDERS_QUERY = gql`
   query MyPurchaseOrders {
     myPurchaseOrders {
       id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus paymentMethod
-      meetup { id place scheduledAt status handoverCode handedOverAt }
+      meetup { id place scheduledAt status proposedById handoverCode handedOverAt }
       seller { id fullName avatarUrl isVerified averageRating reviewsCount }
-      listing { id title price currency condition coverImageUrl paymentMethods category { name } }
+      listing { id title price currency condition size coverImageUrl paymentMethods meetupSpot city category { name } }
     }
   }
 `
@@ -196,7 +196,7 @@ export type UserSession = { id: string; userAgent: string | null; createdAt: str
 export type PurchaseOrder = {
   id: string; reference: string; stage: string; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string
   disputeId: string | null; disputeStatus: DisputeStatus | null; paymentMethod: string | null
-  meetup: { id: string; place: string; scheduledAt: string; status: string; handoverCode: string | null; handedOverAt: string | null } | null
+  meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null } | null
   seller: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
-  listing: { id: string; title: string; price: number | null; currency: string; condition: string | null; coverImageUrl: string | null; paymentMethods: string[]; category: { name: string } }
+  listing: { id: string; title: string; price: number | null; currency: string; condition: string | null; size?: string | null; coverImageUrl: string | null; paymentMethods: string[]; meetupSpot?: string | null; city?: string; category: { name: string } }
 }

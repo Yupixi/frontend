@@ -2,18 +2,42 @@ import { useState } from 'react'
 import DOMPurify from 'dompurify'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
-  Heart, Share2, MapPin, MessageSquare, ShieldCheck, ChevronLeft, ChevronRight, Eye, Tag, Handshake,
-  BadgeCheck, Star, Zap, Store, Home, Flag, ArrowRight, Rocket, Archive, CheckCircle2, Wallet, Truck, X, UserPlus, UserCheck, Percent,
+  Heart,
+  Share2,
+  MapPin,
+  MessageSquare,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Tag,
+  Handshake,
+  BadgeCheck,
+  Star,
+  Zap,
+  Store,
+  Home,
+  Flag,
+  ArrowRight,
+  Rocket,
+  Archive,
+  CheckCircle2,
+  Wallet,
+  Truck,
+  X,
+  UserPlus,
+  UserCheck,
+  Percent,
 } from '../components/icons'
 import Price from '../components/Price'
 import BottomSheet from '../components/BottomSheet'
 import InlineConversation from '../components/InlineConversation'
+import QuickNegotiation from '../components/QuickNegotiation'
 import { ListingCard } from '../components/ListingCard'
 import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteSellerProfile } from '../graphql/reviews'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
-import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
 import { formatRelativeDate } from '../lib/format'
@@ -27,6 +51,7 @@ type ListingDetailProps = {
   favorites: string[]
   onToggleFavorite: (id: string) => void
   currentUser?: AuthUser | null
+  onContactSeller?: (sellerId: string, listingId?: string) => void
 }
 
 const REPORT_REASONS = ['Prix suspect', 'Annonce frauduleuse', 'Tentative d\'arnaque', 'Contenu inapproprié', 'Article déjà vendu', 'Autre']
@@ -53,14 +78,11 @@ function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, s
   )
 }
 
-export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser }: ListingDetailProps) {
+export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser, onContactSeller }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [tab, setTab] = useState<typeof TABS[number]['key']>('description')
   const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
-  const [offerAmount, setOfferAmount] = useState('')
-  const [offerError, setOfferError] = useState<string | null>(null)
-  const [offerSent, setOfferSent] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
   const [reportMessage, setReportMessage] = useState('')
@@ -79,7 +101,6 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const seller = sellerData?.sellerProfile
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
 
-  const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
   const [bumpListing, { loading: renewing }] = useMutation(BUMP_LISTING_MUTATION)
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
@@ -129,18 +150,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const requireAuth = (fn: () => void) => () => (getAccessToken() ? fn() : onNavigate('auth'))
 
-  const submitOffer = async () => {
-    setOfferError(null)
-    const amount = Number(offerAmount.replace(/[^\d]/g, ''))
-    if (!amount) { setOfferError('Indiquez un montant valide.'); return }
-    try {
-      await makeOffer({ variables: { input: { listingId: listing.id, amount } } })
-      setOfferSent(true)
-      setOfferAmount('')
-    } catch (err) {
-      setOfferError(err instanceof Error ? err.message : "Impossible d'envoyer l'offre.")
-    }
-  }
+
 
   const toggleFollow = requireAuth(async () => {
     if (!seller) return
@@ -148,21 +158,16 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     void refetchSeller()
   })
 
-  const offerForm = (
-    offerSent ? (
-      <p className="m-0 flex items-center gap-2 rounded-lg bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} /> Offre envoyée ! Le vendeur vous répondra dans la messagerie.</p>
-    ) : (
-      <div className="rounded-xl border border-outline-variant p-3">
-        <label className="mb-1.5 block text-label-md text-on-surface">Votre offre (F)</label>
-        <input className="input" inputMode="numeric" placeholder={listing.price ? `Ex : ${Math.round(listing.price * 0.9).toLocaleString('fr-FR')}` : 'Montant'} value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
-        {offerError && <p className="m-0 mt-1.5 text-body-sm text-primary">{offerError}</p>}
-        <div className="mt-2 flex gap-2">
-          <button disabled={sendingOffer} onClick={() => void submitOffer()} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-60">{sendingOffer ? 'Envoi…' : "Envoyer l'offre"}</button>
-          <button onClick={() => { setOfferOpen(false); setOfferError(null) }} className="cursor-pointer rounded-lg border-none bg-surface-container px-3 text-on-surface-variant"><X size={16} /></button>
-        </div>
-      </div>
-    )
+  const loggedIn = !!getAccessToken() && !currentUser?.isGuest
+  const negotiation = (
+    <QuickNegotiation
+      listing={listing}
+      sellerRating={seller ? { average: seller.averageRating, count: seller.reviewsCount, verified: seller.isVerified } : null}
+      responseTime={responseTime}
+      onSent={(sellerId, id) => { setOfferOpen(false); onContactSeller?.(sellerId, id) }}
+    />
   )
+
 
   // Seller-side / archived states replace the buying CTAs.
   const ownerPanel = isOwner ? (
@@ -401,14 +406,18 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <InlineConversation sellerId={listing.seller.id} listingId={listing.id} sellerName={listing.seller.fullName} onAuthenticated={onAuthenticated} onClose={() => setChatOpen(false)} />
                 ) : (
                   <>
-                    <button onClick={() => setChatOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark">
+                    {offerOpen ? negotiation : (
+                    <>
+                    <button onClick={() => (loggedIn ? setOfferOpen(true) : setChatOpen(true))} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark">
                       <MessageSquare size={18} /> Discuter en direct
                     </button>
-                    {listing.negotiable && (offerOpen ? offerForm : (
+                    {listing.negotiable && (
                       <button onClick={requireAuth(() => setOfferOpen(true))} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
                         <Tag size={17} /> Faire une offre
                       </button>
-                    ))}
+                    )}
+                    </>
+                    )}
                   </>
                 )
               )}
@@ -497,7 +506,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 <Tag size={17} /> Faire une offre
               </button>
             )}
-            <button onClick={() => setChatOpen(true)} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
+            <button onClick={() => (loggedIn ? setOfferOpen(true) : setChatOpen(true))} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
               <MessageSquare size={18} /> Discuter en direct
             </button>
           </>
@@ -509,8 +518,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         <BottomSheet open={isMobile && chatOpen && canContact} onClose={() => setChatOpen(false)} title={`Discuter avec ${listing.seller.fullName}`}>
           <InlineConversation sellerId={listing.seller.id} listingId={listing.id} sellerName={listing.seller.fullName} onAuthenticated={onAuthenticated} onClose={() => setChatOpen(false)} />
         </BottomSheet>
-        <BottomSheet open={isMobile && offerOpen && canContact} onClose={() => setOfferOpen(false)} title="Faire une offre">
-          {offerForm}
+        <BottomSheet open={isMobile && offerOpen && canContact} onClose={() => setOfferOpen(false)} title="Faire une offre & Contacter" maxHeight="92vh">
+          {negotiation}
         </BottomSheet>
       </div>
     </div>

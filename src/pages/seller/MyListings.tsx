@@ -7,7 +7,7 @@ import {
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
-import { ListingOffersPanel } from './SellerPages'
+import ListingOffersPanel from '../../components/ListingOffersPanel'
 import { MY_LISTINGS_QUERY, DELETE_LISTING_MUTATION, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
 import { CREATE_BOOST_MUTATION } from '../../graphql/promotions'
 import { MY_REPUTATION_QUERY, MY_WALLET_QUERY, type Reputation, type WalletSummary } from '../../graphql/sellerHub'

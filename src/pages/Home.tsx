@@ -365,7 +365,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               <h3 className="m-0 mt-2 text-display leading-tight text-on-surface">Vendez en 2 minutes chrono et gardez 100% de votre argent</h3>
               <p className="m-0 mt-2 text-body-lg text-on-surface-variant">Prenez une photo, fixez votre prix en F, et convenez d'un lieu de rendez-vous sécurisé (centres commerciaux, stations-service…).</p>
               <div className="mt-6 flex flex-wrap items-center gap-4">
-                <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-10 py-3.5 text-label-lg font-bold text-white shadow-md hover:bg-primary-container">
+                <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-10 py-3.5 text-label-lg font-bold text-white hover:bg-primary-container">
                   <Icon name="add_photo_alternate" size={22} /> Publier une annonce gratuite
                 </button>
                 <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-bold text-on-surface underline hover:text-primary">

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { X } from './icons'
+import Icon from './Icon'
 
 type BottomSheetProps = {
   open: boolean
@@ -59,39 +59,22 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
   if (!open) return null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9990, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', animation: 'fadeIn 0.2s ease-out' }} onClick={() => onCloseRef.current()} />
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: 640,
-        maxHeight,
-        background: 'var(--bg)',
-        borderRadius: '20px 20px 0 0',
-        display: 'flex',
-        flexDirection: 'column',
-        animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.18)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}>
-        <div style={{ padding: '10px 0 2px', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ width: 40, height: 4, borderRadius: 999, background: 'var(--border)' }} />
-        </div>
+    <div className="fixed inset-0 z-[9990] flex items-end justify-center">
+      <div className="absolute inset-0 bg-black/45 animate-[fadeIn_0.2s_ease-out]" onClick={() => onCloseRef.current()} />
+      <div
+        className="relative flex w-full max-w-[640px] flex-col rounded-t-3xl bg-surface pb-[env(safe-area-inset-bottom)] animate-[slideUp_0.3s_cubic-bezier(0.16,1,0.3,1)]"
+        style={{ maxHeight }}
+      >
+        <div className="flex justify-center pb-0.5 pt-2.5"><span className="h-1 w-10 rounded-full bg-outline-variant" /></div>
         {title && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 12px' }}>
-            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: 0, fontSize: '1.05rem' }}>{title}</h3>
-            <button
-              onClick={() => onCloseRef.current()}
-              aria-label="Fermer"
-              style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}
-            >
-              <X size={18} />
+          <div className="flex items-center justify-between px-4 pb-3 pt-2.5">
+            <h3 className="m-0 text-headline-sm text-on-surface">{title}</h3>
+            <button onClick={() => onCloseRef.current()} aria-label="Fermer" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant">
+              <Icon name="close" size={18} />
             </button>
           </div>
         )}
-        <div style={{ overflowY: 'auto', padding: '4px 16px 20px', flex: 1 }}>
-          {children}
-        </div>
+        <div className="flex-1 overflow-y-auto px-4 pb-5 pt-1">{children}</div>
         {footer}
       </div>
     </div>
