@@ -5,6 +5,8 @@ import Price from './Price'
 import BoostMenu from './BoostMenu'
 import type { RemoteListing } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
+import { getAccessToken } from '../lib/auth'
+import { setAuthReason } from '../pages/Auth'
 import {
   getArchetype,
   archetypeHighlight,
@@ -13,6 +15,9 @@ import {
   ARCHETYPE_ACCENT,
   type ArchetypeKey,
 } from '../lib/listingArchetype'
+
+// Visitors are sent to the login screen by the favourite toggle; tell it why.
+const favWithReason = (toggle: () => void) => { if (!getAccessToken()) setAuthReason('favorite'); toggle() }
 
 const ARCHETYPE_ICON: Record<ArchetypeKey, AppIcon> = {
   route: Car,
@@ -86,7 +91,7 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
         <BoostMenu listingId={listing.id} variant="inline" onDone={() => { setOpen(false); setDone(true) }} />
       ) : (
         <button onClick={() => setOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border border-dashed border-primary bg-primary-fixed/40 px-2 py-1.5 text-label-sm text-primary">
-          <ArrowUp size={13} /> Boostez cette annonce
+          <ArrowUp size={13} /> <span className="whitespace-nowrap">Booster<span className="hidden md:inline"> cette annonce</span></span>
         </button>
       )}
     </div>
@@ -116,11 +121,13 @@ function isUrgent(listing: RemoteListing) {
 // Mobile – Accueil" card (price first, one Contacter button); from md up
 // it's the desktop "Pépites à la Une" card (category + trust signal, title,
 // location, price, Détails / Discuter).
-export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact }: {
+export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact, featured }: {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
   // Opens the chat with the seller straight from the card. Falls back to
   // opening the listing.
   onContact?: () => void
+  // "Pépites à la Une" rail: prominent red "Discuter" button on phones.
+  featured?: boolean
 }) {
   const [imgError, setImgError] = useState(false)
   const salePrice = discountedPrice(listing)
@@ -167,7 +174,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <div className="flex h-full w-full items-center justify-center text-outline"><Tag size={40} /></div>
           )}
 
-          <div className="absolute left-2 top-2 flex flex-col items-start gap-1 md:left-3 md:top-3">
+          <div className="absolute left-2 right-10 top-2 flex flex-col items-start gap-1 md:left-3 md:right-12 md:top-3">
             {isActivelyBoosted(listing) && (
               <span className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2.5 md:py-1 md:text-label-sm">
                 <Icon name="rocket_launch" size={14}/> Boosté
@@ -176,12 +183,12 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <PromoBadge listing={listing} />
             {isUrgent(listing) && <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2 md:text-label-sm">Urgent</span>}
             {/* Phone: size or category tag. Desktop: the condition. */}
-            <span className="rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface backdrop-blur-sm md:hidden">{listing.size ? `Taille ${listing.size}` : category}</span>
+            <span className="max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface backdrop-blur-sm md:hidden">{listing.size ? `Taille ${listing.size}` : category}</span>
             {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface backdrop-blur md:inline">{condition}</span>}
           </div>
 
           <button
-            onClick={e => { e.stopPropagation(); onToggleFav() }}
+            onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
             className={`absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 backdrop-blur-sm transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
             aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
@@ -220,9 +227,15 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       ) : (
         <>
           <div className="px-2.5 pb-2.5 md:hidden">
-            <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-surface-container py-1.5 text-label-sm font-bold text-on-surface transition-colors hover:bg-primary hover:text-white">
-              <Icon name="chat_bubble" size={14} /> Contacter
-            </button>
+            {featured ? (
+              <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-2 text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
+                <Icon name="chat" size={16} /> Discuter
+              </button>
+            ) : (
+              <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-surface-container py-1.5 text-label-sm font-bold text-on-surface transition-colors hover:bg-primary hover:text-white">
+                <Icon name="chat_bubble" size={14} /> Contacter
+              </button>
+            )}
           </div>
           <div className="hidden gap-2 px-4 pb-4 md:flex">
             <button onClick={e => { e.stopPropagation(); onSelect() }} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-low py-2 text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container">Détails</button>
@@ -274,7 +287,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
             </div>
           </div>
           <button
-            onClick={e => { e.stopPropagation(); onToggleFav() }}
+            onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
             title="Ajouter aux favoris"
             aria-label="Ajouter aux favoris"
             className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-low ${isFav ? 'text-primary' : 'text-on-surface-variant'}`}

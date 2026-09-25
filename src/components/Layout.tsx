@@ -646,7 +646,7 @@ export default function Layout({
 
             if (item.primary) {
               return (
-                <button key={item.label} onClick={() => onNavigate(item.page)} className="flex cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
+                <button key={item.label} onClick={() => onNavigate(item.page)} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
                   <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]">
                     <IconComp size={26} strokeWidth={2.6} color="#fff" />
                   </span>
@@ -659,7 +659,7 @@ export default function Layout({
               <button
                 key={item.label}
                 onClick={() => onNavigate(item.page)}
-                className={`relative flex cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}
+                className={`relative flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}
               >
                 <span className="relative">
                   <IconComp size={22} strokeWidth={isActive ? 2.4 : 2} />

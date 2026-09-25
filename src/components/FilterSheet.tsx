@@ -47,6 +47,8 @@ type Props = {
   facets?: ListingFacets
   categories: RemoteCategory[]
   total: number
+  // Geolocated default city: shown as "Près de vous", not as a chosen filter.
+  nearCity?: string
 }
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter(x => x !== v) : [...list, v])
@@ -61,29 +63,36 @@ function Section({ icon, title, sub, children }: { icon: string; title: string; 
   )
 }
 
-export default function FilterSheet({ open, state, onChange, onReset, onClose, facets, categories, total }: Props) {
+export default function FilterSheet({ open, state, onChange, onReset, onClose, facets, categories, total, nearCity }: Props) {
   const hist = facets?.priceHistogram ?? []
   const maxCount = Math.max(1, ...hist.map(b => b.count))
   const min = state.minPrice ? Number(state.minPrice) : null
   const max = state.maxPrice ? Number(state.maxPrice) : null
   const inRange = (b: { min: number; max: number }) => (min == null || b.max >= min) && (max == null || b.min <= max)
   const catCount = (slug: string) => facets?.categories.find(c => c.value === slug)?.count ?? 0
-  const shownCategories = [...categories].sort((a, b) => catCount(b.slug) - catCount(a.slug)).slice(0, 6)
+  // Empty categories are noise here; keep a selected one visible so it can be unticked.
+  const shownCategories = [...categories]
+    .filter(c => catCount(c.slug) > 0 || state.categorySlugs.includes(c.slug))
+    .sort((a, b) => catCount(b.slug) - catCount(a.slug)).slice(0, 6)
 
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Filtres"
       maxHeight="94vh"
       footer={
         <div className="flex gap-3 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 py-3">
           <button onClick={onReset} className="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container text-on-surface" aria-label="Réinitialiser"><Icon name="restart_alt" size={22} /></button>
-          <button onClick={onClose} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="search" size={20} /> Afficher les {formatNumber(total)} annonce{total > 1 ? 's' : ''}</button>
+          <button onClick={onClose} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="search" size={20} /> {total === 0 ? 'Aucune annonce' : `Afficher ${formatNumber(total)} annonce${total > 1 ? 's' : ''}`}</button>
         </div>
       }
     >
       <div>
+        <div className="sticky top-0 z-10 -mx-4 -mt-1 mb-3 grid grid-cols-[1fr_auto_1fr] items-center bg-surface px-2 pb-2 pt-0.5">
+          <button onClick={onClose} aria-label="Fermer" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface"><Icon name="close" size={24} /></button>
+          <h3 className="m-0 text-headline-sm text-on-surface">Filtres</h3>
+          <button onClick={onReset} className="justify-self-end cursor-pointer border-none bg-transparent px-2 py-2 text-label-md text-primary">Réinitialiser</button>
+        </div>
         <div className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4">
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="tune" size={22} /></span>
           <div>
@@ -102,7 +111,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
-          <Section icon="location_on" title="Localisation & Communes" sub="Sélectionnez vos zones favorites pour la remise directe">
+          <Section icon="location_on" title="Localisation & Communes" sub={nearCity && state.cities.includes(nearCity) ? `Près de vous : ${nearCity} (détecté automatiquement)` : 'Sélectionnez vos zones favorites pour la remise directe'}>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => onChange({ cities: [] })} className={`cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${state.cities.length === 0 ? 'bg-inverse-surface text-white' : 'bg-surface-container text-on-surface'}`}>Toutes les zones</button>
               {(facets?.cities ?? []).slice(0, 8).map(c => (
