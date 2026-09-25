@@ -1,3 +1,4 @@
+import AnimatedIcon from '../../components/AnimatedIcon'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -67,7 +68,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
           <>
             {/* Mobile hero */}
             <div className="mb-4 text-center md:hidden">
-              <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-tertiary text-white ring-8 ring-tertiary-soft"><Icon name="check_circle" size={40} /></span>
+              <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-tertiary text-white ring-8 ring-tertiary-soft"><AnimatedIcon name="check" fallback="check_circle" size={40} playOnMount /></span>
               <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified_user" size={14} /> Handshake scellé & sécurisé</span>
               <h1 className="m-0 mt-2 text-headline-md text-on-surface">Félicitations pour votre achat !</h1>
               <p className="m-0 text-body-md text-on-surface-variant">La remise en main propre a été scellée avec succès.</p>

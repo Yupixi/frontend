@@ -551,3 +551,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .hero-progress { width: 0; animation: hero-progress linear forwards; }
 @keyframes hero-progress { to { width: 100%; } }
 .ms-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+/* Animated icons (AnimatedIcon): Lottie files ship with baked-in colours;
+   render them in the surrounding text colour like the Material Symbols. */
+.lottie-tint svg [stroke]:not([stroke="none"]) { stroke: currentColor; }
+.lottie-tint svg [fill]:not([fill="none"]) { fill: currentColor; }

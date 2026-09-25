@@ -1,7 +1,8 @@
+import AnimatedIcon from '../../components/AnimatedIcon'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
-  Search, CheckCheck, Send, Tag, X, MapPin, ShieldCheck, BadgeCheck, Star, Handshake, CircleX, Flag,
+  Search, CheckCheck, Tag, X, MapPin, ShieldCheck, BadgeCheck, Star, Handshake, CircleX, Flag,
   Calendar, CheckCircle2, Wallet, Info, Lock, Zap,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
@@ -187,11 +188,13 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])
 
   const refresh = () => { void refetchConv(); void refetchList() }
+  const [sentCount, setSentCount] = useState(0)
   const send = (text?: string) => {
     const body = (text ?? msg).trim()
     if (!body || !activeId) return
     setMsg('')
     notifyStoppedTyping()
+    setSentCount(c => c + 1)
     void sendMessage({ variables: { conversationId: activeId, body } }).then(refresh)
   }
   const closeDeal = (status: 'CONCLUDED' | 'NOT_CONCLUDED') => {
@@ -518,7 +521,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       enterKeyHint="send"
                       onChange={e => { setMsg(e.target.value); notifyTyping() }}
                     />
-                    <button type="submit" disabled={sending || !msg.trim()} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md disabled:opacity-50" aria-label="Envoyer le message"><Send size={19} /></button>
+                    <button type="submit" disabled={sending || !msg.trim()} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md disabled:opacity-50" aria-label="Envoyer le message"><AnimatedIcon name="send" fallback="send" size={19} trigger={sentCount} /></button>
                   </form>
                 </div>
               </>

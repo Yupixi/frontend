@@ -1,3 +1,4 @@
+import AnimatedIcon from '../../components/AnimatedIcon'
 import { useState } from 'react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
@@ -70,7 +71,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
 
       {(done || error) && (
         <p className={`m-0 flex items-center gap-2 rounded-xl p-3 text-body-sm ${done ? 'bg-tertiary-soft text-tertiary' : 'bg-primary-fixed text-primary'}`}>
-          <Icon name={done ? 'check_circle' : 'error'} size={17} /> {done ?? error}
+          {done ? <AnimatedIcon name="rocket" fallback="rocket_launch" size={20} trigger={done} /> : <Icon name="error" size={17} />} {done ?? error}
         </p>
       )}
 

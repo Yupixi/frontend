@@ -1,3 +1,4 @@
+import AnimatedIcon, { useIncreaseCounter } from '../../components/AnimatedIcon'
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
@@ -174,6 +175,7 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
   activeLabel: string; isHome: boolean; currentUser?: AuthUser | null; onToggleSidebar: () => void; onBack: () => void; onNavigate: (p: any) => void; onLogout: () => void; unreadMessages?: number; unreadNotifications?: number
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const bellRings = useIncreaseCounter(unreadNotifications ?? 0)
   const isGuest = !!currentUser?.isGuest
   const displayName = currentUser?.fullName || 'Mon compte'
   const iconBtn = 'relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container-low'
@@ -199,7 +201,7 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
       {!isGuest && (
         <>
           <button onClick={() => onNavigate('buyer-notifications')} className={iconBtn} aria-label="Notifications">
-            <Bell size={22} />
+            <AnimatedIcon name="bell" fallback="notifications" size={22} trigger={bellRings} />
             {!!unreadNotifications && <span className="notif-dot">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
           </button>
           <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark sm:flex">
