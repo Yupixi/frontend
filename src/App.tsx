@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, startTransition } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
@@ -9,32 +9,37 @@ import { detectLocationFromIP, getStoredLocation, setStoredLocation, type Stored
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
 import Home, { type SearchPreset } from './pages/Home'
-import Orders from './pages/seller/Orders'
-import Wallet from './pages/seller/Wallet'
-import SellerReviews from './pages/seller/Reviews'
-import SellerStats from './pages/seller/Stats'
-import Disputes from './pages/seller/Disputes'
-import Handover from './pages/seller/Handover'
-import Settings from './pages/seller/Settings'
-import Purchases from './pages/buyer/Purchases'
-import HandoverCode from './pages/buyer/HandoverCode'
-import Receipt from './pages/buyer/Receipt'
-import OpenDispute from './pages/buyer/OpenDispute'
-import DisputeFollow from './pages/buyer/DisputeFollow'
-import SearchPage from './pages/Search'
-import ListingDetail from './pages/ListingDetail'
-import SellerProfile from './pages/SellerProfile'
-import Categories from './pages/Categories'
-import Auth from './pages/Auth'
-import FlashOffers from './pages/FlashOffers'
-import BuyerMessages from './pages/buyer/Messages'
-import Dashboard from './pages/account/Dashboard'
-import Favorites from './pages/buyer/Favorites'
-import Notifications from './pages/buyer/Notifications'
-import History from './pages/buyer/History'
-import {
-  PostListing, SellerListings, SellerPremium,
-} from './pages/seller/SellerPages'
+import { lazyPage, preloadPages } from './lib/lazyPage'
+
+// Home is the landing page and ships in the entry chunk; every other page is
+// its own chunk so a first visit only downloads what it renders (recharts,
+// tiptap and the seller hub stay out of the storefront bundle).
+const SearchPage = lazyPage(() => import('./pages/Search'))
+const ListingDetail = lazyPage(() => import('./pages/ListingDetail'))
+const SellerProfile = lazyPage(() => import('./pages/SellerProfile'))
+const Categories = lazyPage(() => import('./pages/Categories'))
+const Auth = lazyPage(() => import('./pages/Auth'))
+const FlashOffers = lazyPage(() => import('./pages/FlashOffers'))
+const Orders = lazyPage(() => import('./pages/seller/Orders'))
+const Wallet = lazyPage(() => import('./pages/seller/Wallet'))
+const SellerReviews = lazyPage(() => import('./pages/seller/Reviews'))
+const SellerStats = lazyPage(() => import('./pages/seller/Stats'))
+const Disputes = lazyPage(() => import('./pages/seller/Disputes'))
+const Handover = lazyPage(() => import('./pages/seller/Handover'))
+const Settings = lazyPage(() => import('./pages/seller/Settings'))
+const Purchases = lazyPage(() => import('./pages/buyer/Purchases'))
+const HandoverCode = lazyPage(() => import('./pages/buyer/HandoverCode'))
+const Receipt = lazyPage(() => import('./pages/buyer/Receipt'))
+const OpenDispute = lazyPage(() => import('./pages/buyer/OpenDispute'))
+const DisputeFollow = lazyPage(() => import('./pages/buyer/DisputeFollow'))
+const BuyerMessages = lazyPage(() => import('./pages/buyer/Messages'))
+const Dashboard = lazyPage(() => import('./pages/account/Dashboard'))
+const Favorites = lazyPage(() => import('./pages/buyer/Favorites'))
+const Notifications = lazyPage(() => import('./pages/buyer/Notifications'))
+const History = lazyPage(() => import('./pages/buyer/History'))
+const PostListing = lazyPage(() => import('./pages/seller/PostListing'))
+const SellerListings = lazyPage(() => import('./pages/seller/MyListings'))
+const SellerPremium = lazyPage(() => import('./pages/seller/Booster'))
 
 // Admin BO control lives in the dedicated Backoffice app (real, GraphQL-wired)
 // — this Frontend app never had a real admin surface, just a mock
@@ -266,14 +271,15 @@ export default function App() {
   useEffect(() => {
     const onPop = () => {
       const st = window.history.state
-      if (st && typeof st.__yupixiPage === 'string') {
-        setPage(st.__yupixiPage)
-      } else {
-        setPage('home')
-      }
+      startTransition(() => setPage(st && typeof st.__yupixiPage === 'string' ? st.__yupixiPage : 'home'))
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  // The storefront pages a visitor is most likely to open next.
+  useEffect(() => {
+    preloadPages([SearchPage, ListingDetail, SellerProfile, Categories])
   }, [])
 
   // Scroll to top on page change
@@ -289,8 +295,10 @@ export default function App() {
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
   }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId])
 
+  // A transition keeps the current page on screen while the next page's
+  // chunk loads, instead of flashing the Suspense fallback.
   const navigate = (p: Page) => {
-    setPage(p)
+    startTransition(() => setPage(p))
     window.history.pushState({ __yupixiPage: p }, '')
   }
 
@@ -463,7 +471,7 @@ export default function App() {
     })()
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
-        {accountContent}
+        <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
         <InstallBanner show={showInstallBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
@@ -487,13 +495,21 @@ export default function App() {
         location={location}
         onLocationChange={changeLocation}
       >
-        {renderPage()}
+        <Suspense fallback={<PageFallback />}>{renderPage()}</Suspense>
       </Layout>
       <InstallBanner show={showInstallBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {isLoggedIn && pushStatus && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
+    </div>
+  )
+}
+
+function PageFallback({ fullScreen }: { fullScreen?: boolean }) {
+  return (
+    <div className={`flex items-center justify-center ${fullScreen ? 'min-h-screen' : 'min-h-[60vh]'}`} role="status" aria-label="Chargement">
+      <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-surface-container-high border-t-primary" />
     </div>
   )
 }
