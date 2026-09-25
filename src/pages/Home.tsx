@@ -235,14 +235,10 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   )
   const zone = location?.city ?? 'Toute la Côte d’Ivoire'
 
-  // Mobile deals banner: always shown. A live campaign drives it; otherwise it
-  // falls back to the real markdowns (originalPrice > price) of loaded listings.
-  const realMarkdown = Math.max(0, ...[...pepites, ...latest].map(l =>
-    l.originalPrice && l.price != null && l.originalPrice > l.price ? Math.round((1 - l.price / l.originalPrice) * 100) : 0))
-  const dealsCity = feedCity ?? location?.city
+  // Mobile deals banner: only for a live campaign (BO), never invented copy.
   const deals = campaign
     ? { tag: campaign.name, title: bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Offres à prix cassés', text: campaign.description }
-    : { tag: dealsCity ? `Bons plans ${dealsCity}` : 'Bons plans', title: realMarkdown > 0 ? `Jusqu'à -${realMarkdown}%` : 'Petits prix du jour', text: 'Dégagement de dressing & fins de stock express' }
+    : null
   const hasExpress = latest.some(l => !!l.urgentUntil && new Date(l.urgentUntil) > new Date())
 
   const loadMore = canLoadMore && (
@@ -580,7 +576,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           </section>
         )}
 
-        <section
+        {deals && <section
           className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary-dark to-primary-container p-4 text-white shadow-md"
           style={campaign?.themeColor ? { background: campaign.themeColor } : undefined}
         >
@@ -588,7 +584,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           <div className="relative flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate rounded-full bg-white px-2.5 py-0.5 text-label-sm font-extrabold uppercase tracking-wide text-primary" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>{deals.tag}</span>
-              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-label-sm tabular-nums backdrop-blur-sm"><Icon name="timer" size={14} /> <LiveClock endsAt={campaign?.endsAt} /></span>
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-label-sm tabular-nums backdrop-blur-sm">{campaign?.endsAt && <><Icon name="timer" size={14} /> <LiveClock endsAt={campaign.endsAt} /></>}</span>
             </div>
             <div className="mt-1 flex items-end justify-between gap-3">
               <div className="min-w-0">
@@ -598,7 +594,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               <button onClick={() => onNavigate('flash-offers')} className="shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none bg-white px-4 py-2 text-label-md font-bold text-primary shadow active:scale-95" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>Profiter</button>
             </div>
           </div>
-        </section>
+        </section>}
 
         {pepites.length > 0 && (
           <section className="mb-8">
