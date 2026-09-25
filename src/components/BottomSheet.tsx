@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { X } from './icons'
 
 type BottomSheetProps = {
   open: boolean
@@ -7,9 +7,11 @@ type BottomSheetProps = {
   title?: string
   children: React.ReactNode
   maxHeight?: string
+  // Pinned under the scrolling content (e.g. "Afficher les N annonces").
+  footer?: React.ReactNode
 }
 
-export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh' }: BottomSheetProps) {
+export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh', footer }: BottomSheetProps) {
   const closedByBackRef = useRef(false)
   const onCloseRef = useRef(onClose)
 
@@ -77,7 +79,7 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
         </div>
         {title && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 12px' }}>
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, margin: 0, fontSize: '1.05rem' }}>{title}</h3>
+            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, margin: 0, fontSize: '1.05rem' }}>{title}</h3>
             <button
               onClick={() => onCloseRef.current()}
               aria-label="Fermer"
@@ -90,6 +92,7 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
         <div style={{ overflowY: 'auto', padding: '4px 16px 20px', flex: 1 }}>
           {children}
         </div>
+        {footer}
       </div>
     </div>
   )

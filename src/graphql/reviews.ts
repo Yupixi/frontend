@@ -13,6 +13,13 @@ export const SELLER_PROFILE_QUERY = gql`
       reviewsCount
       canReview
       hasReviewed
+      isVerified
+      bio
+      coverUrl
+      salesCount
+      followersCount
+      isFollowedByMe
+      responseTimeMinutes
     }
   }
 `
@@ -24,6 +31,8 @@ export const SELLER_REVIEWS_QUERY = gql`
       rating
       comment
       createdAt
+      reply
+      repliedAt
       author {
         id
         fullName
@@ -58,6 +67,13 @@ export type RemoteSellerProfile = {
   listingsCount: number
   averageRating: number
   reviewsCount: number
+  isVerified: boolean
+  bio: string | null
+  coverUrl: string | null
+  salesCount: number
+  followersCount: number
+  isFollowedByMe: boolean
+  responseTimeMinutes: number | null
   canReview: boolean
   hasReviewed: boolean
 }
@@ -66,10 +82,26 @@ export type RemoteReview = {
   id: string
   rating: number
   comment: string | null
+  reply?: string | null
+  repliedAt?: string | null
   createdAt: string
   author: {
     id: string
     fullName: string
     avatarUrl: string | null
   }
+}
+
+export const FOLLOW_SELLER_MUTATION = gql`
+  mutation FollowSeller($sellerId: String!) { followSeller(sellerId: $sellerId) }
+`
+export const UNFOLLOW_SELLER_MUTATION = gql`
+  mutation UnfollowSeller($sellerId: String!) { unfollowSeller(sellerId: $sellerId) }
+`
+
+export function formatResponseTime(minutes: number | null | undefined): string | null {
+  if (minutes == null) return null
+  if (minutes < 60) return `< ${Math.max(5, Math.ceil(minutes / 5) * 5)} min`
+  if (minutes < 24 * 60) return `< ${Math.ceil(minutes / 60)} h`
+  return `${Math.ceil(minutes / 1440)} j`
 }

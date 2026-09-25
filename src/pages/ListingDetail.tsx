@@ -1,15 +1,17 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import DOMPurify from 'dompurify'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
-  Heart, Share2, MapPin, MessageCircle, ShieldCheck,
-  ChevronLeft, ChevronRight, Eye, Tag, Truck, CheckCircle,
-  Calendar, ArrowLeft, Flag, ExternalLink, ArrowUp, Archive,
-} from 'lucide-react'
+  Heart, Share2, MapPin, MessageSquare, ShieldCheck, ChevronLeft, ChevronRight, Eye, Tag, Handshake,
+  BadgeCheck, Star, Zap, Store, Home, Flag, ArrowRight, Rocket, Archive, CheckCircle2, Wallet, Truck, X, UserPlus, UserCheck, Percent,
+} from '../components/icons'
 import Price from '../components/Price'
+import BottomSheet from '../components/BottomSheet'
 import InlineConversation from '../components/InlineConversation'
-import BoostMenu from '../components/BoostMenu'
+import { ListingCard } from '../components/ListingCard'
 import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
+import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
+import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteSellerProfile } from '../graphql/reviews'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import type { AuthUser } from '../graphql/auth'
@@ -27,147 +29,68 @@ type ListingDetailProps = {
   currentUser?: AuthUser | null
 }
 
-const REPORT_REASONS = [
-  'Prix suspect',
-  'Annonce frauduleuse',
-  'Contenu inapproprié',
-  'Article déjà vendu',
-  'Autre',
-]
+const REPORT_REASONS = ['Prix suspect', 'Annonce frauduleuse', 'Tentative d\'arnaque', 'Contenu inapproprié', 'Article déjà vendu', 'Autre']
 
-function X({ size }: { size: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+export const PAYMENT_LABELS: Record<string, string> = {
+  CASH: 'Espèces en main propre',
+  WAVE: 'Wave',
+  ORANGE_MONEY: 'Orange Money',
+  MTN_MOMO: 'MTN MoMo',
+  MOOV_MONEY: 'Moov Money',
 }
 
-function listingLocation(listing: RemoteListing): string {
-  return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
-}
+const TABS = [
+  { key: 'description', label: 'Description du vendeur' },
+  { key: 'specs', label: 'Fiche technique & Détails' },
+  { key: 'safety', label: 'Remise & Sécurité' },
+] as const
 
-function SpecItem({ icon, label, value }: { icon: ReactNode, label: string, value: string }) {
+function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, size?: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.75rem' }}>
-      <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--primary)' }}>
-        {icon}
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)', fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: '0.82rem', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', lineHeight: 1.25, wordBreak: 'break-word' }}>{value}</div>
-      </div>
-    </div>
-  )
-}
-
-// Shown instead of the chat/offer panel when the viewer owns the listing —
-// they can't message or make an offer to themselves, so this is where the
-// boost invite goes instead (see the user's ask: invite to boost wherever
-// they see their own listing).
-function OwnerBoostPanel({ listingId, isBoosted, boostExpiresAt, boostMenuOpen, setBoostMenuOpen, justBoosted, onBoosted }: {
-  listingId: string
-  isBoosted: boolean
-  boostExpiresAt: string | null | undefined
-  boostMenuOpen: boolean
-  setBoostMenuOpen: (open: boolean) => void
-  justBoosted: boolean
-  onBoosted: () => void
-}) {
-  if (isBoosted || justBoosted) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: '#059669', fontSize: '0.82rem', fontWeight: 700 }}>
-        <ArrowUp size={16} />
-        {boostExpiresAt ? `Boosté jusqu'au ${new Date(boostExpiresAt).toLocaleDateString('fr-FR')}` : 'Boost activé'}
-      </div>
-    )
-  }
-  return (
-    <div style={{ position: 'relative' }}>
-      <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>C'est votre annonce. Boostez-la pour passer devant les autres et être vu davantage.</p>
-      <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => setBoostMenuOpen(!boostMenuOpen)}>
-        <ArrowUp size={18} /> Booster cette annonce
-      </button>
-      {boostMenuOpen && <BoostMenu listingId={listingId} onDone={() => { setBoostMenuOpen(false); onBoosted() }} />}
-    </div>
-  )
-}
-
-// The seller's own view of a listing the daily expiry sweep has since
-// archived (see ListingsService.expireStaleListings) — bumpListing doubles
-// as "republish" for an EXPIRED listing, no separate renew endpoint needed.
-function OwnerRenewPanel({ listingId }: { listingId: string }) {
-  const [bumpListing, { loading }] = useMutation(BUMP_LISTING_MUTATION)
-  const [renewed, setRenewed] = useState(false)
-  if (renewed) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: '#059669', fontSize: '0.82rem', fontWeight: 700 }}>
-        <CheckCircle size={16} /> Annonce remise en ligne
-      </div>
-    )
-  }
-  return (
-    <div>
-      <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Cette annonce a expiré après 90 jours et n'est plus visible des acheteurs. Remettez-la en ligne pour reprendre là où vous en étiez.</p>
-      <button className="btn-primary" disabled={loading} style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} onClick={() => void bumpListing({ variables: { id: listingId } }).then(() => setRenewed(true))}>
-        <Archive size={18} /> {loading ? 'Remise en ligne...' : 'Remettre en ligne'}
-      </button>
-    </div>
-  )
-}
-
-// Shown to anyone else who reaches an expired listing (a permalink someone
-// bookmarked, an old search result cached elsewhere) — the listing itself
-// stays fully visible below (that's the point: an archive, not a 404), but
-// contacting the seller or making an offer on a dead listing doesn't.
-function ExpiredListingNotice() {
-  return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '1rem', borderRadius: 9, background: 'var(--border-subtle)', color: 'var(--fg-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-      <Archive size={20} style={{ flexShrink: 0, marginTop: 1 }} />
-      <span>Cette annonce n'est plus disponible — elle a expiré. Vous consultez une archive ; le vendeur ne peut plus être contacté à ce sujet.</span>
-    </div>
+    <span className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-container-high font-bold text-primary" style={{ width: size, height: size }}>
+      {url ? <img src={url} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+    </span>
   )
 }
 
 export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
+  const [tab, setTab] = useState<typeof TABS[number]['key']>('description')
+  const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
   const [offerAmount, setOfferAmount] = useState('')
-  const [sellerSheetOpen, setSellerSheetOpen] = useState(false)
+  const [offerError, setOfferError] = useState<string | null>(null)
+  const [offerSent, setOfferSent] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const [chatOpen, setChatOpen] = useState(false)
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
-  const [offerError, setOfferError] = useState<string | null>(null)
-  const [offerSent, setOfferSent] = useState(false)
-  const [boostMenuOpen, setBoostMenuOpen] = useState(false)
-  const [justBoosted, setJustBoosted] = useState(false)
-  const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
+  const [renewed, setRenewed] = useState(false)
+  const [isMobile] = useState(() => window.innerWidth < 1024)
 
-  const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, {
-    variables: { id: listingId },
-  })
+  const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
   const listing = data?.listing
-
-  // Real content-based similarity (category/subcategory + price proximity +
-  // popularity, see ListingsService.findSimilar) rather than "first 4 in the
-  // same category" — falls back to a broader pool server-side when the
-  // category is thin.
-  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, {
-    variables: { listingId, limit: 4 },
-    skip: !listing,
-  })
+  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4 }, skip: !listing })
   const similar = similarData?.similarListings ?? []
+  const { data: sellerData, refetch: refetchSeller } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, {
+    variables: { sellerId: listing?.seller.id ?? '' }, skip: !listing,
+  })
+  const seller = sellerData?.sellerProfile
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
 
+  const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
+  const [bumpListing, { loading: renewing }] = useMutation(BUMP_LISTING_MUTATION)
+  const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
+  const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
 
-  if (loading) {
-    return <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem', textAlign: 'center', color: 'var(--fg-muted)' }}>Chargement...</div>
-  }
-
+  if (loading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
   if (!listing) {
     return (
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '3rem 1rem', textAlign: 'center' }}>
-        <p style={{ color: 'var(--fg-muted)', marginBottom: '1rem' }}>Cette annonce n'existe plus ou a été retirée.</p>
-        <button onClick={() => onNavigate('home')} className="btn-primary" style={{ padding: '0.7rem 1.5rem' }}>Retour à l'accueil</button>
+      <div className="p-12 text-center">
+        <p className="mb-4 text-on-surface-variant">Cette annonce n'existe plus ou a été retirée.</p>
+        <button onClick={() => onNavigate('home')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour à l'accueil</button>
       </div>
     )
   }
@@ -175,22 +98,28 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const images = listing.media.length > 0 ? listing.media.map(m => m.url) : (listing.coverImageUrl ? [listing.coverImageUrl] : [])
   const isFav = favorites.includes(listing.id)
   const isOwner = !!currentUser && listing.seller.id === currentUser.id
-  const isBoosted = !!listing.boostExpiresAt && new Date(listing.boostExpiresAt) > new Date()
   const isExpired = listing.status === 'EXPIRED'
-
-  // The app never puts state in the URL (see App.tsx), so the shareable
-  // link is built here with a `?listing=` param App.tsx knows to read on
-  // load — a plain window.location.href would just point at the homepage.
+  const isSold = listing.status === 'SOLD'
+  const canContact = !isOwner && !isExpired && !isSold
+  const saving = listing.originalPrice && listing.price != null && listing.originalPrice > listing.price
+    ? Math.round((1 - listing.price / listing.originalPrice) * 100) : 0
+  const location = listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+  const category = categoriesData?.categories.find(c => c.slug === listing.category.slug)
+  const specs = [
+    ...(listing.brand ? [{ label: 'Marque', value: listing.brand }] : []),
+    ...(listing.modelName ? [{ label: 'Modèle', value: listing.modelName }] : []),
+    ...(listing.size ? [{ label: 'Taille', value: listing.size }] : []),
+    ...(listing.condition && listing.condition !== 'N/A' ? [{ label: 'État', value: listing.condition }] : []),
+    ...Object.entries(listing.attributes ?? {})
+      .filter(([, v]) => v !== '' && v != null)
+      .map(([k, v]) => ({ label: category?.attributes.find(a => a.key === k)?.label ?? k, value: String(v) })),
+  ]
+  const responseTime = formatResponseTime(seller?.responseTimeMinutes)
   const shareUrl = `${window.location.origin}${window.location.pathname}?listing=${listing.id}`
 
-  const shareListing = async () => {
-    const shareData = { title: listing.title, text: `${listing.title} — ${listingLocation(listing)}`, url: shareUrl }
+  const share = async () => {
     if (navigator.share) {
-      try {
-        await navigator.share(shareData)
-      } catch {
-        // User cancelled the native share sheet — not an error.
-      }
+      try { await navigator.share({ title: listing.title, text: `${listing.title} — ${location}`, url: shareUrl }) } catch { /* cancelled */ }
       return
     }
     await navigator.clipboard.writeText(shareUrl)
@@ -198,13 +127,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     setTimeout(() => setLinkCopied(false), 2000)
   }
 
+  const requireAuth = (fn: () => void) => () => (getAccessToken() ? fn() : onNavigate('auth'))
+
   const submitOffer = async () => {
     setOfferError(null)
     const amount = Number(offerAmount.replace(/[^\d]/g, ''))
-    if (!amount || amount < 1) {
-      setOfferError('Indiquez un montant valide.')
-      return
-    }
+    if (!amount) { setOfferError('Indiquez un montant valide.'); return }
     try {
       await makeOffer({ variables: { input: { listingId: listing.id, amount } } })
       setOfferSent(true)
@@ -214,445 +142,377 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     }
   }
 
-  const submitReport = async () => {
-    await createReport({
-      variables: {
-        targetType: 'LISTING',
-        targetListingId: listing.id,
-        reason: reportReason,
-        message: reportMessage || undefined,
-      },
-    })
-    setReportDone(true)
-  }
+  const toggleFollow = requireAuth(async () => {
+    if (!seller) return
+    await (seller.isFollowedByMe ? unfollow : follow)({ variables: { sellerId: seller.id } })
+    void refetchSeller()
+  })
 
-  const openReport = () => {
-    if (!getAccessToken()) {
-      onNavigate('auth')
-      return
-    }
-    setReportOpen(true)
-  }
+  const offerForm = (
+    offerSent ? (
+      <p className="m-0 flex items-center gap-2 rounded-lg bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} /> Offre envoyée ! Le vendeur vous répondra dans la messagerie.</p>
+    ) : (
+      <div className="rounded-xl border border-outline-variant p-3">
+        <label className="mb-1.5 block text-label-md text-on-surface">Votre offre (F)</label>
+        <input className="input" inputMode="numeric" placeholder={listing.price ? `Ex : ${Math.round(listing.price * 0.9).toLocaleString('fr-FR')}` : 'Montant'} value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
+        {offerError && <p className="m-0 mt-1.5 text-body-sm text-primary">{offerError}</p>}
+        <div className="mt-2 flex gap-2">
+          <button disabled={sendingOffer} onClick={() => void submitOffer()} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-60">{sendingOffer ? 'Envoi…' : "Envoyer l'offre"}</button>
+          <button onClick={() => { setOfferOpen(false); setOfferError(null) }} className="cursor-pointer rounded-lg border-none bg-surface-container px-3 text-on-surface-variant"><X size={16} /></button>
+        </div>
+      </div>
+    )
+  )
+
+  // Seller-side / archived states replace the buying CTAs.
+  const ownerPanel = isOwner ? (
+    isExpired ? (
+      renewed ? (
+        <p className="m-0 flex items-center gap-2 rounded-lg bg-tertiary-soft p-3 text-label-md text-tertiary"><CheckCircle2 size={16} /> Annonce remise en ligne</p>
+      ) : (
+        <button disabled={renewing} onClick={() => void bumpListing({ variables: { id: listing.id } }).then(() => setRenewed(true))} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
+          <Archive size={18} /> {renewing ? 'Remise en ligne…' : 'Remettre en ligne'}
+        </button>
+      )
+    ) : (
+      <button onClick={() => onNavigate('seller-premium')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
+        <Rocket size={18} /> Booster cette annonce
+      </button>
+    )
+  ) : !canContact ? (
+    <p className="m-0 flex items-start gap-2 rounded-lg bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
+      <Archive size={17} className="mt-0.5 shrink-0" /> {isSold ? 'Cet article a déjà été vendu.' : "Cette annonce a expiré : le vendeur ne peut plus être contacté à son sujet."}
+    </p>
+  ) : null
 
   return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.5rem 1rem', paddingBottom: '5rem' }}>
-      {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem', fontSize: '0.875rem', color: 'var(--fg-muted)' }}>
-        <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <ArrowLeft size={16} /> Retour
-        </button>
-        <span>/</span>
-        <span>{listing.category.name}</span>
-        <span className="listing-breadcrumb-sep">/</span>
-        <span className="listing-breadcrumb-title" style={{ color: 'var(--fg)' }}>{listing.title}</span>
+    <div className="pb-24 lg:pb-8">
+      {/* Meta bar: breadcrumb + actions (desktop) */}
+      <div className="hidden border-0 border-b border-solid border-outline-variant bg-surface-lowest lg:block">
+        <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-12 py-2.5 text-label-md text-on-surface-variant">
+          <nav className="flex min-w-0 items-center gap-1">
+            <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
+            <ChevronRight size={14} className="text-outline-variant" />
+            <span>{listing.category.name}</span>
+            {listing.subcategory && <><ChevronRight size={14} className="text-outline-variant" /><span>{listing.subcategory.name}</span></>}
+            <ChevronRight size={14} className="text-outline-variant" />
+            <span className="truncate font-semibold text-on-surface">{listing.title}</span>
+          </nav>
+          <div className="flex shrink-0 items-center gap-5">
+            <button onClick={() => void share()} className="relative flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-on-surface">
+              <Share2 size={15} /> {linkCopied ? 'Lien copié !' : 'Partager'}
+            </button>
+            <button onClick={() => onToggleFavorite(listing.id)} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-on-surface">
+              <Heart size={15} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'currentColor'} /> {isFav ? 'Sauvegardé' : 'Sauvegarder'}
+              <span className="rounded-full bg-surface-container px-1.5 text-label-sm">{listing.favoritesCount}</span>
+            </button>
+            <span className="flex items-center gap-1.5 text-tertiary"><Eye size={15} /> {listing.viewsCount} vues</span>
+          </div>
+        </div>
       </div>
 
-      <div className="listing-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.5rem' }}>
-        <div>
-          {/* Image gallery */}
-          <div className="card" style={{ overflow: 'hidden', marginBottom: '1.25rem' }}>
-            <div className="listing-detail-image" style={{ position: 'relative', height: 420, background: 'var(--border-subtle)' }}>
+      <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-6 lg:grid-cols-12 lg:px-12 lg:pt-6">
+        {/* LEFT */}
+        <div className="min-w-0 lg:col-span-7">
+          {/* Gallery */}
+          <div className="overflow-hidden bg-surface-lowest lg:rounded-2xl lg:border lg:border-outline-variant lg:p-3">
+            <div className="relative aspect-square overflow-hidden bg-surface-container-low lg:aspect-[4/3] lg:rounded-xl">
               {images.length > 0 ? (
-                <img
-                  src={images[imgIdx]}
-                  alt={listing.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                />
+                <img src={images[imgIdx]} alt={listing.title} className="h-full w-full object-cover" />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-subtle)' }}>
-                  <Tag size={48} />
-                </div>
+                <div className="flex h-full items-center justify-center text-outline"><Tag size={56} /></div>
               )}
+              <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+                {listing.seller.isVerified && (
+                  <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><BadgeCheck size={13} /> Vendeur certifié</span>
+                )}
+                {listing.condition && listing.condition !== 'N/A' && (
+                  <span className="rounded-full bg-surface-lowest px-2.5 py-1 text-label-sm uppercase text-on-surface">{listing.condition}</span>
+                )}
+                {listing.urgentUntil && new Date(listing.urgentUntil) > new Date() && (
+                  <span className="rounded-full bg-primary px-2.5 py-1 text-label-sm uppercase text-white">Urgent</span>
+                )}
+              </div>
+              <button onClick={() => onToggleFavorite(listing.id)} className="absolute right-3 top-3 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm lg:hidden" aria-label="Favori">
+                <Heart size={19} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
+              </button>
               {images.length > 1 && (
                 <>
-                  <button onClick={() => setImgIdx(i => Math.max(0, i - 1))} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button onClick={() => setImgIdx(i => Math.min(images.length - 1, i + 1))} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', border: 'none', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
-                    <ChevronRight size={20} />
-                  </button>
-                  <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: '0.8rem', fontWeight: 800, fontFamily: "'Outfit', 'Nunito', sans-serif" }}>
-                    {imgIdx + 1} / {images.length}
+                  <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)} className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronLeft size={20} /></button>
+                  <button onClick={() => setImgIdx(i => (i + 1) % images.length)} className="absolute right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronRight size={20} /></button>
+                  <div className="absolute bottom-3 left-3 flex gap-1 lg:hidden">
+                    {images.map((_, i) => <button key={i} onClick={() => setImgIdx(i)} className={`h-1.5 cursor-pointer rounded-full border-none p-0 ${i === imgIdx ? 'w-5 bg-primary' : 'w-1.5 bg-white/80'}`} aria-label={`Photo ${i + 1}`} />)}
                   </div>
+                  <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-0.5 text-label-sm text-white">{imgIdx + 1} / {images.length}</span>
                 </>
               )}
             </div>
             {images.length > 1 && (
-              <div className="listing-thumbnails" style={{ display: 'flex', gap: 8, padding: '10px 14px', background: 'var(--bg-card)' }}>
+              <div className="mt-3 hidden gap-2 overflow-x-auto lg:flex">
                 {images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setImgIdx(i)}
-                    style={{ width: 64, height: 48, borderRadius: 6, overflow: 'hidden', border: i === imgIdx ? '2px solid var(--primary)' : '2px solid transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }}
-                  >
-                    <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button key={i} onClick={() => setImgIdx(i)} className={`h-20 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 ${i === imgIdx ? 'border-primary' : 'border-transparent'}`}>
+                    <img src={img} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Details card */}
-          <div className="card listing-detail-card" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
-            <div className="listing-detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: '1rem' }}>
-              <div style={{ minWidth: 0 }}>
-                <h1 className="listing-detail-title" style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: '0 0 8px', color: 'var(--fg)' }}>{listing.title}</h1>
-                <div className="price-tag" style={{ fontSize: '1.75rem' }}><Price amount={listing.price} currency={listing.currency} /></div>
-                {listing.negotiable && <span className="badge badge-green" style={{ marginTop: 6 }}>Prix négociable</span>}
-              </div>
-              <div className="listing-detail-actions" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={() => onToggleFavorite(listing.id)} style={{ background: isFav ? 'rgba(254,0,0,0.08)' : 'var(--border-subtle)', border: isFav ? '1.5px solid rgba(254,0,0,0.3)' : '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
-                </button>
-                <div style={{ position: 'relative' }}>
-                  <button onClick={() => void shareListing()} title="Partager l'annonce" style={{ background: 'var(--border-subtle)', border: '1.5px solid var(--border)', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <Share2 size={18} color="var(--fg-muted)" />
-                  </button>
-                  {linkCopied && (
-                    <span style={{ position: 'absolute', top: '110%', right: 0, background: 'var(--fg)', color: 'var(--bg-card)', fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: 8, whiteSpace: 'nowrap', zIndex: 5 }}>
-                      Lien copié !
-                    </span>
-                  )}
-                </div>
-              </div>
+          {/* Mobile summary (desktop has it in the right column) */}
+          <div className="px-4 pt-4 lg:hidden">
+            <div className="flex items-center justify-between gap-2 text-label-sm uppercase text-on-surface-variant">
+              <span className="truncate">{[listing.brand, listing.subcategory?.name ?? listing.category.name].filter(Boolean).join(' • ')}</span>
+              <span className="flex shrink-0 items-center gap-1 normal-case"><Eye size={14} /> {listing.viewsCount} vues</span>
             </div>
-
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--fg-muted)', fontSize: '0.875rem' }}>
-                <MapPin size={15} color="var(--primary)" /> {listingLocation(listing)}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--fg-muted)', fontSize: '0.875rem' }}>
-                <Calendar size={15} /> Publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--fg-muted)', fontSize: '0.875rem' }}>
-                <Eye size={15} /> {listing.viewsCount} vues
-              </div>
+            <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface">{listing.title}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <span className="text-headline-lg font-extrabold text-primary"><Price amount={listing.price} currency={listing.currency} /></span>
+              {saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
+              {saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">-{saving}% épargne</span>}
             </div>
-
-            <div className="listing-detail-specs" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', marginBottom: '1.25rem' }}>
-              <SpecItem icon={<Tag size={15} />} label="Catégorie" value={listing.category.name} />
-              {listing.subcategory && <SpecItem icon={<Tag size={15} />} label="Sous-catégorie" value={listing.subcategory.name} />}
-              {listing.condition && listing.condition !== 'N/A' && <SpecItem icon={<CheckCircle size={15} />} label="État" value={listing.condition} />}
-              <SpecItem icon={<Truck size={15} />} label="Livraison" value={listing.deliveryAvailable ? 'Disponible' : 'Non disponible'} />
-            </div>
-
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Description</h3>
-            <div
-              style={{ color: 'var(--fg)', lineHeight: 1.7, fontSize: '0.9rem' }}
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }}
-            />
-
-            {listing.tags.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--border)', marginTop: '1.25rem', paddingTop: '1.25rem' }}>
-                <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1rem', margin: '0 0 0.75rem' }}>Mots-clés</h3>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {listing.tags.map(t => <span key={t} className="badge badge-gray">{t}</span>)}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Map */}
-          <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 1rem' }}>Localisation</h3>
-            <div className="map-placeholder" style={{ height: 220 }}>
-              <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', color: 'var(--primary)' }}>
-                  <MapPin size={22} />
-                </div>
-                <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, color: 'var(--fg)', fontSize: '0.9rem' }}>{listingLocation(listing)}</div>
-                <div style={{ color: 'var(--fg-muted)', fontSize: '0.8rem', marginTop: 4 }}>Carte interactive — Côte d'Ivoire</div>
-                <button
-                  className="btn-outline"
-                  style={{ padding: '6px 14px', fontSize: '0.8rem', margin: '12px auto 0' }}
-                  onClick={() =>
-                    window.open(
-                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${listingLocation(listing)}, Côte d'Ivoire`)}`,
-                      '_blank',
-                      'noopener,noreferrer',
-                    )
-                  }
-                >
-                  <ExternalLink size={13} /> Ouvrir dans Maps
-                </button>
+            <div className="mt-4 flex items-start gap-3 rounded-xl bg-tertiary-soft p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><Percent size={18} /></span>
+              <div className="text-body-sm">
+                <div className="font-bold text-tertiary">Engagement 0 F de commission</div>
+                <div className="text-on-surface-variant">Aucun frais caché. Paiement direct et remise en main propre entre particuliers.</div>
               </div>
             </div>
           </div>
 
-          {/* Similar listings */}
-          {similar.length > 0 && (
-            <div>
-              <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem', margin: '0 0 1rem' }}>Annonces similaires</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
-                {similar.map(l => (
-                  <div key={l.id} className="card card-hover" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
-                    <div style={{ height: 130, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                      <img src={l.coverImageUrl ?? l.media[0]?.url ?? ''} alt={l.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    </div>
-                    <div style={{ padding: '10px 12px' }}>
-                      <div className="price-tag" style={{ fontSize: '0.95rem' }}><Price amount={l.price} currency={l.currency} /></div>
-                      <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--fg)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 600, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{l.title}</p>
-                    </div>
+          {/* Specs grid (mobile mockup "Spécifications vérifiées") */}
+          {specs.length > 0 && (
+            <div className="px-4 pt-6 lg:hidden">
+              <h2 className="m-0 mb-3 text-headline-sm text-on-surface">Spécifications</h2>
+              <div className="grid grid-cols-2 gap-2">
+                {specs.map(s => (
+                  <div key={s.label} className="rounded-xl bg-surface-container-low p-3">
+                    <div className="text-label-sm uppercase text-tertiary">{s.label}</div>
+                    <div className="text-label-lg text-on-surface">{s.value}</div>
                   </div>
                 ))}
               </div>
             </div>
           )}
+
+          {/* Tabs (desktop) / stacked sections (mobile) */}
+          <div className="mt-6 px-4 lg:rounded-2xl lg:border lg:border-outline-variant lg:bg-surface-lowest lg:p-0">
+            <div className="hidden border-0 border-b border-solid border-outline-variant lg:flex">
+              {TABS.map(t => (
+                <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 cursor-pointer border-0 border-b-2 border-solid bg-transparent px-4 py-3.5 text-label-lg ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="lg:p-6">
+              <section className={tab === 'description' ? '' : 'lg:hidden'}>
+                <h2 className="m-0 mb-3 text-headline-sm text-on-surface lg:hidden">Description de l'article</h2>
+                <div className="rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }} />
+                <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</p>
+              </section>
+              <section className={tab === 'specs' ? 'hidden lg:block' : 'hidden'}>
+                {specs.length === 0 ? <p className="m-0 text-body-md text-on-surface-variant">Le vendeur n'a pas renseigné de caractéristiques.</p> : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {specs.map(s => (
+                      <div key={s.label} className="rounded-xl bg-surface-container-low p-3">
+                        <div className="text-label-sm uppercase text-tertiary">{s.label}</div>
+                        <div className="text-label-lg text-on-surface">{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+              <section className={tab === 'safety' ? 'mt-6 lg:mt-0' : 'mt-6 lg:hidden'}>
+                <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface">
+                  Lieu de rencontre suggéré
+                  <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><ShieldCheck size={12} /> Espace public</span>
+                </h2>
+                <div className="map-placeholder mb-4 h-40 items-end! justify-start! p-3">
+                  <div className="relative z-[1] flex w-full items-center gap-3 rounded-xl bg-surface-lowest p-3 shadow-float">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-white"><Store size={19} /></span>
+                    <div className="min-w-0">
+                      <div className="truncate text-label-lg text-on-surface">{listing.meetupSpot || location}</div>
+                      <div className="truncate text-body-sm text-on-surface-variant">{listing.meetupSpot ? location : 'Convenez ensemble d’un lieu public et fréquenté'}</div>
+                    </div>
+                  </div>
+                </div>
+                <ul className="m-0 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
+                  {['Rencontrez-vous dans un lieu public, éclairé et fréquenté.', 'Inspectez et testez l’article avant tout paiement.', 'Ne payez jamais à l’avance et ne partagez pas de code reçu par SMS.'].map(t => (
+                    <li key={t} className="flex items-start gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-tertiary" /> {t}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </div>
         </div>
 
-        {/* Right sidebar: desktop only */}
-        <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="card" style={{ padding: '1.5rem', position: 'sticky', top: 80 }}>
-            <h3 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.4rem', fontSize: '1rem' }}>
-              {isOwner ? 'Votre annonce' : isExpired ? 'Annonce expirée' : 'Discutez avec le vendeur'}
-            </h3>
+        {/* RIGHT */}
+        <aside className="flex flex-col gap-4 px-4 lg:col-span-5 lg:px-0">
+          <div className="hidden rounded-2xl border border-outline-variant bg-surface-lowest p-5 lg:block">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="truncate rounded bg-surface-container-high px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">
+                {[listing.brand, listing.modelName].filter(Boolean).join(' • ') || listing.category.name}
+              </span>
+              {listing.condition && listing.condition !== 'N/A' && (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><CheckCircle2 size={12} /> {listing.condition}</span>
+              )}
+            </div>
+            <h1 className="m-0 text-headline-md text-on-surface">{listing.title}</h1>
 
-            {isOwner ? (
-              isExpired ? (
-                <OwnerRenewPanel listingId={listing.id} />
-              ) : (
-                <OwnerBoostPanel
-                  listingId={listing.id}
-                  isBoosted={isBoosted}
-                  boostExpiresAt={listing.boostExpiresAt}
-                  boostMenuOpen={boostMenuOpen}
-                  setBoostMenuOpen={setBoostMenuOpen}
-                  justBoosted={justBoosted}
-                  onBoosted={() => setJustBoosted(true)}
-                />
-              )
-            ) : isExpired ? (
-              <ExpiredListingNotice />
-            ) : (
-              <>
-                {chatOpen ? (
-                  <InlineConversation
-                    sellerId={listing.seller.id}
-                    listingId={listing.id}
-                    sellerName={listing.seller.fullName}
-                    onAuthenticated={onAuthenticated}
-                    onClose={() => setChatOpen(false)}
-                  />
-                ) : (
-                  <>
-                    <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>Posez vos questions et concluez directement dans la messagerie Dilchap.</p>
-
-                    <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
-                      <MessageCircle size={18} /> Démarrer la discussion
-                    </button>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-                      <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-                      <span>Vos coordonnées restent privées. Gardez vos échanges sur Dilchap pour conserver le contexte de la transaction.</span>
-                    </div>
-                  </>
-                )}
-
-                {listing.negotiable && (
-                  offerSent ? (
-                    <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
-                  ) : offerOpen ? (
-                    <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                      <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
-                      <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
-                      {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
-                        <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <Tag size={15} /> Faire une offre
-                    </button>
-                  )
-                )}
-              </>
-            )}
-
-            <div style={{ borderTop: '1px solid var(--border)', marginTop: '1.25rem', paddingTop: '1.25rem' }}>
-              <button onClick={() => onSelectSeller(listing.seller.id)} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
-                {listing.seller.avatarUrl ? (
-                  <img src={listing.seller.avatarUrl} alt={listing.seller.fullName} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
-                ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--primary)' }}>
-                    {listing.seller.fullName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '0.9rem', color: 'var(--fg)' }}>{listing.seller.fullName}</div>
-                  {listing.seller.city && <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{listing.seller.city}</div>}
-                </div>
-              </button>
-
-              <button onClick={() => onSelectSeller(listing.seller.id)} style={{ marginTop: '0.75rem', width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.85rem' }}>
-                Voir le profil complet →
-              </button>
+            <div className="mt-4 rounded-xl bg-surface-container-low p-4">
+              <div className="flex flex-wrap items-baseline gap-3">
+                <span className="text-[40px] font-extrabold leading-none tracking-tight text-primary"><Price amount={listing.price} currency={listing.currency} /></span>
+                {saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
+              </div>
+              {saving > 0 && <span className="mt-2 inline-block rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">-{saving}% par rapport au prix neuf</span>}
+              {listing.negotiable && <span className="ml-2 mt-2 inline-block rounded-md bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">Prix négociable</span>}
             </div>
 
-            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-              {reportDone ? (
-                <p style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>Merci, votre signalement a été transmis.</p>
-              ) : reportOpen ? (
-                <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem', textAlign: 'left' }}>
-                  <label style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 700, fontSize: '0.8rem', display: 'block', marginBottom: 6 }}>Motif</label>
-                  <select className="input" value={reportReason} onChange={e => setReportReason(e.target.value)} style={{ marginBottom: 8 }}>
-                    {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                  <textarea className="input" placeholder="Détails (optionnel)" value={reportMessage} onChange={e => setReportMessage(e.target.value)} rows={2} style={{ marginBottom: 8, resize: 'vertical' }} />
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }} disabled={reporting} onClick={submitReport}>
-                      {reporting ? 'Envoi...' : 'Envoyer'}
-                    </button>
-                    <button onClick={() => setReportOpen(false)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
-                  </div>
+            <dl className="m-0 mt-4 flex flex-col gap-2 text-body-sm">
+              <div className="flex justify-between"><dt className="flex items-center gap-1.5 text-on-surface-variant"><ShieldCheck size={14} /> Commission Dilchap</dt><dd className="m-0 font-bold text-tertiary">0 F (0%)</dd></div>
+              <div className="flex justify-between border-0 border-t border-solid border-outline-variant pt-2"><dt className="font-bold text-on-surface">Montant à régler au vendeur</dt><dd className="m-0 text-label-lg text-on-surface"><Price amount={listing.price} currency={listing.currency} /></dd></div>
+            </dl>
+
+            <div className="mt-4">
+              <div className="mb-2 text-label-sm uppercase text-on-surface-variant">Modes de remise au choix</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border-[1.5px] border-solid border-primary bg-primary-fixed/40 p-3">
+                  <div className="flex items-center justify-between text-label-md text-on-surface"><span className="flex items-center gap-1.5"><Handshake size={15} className="text-primary" /> Main propre</span><span className="text-label-sm text-tertiary">Gratuit</span></div>
+                  <div className="mt-1 text-body-sm text-on-surface-variant">{listing.meetupSpot || location}</div>
                 </div>
-              ) : (
-                <button onClick={openReport} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 4, margin: '0 auto' }}>
-                  <Flag size={13} /> Signaler cette annonce
+                <div className={`rounded-xl border-[1.5px] border-solid border-outline-variant p-3 ${listing.deliveryAvailable ? '' : 'opacity-50'}`}>
+                  <div className="flex items-center gap-1.5 text-label-md text-on-surface"><Truck size={15} /> Livraison</div>
+                  <div className="mt-1 text-body-sm text-on-surface-variant">{listing.deliveryAvailable ? 'Possible, à convenir' : 'Non proposée'}</div>
+                </div>
+              </div>
+            </div>
+
+            {!!listing.paymentMethods?.length && (
+              <div className="mt-4">
+                <div className="mb-2 text-label-sm uppercase text-on-surface-variant">Règlement accepté à la rencontre</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {listing.paymentMethods.map(p => <span key={p} className="flex items-center gap-1 rounded-lg bg-surface-container px-2 py-1 text-label-md text-on-surface"><Wallet size={13} /> {PAYMENT_LABELS[p] ?? p}</span>)}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-col gap-2">
+              {ownerPanel ?? (
+                chatOpen ? (
+                  <InlineConversation sellerId={listing.seller.id} listingId={listing.id} sellerName={listing.seller.fullName} onAuthenticated={onAuthenticated} onClose={() => setChatOpen(false)} />
+                ) : (
+                  <>
+                    <button onClick={() => setChatOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark">
+                      <MessageSquare size={18} /> Discuter en direct
+                    </button>
+                    {listing.negotiable && (offerOpen ? offerForm : (
+                      <button onClick={requireAuth(() => setOfferOpen(true))} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
+                        <Tag size={17} /> Faire une offre
+                      </button>
+                    ))}
+                  </>
+                )
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-center gap-3 text-label-sm text-tertiary">
+              <span className="flex items-center gap-1"><Handshake size={13} /> Paiement à la remise</span>•<span className="flex items-center gap-1"><ShieldCheck size={13} /> Échanges protégés</span>
+            </div>
+          </div>
+
+          {/* Seller card */}
+          <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 lg:p-5">
+            <div className="flex items-center gap-3">
+              <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0">
+                <Avatar url={listing.seller.avatarUrl} name={listing.seller.fullName} size={52} />
+                {seller?.isVerified && <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={11} /></span>}
+              </button>
+              <div className="min-w-0 flex-1">
+                <button onClick={() => onSelectSeller(listing.seller.id)} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-left text-headline-sm text-on-surface">
+                  <span className="truncate">{listing.seller.fullName}</span>
+                  {seller?.isVerified && <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><BadgeCheck size={12} /> Certifié</span>}
+                </button>
+                <div className="flex items-center gap-1 text-body-sm text-on-surface-variant">
+                  {seller && seller.reviewsCount > 0 && <><Star size={13} fill="#F59E0B" color="#F59E0B" /> <b className="text-on-surface">{seller.averageRating.toFixed(1)}</b> ({seller.reviewsCount} avis) •</>}
+                  {seller && <span>{seller.salesCount} vente{seller.salesCount > 1 ? 's' : ''}</span>}
+                </div>
+              </div>
+              {!isOwner && seller && (
+                <button onClick={toggleFollow} className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border-none px-3 py-1.5 text-label-md ${seller.isFollowedByMe ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface'}`}>
+                  {seller.isFollowedByMe ? <><UserCheck size={14} /> Suivi</> : <><UserPlus size={14} /> Suivre</>}
                 </button>
               )}
             </div>
-          </div>
-
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <h4 style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--fg)' }}>🔒 Conseils de sécurité</h4>
-            <ul style={{ margin: 0, padding: '0 0 0 16px', color: 'var(--fg-muted)', fontSize: '0.8rem', lineHeight: 1.8 }}>
-              <li>Rencontrez le vendeur dans un lieu public</li>
-              <li>Vérifiez le produit avant de payer</li>
-              <li>N'envoyez jamais d'argent à l'avance</li>
-              <li>Méfiez-vous des prix trop bas</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile bottom bar */}
-      <div className="mobile-contact-bar" style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9998,
-        background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
-        padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10,
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1rem', color: 'var(--primary)' }}><Price amount={listing.price} currency={listing.currency} /></div>
-          {listing.negotiable && <div style={{ fontSize: '0.7rem', color: 'var(--fg-subtle)' }}>Prix négociable</div>}
-        </div>
-        {!isOwner && (
-          <button onClick={() => onToggleFavorite(listing.id)} style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: 10, width: 42, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <Heart size={18} fill={isFav ? '#FE0000' : 'none'} color={isFav ? '#FE0000' : 'var(--fg-muted)'} />
-          </button>
-        )}
-        <button onClick={() => setSellerSheetOpen(true)} className="btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, fontSize: '0.85rem', fontFamily: "'Outfit', sans-serif", fontWeight: 800 }}>
-          {isOwner
-            ? isExpired ? <><Archive size={16} /> Remettre en ligne</> : <><ArrowUp size={16} /> Booster</>
-            : isExpired ? <><Archive size={16} /> Archivée</> : <><MessageCircle size={16} /> Contacter</>}
-        </button>
-      </div>
-
-      {/* Mobile seller sheet */}
-      {sellerSheetOpen && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          animation: 'fadeIn 0.15s ease-out',
-        }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => setSellerSheetOpen(false)} />
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
-            maxHeight: '85vh', overflow: 'auto',
-            animation: 'slideUp 0.25s ease-out',
-            fontFamily: "'Outfit', 'Nunito', sans-serif",
-          }}>
-            {/* Handle */}
-            <div style={{ padding: '12px 0 4px', display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)' }} />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 rounded-lg bg-surface-container-low p-2.5">
+                <Zap size={16} className="shrink-0 text-tertiary" />
+                <div className="min-w-0 text-body-sm"><div className="font-semibold text-on-surface">Réactif</div><div className="truncate text-on-surface-variant">{responseTime ? `Répond en ${responseTime}` : 'Nouveau vendeur'}</div></div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-surface-container-low p-2.5">
+                <MapPin size={16} className="shrink-0 text-primary" />
+                <div className="min-w-0 text-body-sm"><div className="font-semibold text-on-surface">Rencontre</div><div className="truncate text-on-surface-variant">{location}</div></div>
+              </div>
             </div>
+            <button onClick={() => onSelectSeller(listing.seller.id)} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-2.5 text-label-md text-on-surface hover:bg-surface-container">
+              Voir {seller && seller.listingsCount > 1 ? `ses ${seller.listingsCount - 1} autres articles` : 'le profil'} <ArrowRight size={15} />
+            </button>
+          </div>
 
-            <div style={{ padding: '0 1.25rem 1.5rem' }}>
-              {/* Seller header */}
-              <button onClick={() => { setSellerSheetOpen(false); onSelectSeller(listing.seller.id) }} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', padding: '0.75rem 0', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1rem' }}>
-                {listing.seller.avatarUrl ? (
-                  <img src={listing.seller.avatarUrl} alt={listing.seller.fullName} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
-                ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--primary)' }}>
-                    {listing.seller.fullName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>{listing.seller.fullName}</div>
-                  {listing.seller.city && <div style={{ fontSize: '0.78rem', color: 'var(--fg-muted)', marginTop: 2 }}>{listing.seller.city}</div>}
+          <div className="text-center">
+            {reportDone ? (
+              <p className="m-0 text-body-sm text-on-surface-variant">Merci, votre signalement a été transmis.</p>
+            ) : reportOpen ? (
+              <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3 text-left">
+                <select className="input mb-2" value={reportReason} onChange={e => setReportReason(e.target.value)}>{REPORT_REASONS.map(r => <option key={r}>{r}</option>)}</select>
+                <textarea className="input mb-2" rows={2} placeholder="Détails (optionnel)" value={reportMessage} onChange={e => setReportMessage(e.target.value)} />
+                <div className="flex gap-2">
+                  <button disabled={reporting} onClick={() => void createReport({ variables: { targetType: 'LISTING', targetListingId: listing.id, reason: reportReason, message: reportMessage || undefined } }).then(() => setReportDone(true))} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">{reporting ? 'Envoi…' : 'Envoyer'}</button>
+                  <button onClick={() => setReportOpen(false)} className="cursor-pointer rounded-lg border-none bg-surface-container px-3"><X size={15} /></button>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-
-              {isOwner ? (
-                isExpired ? (
-                  <OwnerRenewPanel listingId={listing.id} />
-                ) : (
-                  <OwnerBoostPanel
-                    listingId={listing.id}
-                    isBoosted={isBoosted}
-                    boostExpiresAt={listing.boostExpiresAt}
-                    boostMenuOpen={boostMenuOpen}
-                    setBoostMenuOpen={setBoostMenuOpen}
-                    justBoosted={justBoosted}
-                    onBoosted={() => setJustBoosted(true)}
-                  />
-                )
-              ) : isExpired ? (
-                <ExpiredListingNotice />
-              ) : (
-                <>
-                  {chatOpen ? (
-                    <InlineConversation
-                      sellerId={listing.seller.id}
-                      listingId={listing.id}
-                      sellerName={listing.seller.fullName}
-                      onAuthenticated={onAuthenticated}
-                      onClose={() => setChatOpen(false)}
-                    />
-                  ) : (
-                    <>
-                      <button className="btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: '0.75rem' }} onClick={() => setChatOpen(true)}>
-                        <MessageCircle size={18} /> Démarrer la discussion
-                      </button>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '0.75rem', marginBottom: '0.75rem', borderRadius: 9, background: 'rgba(16,185,129,0.08)', color: 'var(--fg-muted)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-                        <ShieldCheck size={17} color="#10B981" style={{ flexShrink: 0 }} />
-                        <span>Échangez sur Dilchap : vos coordonnées restent privées et la discussion reste liée à l’annonce.</span>
-                      </div>
-                    </>
-                  )}
-
-                  {listing.negotiable && (
-                    offerSent ? (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--fg-muted)', textAlign: 'center', margin: '0 0 0.75rem' }}>Offre envoyée ! Le vendeur vous répondra bientôt.</p>
-                    ) : offerOpen ? (
-                      <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                        <label style={{ fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Votre offre ({listing.currency})</label>
-                        <input className="input" placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} style={{ marginBottom: 8 }} />
-                        {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.78rem', margin: '0 0 8px' }}>{offerError}</p>}
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn-primary" disabled={sendingOffer} onClick={() => void submitOffer()} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
-                          <button onClick={() => { setOfferOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.6rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button onClick={() => setOfferOpen(true)} style={{ width: '100%', background: 'none', border: '1.5px dashed var(--border)', borderRadius: 8, padding: '0.7rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                        <Tag size={15} /> Faire une offre
-                      </button>
-                    )
-                  )}
-                </>
-              )}
-
-              <button onClick={() => setSellerSheetOpen(false)} style={{ width: '100%', background: 'none', border: 'none', borderRadius: 8, padding: '0.85rem', cursor: 'pointer', color: 'var(--fg-muted)', fontWeight: 600, fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                Fermer
-              </button>
-            </div>
+              </div>
+            ) : (
+              <button onClick={requireAuth(() => setReportOpen(true))} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent text-body-sm text-on-surface-variant hover:text-primary"><Flag size={13} /> Signaler cette annonce</button>
+            )}
           </div>
-        </div>
+        </aside>
+      </div>
+
+      {/* Similar */}
+      {similar.length > 0 && (
+        <section className="mx-auto mt-10 max-w-[1320px] px-4 lg:px-12">
+          <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Articles similaires qui pourraient vous intéresser</h2>
+          <p className="m-0 mb-4 mt-1 text-body-sm text-on-surface-variant">{listing.subcategory?.name ?? listing.category.name} dans une gamme de prix proche</p>
+          <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4 md:gap-4">
+            {similar.map(l => (
+              <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
+            ))}
+          </div>
+        </section>
       )}
+
+      {/* Mobile sticky action bar */}
+      <div className="fixed inset-x-0 bottom-0 z-[300] flex gap-2 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 p-3 backdrop-blur-md lg:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+        {ownerPanel ?? (
+          <>
+            {listing.negotiable && (
+              <button onClick={requireAuth(() => setOfferOpen(true))} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
+                <Tag size={17} /> Faire une offre
+              </button>
+            )}
+            <button onClick={() => setChatOpen(true)} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
+              <MessageSquare size={18} /> Discuter en direct
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Mobile sheets (desktop shows the same content inline) */}
+      <div>
+        <BottomSheet open={isMobile && chatOpen && canContact} onClose={() => setChatOpen(false)} title={`Discuter avec ${listing.seller.fullName}`}>
+          <InlineConversation sellerId={listing.seller.id} listingId={listing.id} sellerName={listing.seller.fullName} onAuthenticated={onAuthenticated} onClose={() => setChatOpen(false)} />
+        </BottomSheet>
+        <BottomSheet open={isMobile && offerOpen && canContact} onClose={() => setOfferOpen(false)} title="Faire une offre">
+          {offerForm}
+        </BottomSheet>
+      </div>
     </div>
   )
 }

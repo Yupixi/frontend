@@ -7,7 +7,19 @@ import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } f
 import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
-import Home from './pages/Home'
+import Home, { type SearchPreset } from './pages/Home'
+import Orders from './pages/seller/Orders'
+import Wallet from './pages/seller/Wallet'
+import SellerReviews from './pages/seller/Reviews'
+import SellerStats from './pages/seller/Stats'
+import Disputes from './pages/seller/Disputes'
+import Handover from './pages/seller/Handover'
+import Settings from './pages/seller/Settings'
+import Purchases from './pages/buyer/Purchases'
+import HandoverCode from './pages/buyer/HandoverCode'
+import Receipt from './pages/buyer/Receipt'
+import OpenDispute from './pages/buyer/OpenDispute'
+import DisputeFollow from './pages/buyer/DisputeFollow'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
 import SellerProfile from './pages/SellerProfile'
@@ -16,11 +28,10 @@ import Auth from './pages/Auth'
 import FlashOffers from './pages/FlashOffers'
 import {
   BuyerDashboard, BuyerFavorites, BuyerMessages,
-  BuyerNotifications, BuyerHistory, BuyerSettings,
+  BuyerNotifications, BuyerHistory,
 } from './pages/buyer/BuyerPages'
 import {
-  PostListing, SellerListings,
-  SellerStats, SellerPremium,
+  PostListing, SellerListings, SellerPremium,
 } from './pages/seller/SellerPages'
 
 // Admin BO control lives in the dedicated Backoffice app (real, GraphQL-wired)
@@ -29,9 +40,11 @@ import {
 // it (see Phase 1 audit). Removed rather than maintained as a second,
 // disconnected "admin" UI.
 type Page =
-  | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
+  | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover'
+  | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -44,6 +57,8 @@ type NavState = {
   searchTerm: string
   searchCity: string
   categoryFilter: string
+  selectedOrderId?: string
+  selectedDisputeId?: string
 }
 const NAV_STORAGE_KEY = 'yupixi_nav_state'
 
@@ -68,23 +83,29 @@ function shortcutPage(): Page | null {
 // "Partager l'annonce" needs a link that actually opens the listing for
 // whoever receives it — the app otherwise never puts state in the URL, so
 // a shared `window.location.href` would just be the homepage.
+function sharedSellerId(): string | null {
+  return new URLSearchParams(window.location.search).get('seller')
+}
+
 function sharedListingId(): string | null {
   return new URLSearchParams(window.location.search).get('listing')
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(sharedListingId() ? 'listing-detail' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [page, setPage] = useState<Page>(sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? savedNav.selectedListingId ?? 'l1')
   const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
-  const [selectedSellerId, setSelectedSellerId] = useState(savedNav.selectedSellerId ?? 's1')
+  const [selectedSellerId, setSelectedSellerId] = useState(sharedSellerId() ?? savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
   // right conversation, not part of the session-restored nav state.
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
   const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
+  const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
+  const [selectedDisputeId, setSelectedDisputeId] = useState(savedNav.selectedDisputeId ?? '')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
@@ -219,6 +240,14 @@ export default function App() {
     setShowInstallGuide(false)
   }
 
+  const [searchPreset, setSearchPreset] = useState<SearchPreset | null>(null)
+  const searchFromHome = (term: string, preset?: SearchPreset) => {
+    setCategoryFilter('')
+    setSearchTerm(term)
+    setSearchPreset(preset ?? null)
+    navigate('search')
+  }
+
   const navigateToCategory = (cat: string) => {
     setCategoryFilter(cat)
     setSearchTerm('')
@@ -252,10 +281,10 @@ export default function App() {
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId,
     }
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId])
 
   const navigate = (p: Page) => {
     setPage(p)
@@ -275,6 +304,26 @@ export default function App() {
   const selectSeller = (id: string) => {
     setSelectedSellerId(id)
     navigate('seller-profile')
+  }
+
+  const openHandover = (orderId: string) => {
+    setSelectedOrderId(orderId)
+    navigate('seller-handover')
+  }
+
+  const openDispute = (disputeId: string) => {
+    setSelectedDisputeId(disputeId)
+    navigate('seller-disputes')
+  }
+
+  const openPurchase = (orderId: string, target: Page) => {
+    setSelectedOrderId(orderId)
+    navigate(target)
+  }
+
+  const openBuyerDispute = (disputeId: string) => {
+    setSelectedDisputeId(disputeId)
+    navigate('buyer-disputes')
   }
 
   const contactSellerAbout = (sellerId: string, listingId?: string) => {
@@ -328,17 +377,17 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchCity} onCityChange={setSearchCity} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? location?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} />
       case 'seller-profile':
-        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn} />
+        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
       case 'categories':
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} />
       case 'flash-offers':
-        return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       case 'auth':
         return <Auth onNavigate={navigate} onLogin={handleAuthenticated} />
 
@@ -371,19 +420,40 @@ export default function App() {
         case 'seller-listings':
           return <SellerListings onNavigate={navigate} onSelectListing={selectListing} onEditListing={editListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-stats':
-          return <SellerStats onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+          return <SellerStats onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
+        case 'seller-orders':
+          return <Orders onNavigate={navigate} onSelectListing={selectListing} onOpenConversation={contactSellerAbout} onOpenHandover={openHandover} onOpenDispute={openDispute} currentUser={currentUser} onLogout={logout} />
+        case 'seller-handover':
+          return <Handover orderId={selectedOrderId} onNavigate={navigate} onOpenDispute={openDispute} currentUser={currentUser} onLogout={logout} />
+        case 'seller-disputes':
+          return <Disputes onNavigate={navigate} onSelectListing={selectListing} focusDisputeId={selectedDisputeId} currentUser={currentUser} onLogout={logout} />
+        case 'seller-wallet':
+          return <Wallet onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'seller-reviews':
+          return <SellerReviews onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-premium':
           return <SellerPremium onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-purchases':
+        case 'buyer-receipts':
+          return <Purchases mode={accountPage === 'buyer-receipts' ? 'receipts' : 'purchases'} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-handover':
+          return <HandoverCode orderId={selectedOrderId} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-receipt':
+          return <Receipt orderId={selectedOrderId} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-dispute-new':
+          return <OpenDispute orderId={selectedOrderId} onNavigate={navigate} onSelectOrder={id => setSelectedOrderId(id)} onOpened={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+        case 'buyer-disputes':
+          return <DisputeFollow focusDisputeId={selectedDisputeId} onNavigate={navigate} onSelectDispute={id => setSelectedDisputeId(id)} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
         case 'buyer-favorites':
           return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onLogout={logout} />
         case 'buyer-messages':
-          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} />
+          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} onOpenHandover={(id, as) => as === 'SELLER' ? openHandover(id) : openPurchase(id, 'buyer-handover')} />
         case 'buyer-notifications':
           return <BuyerNotifications onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
         case 'buyer-history':
           return <BuyerHistory onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
         case 'buyer-settings':
-          return <BuyerSettings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
+          return <Settings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
         default:
           return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} onLogout={logout} />
       }
@@ -402,6 +472,7 @@ export default function App() {
         currentPage={page}
         onNavigate={navigate}
         onNavigateCategory={navigateToCategory}
+        activeCategory={page === 'search' ? categoryFilter : ''}
         dark={dark}
         onToggleDark={() => setDark(d => !d)}
         isLoggedIn={isLoggedIn}
@@ -444,13 +515,13 @@ function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onUpdate: 
       background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
       padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12,
       boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      fontFamily: "'Outfit', 'Nunito', sans-serif",
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
       <div style={{ flex: 1, fontWeight: 700, fontSize: '0.85rem' }}>
         Une nouvelle version de Dilchap est disponible.
       </div>
       <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.8rem', fontWeight: 600 }}>Plus tard</button>
-      <button onClick={onUpdate} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+      <button onClick={onUpdate} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
         Mettre à jour
       </button>
     </div>
@@ -467,16 +538,16 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
         <div style={{
           position: 'fixed', inset: 0, zIndex: 10000,
           background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          fontFamily: "'Outfit', 'Nunito', sans-serif",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
         }} onClick={onDismiss}>
           <div style={{
             background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 420,
             padding: '2rem 1.5rem', textAlign: 'center',
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-              <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+              <img src="/icon-192.png" alt="Dilchap" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Dilchap</h3>
+            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Dilchap</h3>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
               {isSafari
                 ? 'Appuyez sur le bouton Partager <span style="font-size:1.2rem">⬆️</span> puis choisissez "Sur l\'écran d\'accueil".'
@@ -484,7 +555,7 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
                   ? 'Appuyez sur le menu ⋮ puis choisissez "Ajouter à l\'écran d\'accueil".'
                   : 'Utilisez le menu du navigateur pour ajouter à l\'écran d\'accueil.'}
             </p>
-            <button onClick={onDismiss} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', width: '100%' }}>
+            <button onClick={onDismiss} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', width: '100%' }}>
               J'ai compris
             </button>
           </div>
@@ -495,17 +566,17 @@ function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; g
         background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
         padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-        fontFamily: "'Outfit', 'Nunito', sans-serif",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
       }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FE0000', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <img src="/icon-dilchap-192.png" alt="Dilchap" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <img src="/icon-192.png" alt="Dilchap" style={{ width: 30, height: 30, objectFit: 'contain' }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Dilchap</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>sur l'écran d'accueil</div>
         </div>
         <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.85rem', fontWeight: 600 }}>Plus tard</button>
-        <button onClick={onInstall} style={{ background: '#FE0000', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+        <button onClick={onInstall} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
           Installer
         </button>
       </div>

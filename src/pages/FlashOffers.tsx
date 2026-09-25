@@ -1,233 +1,289 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { Zap, Clock, Heart, MapPin, Eye, Tag, Flame, ArrowRight } from 'lucide-react'
-import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign, type ActiveCampaignListing } from '../graphql/content'
+import { Heart, MessageSquare, Tag, Timer, Handshake, Percent, ShieldCheck, ArrowRight, ChevronLeft, ChevronRight, CheckCircle2, Eye } from '../components/icons'
+import Icon, { CategoryIcon } from '../components/Icon'
 import Price from '../components/Price'
+import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign, type ActiveCampaignListing } from '../graphql/content'
+import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 
 type FlashOffersProps = {
   onNavigate: (page: any) => void
   onSelectListing: (id: string) => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
+  onContactSeller?: (sellerId: string, listingId?: string) => void
+  isLoggedIn?: boolean
 }
 
-function useCountdown(endsAt: string | undefined) {
+function useCountdown(endsAt?: string) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!endsAt) return
-    const timer = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(timer)
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
   }, [endsAt])
-
   if (!endsAt) return null
-  const diffMs = Math.max(0, new Date(endsAt).getTime() - now)
-  const hours = Math.floor(diffMs / 3_600_000)
-  const minutes = Math.floor((diffMs % 3_600_000) / 60_000)
-  const seconds = Math.floor((diffMs % 60_000) / 1000)
-  return { hours, minutes, seconds, ended: diffMs <= 0 }
+  const ms = Math.max(0, new Date(endsAt).getTime() - now)
+  return {
+    days: Math.floor(ms / 86_400_000),
+    hours: Math.floor(ms / 3_600_000) % 24,
+    minutes: Math.floor(ms / 60_000) % 60,
+    seconds: Math.floor(ms / 1000) % 60,
+    ended: ms <= 0,
+  }
 }
 
-function discountedPrice(entry: ActiveCampaignListing): number | null {
+const pad = (n: number) => String(n).padStart(2, '0')
+
+function salePrice(entry: ActiveCampaignListing): number | null {
   const { price } = entry.listing
   if (price == null) return null
   if (entry.salePrice != null) return entry.salePrice
   if (entry.discountPercent != null) return Math.round(price * (1 - entry.discountPercent / 100))
   return null
 }
+function discountOf(entry: ActiveCampaignListing): number {
+  if (entry.discountPercent != null) return entry.discountPercent
+  const sale = salePrice(entry)
+  return sale != null && entry.listing.price ? Math.round((1 - sale / entry.listing.price) * 100) : 0
+}
+const imageOf = (e: ActiveCampaignListing) => e.listing.coverImageUrl ?? e.listing.media[0]?.url ?? ''
 
-export default function FlashOffers({ onNavigate, onSelectListing, favorites, onToggleFavorite }: FlashOffersProps) {
+// "Campagnes & Black Friday" mockup — everything is driven by the live
+// campaign (name, colour, window, discounted listings) authored in the BO.
+export default function FlashOffers({ onNavigate, onSelectListing, favorites, onToggleFavorite, onContactSeller, isLoggedIn }: FlashOffersProps) {
   const { data, loading } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const campaign = data?.activeCampaign
   const countdown = useCountdown(campaign?.endsAt)
   const entries = campaign?.listings ?? []
+  const color = campaign?.themeColor || 'var(--primary)'
+  const [cat, setCat] = useState<string | null>(null)
+  const [railStart, setRailStart] = useState(0)
+
+  const groups = useMemo(() => {
+    const m = new Map<string, { slug: string, name: string, entries: ActiveCampaignListing[] }>()
+    entries.forEach(e => {
+      const g = m.get(e.listing.category.slug) ?? { slug: e.listing.category.slug, name: e.listing.category.name, entries: [] }
+      g.entries.push(e); m.set(g.slug, g)
+    })
+    return [...m.values()].sort((a, b) => b.entries.length - a.entries.length)
+  }, [entries])
+  const bestDiscount = Math.max(0, ...entries.map(discountOf))
+  const flash = entries.filter(e => !cat || e.listing.category.slug === cat).sort((a, b) => discountOf(b) - discountOf(a))
+  const latest = [...entries].sort((a, b) => new Date(b.listing.publishedAt ?? b.listing.createdAt).getTime() - new Date(a.listing.publishedAt ?? a.listing.createdAt).getTime())
+  const iconFor = (slug: string) => categoriesData?.categories.find(c => c.slug === slug)?.icon ?? 'category'
+  const contact = (e: ActiveCampaignListing) => () =>
+    isLoggedIn && onContactSeller ? onContactSeller(e.listing.seller.id, e.listing.id) : onSelectListing(e.listing.id)
+  const endsIn = countdown ? `${countdown.days ? `${countdown.days}j ` : ''}${pad(countdown.hours)}h ${pad(countdown.minutes)}m` : ''
+
+  if (loading) return <p className="p-12 text-center text-on-surface-variant">Chargement…</p>
+
+  if (!campaign) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+        <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-fixed text-primary"><Icon name="local_fire_department" size={32} /></span>
+        <h1 className="m-0 text-headline-lg text-on-surface">Pas de campagne en cours</h1>
+        <p className="m-0 mt-2 text-body-md text-on-surface-variant">Les prochaines ventes flash et braderies arrivent bientôt. En attendant, découvrez les dernières pépites.</p>
+        <button onClick={() => onNavigate('search')} className="mt-6 cursor-pointer rounded-lg border-none bg-primary px-6 py-3 text-label-lg text-white">Explorer le catalogue</button>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.5rem 1rem' }}>
-      {/* Hero Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)',
-        borderRadius: 'var(--radius)',
-        padding: '2.5rem 2rem',
-        marginBottom: '2rem',
-        position: 'relative',
-        overflow: 'hidden',
-        border: '1px solid rgba(255,221,33,0.15)',
-      }}>
-        <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(254,0,0,0.08)', filter: 'blur(40px)' }} />
-        <div style={{ position: 'absolute', bottom: -80, left: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,221,33,0.06)', filter: 'blur(40px)' }} />
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <div style={{ background: campaign?.themeColor || '#FE0000', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={24} color="#FFDD21" fill="#FFDD21" />
-              </div>
-              <div>
-                <h1 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1.8rem', color: '#FFDD21', margin: 0, letterSpacing: '0.02em' }}>
-                  {campaign?.name || 'Offres Flash'}
-                </h1>
-                <p style={{ color: '#94A3B8', fontSize: '0.9rem', margin: '2px 0 0' }}>
-                  {campaign?.description || 'Offres limitées · Prix exceptionnels'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Countdown Timer */}
+    <div className="pb-4">
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#1c1b1b] via-[#2b2626] to-[#1c1b1b] px-4 py-12 text-center text-white md:py-16">
+        <div className="pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: color }} />
+        <div className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+        <div className="relative mx-auto max-w-3xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label-sm uppercase" style={{ background: color }}><Icon name="bolt" size={14} /> Événement exclusif marketplace</span>
+          <h1 className="m-0 mt-4 text-[34px] font-extrabold uppercase leading-tight tracking-tight md:text-display">{campaign.name}</h1>
+          <p className="m-0 mx-auto mt-3 max-w-xl text-body-lg text-white/85">
+            {bestDiscount > 0 && <>Jusqu'à <b className="text-emerald-300 underline">-{bestDiscount}%</b> sur la seconde main. </>}
+            {campaign.description || 'Des articles uniques à prix cassés, prêts pour une remise en main propre immédiate.'}
+          </p>
           {countdown && !countdown.ended && (
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <Clock size={18} color="#FFDD21" />
-              {['heures', 'minutes', 'secondes'].map((label, i) => {
-                const val = [countdown.hours, countdown.minutes, countdown.seconds][i]
-                return (
-                  <div key={label} style={{ textAlign: 'center' }}>
-                    <div style={{
-                      background: 'rgba(255,255,255,0.08)',
-                      borderRadius: 8,
-                      padding: '6px 10px',
-                      minWidth: 40,
-                      fontFamily: 'Outfit, sans-serif',
-                      fontWeight: 900,
-                      fontSize: '1.2rem',
-                      color: '#FFDD21',
-                    }}>
-                      {String(val).padStart(2, '0')}
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: 4, fontWeight: 700 }}>{label}</div>
+            <div className="mt-6 flex items-center justify-center gap-2">
+              {[['Jours', countdown.days], ['Heures', countdown.hours], ['Minutes', countdown.minutes], ['Secondes', countdown.seconds]].map(([label, v], i) => (
+                <div key={label as string} className="flex items-center gap-2">
+                  {i > 0 && <span className="text-headline-md text-white/50">:</span>}
+                  <div className="w-16 rounded-xl bg-white/10 py-2 backdrop-blur-sm md:w-20">
+                    <div className={`text-headline-lg font-extrabold tabular-nums md:text-[40px] ${i === 3 ? 'text-primary-container' : ''}`}>{pad(v as number)}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-white/60">{label as string}</div>
                   </div>
-                )
-              })}
+                </div>
+              ))}
+            </div>
+          )}
+          {groups.length > 0 && (
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <button onClick={() => setCat(null)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${cat === null ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>Tout {campaign.name}</button>
+              {groups.map(g => (
+                <button key={g.slug} onClick={() => setCat(g.slug)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${cat === g.slug ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>{g.name}</button>
+              ))}
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* Flash Deals Grid */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Flame size={20} color="#FE0000" fill="#FE0000" />
-          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, fontSize: '1.3rem', margin: 0 }}>
-            {loading
-              ? 'Chargement...'
-              : entries.length === 0
-                ? 'Aucune offre flash pour le moment'
-                : `🔥 ${entries.length} offre${entries.length > 1 ? 's' : ''} disponible${entries.length > 1 ? 's' : ''}`}
-          </h2>
-        </div>
+      <div className="mx-auto max-w-[1320px] px-4 md:px-8 lg:px-12">
+        {/* Reassurance */}
+        <section className="-mt-6 grid gap-3 md:grid-cols-3">
+          {[
+            { icon: <Percent size={19} />, box: 'bg-tertiary-soft text-tertiary', title: '0% frais marketplace', text: 'Zéro commission, même en période de rabais extrêmes.' },
+            { icon: <MessageSquare size={19} />, box: 'bg-primary-fixed text-primary', title: 'Négociation en direct', text: 'Proposez une offre instantanée au vendeur par messagerie.' },
+            { icon: <ShieldCheck size={19} />, box: 'bg-tertiary-soft text-tertiary', title: 'Prix barré réel', text: 'Le prix d’origine de l’annonce est affiché à côté du prix promo.' },
+          ].map(t => (
+            <div key={t.title} className="relative flex items-center gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-4 shadow-sm">
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${t.box}`}>{t.icon}</span>
+              <div><div className="text-label-lg text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
+            </div>
+          ))}
+        </section>
 
-        {!loading && entries.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-            <Zap size={48} style={{ color: 'var(--fg-subtle)', marginBottom: 12 }} />
-            <p style={{ color: 'var(--fg-muted)', fontSize: '1rem' }}>
-              Revenez bientôt pour découvrir nos offres flash exclusives&nbsp;!
-            </p>
-            <button onClick={() => onNavigate('home')} className="btn-primary" style={{ marginTop: 12, padding: '0.7rem 1.5rem' }}>
-              Retour à l'accueil
-            </button>
+        {/* Flash grid */}
+        <section className="mt-10">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1 text-label-sm uppercase text-primary"><Timer size={14} /> Chrono expiration imminente</div>
+              <h2 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Ventes Flash &amp; Pépites Uniques</h2>
+            </div>
+            <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {entries.length} article{entries.length > 1 ? 's' : ''} à prix cassé</span>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-            {entries.map(entry => {
-              const { listing } = entry
-              const salePrice = discountedPrice(entry)
+          <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+            {flash.map(e => {
+              const sale = salePrice(e)
+              const d = discountOf(e)
+              const fav = favorites.includes(e.listing.id)
               return (
-                <div
-                  key={entry.id}
-                  className="card card-hover"
-                  style={{ overflow: 'hidden', cursor: 'pointer', position: 'relative', border: '1.5px solid rgba(255,221,33,0.3)' }}
-                  onClick={() => onSelectListing(listing.id)}
-                >
-                  {/* Flash badge */}
-                  <div style={{
-                    position: 'absolute', top: 10, left: 10, zIndex: 2,
-                    background: '#FE0000', borderRadius: 6,
-                    padding: '3px 10px',
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    boxShadow: '0 2px 8px rgba(254,0,0,0.3)',
-                  }}>
-                    <Zap size={12} color="#FFDD21" fill="#FFDD21" />
-                    <span style={{ color: '#FFDD21', fontWeight: 900, fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif' }}>OFFRE FLASH</span>
-                  </div>
-
-                  {/* Promo ribbon */}
-                  {entry.discountPercent != null && (
-                    <div style={{
-                      position: 'absolute', top: 10, right: 10, zIndex: 2,
-                      background: '#FFDD21', borderRadius: 6,
-                      padding: '3px 8px', fontSize: '0.7rem',
-                      fontWeight: 900, fontFamily: 'Outfit, sans-serif',
-                      color: '#0F172A',
-                      display: 'flex', alignItems: 'center', gap: 3,
-                    }}>
-                      <Tag size={11} />
-                      -{entry.discountPercent}%
-                    </div>
-                  )}
-
-                  <button
-                    onClick={e => { e.stopPropagation(); onToggleFavorite(listing.id) }}
-                    style={{ position: 'absolute', top: 46, right: 10, zIndex: 2, background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  >
-                    <Heart size={13} fill={favorites.includes(listing.id) ? '#FE0000' : 'none'} color={favorites.includes(listing.id) ? '#FE0000' : '#666'} />
-                  </button>
-
-                  <div style={{ height: 180, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                    {listing.coverImageUrl && (
-                      <img src={listing.coverImageUrl} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <div key={e.id} onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
+                  <div className="relative aspect-square bg-surface-container-low">
+                    {imageOf(e) ? <img src={imageOf(e)} alt={e.listing.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
+                    {d > 0 && <span className="absolute left-2 top-2 rounded-md px-2 py-0.5 text-label-sm uppercase text-white" style={{ background: color }}>-{d}% Flash</span>}
+                    <button onClick={ev => { ev.stopPropagation(); onToggleFavorite(e.listing.id) }} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm" aria-label="Favori">
+                      <Heart size={17} fill={fav ? 'var(--primary)' : 'none'} color={fav ? 'var(--primary)' : 'var(--fg)'} />
+                    </button>
+                    {endsIn && (
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/70 px-2 py-1 text-[11px] text-white">
+                        <span className="flex items-center gap-1"><Timer size={12} className="text-primary-container" /> Fin dans {endsIn}</span>
+                        <span>Pièce unique</span>
+                      </div>
                     )}
                   </div>
-
-                  <div style={{ padding: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <div className="price-tag" style={{ fontSize: '1.15rem', color: '#FE0000' }}>
-                        <Price amount={salePrice ?? listing.price} currency={listing.currency} />
-                      </div>
-                      {salePrice != null && listing.price != null && (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)', textDecoration: 'line-through' }}>
-                          <Price amount={listing.price} currency={listing.currency} />
-                        </div>
-                      )}
+                  <div className="flex flex-1 flex-col p-3">
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-on-surface-variant">
+                      <span className="truncate">{e.listing.brand || e.listing.category.name}</span>
+                      {e.listing.condition && e.listing.condition !== 'N/A' && <span className="flex shrink-0 items-center gap-0.5"><CheckCircle2 size={12} className="text-tertiary" /> {e.listing.condition}</span>}
                     </div>
-
-                    <p style={{ margin: '4px 0 6px', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'Nunito, sans-serif', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>
-                      {listing.title}
-                    </p>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--fg-muted)', fontSize: '0.75rem' }}>
-                      <MapPin size={11} />{listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city}
+                    <div className="mt-0.5 line-clamp-1 text-label-lg text-on-surface">{e.listing.title}</div>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <span className="text-headline-sm font-extrabold text-primary"><Price amount={sale ?? e.listing.price} currency={e.listing.currency} /></span>
+                      {sale != null && <span className="text-body-sm text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></span>}
                     </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: '0.72rem', color: 'var(--fg-subtle)' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={11} />{listing.viewsCount} vues</span>
-                      {countdown && !countdown.ended && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Clock size={11} />Fin dans {countdown.hours}h</span>
-                      )}
-                    </div>
+                    {d > 0 && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full" style={{ width: `${Math.min(100, d)}%`, background: color }} /></div>}
+                    <div className="mt-2 flex items-center gap-1 text-[11px] text-tertiary"><Handshake size={13} /> Remise en main propre gratuite</div>
+                    <button onClick={ev => { ev.stopPropagation(); contact(e)() }} className="mt-2 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-2 text-label-md text-on-surface hover:bg-primary hover:text-white">
+                      <MessageSquare size={15} /> Discuter avec le vendeur
+                    </button>
                   </div>
                 </div>
               )
             })}
           </div>
-        )}
-      </div>
+        </section>
 
-      {/* Bottom CTA */}
-      {entries.length > 0 && (
-        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <button
-            onClick={() => onNavigate('search')}
-            style={{
-              background: 'none', border: '1.5px solid var(--border)', borderRadius: 999,
-              padding: '0.7rem 2rem', cursor: 'pointer', color: 'var(--fg)',
-              fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '0.9rem',
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-            }}
-          >
-            Voir toutes les annonces
-            <ArrowRight size={16} />
-          </button>
-        </div>
-      )}
+        {/* Thematic selections */}
+        {groups.length > 0 && (
+          <section className="mt-12">
+            <div className="text-label-sm uppercase text-primary">Rayons ciblés</div>
+            <h2 className="m-0 mb-4 mt-1 text-headline-md text-on-surface md:text-headline-lg">Les sélections thématiques de la campagne</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {groups.slice(0, 3).map((g, i) => {
+                const min = Math.min(...g.entries.map(e => salePrice(e) ?? e.listing.price ?? Infinity))
+                const best = Math.max(...g.entries.map(discountOf))
+                const pics = g.entries.filter(imageOf).slice(0, 2)
+                return (
+                  <div key={g.slug} className={`flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-lowest p-5 ${i === 2 ? 'md:col-span-2 md:flex-row md:items-center' : ''}`}>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="flex items-center gap-1.5 rounded bg-surface-container px-2 py-0.5 text-label-sm uppercase text-on-surface"><CategoryIcon icon={iconFor(g.slug)} size={14} /> {g.name}</span>
+                        {best > 0 && <span className="rounded-lg bg-primary-fixed px-2 py-1 text-center text-label-md text-primary">-{best}%<span className="block text-[10px] font-normal">sur {g.entries.length} article{g.entries.length > 1 ? 's' : ''}</span></span>}
+                      </div>
+                      <h3 className="m-0 mt-2 text-headline-sm text-on-surface">Sélection {g.name}</h3>
+                      <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{g.entries.length} pièce{g.entries.length > 1 ? 's' : ''} à prix réduit, en remise directe entre particuliers.</p>
+                      {Number.isFinite(min) && <div className="mt-3 text-headline-sm font-extrabold text-primary">Dès <Price amount={min} /></div>}
+                      <button onClick={() => setCat(g.slug)} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Explorer {g.name} <ArrowRight size={15} /></button>
+                    </div>
+                    {pics.length > 0 && (
+                      <div className={`grid gap-2 ${pics.length > 1 ? 'grid-cols-2' : 'max-w-[220px] grid-cols-1'} ${i === 2 ? 'md:w-80' : ''}`}>
+                        {pics.map(e => (
+                          <button key={e.id} onClick={() => onSelectListing(e.listing.id)} className="relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0">
+                            <img src={imageOf(e)} alt="" className="h-full w-full object-cover" />
+                            <span className="absolute bottom-1.5 left-1.5 rounded bg-surface-lowest/95 px-1.5 text-[10px] font-semibold text-on-surface"><Price amount={salePrice(e) ?? e.listing.price} /></span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Latest validated */}
+        {latest.length > 0 && (
+          <section className="mt-12">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <div className="text-label-sm uppercase text-primary">Fraîchement ajoutées</div>
+                <h2 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Dernières offres validées par l'équipe</h2>
+              </div>
+              <div className="hidden gap-2 md:flex">
+                <button disabled={railStart === 0} onClick={() => setRailStart(s => Math.max(0, s - 6))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-outline-variant bg-surface-lowest disabled:opacity-40"><ChevronLeft size={18} /></button>
+                <button disabled={railStart + 6 >= latest.length} onClick={() => setRailStart(s => s + 6)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-outline-variant bg-surface-lowest disabled:opacity-40"><ChevronRight size={18} /></button>
+              </div>
+            </div>
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-6 md:overflow-visible md:px-0">
+              {latest.slice(railStart, railStart + 6).map(e => (
+                <button key={e.id} onClick={() => onSelectListing(e.listing.id)} className="w-36 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest p-0 text-left md:w-auto">
+                  <div className="relative aspect-square bg-surface-container-low">
+                    {imageOf(e) && <img src={imageOf(e)} alt="" className="h-full w-full object-cover" />}
+                    {discountOf(e) > 0 && <span className="absolute left-1.5 top-1.5 rounded px-1.5 text-[10px] font-bold text-white" style={{ background: color }}>-{discountOf(e)}%</span>}
+                  </div>
+                  <div className="p-2">
+                    <div className="truncate text-body-sm text-on-surface">{e.listing.title}</div>
+                    <div className="text-label-md font-extrabold text-primary"><Price amount={salePrice(e) ?? e.listing.price} currency={e.listing.currency} /></div>
+                    {salePrice(e) != null && <div className="text-[11px] text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></div>}
+                    <span className="mt-1 flex items-center justify-center gap-1 rounded-md bg-surface-container-low py-1 text-[11px] text-on-surface"><Eye size={12} /> Voir</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Seller CTA */}
+        <section className="relative mt-12 overflow-hidden rounded-3xl p-6 text-white md:p-10" style={{ background: color }}>
+          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10" />
+          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-label-sm uppercase"><Icon name="trending_up" size={14} /> Trafic record {campaign.name}</span>
+              <h2 className="m-0 mt-3 text-headline-lg text-white md:text-[36px] md:leading-[44px]">Vos placards regorgent de pépites ? Vendez-les aujourd'hui !</h2>
+              <p className="m-0 mt-2 text-body-md text-white/90">Profitez du pic d'acheteurs : déposez votre annonce gratuitement en moins de 2 minutes, fixez votre prix et gardez 100% de vos gains.</p>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-white/90">
+                <span className="flex items-center gap-1"><CheckCircle2 size={14} /> 0 F de frais de mise en vente</span>
+                <span className="flex items-center gap-1"><CheckCircle2 size={14} /> Paiement en direct sans intermédiaire</span>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-col gap-2">
+              <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-inverse-surface px-5 py-3 text-label-lg text-white hover:opacity-90"><Icon name="add_photo_alternate" size={19} /> Vendre pour {campaign.name}</button>
+              <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer rounded-lg border-none bg-white/15 px-5 py-2.5 text-label-md text-white hover:bg-white/25">Booster mes annonces</button>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

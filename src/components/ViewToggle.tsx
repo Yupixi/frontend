@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Grid, List } from 'lucide-react'
+import { Grid, List } from './icons'
 
 type ViewToggleProps = {
   viewMode: 'grid' | 'list'

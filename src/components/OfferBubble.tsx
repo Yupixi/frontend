@@ -1,4 +1,4 @@
-import { Check, Tag, X as XIcon } from 'lucide-react'
+import { Check, Tag, X as XIcon } from './icons'
 import Price from './Price'
 import PriceSuggestionHint from './PriceSuggestionHint'
 import type { RemoteMessageOffer } from '../graphql/messaging'
@@ -35,7 +35,7 @@ export default function OfferBubble({ offer, currency, isMine, canRespond, respo
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', fontWeight: 700, color: 'var(--fg-muted)', marginBottom: 4 }}>
         <Tag size={13} /> Offre
       </div>
-      <div style={{ fontFamily: "'Outfit', 'Nunito', sans-serif", fontWeight: 800, fontSize: '1.1rem' }}>
+      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1.1rem' }}>
         <Price amount={offer.amount} currency={currency} />
       </div>
       <div style={{ fontSize: '0.74rem', fontWeight: 700, color: STATUS_COLOR[offer.status], marginTop: 4 }}>

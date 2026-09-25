@@ -1,57 +1,133 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta Sans:wght@400;500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0&display=block');
 @import 'tailwindcss';
 
+/* "Circulaire Dynamique" design system (Stitch — SecondHand Marketplace).
+   Tailwind utilities (bg-surface-container-low, text-on-surface-variant,
+   text-tertiary, rounded-lg…) resolve to the runtime CSS vars below so they
+   follow the .dark theme too. */
 @theme {
-  --color-primary: #FE0000;
-  --color-primary-dark: #D90000;
-  --color-primary-light: #FF3333;
-  --color-secondary: #FFDD21;
-  --color-secondary-hover: #ECC900;
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-container: var(--primary-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-on-primary-fixed: #410002;
+  --color-secondary: var(--secondary);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-tertiary-soft: var(--tertiary-soft);
+  --color-surface: var(--bg);
+  --color-surface-lowest: var(--bg-card);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-on-surface: var(--fg);
+  --color-on-surface-variant: var(--fg-muted);
+  --color-outline: var(--fg-subtle);
+  --color-outline-variant: var(--border);
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
   --font-family-sans: 'Plus Jakarta Sans', sans-serif;
-  --font-family-brand: 'Outfit', 'Nunito', sans-serif;
+  --font-family-brand: 'Plus Jakarta Sans', sans-serif;
+  --text-display: 48px;
+  --text-display--line-height: 56px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 800;
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.015em;
+  --text-headline-lg--font-weight: 700;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 700;
+  --text-headline-sm: 20px;
+  --text-headline-sm--line-height: 28px;
+  --text-headline-sm--font-weight: 600;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-md: 15px;
+  --text-body-md--line-height: 24px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 20px;
+  --text-label-lg: 15px;
+  --text-label-lg--line-height: 20px;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 13px;
+  --text-label-md--line-height: 18px;
+  --text-label-md--font-weight: 600;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--letter-spacing: 0.04em;
+  --text-label-sm--font-weight: 700;
+  --shadow-card-hover: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
+  --shadow-float: 0 12px 32px -4px rgba(26, 26, 26, 0.12);
+  --shadow-modal: 0 20px 48px -8px rgba(26, 26, 26, 0.18);
 }
 
 :root {
-  --bg: #FAFAFC;
+  --bg: #FCF9F8;
   --bg-card: #FFFFFF;
-  --fg: #0F172A;
-  --fg-muted: #64748B;
-  --fg-subtle: #94A3B8;
-  --border: #E2E8F0;
-  --border-subtle: #F1F5F9;
-  --primary: #FE0000;
-  --primary-dark: #D90000;
-  --primary-light: #FF3333;
+  --surface-container-low: #F6F3F2;
+  --surface-container: #F0EDED;
+  --surface-container-high: #EAE7E7;
+  --surface-container-highest: #E5E2E1;
+  --inverse-surface: #313030;
+  --fg: #1C1B1B;
+  --fg-muted: #5E3F3C;
+  --fg-subtle: #936E6A;
+  --border: #EAE7E7;
+  --border-subtle: #F6F3F2;
+  --primary: #BB0013;
+  --primary-dark: #93000D;
+  --primary-light: #E71520;
+  --primary-container: #E71520;
+  --primary-fixed: #FFDAD6;
   --primary-fg: #FFFFFF;
-  --secondary: #FFDD21;
-  --secondary-hover: #ECC900;
-  --secondary-fg: #0F172A;
-  --accent: #FF6B35;
-  --success: #10B981;
+  --secondary: #1C1B1B;
+  --secondary-hover: #313030;
+  --secondary-fg: #FFFFFF;
+  --tertiary: #006947;
+  --tertiary-container: #00855B;
+  --tertiary-soft: #E3F5EC;
+  --accent: #E71520;
+  --success: #006947;
   --warning: #F59E0B;
   --info: #00A3E0;
   --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
+  --shadow-md: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
+  --shadow-lg: 0 12px 32px -4px rgba(26, 26, 26, 0.12);
   --shadow-primary: none;
   --shadow-yellow: none;
-  --radius: 14px;
+  --radius: 16px;
   --radius-sm: 8px;
-  --radius-lg: 18px;
+  --radius-lg: 16px;
   --radius-xl: 24px;
 }
 
 .dark {
-  --bg: #090D16;
-  --bg-card: #121826;
-  --fg: #F8FAFC;
-  --fg-muted: #94A3B8;
-  --fg-subtle: #64748B;
-  --border: #1E293B;
-  --border-subtle: #161F32;
+  --bg: #141212;
+  --bg-card: #1C1A1A;
+  --surface-container-low: #211F1F;
+  --surface-container: #262323;
+  --surface-container-high: #2E2B2B;
+  --surface-container-highest: #383434;
+  --inverse-surface: #E5E2E1;
+  --fg: #F3F0EF;
+  --fg-muted: #D6C2BF;
+  --fg-subtle: #A08C89;
+  --border: #332F2F;
+  --border-subtle: #242121;
+  --primary-fixed: #410002;
+  --secondary: #F3F0EF;
+  --secondary-hover: #E5E2E1;
+  --secondary-fg: #1C1B1B;
+  --tertiary: #4EDEA3;
+  --tertiary-soft: rgba(78, 222, 163, 0.12);
   --shadow-sm: none;
   --shadow-md: none;
-  --shadow-lg: none;
+  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.5);
   --shadow-primary: none;
   --shadow-yellow: none;
 }
@@ -76,8 +152,8 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6, .font-brand {
-  font-family: 'Outfit', 'Nunito', sans-serif;
-  font-weight: 800;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -87,18 +163,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px), radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, var(--primary) 1.5px);
   background-size: 28px 28px;
   background-position: 0 0, 14px 14px;
-}
-
-/* Glassmorphism */
-.glass-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.dark .glass-header {
-  background: rgba(18, 24, 38, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Scrollbar */
@@ -117,8 +181,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 
 .card-hover:hover {
-  border-color: var(--primary);
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
 }
 
 /* Chat bubbles (buyer/seller messaging) */
@@ -164,7 +228,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .btn-primary {
   background-color: var(--primary);
   color: #FFFFFF;
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   border-radius: var(--radius-sm);
   padding: 0.65rem 1.35rem;
@@ -183,33 +247,11 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 .btn-primary:active { transform: translateY(0); }
 
-.btn-secondary {
-  background-color: var(--secondary);
-  color: var(--secondary-fg);
-  font-family: 'Outfit', 'Nunito', sans-serif;
-  font-weight: 800;
-  border-radius: var(--radius-sm);
-  padding: 0.65rem 1.35rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: none;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn-secondary:hover {
-  background-color: var(--secondary-hover);
-  transform: translateY(-1px);
-}
-.btn-secondary:active { transform: translateY(0); }
-
 .btn-outline {
   background: transparent;
   color: var(--primary);
   border: 2px solid var(--primary);
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   border-radius: var(--radius-sm);
   padding: 0.6rem 1.3rem;
@@ -251,13 +293,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 800;
-  font-family: 'Outfit', 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
-.badge-red { background: rgba(254, 0, 0, 0.1); color: var(--primary); border: 1px solid rgba(254, 0, 0, 0.2); }
-.badge-yellow { background: var(--secondary); color: #0F172A; border: 1px solid rgba(255, 221, 33, 0.8); }
-.badge-green { background: rgba(16, 185, 129, 0.12); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.25); }
-.badge-blue { background: rgba(0, 163, 224, 0.12); color: #00A3E0; border: 1px solid rgba(0, 163, 224, 0.25); }
-.badge-gray { background: var(--border-subtle); color: var(--fg-muted); border: 1px solid var(--border); }
 
 .map-placeholder {
   position: relative;
@@ -285,32 +322,12 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 .dark .map-placeholder::before { opacity: 0.09; }
 
-.section-title {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: 1.65rem;
-  color: var(--fg);
-  letter-spacing: -0.02em;
-}
-
 /* Animated Rotating Text Effect */
 @keyframes textSlideFade {
   0% { opacity: 0; transform: translateY(10px); }
   15% { opacity: 1; transform: translateY(0); }
   85% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-10px); }
-}
-
-.animated-word {
-  display: inline-block;
-  color: #FFDD21;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 2px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 221, 33, 0.4);
-  animation: textSlideFade 2.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  min-width: 220px;
-  text-align: center;
 }
 
 /* Animations */
@@ -330,42 +347,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   border-right: 1px solid var(--border);
 }
 
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0.6rem 1rem;
-  background: transparent;
-  color: var(--fg-muted);
-  font-family: 'Outfit', 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.12s ease;
-  text-align: left;
-}
-.sidebar-item:hover {
-  background: var(--border-subtle);
-  color: var(--fg);
-}
-.sidebar-item.active {
-  background: rgba(254, 0, 0, 0.06);
-  color: var(--primary);
-}
-.sidebar-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  background: var(--primary);
-  border-radius: 0 3px 3px 0;
-}
-
 /* Price tag */
 .price-tag {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   color: var(--primary);
   font-size: 1.35rem;
@@ -375,20 +359,11 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 /* Currency unit â€” sized relative to the amount it follows (em), so it
    stays proportionally small wherever the price itself is rendered at. */
 .price-unit {
-  font-size: 0.55em;
+  font-size: 0.85em;
   font-weight: 700;
   letter-spacing: 0;
-  opacity: 0.75;
-  margin-left: 0.2em;
-}
-
-/* Listing image */
-.listing-img {
-  width: 100%;
-  height: 210px;
-  object-fit: cover;
-  background: var(--border-subtle);
-  border-radius: var(--radius) var(--radius) 0 0;
+  opacity: 1;
+  margin-left: 0.25em;
 }
 
 /* Notification dot */
@@ -402,38 +377,13 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: #FFFFFF;
   border-radius: 999px;
   border: 2px solid var(--bg-card);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 0.65rem;
   font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-}
-
-/* Role Switcher Pill */
-.role-switcher {
-  display: inline-flex;
-  background: var(--border-subtle);
-  padding: 3px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-}
-.role-btn {
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.775rem;
-  font-weight: 800;
-  font-family: 'Outfit', sans-serif;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: var(--fg-muted);
-  background: transparent;
-}
-.role-btn.active {
-  background: var(--primary);
-  color: #FFFFFF;
 }
 
 /* Toast alert */
@@ -451,7 +401,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: var(--bg);
   padding: 12px 20px;
   border-radius: var(--radius-sm);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   display: flex;
@@ -465,28 +415,14 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   color: var(--fg);
 }
 .tiptap p { margin: 0 0 0.5em; }
-.tiptap h1 { font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 900; margin: 0 0 0.4em; letter-spacing: -0.02em; }
-.tiptap h2 { font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 800; margin: 0 0 0.3em; letter-spacing: -0.01em; }
-.tiptap h3 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; margin: 0 0 0.3em; }
+.tiptap h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.5rem; font-weight: 900; margin: 0 0 0.4em; letter-spacing: -0.02em; }
+.tiptap h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.25rem; font-weight: 800; margin: 0 0 0.3em; letter-spacing: -0.01em; }
+.tiptap h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.1rem; font-weight: 800; margin: 0 0 0.3em; }
 .tiptap ul, .tiptap ol { padding-left: 1.5em; margin: 0 0 0.5em; }
 .tiptap li { margin-bottom: 0.25em; }
 .tiptap a { color: var(--primary); text-decoration: underline; cursor: pointer; }
 .tiptap a:hover { opacity: 0.8; }
 .tiptap s { text-decoration: line-through; }
-.tiptap p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: var(--fg-subtle);
-  pointer-events: none;
-  height: 0;
-}
-
-.listing-breadcrumb-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 420px;
-}
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
@@ -562,743 +498,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .buyer-msg-back { display: flex !important; }
 }
 
-@media (min-width: 769px) {
-  .dashboard-sidebar-mobile-btn { display: none !important; }
-  .dashboard-sidebar-overlay { display: none !important; }
-  .buyer-sidebar-overlay { display: none !important; }
-  .buyer-mobile-menu-btn { display: none !important; }
-  .buyer-msg-back { display: none !important; }
-  .mobile-menu-btn { display: none !important; }
-  .mobile-search-btn { display: none !important; }
-  .mobile-drawer { display: none !important; }
-  .seller-steps-mobile { display: none !important; }
-}
-
-@media (max-width: 768px) {
-  .seller-steps-desktop { display: none !important; }
-  .seller-steps-mobile { display: flex !important; }
-  .seller-step-label { display: none !important; }
-  .seller-step-line { display: none !important; }
-}
-@media (max-width: 768px) {
-  .desktop-only { display: none !important; }
-}
-
-@media (min-width: 769px) {
-  .mobile-menu-btn { display: none !important; }
-  .mobile-drawer { display: none !important; }
-}
-.hero-premium {
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-}
-.dark .hero-premium {
-  background: #120B0B;
-  border-bottom: 1px solid #3A2727;
-}
-
-.hero-premium-glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(254,0,0,0.04) 0%, transparent 70%);
-}
-.dark .hero-premium-glow {
-  background: radial-gradient(ellipse 70% 60% at 90% 50%, rgba(254,0,0,0.08) 0%, transparent 70%);
-}
-
-.hero-premium-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 4rem 1rem 5rem;
-  position: relative;
-}
-/* A creative banner is already a strong visual anchor — it doesn't need
-   the generous breathing room the generated text hero does. */
-.hero-premium-inner:has(.hero-creative) {
-  padding: 2rem 1rem 2.5rem;
-}
-
-/* --- Left Column --- */
-.hero-left {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-.hero-left-solo {
-  max-width: 640px;
-}
-
-/* Marketing-team-supplied hero creative (image or animated GIF) — shown
-   as-is, the way big marketplace home banners work, instead of a
-   generated title/subtitle overlaid on top of whatever text/branding is
-   already baked into the image. 2.5:1 matches the BO's recommended upload
-   size (1200×480), so most creatives crop cleanly instead of losing their
-   top/bottom to a mismatched box. */
-.hero-creative {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.hero-creative-media {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 2.5 / 1;
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  background: var(--border-subtle);
-}
-.hero-creative-link {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-.hero-creative-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-/* CTAs live inside the banner itself (bottom-left, on a scrim) rather
-   than floating below it — one cohesive visual instead of three stacked,
-   loosely-related blocks. */
-.hero-creative-scrim {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 55%;
-  background: linear-gradient(0deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
-  pointer-events: none;
-}
-.hero-creative-actions {
-  position: absolute;
-  left: 1.25rem;
-  right: 1.25rem;
-  bottom: 1.25rem;
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-/* Sits on the scrim over an arbitrary image, not the page background —
-   needs its own always-readable treatment regardless of theme/image. */
-.hero-creative-actions .hero-btn-outline {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.6);
-  color: #FFFFFF;
-  backdrop-filter: blur(4px);
-}
-.hero-creative-actions .hero-btn-outline:hover {
-  background: rgba(255,255,255,0.22);
-  border-color: #FFFFFF;
-  color: #FFFFFF;
-}
-@media (max-width: 768px) {
-  /* Same ratio as desktop (matches the BO's recommended 1200×480 upload) —
-     a narrower mobile ratio here used to crop the image's own left/right
-     edges, cutting off text or elements the marketing team baked into the
-     creative itself. Height shrinks on a narrow screen instead, which is
-     safe: nothing gets clipped that wasn't already cropped on desktop. */
-  .hero-creative-actions {
-    left: 0.85rem;
-    right: 0.85rem;
-    bottom: 0.85rem;
-  }
-  .hero-creative-actions .hero-btn {
-    padding: 0.65rem 1.15rem;
-    font-size: 0.85rem;
-  }
-}
-
-.hero-stats-standalone {
-  max-width: 640px;
-  margin-top: 0;
-}
-@media (max-width: 640px) {
-  .hero-stats-hide-mobile {
-    display: none;
-  }
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--border-subtle);
-  border: 1px solid var(--border);
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 800;
-  font-size: 0.82rem;
-  color: var(--fg-muted);
-  width: fit-content;
-  transition: all 0.2s;
-}
-.dark .hero-badge {
-  background: #2A1B1B;
-  border-color: #3A2727;
-  color: #B89B9B;
-}
-
-.hero-title {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: clamp(2rem, 4vw, 3.2rem);
-  line-height: 1.1;
-  color: var(--fg);
-  margin: 0;
-  letter-spacing: -0.03em;
-}
-.hero-title-accent {
-  color: var(--primary);
-}
-
-.hero-subtitle {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: var(--fg-muted);
-  margin: 0;
-  max-width: 480px;
-}
-
-.hero-buttons {
-  display: flex;
-  gap: 0.85rem;
-  flex-wrap: wrap;
-}
-
-.hero-btn {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 800;
-  border-radius: 12px;
-  padding: 0.85rem 1.75rem;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-}
-.hero-btn-primary {
-  background: var(--primary);
-  color: #FFFFFF;
-}
-.hero-btn-primary:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(254,0,0,0.25);
-}
-.hero-btn-outline {
-  background: transparent;
-  color: var(--fg);
-  border: 2px solid var(--border);
-}
-.hero-btn-outline:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
-}
-.dark .hero-btn-outline {
-  border-color: #3A2727;
-  color: #E0D0D0;
-}
-.dark .hero-btn-outline:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.hero-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-  background: var(--border-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  transition: all 0.2s;
-}
-.dark .hero-stats {
-  background: #1F1414;
-  border-color: #3A2727;
-}
-
-.hero-stat-item {
-  text-align: center;
-}
-.hero-stat-item + .hero-stat-item {
-  border-left: 1px solid var(--border);
-  padding-left: 1rem;
-}
-.dark .hero-stat-item + .hero-stat-item {
-  border-color: #3A2727;
-}
-
-.hero-stat-value {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: 1.2rem;
-  color: var(--primary);
-}
-.hero-stat-label {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.75rem;
-  color: var(--fg-muted);
-  margin-top: 2px;
-  font-weight: 600;
-}
-
-/* Desktop "À la une" — an actual bento: one lead tile, wide banners every
-   4th slot, small squares filling the rest (see bentoVariant in Home.tsx).
-   grid-auto-flow:dense repacks around whatever count comes in so it never
-   shows a half-empty trailing row. Mobile keeps the swipeable .hero-mosaic
-   carousel below instead — dense multi-size packing doesn't translate to a
-   one-thumb swipe strip, so this is hidden there. */
-.hero-bento {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 170px;
-  grid-auto-flow: dense;
-  gap: 14px;
-  animation: heroMosaicIn 0.8s ease-out backwards;
-}
-.hero-bento-lg { grid-column: span 2; grid-row: span 2; }
-.hero-bento-wide { grid-column: span 2; grid-row: span 1; }
-.hero-bento-sm { grid-column: span 1; grid-row: span 1; }
-
-/* Shared full-bleed treatment for every bento tile (and the mosaic's lead
-   card) — image edge to edge, title/price overlaid at the bottom. Written
-   before .hero-mosaic-card-main below so main's larger type/padding still
-   wins where both classes land on the same (lead) card. */
-.hero-mosaic-card-overlay .hero-mosaic-img-wrap { position: absolute; inset: 0; }
-.hero-mosaic-card-overlay .hero-mosaic-overlay {
-  background: linear-gradient(180deg, rgba(2,6,23,0.02) 40%, rgba(2,6,23,0.88) 100%);
-}
-.hero-mosaic-card-overlay .hero-mosaic-body {
-  position: absolute;
-  z-index: 2;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 1.1rem 1rem 0.85rem;
-  color: #fff;
-  background: transparent;
-}
-.hero-mosaic-card-overlay .hero-mosaic-title {
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.35);
-  font-size: 0.9rem;
-  margin-bottom: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hero-mosaic-card-overlay .hero-mosaic-location { display: none; }
-.hero-mosaic-card-overlay .hero-mosaic-price { color: #fff; }
-.hero-mosaic-card-overlay .hero-mosaic-fav { background: rgba(255,255,255,0.85); }
-/* Wide tiles have the width to spare — let the title breathe on two lines
-   instead of ellipsizing what's usually still a short product title. */
-.hero-bento-wide .hero-mosaic-title {
-  white-space: normal;
-  -webkit-line-clamp: 2;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-@media (max-width: 640px) {
-  .hero-bento { display: none; }
-}
-
-.hero-mosaic {
-  display: none;
-  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr);
-  grid-template-rows: repeat(3, 142px);
-  gap: 14px;
-  animation: heroMosaicIn 0.8s ease-out backwards;
-}
-
-.hero-mosaic-card {
-  position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-  cursor: pointer;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
-  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
-  display: flex;
-  flex-direction: column;
-}
-.dark .hero-mosaic-card {
-  background: #2A1B1B;
-  border-color: #3A2727;
-}
-.hero-mosaic-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(239, 68, 68, 0.35);
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
-  z-index: 5;
-}
-.dark .hero-mosaic-card:hover {
-  border-color: #5A3737;
-}
-
-/* Editorial layout: one strong lead story and three equally weighted
-   discoveries. It is calmer and easier to scan than a mixed-size mosaic.
-   Position rules scoped to .hero-mosaic (the mobile carousel) — unscoped,
-   they'd also match .hero-bento's lead tile, which has its own placement
-   via .hero-bento-lg and must not inherit this fixed 1-column/3-row slot. */
-.hero-mosaic .hero-mosaic-card-main {
-  grid-column: 1;
-  grid-row: 1 / 4;
-}
-.hero-mosaic-card-main .hero-mosaic-img-wrap {
-  position: absolute;
-  inset: 0;
-}
-.hero-mosaic-card-main .hero-mosaic-overlay {
-  background: linear-gradient(180deg, rgba(2,6,23,0.02) 30%, rgba(2,6,23,0.9) 100%);
-}
-.hero-mosaic-card-main .hero-mosaic-body {
-  position: absolute;
-  z-index: 2;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 5rem 1.5rem 1.4rem;
-  color: #fff;
-  background: transparent;
-}
-.hero-mosaic-card-main .hero-mosaic-title {
-  max-width: 82%;
-  margin-bottom: 10px;
-  color: #fff;
-  font-size: clamp(1.2rem, 2vw, 1.65rem);
-  white-space: normal;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.35);
-}
-.hero-mosaic-card-main .hero-mosaic-location { color: rgba(255,255,255,0.82); }
-.hero-mosaic-card-main .hero-mosaic-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-/* All :nth-child rules below are scoped to .hero-mosaic for the same
-   reason as .hero-mosaic-card-main above — .hero-bento reuses the same
-   .hero-mosaic-card class on every tile, and an unscoped :nth-child(5)
-   would silently display:none the bento's 5th tile. */
-.hero-mosaic .hero-mosaic-card:nth-child(2) { grid-column: 2; grid-row: 1; }
-.hero-mosaic .hero-mosaic-card:nth-child(3) { grid-column: 2; grid-row: 2; }
-.hero-mosaic .hero-mosaic-card:nth-child(4) { grid-column: 2; grid-row: 3; }
-/* A 5th card only exists as the mobile carousel's trailing loop clone
-   (see hero-mosaic-dots comment) ÔÇö never shown in the desktop grid. */
-.hero-mosaic .hero-mosaic-card:nth-child(5) { display: none; }
-
-/* Anim delay per card */
-.hero-mosaic .hero-mosaic-card:nth-child(1) { animation-delay: 0s; }
-.hero-mosaic .hero-mosaic-card:nth-child(2) { animation-delay: 0.3s; }
-.hero-mosaic .hero-mosaic-card:nth-child(3) { animation-delay: 0.6s; }
-.hero-mosaic .hero-mosaic-card:nth-child(4) { animation-delay: 0.9s; }
-
-.hero-mosaic-img-wrap {
-  position: relative;
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.hero-mosaic-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-.hero-mosaic-card:hover .hero-mosaic-img {
-  transform: scale(1.06);
-}
-
-.hero-mosaic-img-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--border-subtle);
-  color: var(--fg-subtle);
-}
-
-.hero-mosaic-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.65) 100%);
-}
-
-.hero-mosaic-boost {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 3;
-  background: #FFDD21;
-  color: #0F172A;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: 0.6rem;
-  letter-spacing: 0.04em;
-  padding: 3px 8px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-}
-
-.hero-mosaic-category {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  max-width: calc(100% - 60px);
-  background: rgba(255,255,255,0.9);
-  color: #0F172A;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 800;
-  font-size: 0.7rem;
-  padding: 6px 10px;
-  border-radius: 999px;
-  backdrop-filter: blur(10px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dark .hero-mosaic-category {
-  background: rgba(42,27,27,0.9);
-  color: #E0D0D0;
-}
-
-.hero-mosaic-verified {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  color: #00A3E0;
-  background: rgba(255,255,255,0.9);
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-}
-.dark .hero-mosaic-verified {
-  background: rgba(42,27,27,0.9);
-}
-
-.hero-mosaic-price {
-  position: relative;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: 0.8rem;
-  color: var(--primary);
-  text-shadow: none;
-  white-space: nowrap;
-}
-.hero-mosaic-price-lg {
-  margin-left: auto;
-  padding: 7px 10px;
-  border-radius: 10px;
-  color: #fff;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.18);
-  backdrop-filter: blur(10px);
-  font-size: 1rem;
-}
-
-.hero-mosaic-fav {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: rgba(255,255,255,0.85);
-  border: none;
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  backdrop-filter: blur(4px);
-}
-.hero-mosaic-card-main .hero-mosaic-fav {
-  bottom: auto;
-  top: 16px;
-  right: 12px;
-  width: 30px;
-  height: 30px;
-}
-.hero-mosaic-fav:hover {
-  transform: scale(1.15);
-  background: #FFFFFF;
-}
-.dark .hero-mosaic-fav {
-  background: rgba(42,27,27,0.85);
-}
-.dark .hero-mosaic-fav:hover {
-  background: #4A3535;
-}
-
-.hero-mosaic-body {
-  padding: 10px 12px 12px;
-  background: var(--bg-card);
-  transition: background 0.2s;
-}
-.hero-mosaic-card-kicker {
-  margin-bottom: 7px;
-  color: var(--primary);
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.63rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  line-height: 1.2;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hero-mosaic-meta { min-width: 0; }
-.dark .hero-mosaic-body {
-  background: #2A1B1B;
-}
-.dark .hero-mosaic-card-main .hero-mosaic-body {
-  background: transparent;
-}
-
-.hero-mosaic-title {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 800;
-  font-size: 0.85rem;
-  color: var(--fg);
-  margin: 0 0 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hero-mosaic-location {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  color: var(--fg-muted);
-  font-weight: 600;
-}
-
-/* This used to be the desktop mosaic's side-card treatment at >=641px, but
-   .hero-mosaic itself is now display:none at that width (the bento grid
-   replaces it — see .hero-bento above; the carousel below is mobile-only).
-   Removed rather than left in place: it unintentionally applied to
-   .hero-bento's tiles too (same .hero-mosaic-card class, no ancestor scope
-   here), fighting .hero-mosaic-card-overlay for image/body/title placement. */
-
-/* --- Espace Boost header --- */
-.hero-boost-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 1.25rem;
-}
-.featured-heading-copy {
-  min-width: 0;
-}
-.featured-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--primary);
-  font-family: 'Outfit', sans-serif;
-  font-weight: 900;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
-.featured-title {
-  margin: 0;
-  color: var(--fg);
-  font-family: 'Outfit', sans-serif;
-  font-size: clamp(1.45rem, 2.5vw, 2rem);
-  line-height: 1.1;
-  font-weight: 900;
-}
-.hero-boost-note {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.75rem;
-  color: var(--fg-muted);
-  font-weight: 500;
-  margin: 5px 0 0;
-}
-.featured-see-all {
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--fg);
-  border-radius: 999px;
-  padding: 9px 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 800;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.featured-see-all:hover {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-.hero-boost-hint {
-  display: none;
-  align-items: center;
-  gap: 2px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.72rem;
-  color: var(--fg-muted);
-  font-weight: 700;
-  margin-left: auto;
-}
-
-/* Slide indicator dots ÔÇö only meaningful for the mobile carousel below;
-   the desktop mosaic is a static grid, not a scroller. */
-.hero-mosaic-dots {
-  display: none;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-}
-.hero-mosaic-dot {
-  padding: 0;
-  border: none;
-  cursor: pointer;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--border);
-  transition: all 0.25s ease;
-}
-.dark .hero-mosaic-dot {
-  background: #4A3535;
-}
-.hero-mosaic-dot.active {
-  width: 20px;
-  background: var(--primary);
-}
-
 /* --- Responsive --- */
 @media (max-width: 1024px) and (min-width: 641px) {
   .hero-bento {
@@ -1307,287 +506,10 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   }
 }
 
-@media (max-width: 1024px) {
-  .hero-mosaic {
-    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-    max-width: 900px;
-    margin: 0 auto;
-  }
-  .hero-mosaic .hero-mosaic-card:not(.hero-mosaic-card-main) .hero-mosaic-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 7px;
-  }
-}
-
-@media (max-width: 640px) {
-  .hero-premium-inner {
-    padding: 1.25rem 1rem 1.5rem;
-  }
-  .featured-strip-inner {
-    padding-top: 1.5rem;
-  }
-  /* The generated marketing copy (badge/title/subtitle/CTAs/stats) is
-     redundant on mobile — the header search bar and bottom nav already
-     cover those actions — and pushes real content below the fold. Lead
-     with "À la une" instead, which is real listings, not landing-page
-     copy. A BO-supplied creative is different — marketing designed it on
-     purpose, so it stays visible on mobile too (see .hero-creative). */
-  .hero-left {
-    display: none;
-  }
-  .hero-mosaic {
-    display: flex;
-    max-width: none;
-    overflow-x: auto;
-    gap: 12px;
-    margin: 0 -1rem;
-    padding: 4px 1rem 10px;
-    scroll-snap-type: x mandatory;
-    scroll-padding-left: 1rem;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    animation: none;
-  }
-  .hero-mosaic::-webkit-scrollbar { display: none; }
-  .hero-mosaic-card:nth-child(5) { display: flex; }
-  .hero-mosaic-card {
-    grid-column: auto !important;
-    grid-row: auto !important;
-    flex: 0 0 72%;
-    min-height: 0;
-    height: auto;
-    scroll-snap-align: start;
-    animation: none;
-    border: 1px solid var(--border);
-    box-shadow: 0 8px 22px rgba(15,23,42,0.07);
-  }
-  .hero-mosaic-card-main {
-    flex-basis: 72%;
-  }
-  .hero-mosaic-card:hover {
-    transform: none;
-  }
-  .hero-mosaic-img-wrap {
-    flex: none;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-  }
-  .hero-mosaic-card-main .hero-mosaic-img-wrap {
-    position: relative;
-    inset: auto;
-  }
-  .hero-mosaic-card .hero-mosaic-body {
-    position: relative;
-    inset: auto;
-    padding: 10px 12px 12px;
-    color: var(--fg);
-    background: var(--bg-card);
-  }
-  .hero-mosaic-card .hero-mosaic-location {
-    display: flex;
-  }
-  .hero-mosaic-title {
-    max-width: none !important;
-    color: var(--fg) !important;
-    text-shadow: none !important;
-    font-size: 0.85rem !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .hero-mosaic-price,
-  .hero-mosaic-price-lg {
-    position: relative;
-    margin-left: auto;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    backdrop-filter: none;
-    color: var(--primary);
-    font-size: 0.9rem;
-  }
-  .hero-mosaic-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .hero-mosaic-fav,
-  .hero-mosaic-card-main .hero-mosaic-fav {
-    bottom: auto;
-    top: 8px;
-    right: 8px;
-  }
-  .hero-mosaic-verified {
-    top: 32px;
-    right: 8px;
-  }
-  .hero-boost-pill {
-    font-size: 0.88rem;
-    padding: 6px 15px;
-  }
-  .hero-boost-note {
-    font-size: 0.72rem;
-  }
-  .featured-see-all { display: none; }
-  .hero-boost-hint {
-    display: inline-flex;
-  }
-  .hero-mosaic-dots {
-    display: flex;
-  }
-  .hero-stats {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.25rem;
-    padding: 0.75rem;
-  }
-  .hero-stat-value { font-size: 1rem; }
-  .hero-stat-label { font-size: 0.65rem; }
-  .hero-buttons { flex-direction: column; }
-  .hero-btn { justify-content: center; width: 100%; }
-  .hero-subtitle { font-size: 0.95rem; }
-}
-
-/* ========== FEATURED STRIP ("À la une") ========== */
-/* Its own full-width section below the hero, independent of whatever
-   creative/GIF the BO puts in the hero above, so it stays legible and
-   gets proper room instead of being squeezed into a hero column. */
-.featured-strip {
-  background: linear-gradient(180deg, var(--bg) 0%, var(--border-subtle) 100%);
-  border-bottom: 1px solid var(--border);
-}
-.dark .featured-strip {
-  background: #120B0B;
-  border-bottom: 1px solid #3A2727;
-}
-.featured-strip-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2.75rem 1rem 3.25rem;
-}
-
-/* ========== TRUST BAR ========== */
-/* ========== TRUST BAR ========== */
-
-/* ========== TRUST BAR ========== */
-/* ========== TRUST BAR ========== */
-.trust-bar {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-  padding: 0.25rem 1rem;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.trust-bar-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0;
-}
-
-.trust-bar-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 1.25rem 1.5rem;
-  cursor: default;
-  transition: all 0.25s ease;
-  border-right: 1px solid var(--border);
-}
-.trust-bar-item:last-child { border-right: none; }
-.trust-bar-item:hover {
-  background: var(--border-subtle);
-}
-.dark .trust-bar-item {
-  border-color: #3A2727;
-}
-.dark .trust-bar-item:hover {
-  background: #1F1414;
-}
-
-.trust-bar-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: rgba(254,0,0,0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary);
-  flex-shrink: 0;
-  transition: all 0.25s ease;
-}
-.trust-bar-item:hover .trust-bar-icon {
-  background: var(--primary);
-  color: #FFFFFF;
-  transform: scale(1.05);
-}
-
-.trust-bar-text {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 800;
-  font-size: 0.85rem;
-  color: var(--fg);
-  line-height: 1.2;
-}
-.trust-bar-desc {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.72rem;
-  color: var(--fg-muted);
-  margin-top: 2px;
-  font-weight: 500;
-}
-
-@media (max-width: 1024px) {
-  .trust-bar-inner { grid-template-columns: repeat(2, 1fr); }
-  .trust-bar-item:nth-child(2) { border-right: none; }
-  .trust-bar-item:nth-child(3),
-  .trust-bar-item:nth-child(4) { border-top: 1px solid var(--border); }
-  .dark .trust-bar-item:nth-child(3),
-  .dark .trust-bar-item:nth-child(4) { border-top-color: #3A2727; }
-}
-
 /* Hidden below the app's mobile breakpoint â€” the certified-badge row
    crowds a small screen without adding much; kept for desktop/tablet. */
 @media (max-width: 768px) {
   .trust-bar { display: none; }
-}
-
-/* --- Filter chips & labels (search) --- */
-.filter-label {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--fg);
-  margin: 0 0 8px;
-}
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1.5px solid var(--border);
-  background: var(--bg-card);
-  color: var(--fg-muted);
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-.filter-chip:hover {
-  border-color: var(--fg-muted);
-  color: var(--fg);
-}
-.filter-chip.active {
-  border-color: var(--primary);
-  background: rgba(254,0,0,0.08);
-  color: var(--primary);
 }
 
 /* --- View toggle (grid / list) --- */
@@ -1610,7 +532,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   cursor: pointer;
   background: transparent;
   color: var(--fg-muted);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
   transition: all 0.15s ease;
@@ -1623,8 +545,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 }
 @media (max-width: 480px) {
   .view-toggle-btn { padding: 7px 10px; }
-  .view-toggle-label { display: none; }
-}
+  .view-toggle-label { display: none; }}
 
 /* --- List view cards (search + home) --- */
 .listing-list-card {
@@ -1648,7 +569,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .listing-list-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .listing-list-title {
   margin: 0 0 4px;
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--fg);
@@ -1682,78 +603,7 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .listing-list-card { gap: 0.75rem; padding: 0.6rem; }
   .listing-list-thumb { width: 120px !important; height: 120px !important; }
   .listing-list-desc { display: none; }
-  .listing-list-title { font-size: 0.85rem; -webkit-line-clamp: 2; }
-}
-
-.listing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.25rem;
-  /* Grid's default stretch makes every card in a row match the tallest one
-     — without this, opening a card's inline boost picker (see
-     OwnListingBoostCta) visibly inflates its neighbors with empty space. */
-  align-items: start;
-}
-
-@media (max-width: 640px) {
-  .listing-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.6rem;
-  }
-  .listing-card-img {
-    height: 110px !important;
-  }
-  .listing-card-img .listing-img {
-    height: 110px;
-  }
-  .listing-card-body {
-    padding: 8px 10px !important;
-  }
-  .listing-card-body .price-tag {
-    font-size: 0.9rem;
-  }
-  .listing-card-body h3 {
-    font-size: 0.75rem !important;
-    margin: 2px 0 4px !important;
-  }
-  .listing-card-location {
-    font-size: 0.7rem !important;
-    gap: 3px !important;
-  }
-  .listing-card-location svg {
-    width: 11px !important;
-    height: 11px !important;
-  }
-  .listing-card-footer {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 4px !important;
-    margin-top: 6px !important;
-    padding-top: 5px !important;
-  }
-  .listing-card-footer > div:last-child {
-    font-size: 0.65rem !important;
-  }
-  .listing-card-badges {
-    top: 6px !important;
-    left: 6px !important;
-    gap: 3px !important;
-  }
-  .listing-card-badges [class*="badge"] {
-    font-size: 0.55rem !important;
-    padding: 1px 5px !important;
-  }
-  .listing-card-fav {
-    width: 26px !important;
-    height: 26px !important;
-    top: 6px !important;
-    right: 6px !important;
-  }
-  .listing-card-fav svg {
-    width: 13px !important;
-    height: 13px !important;
-  }
-}
+  .listing-list-title { font-size: 0.85rem; -webkit-line-clamp: 2; }}
 
 /* --- Animations --- */
 @keyframes heroFloat {
@@ -1799,32 +649,6 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   95% { opacity: 1; transform: translateY(0); }
   100% { opacity: 1; transform: translateY(0); }
 }
-
-.flash-icon {
-  position: relative;
-  display: inline-flex;
-}
-
-.flash-btn-text {
-  animation: textSlideFade2 5s ease-in-out infinite;
-}
-
-@media (min-width: 769px) {
-  .mobile-contact-bar { display: none !important; }
-}
-
-/* Flash icon animations */
-.flash-bolt {
-  animation: boltGlow 2.8s ease-in-out infinite;
-}
-
-.flash-line {
-  animation: lineFlash 2.8s ease-in-out infinite;
-}
-
-.flash-line-1 { animation-delay: 0s; }
-.flash-line-2 { animation-delay: 0.15s; }
-.flash-line-3 { animation-delay: 0.3s; }
 
 @keyframes boltGlow {
   0%, 100% { opacity: 1; filter: brightness(1); }
@@ -1875,7 +699,24 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   }
   .auth-shell-form {
     padding: 3rem 2.5rem !important;
-  }
+  }}
+
+/* Material Symbols — the icon set of the Stitch mockups (see <Icon>). */
+.ms {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  flex-shrink: 0;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'liga';
+  user-select: none;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
-
-
+.ms-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }

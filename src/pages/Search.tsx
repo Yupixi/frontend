@@ -1,15 +1,31 @@
-import { useState, useEffect } from 'react'
-import { useQuery } from '@apollo/client/react'
-import { Search as SearchIcon, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { cities } from '../data/cities'
-import BottomSheet from '../components/BottomSheet'
-import ViewToggle from '../components/ViewToggle'
+import { useState, useEffect, useMemo } from 'react'
+import { CategoryIcon } from '../components/Icon'
+import { useMutation, useQuery } from '@apollo/client/react'
+import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from '../components/icons'
+import FilterSheet from '../components/FilterSheet'
 import { ListingCard, ListingListCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-import { LISTINGS_QUERY, type RemoteListing, type ListingSort } from '../graphql/listings'
+import {
+  LISTINGS_QUERY, LISTING_FACETS_QUERY, CREATE_SAVED_SEARCH_MUTATION,
+  type RemoteListing, type ListingSort, type ListingFacets, type ListingFilterInput, type FacetCount,
+} from '../graphql/listings'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 18
+
+const SORTS: { value: ListingSort, label: string }[] = [
+  { value: 'RECENT', label: 'Plus récents' },
+  { value: 'PRICE_ASC', label: 'Prix croissant' },
+  { value: 'PRICE_DESC', label: 'Prix décroissant' },
+  { value: 'POPULAR', label: 'Plus populaires' },
+]
+
+const BUDGETS: { label: string, min?: number, max?: number }[] = [
+  { label: '< 10 000 F', max: 10_000 },
+  { label: '10k – 50k F', min: 10_000, max: 50_000 },
+  { label: '50k – 100k F', min: 50_000, max: 100_000 },
+  { label: '+ 100 000 F', min: 100_000 },
+]
 
 type SearchProps = {
   onNavigate: (page: any) => void
@@ -18,333 +34,429 @@ type SearchProps = {
   onToggleFavorite: (id: string) => void
   categoryFilter?: string
   onClearCategoryFilter?: () => void
+  onCategorySelect?: (slug: string) => void
   searchTerm?: string
   onSearchTermChange?: (term: string) => void
   selectedCity?: string
+  initialMaxPrice?: number
   onCityChange?: (city: string) => void
+  currentUserId?: string | null
+  isLoggedIn?: boolean
+  onContactSeller?: (sellerId: string, listingId?: string) => void
 }
 
-export default function SearchPage({ onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, searchTerm: externalSearchTerm, onSearchTermChange, selectedCity: externalCity }: SearchProps) {
-  // A cramped 2-column grid reads as cluttered on small screens — default to
-  // the single-column list view there; desktop keeps the grid. An explicit
-  // choice is remembered (shared with Home) and wins over that default.
-  const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() =>
-    getStoredViewMode() ?? (typeof window !== 'undefined' && window.innerWidth <= 640 ? 'list' : 'grid'),
+const toggle = (list: string[], value: string) => list.includes(value) ? list.filter(v => v !== value) : [...list, value]
+
+function FilterBlock({ title, children, defaultOpen = true }: { title: string, children: React.ReactNode, defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="rounded-xl bg-surface-lowest p-4">
+      <button onClick={() => setOpen(o => !o)} className="flex w-full cursor-pointer items-center justify-between border-none bg-transparent p-0 text-label-lg text-on-surface">
+        {title}
+        {open ? <ChevronUp size={17} className="text-on-surface-variant" /> : <ChevronDown size={17} className="text-on-surface-variant" />}
+      </button>
+      {open && <div className="mt-3">{children}</div>}
+    </div>
   )
-  const setViewMode = (mode: 'grid' | 'list') => {
-    setViewModeState(mode)
-    setStoredViewMode(mode)
-  }
+}
+
+function CheckRow({ checked, label, count, onChange, highlight }: { checked: boolean, label: string, count?: number, onChange: () => void, highlight?: boolean }) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-2 py-1 text-body-sm text-on-surface-variant hover:text-on-surface">
+      <span className="flex min-w-0 items-center gap-2">
+        <input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 shrink-0 accent-[var(--primary)]" />
+        <span className={`truncate ${checked ? 'font-bold text-on-surface' : 'text-on-surface'}`}>{label}</span>
+      </span>
+      {count != null && (
+        <span className={`shrink-0 rounded-full px-2 text-label-sm ${checked && highlight ? 'bg-tertiary-soft text-tertiary' : 'text-outline'}`}>{count.toLocaleString('fr-FR')}</span>
+      )}
+    </label>
+  )
+}
+
+function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
+  facets: FacetCount[], selected: string[], onToggle: (v: string) => void, placeholder: string, icon?: React.ReactNode
+}) {
+  const [q, setQ] = useState('')
+  const shown = facets.filter(f => f.label.toLowerCase().includes(q.toLowerCase()))
+  return (
+    <>
+      <div className="relative mb-2">
+        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-outline">{icon ?? <SearchIcon size={15} />}</span>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder={placeholder} className="w-full rounded-lg border-none bg-surface-container-low py-2 pl-8 pr-2 text-body-sm text-on-surface outline-none placeholder:text-outline" />
+      </div>
+      <div className="flex max-h-40 flex-col overflow-y-auto">
+        {shown.map(f => <CheckRow key={f.value} checked={selected.includes(f.value)} label={f.label} count={f.count} onChange={() => onToggle(f.value)} />)}
+        {shown.length === 0 && <span className="py-1 text-body-sm text-outline">Aucun résultat</span>}
+      </div>
+    </>
+  )
+}
+
+export default function SearchPage({
+  onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, onCategorySelect,
+  searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, currentUserId, isLoggedIn, onContactSeller,
+}: SearchProps) {
+  const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
+  const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [sortBy, setSortBy] = useState<'recent' | 'price-asc' | 'price-desc'>('recent')
-  const [priceMin, setPriceMin] = useState('')
-  const [priceMax, setPriceMax] = useState('')
-  const [selectedCity, setSelectedCity] = useState(externalCity || '')
-  const [selectedCategory, setSelectedCategory] = useState(categoryFilter || '')
-  const [condition, setCondition] = useState('')
-  const [negotiable, setNegotiable] = useState(false)
-  const [delivery, setDelivery] = useState(false)
-  const [hasPhotos, setHasPhotos] = useState(false)
+
+  const [sort, setSort] = useState<ListingSort>('RECENT')
+  const [verifiedOnly, setVerifiedOnly] = useState(false)
+  const [handoverOnly, setHandoverOnly] = useState(false)
+  const [mobileMoneyOnly, setMobileMoneyOnly] = useState(false)
+  const [categorySlugs, setCategorySlugs] = useState<string[]>([])
+  const [subcategories, setSubcategories] = useState<string[]>([])
+  const [conditions, setConditions] = useState<string[]>([])
+  const [brands, setBrands] = useState<string[]>([])
+  const [sizes, setSizes] = useState<string[]>([])
+  const [cities, setCities] = useState<string[]>(selectedCity ? [selectedCity] : [])
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState(initialMaxPrice ? String(initialMaxPrice) : '')
   const [page, setPage] = useState(1)
-  const [debouncedSearch, setDebouncedSearch] = useState(externalSearchTerm || '')
+  const [search, setSearch] = useState(searchTerm || '')
+  const [alertState, setAlertState] = useState<'idle' | 'done' | 'error'>('idle')
 
-  useEffect(() => { setSelectedCity(externalCity || '') }, [externalCity])
-  useEffect(() => { setSelectedCategory(categoryFilter || '') }, [categoryFilter])
+  useEffect(() => { const t = setTimeout(() => setSearch(searchTerm || ''), 300); return () => clearTimeout(t) }, [searchTerm])
+  useEffect(() => { setSubcategories([]) }, [categoryFilter])
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(externalSearchTerm || ''), 300)
-    return () => clearTimeout(t)
-  }, [externalSearchTerm])
+  const filter: ListingFilterInput = useMemo(() => ({
+    ...(search ? { search } : {}),
+    ...(categoryFilter ? { categorySlug: categoryFilter } : {}),
+    ...(subcategories.length ? { subcategorySlugs: subcategories } : {}),
+    ...(conditions.length ? { conditions } : {}),
+    ...(brands.length ? { brands } : {}),
+    ...(sizes.length ? { sizes } : {}),
+    ...(cities.length ? { cities } : {}),
+    ...(verifiedOnly ? { verifiedSellersOnly: true } : {}),
+    ...(handoverOnly ? { handoverOnly: true } : {}),
+    ...(mobileMoneyOnly ? { mobileMoneyOnly: true } : {}),
+    ...(categorySlugs.length ? { categorySlugs } : {}),
+    ...(minPrice ? { minPrice: Number(minPrice) } : {}),
+    ...(maxPrice ? { maxPrice: Number(maxPrice) } : {}),
+  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, handoverOnly, mobileMoneyOnly, categorySlugs, minPrice, maxPrice])
 
-  useEffect(() => {
-    setPage(1)
-  }, [debouncedSearch, selectedCategory, selectedCity, condition, priceMin, priceMax, sortBy])
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
-  const clearFilter = (key: string) => {
-    if (key === 'category') { setSelectedCategory(''); onClearCategoryFilter?.() }
-    if (key === 'city') setSelectedCity('')
-    if (key === 'condition') setCondition('')
-    if (key === 'price') { setPriceMin(''); setPriceMax('') }
-    if (key === 'negotiable') setNegotiable(false)
-    if (key === 'delivery') setDelivery(false)
-    if (key === 'photos') setHasPhotos(false)
-  }
-
-  const resetAll = () => {
-    setSelectedCity(''); setSelectedCategory(''); setCondition('')
-    setPriceMin(''); setPriceMax('')
-    setNegotiable(false); setDelivery(false); setHasPhotos(false)
-    onClearCategoryFilter?.()
-  }
+  useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const categories = categoriesData?.categories ?? []
+  const category = categories.find(c => c.slug === categoryFilter)
 
-  const sortMap: Record<typeof sortBy, ListingSort> = {
-    recent: 'RECENT', 'price-asc': 'PRICE_ASC', 'price-desc': 'PRICE_DESC',
+  const { data, previousData, loading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; totalPages: number } }>(LISTINGS_QUERY, {
+    variables: { filter, sort, page, pageSize: PAGE_SIZE },
+  })
+  const result = (data ?? previousData)?.listings
+  const items = result?.items ?? []
+  const total = result?.totalCount ?? 0
+  const totalPages = result?.totalPages ?? 1
+
+  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter } })
+  const facets = facetsData?.listingFacets
+
+  const [createSavedSearch, { loading: savingAlert }] = useMutation(CREATE_SAVED_SEARCH_MUTATION)
+  const createAlert = async () => {
+    if (!isLoggedIn) { onNavigate('auth'); return }
+    const label = search || category?.name || 'Ma recherche'
+    try {
+      await createSavedSearch({ variables: { label, filter } })
+      setAlertState('done')
+    } catch {
+      setAlertState('error')
+    }
   }
 
-  const filter = {
-    ...(debouncedSearch ? { search: debouncedSearch } : {}),
-    ...(selectedCategory ? { categorySlug: selectedCategory } : {}),
-    ...(selectedCity ? { city: selectedCity } : {}),
-    ...(condition ? { condition } : {}),
-    ...(priceMin ? { minPrice: Number(priceMin) } : {}),
-    ...(priceMax ? { maxPrice: Number(priceMax) } : {}),
+  const resetAll = () => {
+    setVerifiedOnly(false); setSubcategories([]); setConditions([]); setBrands([]); setSizes([]); setCities([])
+    setHandoverOnly(false); setMobileMoneyOnly(false); setCategorySlugs([])
+    setMinPrice(''); setMaxPrice('')
+    onClearCategoryFilter?.()
+    onSearchTermChange?.('')
   }
 
-  const { data, loading } = useQuery<{
-    listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number }
-  }>(LISTINGS_QUERY, {
-    variables: { filter, sort: sortMap[sortBy], page, pageSize: PAGE_SIZE },
-  })
+  const chips: { key: string, label: string, clear: () => void }[] = [
+    ...(search ? [{ key: 'q', label: `« ${search} »`, clear: () => onSearchTermChange?.('') }] : []),
+    ...(category ? [{ key: 'cat', label: category.name, clear: () => onClearCategoryFilter?.() }] : []),
+    ...subcategories.map(v => ({ key: `sub-${v}`, label: facets?.subcategories.find(f => f.value === v)?.label ?? v, clear: () => setSubcategories(s => s.filter(x => x !== v)) })),
+    ...cities.map(v => ({ key: `city-${v}`, label: v, clear: () => setCities(s => s.filter(x => x !== v)) })),
+    ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
+    ...brands.map(v => ({ key: `brand-${v}`, label: v, clear: () => setBrands(s => s.filter(x => x !== v)) })),
+    ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
+    ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => { setMinPrice(''); setMaxPrice('') } }] : []),
+    ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs certifiés', clear: () => setVerifiedOnly(false) }] : []),
+    ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
+    ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
+    ...categorySlugs.map(v => ({ key: `cats-${v}`, label: categories.find(c => c.slug === v)?.name ?? v, clear: () => setCategorySlugs(s => s.filter(x => x !== v)) })),
+  ]
 
-  const items = data?.listings.items ?? []
-  const sorted = items.filter(l => {
-    if (negotiable && !l.negotiable) return false
-    if (delivery && !l.deliveryAvailable) return false
-    if (hasPhotos && l.media.length === 0) return false
-    return true
-  })
+  const contact = (l: RemoteListing) => () =>
+    isLoggedIn && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id)
 
-  const activeCategoryName = categories.find(c => c.slug === (selectedCategory || categoryFilter))?.name
-  const activeFilters = [
-    { key: 'category', label: activeCategoryName || '' },
-    { key: 'city', label: selectedCity },
-    { key: 'condition', label: condition },
-    { key: 'price', label: (priceMin || priceMax) ? `${priceMin ? new Intl.NumberFormat('fr-CI').format(Number(priceMin)) : '0'} – ${priceMax ? new Intl.NumberFormat('fr-CI').format(Number(priceMax)) : '∞'} FCFA` : '' },
-    { key: 'negotiable', label: negotiable ? 'Négociable' : '' },
-    { key: 'delivery', label: delivery ? 'Livraison possible' : '' },
-    { key: 'photos', label: hasPhotos ? 'Avec photos' : '' },
-  ].filter(f => f.label) as { key: string; label: string }[]
-
-  const headerTitle = (selectedCategory || categoryFilter)
-    ? activeCategoryName || 'Annonces'
-    : 'Toutes les annonces'
-
-  const filterFields = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Prix */}
-      <div>
-        <p className="filter-label">Prix (FCFA)</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <input className="input" type="number" min={0} step={500} placeholder="Min" value={priceMin} onChange={e => setPriceMin(e.target.value)} />
-          <input className="input" type="number" min={0} step={500} placeholder="Max" value={priceMax} onChange={e => setPriceMax(e.target.value)} />
-        </div>
+  const filtersPanel = (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-headline-sm text-on-surface"><SlidersHorizontal size={19} className="text-primary" /> Filtres</span>
+        <button onClick={resetAll} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary hover:underline">Réinitialiser</button>
       </div>
 
-      {/* Catégorie + Ville */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div>
-          <p className="filter-label">Catégorie</p>
-          <select className="input" value={selectedCategory} onChange={e => { setSelectedCategory(e.target.value); if (e.target.value !== categoryFilter) onClearCategoryFilter?.() }}>
-            <option value="">Toutes</option>
-            {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <p className="filter-label">Ville</p>
-          <select className="input" value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
-            <option value="">Toutes</option>
-            {cities.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-      </div>
+      <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-tertiary-soft p-3">
+        <span className="flex items-center gap-2">
+          <BadgeCheck size={19} className="text-tertiary" />
+          <span className="flex flex-col">
+            <span className="text-label-md text-on-surface">Vendeurs certifiés</span>
+            <span className="text-label-sm text-tertiary">Identité vérifiée par Dilchap</span>
+          </span>
+        </span>
+        <input type="checkbox" className="peer sr-only" checked={verifiedOnly} onChange={() => setVerifiedOnly(v => !v)} />
+        <span className="relative h-5 w-9 shrink-0 rounded-full bg-surface-container-highest transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-tertiary peer-checked:after:translate-x-4" />
+      </label>
 
-      {/* État */}
-      <div>
-        <p className="filter-label">État</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {['Neuf', 'Comme neuf', 'Très bon état', 'Bon état', 'Passable'].map(c => (
-            <button key={c} className={`filter-chip${condition === c ? ' active' : ''}`} onClick={() => setCondition(condition === c ? '' : c)}>{c}</button>
+      <FilterBlock title="Catégorie">
+        {category ? (
+          <>
+            <button onClick={() => onClearCategoryFilter?.()} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">
+              <ChevronLeft size={14} /> Toutes les catégories
+            </button>
+            <div className="mb-1 flex items-center gap-2 text-label-md text-on-surface"><CategoryIcon icon={category.icon} size={20} className="text-primary" /> {category.name}</div>
+            {(facets?.subcategories ?? []).map(f => (
+              <CheckRow key={f.value} checked={subcategories.includes(f.value)} label={f.label} count={f.count} onChange={() => setSubcategories(s => toggle(s, f.value))} />
+            ))}
+          </>
+        ) : (
+          <div className="flex flex-col">
+            {categories.map(c => (
+              <button key={c.id} onClick={() => onCategorySelect?.(c.slug)} className="flex cursor-pointer items-center justify-between border-none bg-transparent px-0 py-1 text-left text-body-sm text-on-surface hover:text-primary">
+                <span className="flex items-center gap-2"><CategoryIcon icon={c.icon} size={18} className="text-on-surface-variant" /> {c.name}</span>
+                <ChevronRight size={14} className="text-outline" />
+              </button>
+            ))}
+          </div>
+        )}
+      </FilterBlock>
+
+      {!!facets?.conditions.length && (
+        <FilterBlock title="État de l'objet">
+          {facets.conditions.map(f => (
+            <CheckRow key={f.value} checked={conditions.includes(f.value)} label={f.label} count={f.count} highlight onChange={() => setConditions(s => toggle(s, f.value))} />
+          ))}
+        </FilterBlock>
+      )}
+
+      <FilterBlock title="Budget (F)">
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          {[{ label: 'Min', value: minPrice, set: setMinPrice }, { label: 'Max', value: maxPrice, set: setMaxPrice }].map(f => (
+            <label key={f.label} className="flex items-center gap-1 rounded-lg bg-surface-container-low px-2 py-1.5">
+              <span className="text-label-sm text-outline">{f.label}</span>
+              <input type="number" min={0} value={f.value} onChange={e => f.set(e.target.value)} className="w-full min-w-0 border-none bg-transparent text-right text-label-lg text-on-surface outline-none" />
+              <span className="text-label-sm text-on-surface">F</span>
+            </label>
           ))}
         </div>
-      </div>
-
-      {/* Options */}
-      <div>
-        <p className="filter-label">Options</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <button className={`filter-chip${negotiable ? ' active' : ''}`} onClick={() => setNegotiable(!negotiable)}>Négociable</button>
-          <button className={`filter-chip${delivery ? ' active' : ''}`} onClick={() => setDelivery(!delivery)}>Livraison possible</button>
-          <button className={`filter-chip${hasPhotos ? ' active' : ''}`} onClick={() => setHasPhotos(!hasPhotos)}>Avec photos</button>
+        <div className="flex flex-wrap gap-1.5">
+          {BUDGETS.map(b => {
+            const active = minPrice === String(b.min ?? '') && maxPrice === String(b.max ?? '')
+            return (
+              <button
+                key={b.label}
+                onClick={() => { setMinPrice(active ? '' : String(b.min ?? '')); setMaxPrice(active ? '' : String(b.max ?? '')) }}
+                className={`cursor-pointer rounded-lg border-none px-2.5 py-1 text-body-sm ${active ? 'bg-inverse-surface font-semibold text-white' : 'bg-surface-container text-on-surface hover:bg-surface-container-highest'}`}
+              >
+                {b.label}
+              </button>
+            )
+          })}
         </div>
-      </div>
+      </FilterBlock>
 
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button className="btn-outline" style={{ flex: 1, fontSize: '0.9rem', padding: '0.7rem' }} onClick={resetAll}>
-          Réinitialiser
-        </button>
-        <button className="btn-primary" style={{ flex: 1.4, fontSize: '0.9rem', padding: '0.7rem' }} onClick={() => setFiltersOpen(false)}>
-          Voir les résultats
-        </button>
-      </div>
+      {!!facets?.brands.length && (
+        <FilterBlock title="Marque">
+          <SearchableFacet facets={facets.brands} selected={brands} onToggle={v => setBrands(s => toggle(s, v))} placeholder="Rechercher une marque…" />
+        </FilterBlock>
+      )}
+
+      {!!facets?.sizes.length && (
+        <FilterBlock title="Taille">
+          <div className="grid grid-cols-4 gap-1.5">
+            {facets.sizes.map(f => (
+              <button
+                key={f.value}
+                onClick={() => setSizes(s => toggle(s, f.value))}
+                className={`cursor-pointer rounded-lg border-none py-1.5 text-label-md ${sizes.includes(f.value) ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </FilterBlock>
+      )}
+
+      {!!facets?.cities.length && (
+        <FilterBlock title="Villes & Quartiers">
+          <SearchableFacet facets={facets.cities} selected={cities} onToggle={v => setCities(s => toggle(s, v))} placeholder="Rechercher une ville…" icon={<MapPin size={15} />} />
+        </FilterBlock>
+      )}
+
+      <FilterBlock title="Confiance & Transactions directes">
+        <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
+        <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" onChange={() => setMobileMoneyOnly(v => !v)} />
+        <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> 0 % de commission, paiement à la remise</div>
+      </FilterBlock>
+
+      <button onClick={resetAll} className="cursor-pointer rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest">
+        Réinitialiser tous les filtres
+      </button>
     </div>
   )
 
-  return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.5rem 1rem' }}>
-      {/* Search input */}
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: 8 }}>
-        <div style={{ flex: 1, position: 'relative' }}>
-          <SearchIcon size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
-          <input
-            className="input"
-            style={{ paddingLeft: 42, width: '100%' }}
-            placeholder="Rechercher dans les annonces..."
-            value={externalSearchTerm || ''}
-            onChange={e => onSearchTermChange?.(e.target.value)}
-          />
-        </div>
-      </div>
+  const title = search ? `Résultats pour « ${search} »` : category ? category.name : 'Toutes les annonces'
+  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const to = Math.min(page * PAGE_SIZE, total)
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
 
-      {/* Results header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+  return (
+    <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-5 md:px-8 lg:px-12">
+      {/* Breadcrumb */}
+      <nav aria-label="Fil d'ariane" className="mb-2 flex flex-wrap items-center gap-1 text-label-md text-on-surface-variant">
+        <button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary">Accueil</button>
+        <ChevronRight size={14} className="text-outline-variant" />
+        {category ? (
+          <>
+            <button onClick={() => onClearCategoryFilter?.()} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary">Catalogue</button>
+            <ChevronRight size={14} className="text-outline-variant" />
+            <span className="font-semibold text-on-surface">{category.name}</span>
+          </>
+        ) : <span className="font-semibold text-on-surface">Catalogue</span>}
+      </nav>
+
+      {/* Heading + sort + view */}
+      <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
         <div>
-          <h1 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>
-            {headerTitle}
-          </h1>
-          <p style={{ color: 'var(--fg-muted)', fontSize: '0.875rem', margin: '4px 0 0' }}>
-            {loading ? 'Recherche...' : `${data?.listings.totalCount ?? 0} résultat${(data?.listings.totalCount ?? 0) > 1 ? 's' : ''} trouvé${(data?.listings.totalCount ?? 0) > 1 ? 's' : ''}`}
+          {verifiedOnly && (
+            <span className="mb-1 inline-block rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">Sélection vérifiée</span>
+          )}
+          <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{title}</h1>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant">
+            <span className="font-bold text-on-surface">{total.toLocaleString('fr-FR')} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Sort */}
-          <div style={{ position: 'relative' }}>
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              className="input"
-              style={{ width: 'auto', paddingRight: 32, appearance: 'none', cursor: 'pointer' }}
-            >
-              <option value="recent">Plus récentes</option>
-              <option value="price-asc">Prix croissant</option>
-              <option value="price-desc">Prix décroissant</option>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setFiltersOpen(true)} className="flex cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface lg:hidden">
+            <SlidersHorizontal size={16} /> Filtres{chips.length > 0 && <span className="rounded-full bg-primary px-1.5 text-[11px] text-white">{chips.length}</span>}
+          </button>
+          <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-1.5">
+            <span className="hidden text-label-sm uppercase text-on-surface-variant sm:inline">Trier :</span>
+            <select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="cursor-pointer border-none bg-transparent py-1 text-label-md font-bold text-on-surface outline-none">
+              {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
-            <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-muted)', pointerEvents: 'none' }} />
+          </label>
+          <div className="flex items-center rounded-xl bg-surface-container-low p-1">
+            {([['grid', LayoutGrid, 'Vue grille'], ['list', List, 'Vue liste']] as const).map(([mode, Icon, label]) => (
+              <button key={mode} onClick={() => setViewMode(mode)} title={label} className={`flex cursor-pointer rounded-lg border-none p-1.5 ${viewMode === mode ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
+                <Icon size={19} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+        <aside className="hidden rounded-2xl bg-surface-container-low p-4 lg:col-span-3 lg:block">{filtersPanel}</aside>
+
+        <section className="min-w-0 lg:col-span-9">
+          {chips.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
+              <span className="pl-1 text-label-sm uppercase text-on-surface-variant">Actifs :</span>
+              {chips.map(c => (
+                <span key={c.key} className="flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-label-md text-on-surface">
+                  {c.label}
+                  <button onClick={c.clear} className="flex cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary" aria-label={`Retirer ${c.label}`}><X size={13} /></button>
+                </span>
+              ))}
+              <button onClick={resetAll} className="cursor-pointer border-none bg-transparent px-1 text-label-sm text-primary hover:underline">Tout effacer</button>
+            </div>
+          )}
+
+          <div className={loading && !data ? 'opacity-60' : ''}>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4">
+                {items.map(l => (
+                  <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={contact(l)} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {items.map(l => (
+                  <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} />
+                ))}
+              </div>
+            )}
+            {!loading && items.length === 0 && (
+              <div className="rounded-2xl bg-surface-container-low p-10 text-center">
+                <p className="m-0 text-headline-sm text-on-surface">Aucune annonce ne correspond</p>
+                <p className="m-0 mt-1 text-body-md text-on-surface-variant">Élargissez vos filtres ou créez une alerte ci-dessous.</p>
+              </div>
+            )}
           </div>
 
-          {/* Filter button */}
-          <button
-            onClick={() => setFiltersOpen(!filtersOpen)}
-            className="btn-outline"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem' }}
-          >
-            <SlidersHorizontal size={16} />
-            Filtres
-            {activeFilters.length > 0 && (
-              <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
-                {activeFilters.length}
-              </span>
-            )}
-          </button>
-
-          {/* View mode */}
-          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-        </div>
-      </div>
-
-      {/* Active filters */}
-      {activeFilters.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1rem' }}>
-          {activeFilters.map(f => (
-            <span key={f.key} className="badge badge-red" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {f.label}
-              <X size={12} style={{ cursor: 'pointer' }} onClick={() => clearFilter(f.key)} />
-            </span>
-          ))}
-          <button onClick={resetAll}
-            style={{ color: 'var(--fg-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
-            Tout effacer
-          </button>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
-        {/* Filters sidebar (desktop) / bottom sheet (mobile) */}
-        {isMobile ? (
-          <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtrer les résultats">
-            {filterFields}
-          </BottomSheet>
-        ) : (
-          filtersOpen && (
-            <aside className="card" style={{ width: 260, flexShrink: 0, padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h3 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, margin: 0, fontSize: '1rem' }}>Filtrer les résultats</h3>
-                <button onClick={() => setFiltersOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={16} /></button>
+          {/* Saved-search alert */}
+          <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-2xl bg-surface-container-low p-5 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><BellRing size={22} /></span>
+              <div>
+                <div className="text-headline-sm text-on-surface">Vous ne trouvez pas la perle rare ?</div>
+                <p className="m-0 text-body-sm text-on-surface-variant">Enregistrez cette recherche avec vos filtres pour être alerté des nouvelles annonces.</p>
               </div>
-              {filterFields}
-            </aside>
-          )
-        )}
-
-        {/* Results */}
-        <div style={{ flex: 1 }}>
-          {viewMode === 'grid' ? (
-            <div className="listing-grid">
-              {sorted.map(l => (
-                <ListingCard
-                  key={l.id}
-                  listing={l}
-                  onSelect={() => onSelectListing(l.id)}
-                  onToggleFav={() => onToggleFavorite(l.id)}
-                  isFav={favorites.includes(l.id)}
-                />
-              ))}
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {sorted.map(l => (
-                <ListingListCard
-                  key={l.id}
-                  listing={l}
-                  onSelect={() => onSelectListing(l.id)}
-                  onToggleFav={() => onToggleFavorite(l.id)}
-                  isFav={favorites.includes(l.id)}
-                />
-              ))}
+            <button
+              onClick={createAlert}
+              disabled={savingAlert || alertState === 'done'}
+              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-[1.5px] border-solid border-on-surface bg-surface-lowest px-4 py-2.5 text-label-md text-on-surface hover:bg-surface-container disabled:cursor-default disabled:opacity-80"
+            >
+              {alertState === 'done' ? <><Check size={16} className="text-tertiary" /> Alerte créée</> : <><BellRing size={16} className="text-primary" /> Créer une alerte</>}
+            </button>
+          </div>
+          {alertState === 'error' && <p className="mt-2 text-body-sm text-primary">Impossible de créer l'alerte pour le moment.</p>}
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
+              <span className="text-body-sm text-on-surface-variant">Affichage de {from} – {to} sur {total.toLocaleString('fr-FR')} articles</span>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-on-surface-variant disabled:opacity-30"><ChevronLeft size={18} /></button>
+                  {pages.map((p, i) => (
+                    <span key={p} className="flex items-center">
+                      {i > 0 && p - pages[i - 1] > 1 && <span className="px-1 text-outline">…</span>}
+                      <button onClick={() => setPage(p)} className={`h-9 min-w-9 cursor-pointer rounded-lg border-none px-2 text-label-md ${p === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface hover:bg-surface-container'}`}>{p}</button>
+                    </span>
+                  ))}
+                  <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-transparent px-2 py-2 text-label-md text-on-surface disabled:opacity-30">Suivant <ChevronRight size={16} /></button>
+                </div>
+              )}
             </div>
           )}
-
-          {!loading && sorted.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--fg-muted)' }}>
-              Aucune annonce ne correspond à votre recherche.
-            </div>
-          )}
-
-          {data && data.listings.totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: '2rem' }}>
-              <button
-                className="btn-outline"
-                disabled={page <= 1}
-                onClick={() => setPage(p => p - 1)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0.5rem 0.9rem', opacity: page <= 1 ? 0.5 : 1 }}
-              >
-                <ChevronLeft size={16} /> Précédent
-              </button>
-              <span style={{ fontSize: '0.85rem', color: 'var(--fg-muted)' }}>
-                Page {data.listings.page} / {data.listings.totalPages}
-              </span>
-              <button
-                className="btn-outline"
-                disabled={page >= data.listings.totalPages}
-                onClick={() => setPage(p => p + 1)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0.5rem 0.9rem', opacity: page >= data.listings.totalPages ? 0.5 : 1 }}
-              >
-                Suivant <ChevronRight size={16} />
-              </button>
-            </div>
-          )}
-        </div>
+        </section>
       </div>
+
+      <FilterSheet
+          open={filtersOpen}
+          state={{ sort, cities, minPrice, maxPrice, categorySlugs, conditions, verifiedOnly, handoverOnly, mobileMoneyOnly }}
+          onChange={patch => {
+            if (patch.sort) setSort(patch.sort)
+            if (patch.cities) setCities(patch.cities)
+            if (patch.minPrice !== undefined) setMinPrice(patch.minPrice)
+            if (patch.maxPrice !== undefined) setMaxPrice(patch.maxPrice)
+            if (patch.categorySlugs) setCategorySlugs(patch.categorySlugs)
+            if (patch.conditions) setConditions(patch.conditions)
+            if (patch.verifiedOnly !== undefined) setVerifiedOnly(patch.verifiedOnly)
+            if (patch.handoverOnly !== undefined) setHandoverOnly(patch.handoverOnly)
+            if (patch.mobileMoneyOnly !== undefined) setMobileMoneyOnly(patch.mobileMoneyOnly)
+          }}
+          onReset={resetAll}
+          onClose={() => setFiltersOpen(false)}
+          facets={facets}
+          categories={categories}
+          total={total}
+        />
     </div>
   )
 }

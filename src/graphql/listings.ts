@@ -17,6 +17,14 @@ export const LISTINGS_QUERY = gql`
         city
         locationLabel
         condition
+        brand
+        modelName
+        size
+        originalPrice
+        meetupSpot
+        paymentMethods
+        minOfferPrice
+        urgentUntil
         negotiable
         deliveryAvailable
         tags
@@ -49,6 +57,10 @@ export const LISTINGS_QUERY = gql`
         seller {
           id
           fullName
+          avatarUrl
+          isVerified
+          averageRating
+          reviewsCount
         }
       }
     }
@@ -67,6 +79,14 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       city
       locationLabel
       condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
       negotiable
       deliveryAvailable
       tags
@@ -99,6 +119,10 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       seller {
         id
         fullName
+        avatarUrl
+        isVerified
+        averageRating
+        reviewsCount
       }
     }
   }
@@ -116,6 +140,14 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       city
       locationLabel
       condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
       negotiable
       deliveryAvailable
       tags
@@ -147,6 +179,10 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       seller {
         id
         fullName
+        avatarUrl
+        isVerified
+        averageRating
+        reviewsCount
       }
     }
   }
@@ -164,6 +200,14 @@ export const LISTING_QUERY = gql`
       city
       locationLabel
       condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
       negotiable
       deliveryAvailable
       status
@@ -215,6 +259,16 @@ export const MY_LISTING_QUERY = gql`
       currency
       countryCode
       city
+      locationLabel
+      condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      deliveryAvailable
       negotiable
       status
       attributes
@@ -291,6 +345,20 @@ export const MY_LISTINGS_QUERY = gql`
         publishedAt
         coverImageUrl
         boostExpiresAt
+        contactsCount
+        pendingOffersCount
+        views24h
+        activeConversationsCount
+        condition
+        size
+        brand
+        mediaCount: media { id }
+        category { name slug }
+        subcategory { name }
+        autoBumpUntil
+        urgentUntil
+        city
+        locationLabel
       }
     }
   }
@@ -323,6 +391,20 @@ export type MyListingRow = {
   publishedAt: string | null
   coverImageUrl: string | null
   boostExpiresAt: string | null
+  contactsCount?: number
+  pendingOffersCount?: number
+  views24h?: number
+  activeConversationsCount?: number
+  condition?: string | null
+  size?: string | null
+  brand?: string | null
+  mediaCount?: { id: string }[]
+  subcategory?: { name: string } | null
+  autoBumpUntil?: string | null
+  urgentUntil?: string | null
+  category?: { name: string; slug: string }
+  city?: string
+  locationLabel?: string | null
 }
 
 export type MyListingDetail = {
@@ -333,6 +415,16 @@ export type MyListingDetail = {
   currency: string
   countryCode: string
   city: string
+  locationLabel: string | null
+  condition: string | null
+  brand: string | null
+  modelName: string | null
+  size: string | null
+  originalPrice: number | null
+  meetupSpot: string | null
+  paymentMethods: string[]
+  minOfferPrice: number | null
+  deliveryAvailable: boolean
   negotiable: boolean
   status: string
   attributes: Record<string, string>
@@ -387,6 +479,14 @@ export type RemoteListing = {
   city: string
   locationLabel: string | null
   condition: string | null
+  brand?: string | null
+  modelName?: string | null
+  size?: string | null
+  originalPrice?: number | null
+  meetupSpot?: string | null
+  paymentMethods?: string[]
+  minOfferPrice?: number | null
+  urgentUntil?: string | null
   negotiable: boolean
   deliveryAvailable: boolean
   tags: string[]
@@ -402,7 +502,7 @@ export type RemoteListing = {
   media: { url: string }[]
   category: { slug: string; name: string }
   subcategory: { slug: string; name: string } | null
-  seller: { id: string; fullName: string }
+  seller: { id: string; fullName: string; avatarUrl?: string | null; isVerified?: boolean; averageRating?: number; reviewsCount?: number }
 }
 
 export type ListingFilterInput = {
@@ -416,6 +516,47 @@ export type ListingFilterInput = {
   minPrice?: number
   maxPrice?: number
   sellerId?: string
+  subcategorySlugs?: string[]
+  conditions?: string[]
+  brands?: string[]
+  sizes?: string[]
+  cities?: string[]
+  verifiedSellersOnly?: boolean
+  categorySlugs?: string[]
+  handoverOnly?: boolean
+  mobileMoneyOnly?: boolean
 }
 
-export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC'
+export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'
+
+export const LISTING_FACETS_QUERY = gql`
+  query ListingFacets($filter: ListingFilterInput) {
+    listingFacets(filter: $filter) {
+      subcategories { value label count }
+      conditions { value label count }
+      brands { value label count }
+      sizes { value label count }
+      cities { value label count }
+      categories { value label count }
+      priceHistogram { min max count }
+    }
+  }
+`
+
+export type FacetCount = { value: string; label: string; count: number }
+export type ListingFacets = Record<'subcategories' | 'conditions' | 'brands' | 'sizes' | 'cities' | 'categories', FacetCount[]> & {
+  priceHistogram: { min: number; max: number; count: number }[]
+}
+
+export const CREATE_SAVED_SEARCH_MUTATION = gql`
+  mutation CreateSavedSearch($label: String!, $filter: ListingFilterInput!) {
+    createSavedSearch(label: $label, filter: $filter) { id label }
+  }
+`
+
+export const PRICE_RANGE_QUERY = gql`
+  query PriceRange($categoryId: String!, $subcategoryId: String, $countryCode: String) {
+    priceRange(categoryId: $categoryId, subcategoryId: $subcategoryId, countryCode: $countryCode) { low median high sampleSize }
+  }
+`
+export type PriceRange = { low: number; median: number; high: number; sampleSize: number }

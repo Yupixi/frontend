@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@apollo/client/react'
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, ShieldCheck, Sparkles, Users, TrendingUp } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, ShieldCheck, Sparkles, Users, TrendingUp } from '../components/icons'
 import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, type AuthPayload } from '../graphql/auth'
 import { storeTokens } from '../lib/auth'
@@ -45,7 +45,7 @@ export default function Auth({ onNavigate, onLogin }: AuthProps) {
               onClick={() => setMode(t.key)}
               style={{
                 flex: 1, padding: '0.65rem', border: 'none', borderRadius: 8, cursor: 'pointer',
-                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.9rem',
+                fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.9rem',
                 background: mode === t.key ? 'var(--primary)' : 'transparent',
                 color: mode === t.key ? '#fff' : 'var(--fg-muted)',
                 transition: 'all 0.2s',
@@ -85,7 +85,7 @@ function FormError({ message }: { message?: string }) {
   if (!message) return null
   return (
     <div style={{
-      background: 'rgba(254,0,0,0.06)', border: '1px solid rgba(254,0,0,0.2)', borderRadius: 'var(--radius-sm)',
+      background: 'rgba(187, 0, 19,0.06)', border: '1px solid rgba(187, 0, 19,0.2)', borderRadius: 'var(--radius-sm)',
       padding: '0.65rem 0.85rem', color: 'var(--primary-dark)', fontSize: '0.85rem', fontWeight: 600,
     }}>
       {message}
@@ -119,7 +119,7 @@ function LoginForm({ onForgot, onSuccess }: { onForgot: () => void; onSuccess: (
 
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem' }}>Mot de passe</label>
+          <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem' }}>Mot de passe</label>
           <button type="button" onClick={onForgot} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
             Mot de passe oublié ?
           </button>
@@ -179,7 +179,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
       </Field>
 
       <div>
-        <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Mot de passe</label>
+        <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Mot de passe</label>
         <div style={{ position: 'relative' }}>
           <Lock size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
           <input className="input" style={{ paddingLeft: 36, paddingRight: 40 }} type={showPass ? 'text' : 'password'} placeholder="8 caractères minimum" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
@@ -204,7 +204,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
 function Field({ label, icon: Icon, children }: { label: string; icon: typeof Mail; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>{label}</label>
+      <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>{label}</label>
       <div style={{ position: 'relative' }}>
         <Icon size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
         {children}
@@ -218,7 +218,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
     <div style={{ minHeight: '85vh', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' }} className="auth-shell">
       <div className="auth-shell-brand pattern-yupixi">
         <div className="auth-shell-brand-inner">
-          <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', color: '#fff', margin: '0 0 1rem', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', color: '#fff', margin: '0 0 1rem', letterSpacing: '-0.02em' }}>
             La marketplace ivoirienne pour tout acheter et tout vendre
           </h1>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
@@ -246,7 +246,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 
   return (
     <div style={{ width: '100%', maxWidth: 420, margin: '0 auto' }}>
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Outfit', sans-serif", fontWeight: 700, marginBottom: '1.5rem' }}>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, marginBottom: '1.5rem' }}>
         <ArrowLeft size={16} /> Retour
       </button>
       <div className="card" style={{ padding: '2rem' }}>
@@ -254,11 +254,11 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
           <>
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔐</div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, margin: '0 0 0.5rem' }}>Mot de passe oublié</h2>
+              <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, margin: '0 0 0.5rem' }}>Mot de passe oublié</h2>
               <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: 0 }}>Saisissez votre email pour recevoir un lien de réinitialisation.</p>
             </div>
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Email</label>
+              <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', display: 'block', marginBottom: 6 }}>Email</label>
               <input className="input" placeholder="votre@email.ci" value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <button className="btn-primary" style={{ width: '100%', padding: '0.85rem' }} onClick={() => setStep('code')}>
@@ -270,7 +270,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
           <>
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📩</div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, margin: '0 0 0.5rem' }}>Vérifiez vos emails</h2>
+              <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, margin: '0 0 0.5rem' }}>Vérifiez vos emails</h2>
               <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', margin: 0 }}>Un lien de réinitialisation a été envoyé à <strong>{email || 'votre adresse email'}</strong></p>
             </div>
             <button className="btn-primary" style={{ width: '100%', padding: '0.85rem' }} onClick={() => setStep('success')}>
@@ -283,7 +283,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
               <ShieldCheck size={32} color="#10B981" />
             </div>
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, margin: '0 0 0.5rem' }}>Mot de passe réinitialisé !</h2>
+            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, margin: '0 0 0.5rem' }}>Mot de passe réinitialisé !</h2>
             <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</p>
             <button className="btn-primary" style={{ width: '100%', padding: '0.85rem' }} onClick={onBack}>
               Se connecter

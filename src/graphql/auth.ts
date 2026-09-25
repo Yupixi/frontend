@@ -57,6 +57,10 @@ export const ME_QUERY = gql`
       avatarUrl
       notificationPreferences
       isGuest
+      isVerified
+      bio
+      coverUrl
+      boostCredits
     }
   }
 `
@@ -85,6 +89,10 @@ export type AuthUser = {
   avatarUrl?: string | null
   notificationPreferences?: Record<string, boolean>
   isGuest?: boolean
+  isVerified?: boolean
+  boostCredits?: number
+  bio?: string | null
+  coverUrl?: string | null
 }
 
 export type AuthPayload = {

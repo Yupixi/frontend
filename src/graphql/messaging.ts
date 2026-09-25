@@ -17,6 +17,15 @@ const MESSAGE_FIELDS = `
     amount
     status
   }
+  meetup {
+    id
+    proposedById
+    place
+    scheduledAt
+    status
+    handoverCode
+    handedOverAt
+  }
 `
 
 const CONVERSATION_FIELDS = `
@@ -36,11 +45,22 @@ const CONVERSATION_FIELDS = `
     currency
     status
     negotiable
+    condition
+    originalPrice
+    paymentMethods
+    meetupSpot
+    city
+    locationLabel
   }
   otherParticipant {
     id
     fullName
     avatarUrl
+    city
+    createdAt
+    isVerified
+    averageRating
+    reviewsCount
   }
   lastMessage {
     ${MESSAGE_FIELDS}
@@ -151,6 +171,21 @@ export type RemoteUserRef = {
   id: string
   fullName: string
   avatarUrl: string | null
+  city?: string | null
+  createdAt?: string
+  isVerified?: boolean
+  averageRating?: number
+  reviewsCount?: number
+}
+
+export type RemoteMeetup = {
+  id: string
+  proposedById: string
+  place: string
+  scheduledAt: string
+  status: 'PROPOSED' | 'CONFIRMED' | 'DECLINED'
+  handoverCode?: string | null
+  handedOverAt?: string | null
 }
 
 export type RemoteMessageOffer = {
@@ -168,6 +203,7 @@ export type RemoteMessage = {
   createdAt: string
   sender: RemoteUserRef
   offer: RemoteMessageOffer | null
+  meetup?: RemoteMeetup | null
 }
 
 export type RemoteConversation = {
@@ -179,8 +215,23 @@ export type RemoteConversation = {
   dealClosedAt: string | null
   canManageDeal: boolean
   createdAt: string
-  listing: { id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string; negotiable: boolean } | null
+  listing: {
+    id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string; negotiable: boolean
+    condition?: string | null; originalPrice?: number | null; paymentMethods?: string[]; meetupSpot?: string | null; city?: string; locationLabel?: string | null
+  } | null
   otherParticipant: RemoteUserRef
   lastMessage: RemoteMessage | null
   messages?: RemoteMessage[]
 }
+
+export const PROPOSE_MEETUP_MUTATION = gql`
+  mutation ProposeMeetup($conversationId: String!, $place: String!, $scheduledAt: DateTime!) {
+    proposeMeetup(conversationId: $conversationId, place: $place, scheduledAt: $scheduledAt) { id }
+  }
+`
+
+export const RESPOND_TO_MEETUP_MUTATION = gql`
+  mutation RespondToMeetup($meetupId: String!, $confirm: Boolean!) {
+    respondToMeetup(meetupId: $meetupId, confirm: $confirm) { id status }
+  }
+`
