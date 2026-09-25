@@ -271,17 +271,29 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <span className="flex-1 text-body-sm text-on-surface">{pushStatus === 'subscribed' ? 'Notifications push actives sur cet appareil.' : pushStatus === 'permission-denied' ? 'Notifications bloquées dans le navigateur — autorisez-les dans ses réglages.' : pushStatus === 'ios-install-required' ? "Sur iPhone, ajoutez Dilchap à l'écran d'accueil pour recevoir les notifications." : 'Notifications push non activées sur cet appareil.'}</span>
                   {['available', 'permission-required', 'error'].includes(pushStatus) && <button onClick={() => void subscribeToPush(true).then(setPushStatus)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white">Activer</button>}
                 </div>
-                <div className="flex flex-col divide-y divide-outline-variant/50 md:hidden">
+                {/* The card adapts to its own width (container query): full channel
+                    matrix when it fits, otherwise one row per alert with 3 switches. */}
+                <div className="@container">
+                <div className="flex flex-col divide-y divide-outline-variant/50 @2xl:hidden">
                   {ALERTS.map(a => (
-                    <div key={a.key} className="flex items-center gap-3 py-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container-low text-primary"><Icon name={a.icon} size={18} /></span>
-                      <div className="min-w-0 flex-1"><div className="text-label-md text-on-surface">{a.title}</div><div className="truncate text-body-sm text-on-surface-variant">{a.sub}</div></div>
-                      <Toggle label={a.title} on={!!form.alerts[a.key]?.push} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], push: v } })} />
+                    <div key={a.key} className="py-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container-low text-primary"><Icon name={a.icon} size={18} /></span>
+                        <div className="min-w-0 flex-1"><div className="text-label-md text-on-surface">{a.title}</div><div className="text-body-sm text-on-surface-variant">{a.sub}</div></div>
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2 sm:pl-12">
+                        {([['push', 'Push'], ['whatsapp', 'WhatsApp'], ['email', 'E-mail']] as [Channel, string][]).map(([ch, label]) => (
+                          <label key={ch} className="flex items-center justify-between gap-2 rounded-lg bg-surface-container-low px-2.5 py-1.5 text-label-sm text-on-surface-variant">
+                            {label}
+                            <Toggle label={`${a.title} — ${label}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[520px] border-collapse">
+                <div className="hidden @2xl:block">
+                  <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
                         <th className="rounded-l-xl px-3 py-2.5 text-left font-semibold">Type d'alerte transactionnelle</th>
@@ -304,6 +316,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                       ))}
                     </tbody>
                   </table>
+                </div>
                 </div>
                 <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Les alertes push sont actives aujourd'hui ; les envois WhatsApp/SMS et e-mail suivront vos préférences dès l'ouverture de ces canaux.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
