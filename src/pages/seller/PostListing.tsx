@@ -75,9 +75,9 @@ function loadDraft(): { form: Form, savedAt: string } | null {
   } catch { return null }
 }
 
-function Card({ icon, title, subtitle, children, aside }: { icon: string, title: string, subtitle?: string, children: React.ReactNode, aside?: React.ReactNode }) {
+function Card({ icon, title, subtitle, children, aside, className = '' }: { icon: string, title: string, subtitle?: string, children: React.ReactNode, aside?: React.ReactNode, className?: string }) {
   return (
-    <section className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 md:p-6">
+    <section className={`rounded-2xl border border-outline-variant bg-surface-lowest p-4 md:p-6 ${className}`}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name={icon} size={24} className="text-primary" /> {title}</h2>
@@ -198,6 +198,27 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     { title: 'Description & État', done: !!form.title.trim() && !!form.categoryId && wordCount > 3, sub: category ? category.name : 'Catégorie & détails' },
     { title: 'Prix & Échange', done: (!requiresPrice || priceNum > 0) && !!form.city, sub: priceNum ? `${priceNum.toLocaleString('fr-FR')} F` : 'Prix et rencontre' },
   ]
+  // Mobile only: the form becomes a wizard, one card per screen, driven by
+  // a sticky Précédent / Suivant bar. Desktop keeps the single long page.
+  const [step, setStep] = useState(0)
+  const MOBILE_STEPS = ['Photos', 'Détails', 'Prix', 'Rencontre', 'Aperçu']
+  const stepMissing = (i: number) => [
+    ...(i === 1 ? [!form.categoryId && 'la catégorie', !form.title.trim() && 'le titre', wordCount < 1 && 'la description'] : []),
+    ...(i === 2 ? [requiresPrice && !priceNum && 'le prix'] : []),
+    ...(i === 3 ? [!form.city.trim() && 'la ville'] : []),
+  ].filter(Boolean) as string[]
+  const goStep = (i: number) => {
+    setError(null)
+    setStep(i)
+    document.querySelector('.dashboard-main')?.scrollTo({ top: 0 })
+  }
+  const next = () => {
+    const m = stepMissing(step)
+    if (m.length) { setError(`Complétez ${m.join(', ')}.`); return }
+    goStep(step + 1)
+  }
+  const only = (i: number) => (step === i ? '' : 'max-lg:hidden')
+
   const missing = [
     !form.categoryId && 'la catégorie',
     !form.title.trim() && 'le titre',
@@ -304,22 +325,33 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     <AccountLayout active={active} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1160px] pb-6">
         {/* Heading */}
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
-            <div className="mb-1 flex items-center gap-2 text-label-sm uppercase">
+            <div className="mb-1 hidden items-center gap-2 text-label-sm uppercase lg:flex">
               <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-primary">Création guidée</span>
               {!isEditing && <span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Enregistrement auto activé</span>}
             </div>
-            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{isEditing ? "Modifier l'annonce" : 'Déposer une annonce'}</h1>
-            <p className="m-0 mt-1 text-body-md text-on-surface-variant">Vendez vos articles rapidement, sans commission cachée, et recevez l'intégralité de vos gains.</p>
+            <h1 className="m-0 hidden text-headline-lg text-on-surface lg:block">{isEditing ? "Modifier l'annonce" : 'Déposer une annonce'}</h1>
+            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant lg:block">Vendez vos articles rapidement, sans commission cachée, et recevez l'intégralité de vos gains.</p>
           </div>
           {hhmm && !isEditing && (
-            <span className="flex items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><Icon name="bookmark" size={17} /> Brouillon sauvegardé ({hhmm})</span>
+            <span className="hidden items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface lg:flex"><Icon name="bookmark" size={17} /> Brouillon sauvegardé ({hhmm})</span>
           )}
         </div>
 
         {/* Stepper */}
-        <div className="mb-6 grid grid-cols-3 gap-2 rounded-2xl border border-outline-variant bg-surface-lowest p-3">
+        <div className="mb-4 lg:hidden">
+          <div className="mb-2 flex items-center justify-between text-label-md">
+            <span className="text-on-surface">Étape {step + 1} / {MOBILE_STEPS.length} · <span className="text-primary">{MOBILE_STEPS[step]}</span></span>
+            {hhmm && !isEditing && <span className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="bookmark" size={14} /> {hhmm}</span>}
+          </div>
+          <div className="flex gap-1.5">
+            {MOBILE_STEPS.map((label, i) => (
+              <button key={label} type="button" aria-label={label} onClick={() => i < step && goStep(i)} className={`h-1.5 flex-1 rounded-full border-none p-0 ${i <= step ? 'bg-primary' : 'bg-surface-container-high'} ${i < step ? 'cursor-pointer' : 'cursor-default'}`} />
+            ))}
+          </div>
+        </div>
+        <div className="mb-6 hidden grid-cols-3 gap-2 rounded-2xl lg:grid border border-outline-variant bg-surface-lowest p-3">
           {steps.map((s, i) => (
             <div key={s.title} className="flex items-center gap-3">
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-label-md ${s.done ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'}`}>{i + 1}</span>
@@ -334,7 +366,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
           <div className="flex min-w-0 flex-col gap-5">
             {/* Photos */}
-            <Card icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${MAX_PHOTOS} photos gratuites. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
+            <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${MAX_PHOTOS} photos gratuites. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
               aside={<span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface-variant">{photoCount} / {MAX_PHOTOS} ajoutées</span>}>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {allPhotos.map((p, i) => (
@@ -361,7 +393,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {/* Infos */}
-            <Card icon="edit_note" title="Informations sur l'article" subtitle="Donnez un maximum de précisions pour remonter dans les résultats de recherche.">
+            <Card className={only(1)} icon="edit_note" title="Informations sur l'article" subtitle="Donnez un maximum de précisions pour remonter dans les résultats de recherche.">
               <div className="flex flex-col gap-4">
                 <Field label="Titre de l'annonce" required right={<span className="text-body-sm text-on-surface-variant">{form.title.length} / {TITLE_MAX} car.</span>} hint="Mentionnez la marque, le modèle précis et la particularité majeure.">
                   <input className={inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ex : Appareil photo argentique Olympus OM-1 + Zuiko 50mm" />
@@ -434,7 +466,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {/* Price */}
-            <Card icon="sell" title="Fixation du prix & Recommandation Dilchap" subtitle="Fixez votre prix en toute liberté. Vente 100% sans commission entre particuliers.">
+            <Card className={only(2)} icon="sell" title="Fixation du prix & Recommandation Dilchap" subtitle="Fixez votre prix en toute liberté. Vente 100% sans commission entre particuliers.">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Field label={`Votre prix de vente (${form.currency === 'XOF' || form.currency === 'XAF' ? 'F' : form.currency})`} required={requiresPrice}>
@@ -492,7 +524,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {/* Exchange */}
-            <Card icon="handshake" title="Modalités d'échange et de rencontre" subtitle="Aucun transporteur obligatoire : convenez directement du lieu de remise et du mode de règlement avec l'acheteur.">
+            <Card className={only(3)} icon="handshake" title="Modalités d'échange et de rencontre" subtitle="Aucun transporteur obligatoire : convenez directement du lieu de remise et du mode de règlement avec l'acheteur.">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Ville & Commune" required>
                   <div className="relative"><Icon name="location_city" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Abidjan" /></div>
@@ -535,8 +567,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               </div>
             </Card>
 
-            {error && <p className="m-0 rounded-xl bg-primary-fixed p-3 text-body-sm text-primary">{error}</p>}
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}</p>}
+            <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
               {!isEditing ? (
                 <button disabled={busy} onClick={() => void save(false)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-surface-container-high px-5 py-3 text-label-lg text-on-surface hover:bg-surface-container-highest disabled:opacity-60">
                   <Icon name="save" size={19} /> Sauvegarder en brouillon
@@ -549,7 +581,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           </div>
 
           {/* Sticky column */}
-          <aside className="flex flex-col gap-4 lg:sticky lg:top-2">
+          <aside className={`flex flex-col gap-4 lg:sticky lg:top-2 ${only(4)}`}>
             <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <div className="flex items-center justify-between">
                 <span className="text-label-sm uppercase text-on-surface-variant">Vos gains réels</span>
@@ -592,7 +624,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               </div>
             </div>
 
-            <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
+            <div className="hidden rounded-2xl border border-outline-variant bg-surface-lowest p-4 lg:block">
               <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="verified" size={18} className="text-primary" /> Les engagements Dilchap</div>
               <ul className="m-0 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
                 {[
@@ -603,6 +635,32 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               </ul>
             </div>
           </aside>
+        </div>
+
+        {/* Mobile wizard bar, above the account bottom tabs */}
+        <div className="h-16 lg:hidden" />
+        <div className="fixed inset-x-0 bottom-[calc(58px+env(safe-area-inset-bottom))] z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 py-2.5 lg:hidden">
+          {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
+          <div className="flex items-center gap-2">
+            {step > 0 ? (
+              <button type="button" onClick={() => goStep(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label="Étape précédente">
+                <Icon name="arrow_back" size={20} />
+              </button>
+            ) : !isEditing && (
+              <button type="button" disabled={busy} onClick={() => void save(false)} className="flex h-12 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container-high px-4 text-label-md text-on-surface disabled:opacity-60">
+                <Icon name="save" size={19} /> Brouillon
+              </button>
+            )}
+            {step < MOBILE_STEPS.length - 1 ? (
+              <button type="button" onClick={next} className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary text-label-lg text-white hover:bg-primary-dark">
+                Suivant · {MOBILE_STEPS[step + 1]} <Icon name="arrow_forward" size={20} />
+              </button>
+            ) : (
+              <button type="button" disabled={busy} onClick={() => void save(!isEditing)} className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
+                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {isEditing ? 'Enregistrer' : 'Publier mon annonce'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </AccountLayout>

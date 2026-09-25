@@ -464,7 +464,7 @@ export default function App() {
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         {accountContent}
-        <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+        <InstallBanner show={showInstallBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
   }
@@ -489,7 +489,7 @@ export default function App() {
       >
         {renderPage()}
       </Layout>
-      <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      <InstallBanner show={showInstallBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {isLoggedIn && pushStatus && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
