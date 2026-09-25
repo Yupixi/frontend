@@ -97,7 +97,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
             <Icon name="payments" size={22} className="text-tertiary" />
             <div><div className="text-label-sm uppercase text-on-surface-variant">Ventes encaissées</div><div className="text-headline-sm font-extrabold text-tertiary"><Price amount={wallet?.totalSales ?? 0} /></div></div>
           </div>
-          <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white shadow-float md:flex"><Icon name="add_circle" size={19} /> Vendre un article</button>
+          <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white md:flex"><Icon name="add_circle" size={19} /> Vendre un article</button>
         </section>
 
         {/* Mobile: today's meet-up first */}

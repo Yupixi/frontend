@@ -127,7 +127,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
       </div>
 
       {error && <p className="m-0 text-body-sm text-primary">{error}</p>}
-      <button onClick={() => void submit()} disabled={busy || (!message.trim() && !offer)} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white shadow-float hover:bg-primary-dark disabled:opacity-60">
+      <button onClick={() => void submit()} disabled={busy || (!message.trim() && !offer)} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
         <Icon name="send" size={19} /> {busy ? 'Envoi…' : offer ? `Envoyer l'offre de ${formatNumber(offer)} F & Ouvrir le chat` : 'Envoyer & Ouvrir le chat'}
       </button>
       {responseTime && <p className="m-0 -mt-2 text-center text-label-sm text-on-surface-variant">Réponse moyenne de {listing.seller.fullName} en {responseTime}</p>}

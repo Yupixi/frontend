@@ -5,6 +5,7 @@ import Icon from '../../components/Icon'
 import { formatNumber } from '../../lib/format'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
+import StatsMobile from './StatsMobile'
 import { SELLER_STATS_QUERY, type ListingPerformance, type SellerStats } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 
@@ -103,7 +104,10 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
 
   return (
     <AccountLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <div className="mx-auto max-w-[1180px] pb-8">
+      <div className="md:hidden">
+        <StatsMobile s={s} period={period} periods={PERIODS} onPeriod={setPeriod} verified={currentUser?.isVerified} onNavigate={onNavigate} onSelectListing={onSelectListing} />
+      </div>
+      <div className="mx-auto hidden max-w-[1180px] pb-8 md:block">
         <nav className="mb-2 hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
           <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />
           <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">Tableau de bord</button>

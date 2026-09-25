@@ -15,6 +15,7 @@ import type { AuthUser } from '../../graphql/auth'
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
   onProfileUpdated: (u: AuthUser) => void; dark: boolean; onToggleDark: () => void
+  onViewShop?: (sellerId: string) => void
 }
 
 type Channel = 'push' | 'whatsapp' | 'email'
@@ -95,7 +96,7 @@ const deviceLabel = (ua: string | null) => {
 // "Paramètres & Notifications" mockup — one form saved at once ("Enregistrer
 // les modifications" / unsaved-changes bar), plus the security & account
 // actions that apply immediately.
-export default function Settings({ onNavigate, currentUser, onLogout, onProfileUpdated, dark, onToggleDark }: Props) {
+export default function Settings({ onNavigate, currentUser, onLogout, onProfileUpdated, dark, onToggleDark, onViewShop }: Props) {
   const { data, refetch } = useQuery<SettingsData>(SELLER_SETTINGS_QUERY)
   const me = data?.me
   const rep = data?.myReputation
@@ -237,7 +238,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="mt-3 grid grid-cols-2 gap-2 md:hidden">
+                  <button onClick={() => document.getElementById('settings-profil-form')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="edit" size={17} /> Modifier profil</button>
+                  <button onClick={() => currentUser && onViewShop?.(currentUser.id)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary-fixed py-2.5 text-label-md text-primary"><Icon name="storefront" size={17} /> Voir boutique</button>
+                </div>
+                <div id="settings-profil-form" className="mt-4 grid scroll-mt-24 gap-4 sm:grid-cols-2">
                   <label className="text-label-md text-on-surface">Nom officiel de la boutique<input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={`${field} mt-1`} /></label>
                   <label className="text-label-md text-on-surface">Commune principale de référence
                     <select value={form.city} onChange={e => set('city', e.target.value)} className={`${field} mt-1`}>
@@ -266,7 +271,16 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <span className="flex-1 text-body-sm text-on-surface">{pushStatus === 'subscribed' ? 'Notifications push actives sur cet appareil.' : pushStatus === 'permission-denied' ? 'Notifications bloquées dans le navigateur — autorisez-les dans ses réglages.' : pushStatus === 'ios-install-required' ? "Sur iPhone, ajoutez Dilchap à l'écran d'accueil pour recevoir les notifications." : 'Notifications push non activées sur cet appareil.'}</span>
                   {['available', 'permission-required', 'error'].includes(pushStatus) && <button onClick={() => void subscribeToPush(true).then(setPushStatus)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white">Activer</button>}
                 </div>
-                <div className="overflow-x-auto">
+                <div className="flex flex-col divide-y divide-outline-variant/50 md:hidden">
+                  {ALERTS.map(a => (
+                    <div key={a.key} className="flex items-center gap-3 py-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container-low text-primary"><Icon name={a.icon} size={18} /></span>
+                      <div className="min-w-0 flex-1"><div className="text-label-md text-on-surface">{a.title}</div><div className="truncate text-body-sm text-on-surface-variant">{a.sub}</div></div>
+                      <Toggle label={a.title} on={!!form.alerts[a.key]?.push} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], push: v } })} />
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full min-w-[520px] border-collapse">
                     <thead>
                       <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
@@ -415,6 +429,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <button onClick={() => setDeleteOpen(true)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white">Supprimer mon compte</button>
                 </div>
               </Card>
+              <button onClick={onLogout} className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-surface-container-high py-3.5 text-label-lg text-on-surface md:hidden"><Icon name="logout" size={19} /> Se déconnecter de Dilchap</button>
             </div>
 
             {/* Aside */}

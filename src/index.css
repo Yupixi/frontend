@@ -7,6 +7,11 @@
    text-tertiary, rounded-lg…) resolve to the runtime CSS vars below so they
    follow the .dark theme too. */
 @theme {
+  /* Cards stay flat: a barely-there shadow by default, a soft one on hover
+     only. Strong shadows are for floating layers (menus, modals). */
+  --shadow-sm: 0 1px 2px 0 rgb(26 26 26 / 0.035);
+  --shadow-md: 0 2px 6px -1px rgb(26 26 26 / 0.06);
+  --shadow-xl: 0 6px 18px -6px rgb(26 26 26 / 0.12);
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
   --color-primary-container: var(--primary-container);
@@ -61,7 +66,7 @@
   --text-label-sm--line-height: 16px;
   --text-label-sm--letter-spacing: 0.04em;
   --text-label-sm--font-weight: 700;
-  --shadow-card-hover: 0 8px 24px -4px rgba(26, 26, 26, 0.08);
+  --shadow-card-hover: 0 4px 14px -4px rgba(26, 26, 26, 0.07);
   --shadow-float: 0 12px 32px -4px rgba(26, 26, 26, 0.12);
   --shadow-modal: 0 20px 48px -8px rgba(26, 26, 26, 0.18);
 }

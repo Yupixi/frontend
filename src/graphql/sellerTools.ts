@@ -6,7 +6,7 @@ export const SELLER_STATS_QUERY = gql`
     sellerStats(days: $days) {
       days views viewsPrev contacts contactsPrev conversionRate conversionRatePrev
       revenue revenuePrev savedCommission avgSaleDays avgSaleDaysBoosted
-      series { day views boostedViews }
+      series { day views boostedViews contacts }
       origins { city share sales }
       favoritePlace favoritePlaceShare
       funnel { impressions views favorites contacts sales }
@@ -31,7 +31,7 @@ export type SellerStats = {
   days: number; views: number; viewsPrev: number; contacts: number; contactsPrev: number
   conversionRate: number | null; conversionRatePrev: number | null
   revenue: number; revenuePrev: number; savedCommission: number; avgSaleDays: number | null; avgSaleDaysBoosted: number | null
-  series: { day: string; views: number; boostedViews: number }[]
+  series: { day: string; views: number; boostedViews: number; contacts: number }[]
   origins: { city: string; share: number; sales: number }[]
   favoritePlace: string | null; favoritePlaceShare: number | null
   funnel: { impressions: number; views: number; favorites: number; contacts: number; sales: number }
