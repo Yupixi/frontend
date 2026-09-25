@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Heart, MapPin, Eye, Tag, Handshake, MessageSquare, BadgeCheck, Star, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type LucideIcon } from 'lucide-react'
+import { Heart, MapPin, Eye, Tag, Handshake, MessageSquare, BadgeCheck, Star, Rocket, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type AppIcon } from './icons'
 import Price from './Price'
 import BoostMenu from './BoostMenu'
 import type { RemoteListing } from '../graphql/listings'
@@ -13,7 +13,7 @@ import {
   type ArchetypeKey,
 } from '../lib/listingArchetype'
 
-const ARCHETYPE_ICON: Record<ArchetypeKey, LucideIcon> = {
+const ARCHETYPE_ICON: Record<ArchetypeKey, AppIcon> = {
   route: Car,
   rateService: Wrench,
   vehicle: Gauge,
@@ -127,8 +127,11 @@ function isUrgent(listing: RemoteListing) {
   return !!listing.urgentUntil && new Date(listing.urgentUntil) > new Date()
 }
 
-export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact }: {
+export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact, cta = 'icon' }: {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
+  // 'icon': red chat square (catalogue); 'split': Détails + Discuter;
+  // 'full': one full-width Discuter button (home feeds).
+  cta?: 'icon' | 'split' | 'full'
   // Opens the chat with the seller straight from the card (mockup
   // "Contacter" / "Discuter"). Falls back to opening the listing.
   onContact?: () => void
@@ -166,7 +169,10 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
         )}
 
         <div className="absolute left-2 top-2 z-[2] flex flex-col items-start gap-1 md:left-3 md:top-3">
-          {listing.condition && (
+          {isActivelyBoosted(listing) && (
+            <span className="flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"><Rocket size={13} /> Boosté</span>
+          )}
+          {listing.condition && listing.condition !== 'N/A' && (
             <span className="rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface md:px-2 md:text-label-sm">{listing.condition}</span>
           )}
           <PromoBadge listing={listing} />
@@ -211,7 +217,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
               </div>
             )}
           </div>
-          {!isOwn && (
+          {!isOwn && cta === 'icon' && (
             <button
               onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }}
               className="hidden h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-primary text-white transition-colors hover:bg-primary-dark md:flex"
@@ -245,12 +251,20 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
           )}
         </div>
 
-        {!isOwn && (
+        {!isOwn && cta === 'split' && (
+          <div className="mt-3 flex gap-2">
+            <button onClick={e => { e.stopPropagation(); onSelect() }} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-low py-2 text-label-md font-bold text-on-surface hover:bg-surface-container">Détails</button>
+            <button onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }} className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl border-none bg-primary py-2 text-label-md font-bold text-white hover:bg-primary-container">
+              <MessageSquare size={16} /> Discuter
+            </button>
+          </div>
+        )}
+        {!isOwn && cta !== 'split' && (
           <button
             onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }}
-            className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-1.5 text-label-md text-on-surface hover:bg-surface-container md:hidden"
+            className={`mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-1.5 text-label-md text-on-surface hover:bg-primary hover:text-white ${cta === 'full' ? 'md:mt-3 md:rounded-xl md:py-2.5 md:font-bold' : 'md:hidden'}`}
           >
-            <MessageSquare size={14} /> Contacter
+            <MessageSquare size={cta === 'full' ? 18 : 14} /> {cta === 'full' ? 'Discuter' : 'Contacter'}
           </button>
         )}
         {isOwn && <OwnListingBoostCta listing={listing} />}

@@ -5,7 +5,7 @@ import {
   Sun, Moon, LogOut, Settings, Package, BarChart2, PlusCircle,
   Plus, Home, CheckCircle2, Zap, User, AlertTriangle, Info, CheckCheck,
   BadgeCheck, Handshake, ShieldCheck, Percent, Rocket,
-} from 'lucide-react'
+} from './icons'
 import Logo from './DilchapLogo'
 import SearchOverlay from './SearchOverlay'
 import LocationPill from './LocationPill'
@@ -237,7 +237,7 @@ export default function Layout({
 
           {/* Desktop search — opens the overlay (suggestions, recent
               searches, categories) rather than being a bare input. */}
-          <div className="hidden max-w-3xl flex-1 items-center rounded-xl bg-surface-container-low p-1 lg:flex">
+          <div className="hidden min-w-0 max-w-3xl flex-1 items-center rounded-xl bg-surface-container-low p-1 lg:flex">
             {onLocationChange && (
               <>
                 <LocationPill location={location} onChange={onLocationChange} />

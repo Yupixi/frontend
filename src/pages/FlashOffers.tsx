@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { Zap, Clock, Heart, MapPin, Eye, Tag, Flame, ArrowRight } from 'lucide-react'
+import { Zap, Clock, Heart, MapPin, Eye, Tag, Flame, ArrowRight } from '../components/icons'
 import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign, type ActiveCampaignListing } from '../graphql/content'
 import Price from '../components/Price'
 

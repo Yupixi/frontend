@@ -1,4 +1,4 @@
-import { Check, Tag, X as XIcon } from 'lucide-react'
+import { Check, Tag, X as XIcon } from './icons'
 import Price from './Price'
 import PriceSuggestionHint from './PriceSuggestionHint'
 import type { RemoteMessageOffer } from '../graphql/messaging'

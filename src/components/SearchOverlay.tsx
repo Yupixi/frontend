@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { Search, MapPin, TrendingUp, Clock, X } from 'lucide-react'
+import { Search, MapPin, TrendingUp, Clock, X } from './icons'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 

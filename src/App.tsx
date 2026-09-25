@@ -7,7 +7,7 @@ import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } f
 import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
-import Home from './pages/Home'
+import Home, { type SearchPreset } from './pages/Home'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
 import SellerProfile from './pages/SellerProfile'
@@ -219,6 +219,14 @@ export default function App() {
     setShowInstallGuide(false)
   }
 
+  const [searchPreset, setSearchPreset] = useState<SearchPreset | null>(null)
+  const searchFromHome = (term: string, preset?: SearchPreset) => {
+    setCategoryFilter('')
+    setSearchTerm(term)
+    setSearchPreset(preset ?? null)
+    navigate('search')
+  }
+
   const navigateToCategory = (cat: string) => {
     setCategoryFilter(cat)
     setSearchTerm('')
@@ -328,9 +336,9 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} onContactSeller={contactSellerAbout} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={location?.city ?? ''} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? location?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} />
       case 'seller-profile':

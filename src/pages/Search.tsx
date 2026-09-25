@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
+import { CategoryIcon } from '../components/Icon'
 import { useMutation, useQuery } from '@apollo/client/react'
-import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from 'lucide-react'
+import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from '../components/icons'
 import BottomSheet from '../components/BottomSheet'
 import { ListingCard, ListingListCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
@@ -37,6 +38,7 @@ type SearchProps = {
   searchTerm?: string
   onSearchTermChange?: (term: string) => void
   selectedCity?: string
+  initialMaxPrice?: number
   onCityChange?: (city: string) => void
   currentUserId?: string | null
   isLoggedIn?: boolean
@@ -93,7 +95,7 @@ function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
 
 export default function SearchPage({
   onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, onCategorySelect,
-  searchTerm, onSearchTermChange, selectedCity, currentUserId, isLoggedIn, onContactSeller,
+  searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, currentUserId, isLoggedIn, onContactSeller,
 }: SearchProps) {
   const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
   const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
@@ -107,7 +109,7 @@ export default function SearchPage({
   const [sizes, setSizes] = useState<string[]>([])
   const [cities, setCities] = useState<string[]>(selectedCity ? [selectedCity] : [])
   const [minPrice, setMinPrice] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState(initialMaxPrice ? String(initialMaxPrice) : '')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState(searchTerm || '')
   const [alertState, setAlertState] = useState<'idle' | 'done' | 'error'>('idle')
@@ -204,7 +206,7 @@ export default function SearchPage({
             <button onClick={() => onClearCategoryFilter?.()} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">
               <ChevronLeft size={14} /> Toutes les catégories
             </button>
-            <div className="mb-1 text-label-md text-on-surface">{category.icon} {category.name}</div>
+            <div className="mb-1 flex items-center gap-2 text-label-md text-on-surface"><CategoryIcon icon={category.icon} size={20} className="text-primary" /> {category.name}</div>
             {(facets?.subcategories ?? []).map(f => (
               <CheckRow key={f.value} checked={subcategories.includes(f.value)} label={f.label} count={f.count} onChange={() => setSubcategories(s => toggle(s, f.value))} />
             ))}
@@ -213,7 +215,7 @@ export default function SearchPage({
           <div className="flex flex-col">
             {categories.map(c => (
               <button key={c.id} onClick={() => onCategorySelect?.(c.slug)} className="flex cursor-pointer items-center justify-between border-none bg-transparent px-0 py-1 text-left text-body-sm text-on-surface hover:text-primary">
-                <span>{c.icon} {c.name}</span>
+                <span className="flex items-center gap-2"><CategoryIcon icon={c.icon} size={18} className="text-on-surface-variant" /> {c.name}</span>
                 <ChevronRight size={14} className="text-outline" />
               </button>
             ))}

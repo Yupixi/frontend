@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
-import { Star, MapPin, MessageCircle, Clock, Eye, Heart } from 'lucide-react'
+import { Star, MapPin, MessageCircle, Clock, Eye, Heart } from '../components/icons'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import {
   SELLER_PROFILE_QUERY,

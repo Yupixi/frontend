@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { X } from './icons'
 
 type BottomSheetProps = {
   open: boolean

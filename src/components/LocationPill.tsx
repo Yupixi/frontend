@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapPin, ChevronDown } from 'lucide-react'
+import { MapPin, ChevronDown } from './icons'
 import { MARKETS } from '../data/markets'
 import type { StoredLocation } from '../lib/location'
 

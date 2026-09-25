@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { CategoryIcon } from '../../components/Icon'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Plus, Eye, Heart, Package, X,
   CheckCircle, Edit3, Clock,
   Trash2, ChevronRight, ChevronDown, Upload, MapPin, Tag, Image, ArrowUp, TrendingUp,
   Users, AlertCircle, Check,
-} from 'lucide-react'
+} from '../../components/icons'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { cities } from '../../data/cities'
 import { CURRENCIES, MARKETS, marketForCountry } from '../../data/markets'
@@ -402,7 +403,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                     >
                       <div style={{ padding: '1.25rem 0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
-                          {cat.icon}
+                          <CategoryIcon icon={cat.icon} size={22} />
                         </div>
                         <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.82rem', color: selected ? cat.color : 'var(--fg)', textAlign: 'center', lineHeight: 1.2 }}>{cat.name}</span>
                       </div>
@@ -417,7 +418,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem' }}>
                 <div style={{ width: 42, height: 42, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                  {catData.icon}
+                  <CategoryIcon icon={catData.icon} size={22} />
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1rem' }}>{catData.name}</div>
@@ -452,7 +453,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: catData.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
-                  {catData.icon}
+                  <CategoryIcon icon={catData.icon} size={22} />
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1.05rem' }}>{catData.name}</div>

@@ -22,7 +22,6 @@
     "dompurify": "^3.4.13",
     "graphql": "^17.0.2",
     "graphql-ws": "^6.2.1",
-    "lucide-react": "^1.27.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.10.1",

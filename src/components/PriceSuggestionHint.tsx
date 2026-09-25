@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react'
-import { Lightbulb } from 'lucide-react'
+import { Lightbulb } from './icons'
 import Price from './Price'
 import { PRICE_SUGGESTION_QUERY, type RemotePriceSuggestion } from '../graphql/offers'
 

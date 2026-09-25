@@ -8,7 +8,7 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Heading1, Heading2, Heading3, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, Link, Undo2, Redo2,
-} from 'lucide-react'
+} from './icons'
 
 type RichTextEditorProps = {
   content: string

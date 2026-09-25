@@ -1,5 +1,6 @@
 import { useQuery } from '@apollo/client/react'
-import { Search, ChevronRight } from 'lucide-react'
+import { CategoryIcon } from '../components/Icon'
+import { Search, ChevronRight } from '../components/icons'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { CATEGORY_TOP_BANNER_QUERY, type RemoteBanner } from '../graphql/content'
 import { followBannerCta } from '../lib/bannerCta'
@@ -63,7 +64,7 @@ export default function Categories({ onNavigate, onCategorySelect }: CategoriesP
             <div key={cat.id} className="card card-hover" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => onCategorySelect?.(cat.slug)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
                 <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.4rem' }}>
-                  {cat.icon}
+                  <CategoryIcon icon={cat.icon} size={22} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: 'var(--fg)' }}>{cat.name}</h2>

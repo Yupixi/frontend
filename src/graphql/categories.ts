@@ -7,6 +7,7 @@ export const CATEGORIES_QUERY = gql`
       slug
       name
       icon
+      listingsCount
       color
       requiresPrice
       subcategories {
@@ -44,6 +45,7 @@ export type RemoteCategory = {
   slug: string
   name: string
   icon: string
+  listingsCount?: number
   color: string
   requiresPrice: boolean
   subcategories: CategorySubcategory[]

@@ -5,7 +5,7 @@ import {
   MapPin, Send, Trash2, CheckCheck,
   Smartphone, Moon, Sun, Lock, User, Bell,
   ChevronRight, Clock, ArrowLeft, ImageOff, Handshake, CircleX, Tag, X,
-} from 'lucide-react'
+} from '../../components/icons'
 import Price from '../../components/Price'
 import BoostRibbon from '../../components/BoostRibbon'
 import OfferBubble from '../../components/OfferBubble'

@@ -1,6 +1,6 @@
 import { cloneElement, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
-import { Send, Tag, X, User, Mail, Phone, CheckCheck } from 'lucide-react'
+import { Send, Tag, X, User, Mail, Phone, CheckCheck } from './icons'
 import {
   CONVERSATION_QUERY,
   MARK_CONVERSATION_READ_MUTATION,
