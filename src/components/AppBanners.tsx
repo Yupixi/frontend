@@ -24,11 +24,15 @@ export function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onU
   if (!show) return null
   return (
     <div role="status" className="fixed inset-x-3 top-3 z-[9999] mx-auto max-w-xl">
-      <div className={card}>
+      {/* Buttons wrap under the text on a phone instead of squeezing it
+          into a one-word-per-line column. */}
+      <div className={`${card} flex-wrap sm:flex-nowrap`}>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="system_update" size={21} /></span>
-        <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Nouvelle version disponible</div><div className="text-body-sm text-on-surface-variant">Mettez à jour pour profiter des dernières améliorations.</div></div>
-        <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
-        <button onClick={onUpdate} className={primaryBtn}>Mettre à jour</button>
+        <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-auto"><div className="text-label-lg text-on-surface">Nouvelle version disponible</div><div className="text-body-sm text-on-surface-variant">Mettez à jour pour profiter des dernières améliorations.</div></div>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
+          <button onClick={onUpdate} className={primaryBtn}>Mettre à jour</button>
+        </div>
       </div>
     </div>
   )
@@ -78,14 +82,16 @@ export function PushBanner({ status, enabling, onEnable, onDismiss }: { status: 
   const actionable = status === 'permission-required' || status === 'error'
   return (
     <div role="status" className="fixed inset-x-3 top-20 z-[1000] mx-auto max-w-xl">
-      <div className={card}>
+      <div className={`${card} flex-wrap sm:flex-nowrap`}>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="notifications_active" size={21} /></span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-auto">
           <div className="text-label-lg text-on-surface">Activer les notifications</div>
           <div className="text-body-sm text-on-surface-variant">{PUSH_COPY[status] ?? 'Soyez prévenu de vos messages, offres et rendez-vous même lorsque Dilchap est fermé.'}</div>
         </div>
-        <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
-        {actionable && <button onClick={onEnable} disabled={enabling} className={primaryBtn}>{enabling ? 'Activation…' : status === 'error' ? 'Réessayer' : 'Activer'}</button>}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
+          {actionable && <button onClick={onEnable} disabled={enabling} className={primaryBtn}>{enabling ? 'Activation…' : status === 'error' ? 'Réessayer' : 'Activer'}</button>}
+        </div>
       </div>
     </div>
   )

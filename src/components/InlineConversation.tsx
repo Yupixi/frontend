@@ -19,10 +19,12 @@ import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator 
 import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
 
+// Short chip labels so the row wraps instead of being cut off on phones;
+// the full sentence goes into the message box.
 const QUICK_MESSAGES = [
-  'Bonjour, l’article est-il toujours disponible ?',
-  'Bonjour, votre prix est-il négociable ?',
-  'Est-il possible de convenir d’un rendez-vous ?',
+  { label: 'Toujours disponible ?', text: 'Bonjour, l’article est-il toujours disponible ?' },
+  { label: 'Prix négociable ?', text: 'Bonjour, votre prix est-il négociable ?' },
+  { label: 'Un rendez-vous ?', text: 'Est-il possible de convenir d’un rendez-vous ?' },
 ]
 
 type InlineConversationProps = {
@@ -35,7 +37,7 @@ type InlineConversationProps = {
 
 const panel = 'mb-5 rounded-2xl bg-surface-container-low p-3.5'
 const field = 'w-full rounded-xl border border-transparent bg-surface-lowest py-2.5 text-body-md text-on-surface outline-none focus:border-primary'
-const chip = 'shrink-0 cursor-pointer rounded-full border-none bg-surface-lowest px-3 py-1.5 text-label-sm text-on-surface-variant hover:text-on-surface'
+const chip = 'shrink-0 whitespace-nowrap cursor-pointer rounded-full border-none bg-surface-lowest px-3 py-1.5 text-label-sm text-on-surface-variant hover:text-on-surface'
 
 // The whole point: never navigate away from the listing to talk to a
 // seller. A logged-in visitor goes straight to the thread; an anonymous
@@ -144,8 +146,8 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
       {withIcon('person', <input className={`${field} pl-10 pr-3`} placeholder="Votre nom" value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} />)}
       {withIcon('call', <input className={`${field} pl-10 pr-3`} type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} />)}
       {withIcon('mail', <input className={`${field} pl-10 pr-3`} type="email" placeholder="E-mail (optionnel)" value={email} onChange={e => setEmail(e.target.value)} />)}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-        {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMessage(text)} className={chip}>{text}</button>)}
+      <div className="flex flex-wrap gap-1.5">
+        {QUICK_MESSAGES.map(q => <button key={q.label} type="button" onClick={() => setMessage(q.text)} className={chip}>{q.label}</button>)}
       </div>
       <textarea className={`${field} resize-y px-3`} placeholder="Votre message…" value={message} onChange={e => setMessage(e.target.value)} required minLength={2} rows={3} />
       <button type="submit" disabled={sending || loggingIn} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
@@ -287,8 +289,8 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
         </div>
       ) : (
         <div className="mt-2">
-          <div className="flex gap-1.5 overflow-x-auto pb-1.5">
-            {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMsg(text)} className={chip}>{text}</button>)}
+          <div className="flex flex-wrap gap-1.5 pb-1.5">
+            {QUICK_MESSAGES.map(q => <button key={q.label} type="button" onClick={() => setMsg(q.text)} className={chip}>{q.label}</button>)}
           </div>
           <div className="flex gap-2">
             {canOffer && (

@@ -13,6 +13,11 @@ import {
 import { PAYMENT_LABELS } from './ListingDetail'
 import { formatRelativeDate } from '../lib/format'
 import Select from '../components/Select'
+import ConfirmSheet from '../components/ConfirmSheet'
+import { CREATE_REPORT_MUTATION } from '../graphql/reports'
+import { setAuthReason, type AuthReason } from './Auth'
+
+const REPORT_REASONS = ['Tentative d’arnaque', 'Faux profil', 'Comportement inapproprié', 'Article non conforme', 'Autre']
 
 type SellerProfileProps = {
   sellerId: string
@@ -48,6 +53,10 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
+  const [reportMessage, setReportMessage] = useState('')
+  const [reportDone, setReportDone] = useState(false)
 
   const { data: profileData, loading, refetch: refetchProfile } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, { variables: { sellerId } })
   const seller = profileData?.sellerProfile
@@ -61,6 +70,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   const [createReview, { loading: submittingReview }] = useMutation(CREATE_REVIEW_MUTATION)
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
+  const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
 
   const categories = useMemo(() => {
     const m = new Map<string, { name: string, count: number }>()
@@ -82,12 +92,23 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   }
 
   const responseTime = formatResponseTime(seller.responseTimeMinutes)
-  const requireAuth = (fn: () => void) => () => (isLoggedIn ? fn() : onNavigate('auth'))
-  const contact = requireAuth(() => onContactSeller(seller.id))
+  // No guest chat here (it needs a listing): visitors log in, and the login
+  // screen says why.
+  const requireAuth = (fn: () => void, reason: AuthReason) => () => {
+    if (isLoggedIn) return fn()
+    setAuthReason(reason)
+    onNavigate('auth')
+  }
+  const contact = requireAuth(() => onContactSeller(seller.id), 'contact')
   const toggleFollow = requireAuth(async () => {
     await (seller.isFollowedByMe ? unfollow : follow)({ variables: { sellerId: seller.id } })
     void refetchProfile()
-  })
+  }, 'follow')
+  const sendReport = () => {
+    void createReport({ variables: { targetType: 'USER', targetUserId: seller.id, reason: reportReason, message: reportMessage.trim() || undefined } })
+      .then(() => { setReportDone(true); setReportOpen(false) })
+      .catch(() => undefined)
+  }
   const share = async () => {
     const url = `${window.location.origin}${window.location.pathname}?seller=${seller.id}`
     if (navigator.share) { try { await navigator.share({ title: seller.fullName, url }) } catch { /* cancelled */ } return }
@@ -105,15 +126,15 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   }
 
   const stats = [
-    { value: seller.reviewsCount ? <>{seller.averageRating.toFixed(1)} <Star size={15} fill="#F59E0B" color="#F59E0B" /></> : '—', label: `${seller.reviewsCount} avis vérifiés` },
-    { value: seller.salesCount, label: 'Ventes conclues' },
-    { value: responseTime ?? '—', label: 'Réponse' },
-    { value: seller.followersCount, label: 'Abonnés' },
+    { value: seller.reviewsCount ? <>{seller.averageRating.toFixed(1)} <Star size={15} fill="#F59E0B" color="#F59E0B" /></> : '—', label: `${seller.reviewsCount} avis vérifié${seller.reviewsCount > 1 ? 's' : ''}` },
+    { value: seller.salesCount, label: `Vente${seller.salesCount > 1 ? 's' : ''} conclue${seller.salesCount > 1 ? 's' : ''}` },
+    ...(responseTime ? [{ value: responseTime, label: 'Réponse' }] : []),
+    { value: seller.followersCount, label: `Abonné${seller.followersCount > 1 ? 's' : ''}` },
   ]
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-4 md:px-8 lg:px-12">
-      <nav className="mb-3 flex items-center gap-1 text-label-md text-on-surface-variant">
+      <nav className="mb-3 hidden items-center md:flex gap-1 text-label-md text-on-surface-variant">
         <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
         <ChevronRight size={14} className="text-outline-variant" />
         <span>{seller.isVerified ? 'Vendeurs certifiés Dilchap' : 'Vendeurs'}</span>
@@ -132,14 +153,16 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
         </div>
         <div className="px-4 pb-5 md:px-6">
           <div className="-mt-10 flex flex-col gap-4 md:-mt-12 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-end gap-4">
-              <div className="relative shrink-0">
+            {/* Mobile: name below the avatar — side by side, the -mt pulls
+                the name up over the dark cover where it can't be read. */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+              <div className="relative w-fit shrink-0">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-solid border-surface-lowest bg-surface-container-high text-headline-lg text-primary md:h-28 md:w-28">
                   {seller.avatarUrl ? <img src={seller.avatarUrl} alt={seller.fullName} className="h-full w-full object-cover" /> : seller.fullName.charAt(0).toUpperCase()}
                 </div>
                 {seller.isVerified && <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={15} /></span>}
               </div>
-              <div className="min-w-0 pb-1">
+              <div className="min-w-0 md:pb-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="m-0 text-headline-md text-on-surface md:text-headline-lg">{seller.fullName}</h1>
                   {seller.isVerified && <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><BadgeCheck size={13} /> Vendeur certifié</span>}
@@ -172,7 +195,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-4 rounded-xl bg-surface-container-low p-3 text-center">
+            <div className={`grid rounded-xl bg-surface-container-low p-3 text-center ${stats.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
               {stats.map(s => (
                 <div key={s.label} className="flex flex-col items-center justify-center px-1">
                   <span className="flex items-center gap-0.5 text-headline-sm font-extrabold text-on-surface">{s.value}</span>
@@ -185,27 +208,30 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       </section>
 
       {/* Trust tiles */}
-      <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
         {[
           { icon: <ShieldCheck size={20} />, box: 'bg-tertiary-soft text-tertiary', title: seller.isVerified ? 'Identité vérifiée' : 'Profil public', text: seller.isVerified ? 'Pièce d’identité contrôlée par Dilchap' : 'Avis et historique visibles de tous' },
           { icon: <MessageSquare size={20} />, box: 'bg-surface-container text-on-surface', title: 'Chat & négociation', text: responseTime ? `Répond en ${responseTime}` : 'Messagerie intégrée' },
           { icon: <Handshake size={20} />, box: 'bg-surface-container text-on-surface', title: 'Remise en main propre', text: 'Testez l’article avant tout paiement' },
           { icon: <Percent size={20} />, box: 'bg-primary-fixed text-primary', title: '0 F de commission', text: '100% de la somme revient au vendeur' },
         ].map(t => (
-          <div key={t.title} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-3">
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${t.box}`}>{t.icon}</span>
-            <div className="min-w-0"><div className="text-label-md text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
+          <div key={t.title} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-2.5 sm:p-3">
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 ${t.box}`}>{t.icon}</span>
+            <div className="min-w-0"><div className="text-label-md text-on-surface">{t.title}</div><div className="truncate text-body-sm text-on-surface-variant sm:whitespace-normal">{t.text}</div></div>
           </div>
         ))}
       </section>
 
-      {/* Tabs */}
-      <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
+      {/* Tabs — the fade hints that the row scrolls on phones */}
+      <div className="relative mt-6">
+      <div className="flex gap-2 overflow-x-auto pb-1 pr-8 [scrollbar-width:none] md:pr-0">
         {([['listings', 'En vente', all.length], ['reviews', 'Avis & Évaluations', seller.reviewsCount], ['terms', 'Conditions d’échange & RDV', null]] as const).map(([key, label, count]) => (
           <button key={key} onClick={() => setTab(key)} className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-full border-none px-4 py-2 text-label-md ${tab === key ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface hover:bg-surface-container-low'}`}>
             {label}{count != null && <span className={`rounded-full px-1.5 text-label-sm ${tab === key ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'}`}>{count}</span>}
           </button>
         ))}
+      </div>
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-surface to-transparent md:hidden" />
       </div>
 
       {tab === 'listings' && (
@@ -229,7 +255,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           </div>
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {filtered.slice(0, shown).map(l => (
-              <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(seller.id, l.id))} />
+              <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(seller.id, l.id), 'contact')} />
             ))}
           </div>
           {filtered.length === 0 && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-on-surface-variant">Aucune pièce ne correspond.</p>}
@@ -316,14 +342,30 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
             <span className="text-label-sm text-tertiary">100% direct & gratuit</span>
           </div>
           <h3 className="m-0 text-headline-sm text-on-surface">Les 3 règles d'or pour acheter en toute sérénité</h3>
-          <ol className="m-0 mt-1 pl-5 text-body-sm text-on-surface-variant">
+          <ol className="m-0 mt-1 list-decimal pl-5 text-body-sm text-on-surface-variant">
             <li>Convenez toujours d'un rendez-vous dans un lieu public et fréquenté.</li>
             <li>Inspectez et essayez le produit (écoute, essayage, test) avant tout règlement.</li>
             <li>Effectuez le paiement direct de la somme convenue (0 F de frais) par Wave, Orange Money ou espèces.</li>
           </ol>
         </div>
-        <button onClick={requireAuth(() => onNavigate('buyer-settings'))} className="flex shrink-0 cursor-pointer items-center gap-1 self-start rounded-full border border-outline-variant bg-surface-lowest px-4 py-2 text-label-md text-on-surface md:self-center"><Flag size={15} className="text-primary" /> Signaler</button>
+        {reportDone ? (
+          <span className="flex shrink-0 items-center gap-1 self-start text-label-md text-tertiary md:self-center"><CheckCircle2 size={15} /> Signalement envoyé</span>
+        ) : currentUserId !== seller.id && (
+          <button onClick={requireAuth(() => setReportOpen(true), 'report')} className="flex shrink-0 cursor-pointer items-center gap-1 self-start rounded-full border border-outline-variant bg-surface-lowest px-4 py-2 text-label-md text-on-surface md:self-center"><Flag size={15} className="text-primary" /> Signaler ce vendeur</button>
+        )}
       </section>
+
+      <ConfirmSheet open={reportOpen} title={`Signaler ${seller.fullName}`} confirmLabel={reporting ? 'Envoi…' : 'Envoyer le signalement'} onConfirm={sendReport} onClose={() => setReportOpen(false)} loading={reporting}>
+        <p className="m-0 mb-3 text-body-sm text-on-surface-variant">L'équipe de modération examine chaque signalement. Le vendeur ne voit pas qui l'a signalé.</p>
+        <label className="text-label-md text-on-surface">Motif
+          <Select value={reportReason} onChange={e => setReportReason(e.target.value)} className="input mt-1.5 cursor-pointer">
+            {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </Select>
+        </label>
+        <label className="mt-3 block text-label-md text-on-surface">Détails (facultatif)
+          <textarea className="input mt-1.5" rows={3} value={reportMessage} onChange={e => setReportMessage(e.target.value)} placeholder="Que s'est-il passé ?" />
+        </label>
+      </ConfirmSheet>
     </div>
   )
 }

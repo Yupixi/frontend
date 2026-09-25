@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
 import { DisputeStatusChip, DisputeTimeline, MediationCard, hoursLeft } from '../../components/DisputeParts'
 import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
@@ -39,7 +40,8 @@ function Banner({ d }: { d: Dispute }) {
         </div>
         <div className="mt-1 text-headline-sm text-on-surface">{m?.title ?? `Dossier clôturé : ${d.verdict ?? ''}`}</div>
       </div>
-      <div className="w-full sm:w-auto sm:text-right">
+      {/* Mobile shows the amount on the transaction card instead */}
+      <div className="hidden sm:block sm:w-auto sm:text-right">
         <div className="text-label-sm text-on-surface-variant">Montant de l'achat</div>
         <div className="text-headline-sm font-extrabold text-tertiary"><Price amount={d.amount} currency={d.listing?.currency} /> {open && <Icon name="lock" size={16} />}</div>
       </div>
@@ -60,8 +62,8 @@ function Decision({ d, onDone }: { d: Dispute; onDone: () => void }) {
 
   if (!d.proposal) return null
   return (
-    <section className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-2 text-label-sm uppercase text-on-surface-variant">
+    <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:order-2 md:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-label-sm uppercase text-on-surface-variant">
         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary" /> Dernière offre du vendeur</span>
         {sellerEvent && <span>Reçue le {new Date(sellerEvent.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
       </div>
@@ -157,30 +159,43 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
 
         {d && (
           <>
+            {/* Mobile: dossier reference + status (Stitch mobile "Suivi de mon litige") */}
+            <div className="mb-3 flex items-start justify-between gap-3 md:hidden">
+              <div className="min-w-0"><div className="truncate text-headline-sm text-on-surface">#{d.reference}</div><div className="text-body-sm text-on-surface-variant">Dossier ouvert le {new Date(d.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div></div>
+              <span className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-label-sm ${disputeIsOpen(d.status) ? 'bg-primary-fixed/60 text-primary' : 'bg-tertiary-soft text-tertiary'}`}><span className={`h-1.5 w-1.5 rounded-full ${disputeIsOpen(d.status) ? 'bg-primary' : 'bg-tertiary'}`} /> {disputeIsOpen(d.status) ? 'Médiation en cours' : 'Dossier clôturé'}</span>
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Litige #${d.reference}` }, { label: 'Suivi & Résolution' }]} />
               <span className="mb-3 hidden text-label-sm uppercase text-on-surface-variant md:block">Dossier ouvert le {new Date(d.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} • Commande #{d.orderReference}</span>
             </div>
             <Banner d={d} />
 
-            <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-              <div className="flex min-w-0 flex-col gap-4">
+            {/* Below lg both columns flatten (contents) and `order` gives the
+                mobile sequence: transaction, decision, history, seller, help. */}
+            <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:mt-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-5">
+              <div className="flex min-w-0 flex-col gap-4 max-lg:contents">
                 <Decision key={d.id + d.status} d={d} onDone={() => void refetch()} />
-                <section className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
+                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:order-3 md:p-5">
                   <div className="flex items-center justify-between gap-2">
-                    <div><h2 className="m-0 text-headline-sm text-on-surface">Journal des événements &amp; échanges</h2><p className="m-0 text-body-sm text-on-surface-variant">Motif : {DISPUTE_REASON_LABELS[d.reason]}</p></div>
-                    <span className="rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">{d.events.length} entrée{d.events.length > 1 ? 's' : ''}</span>
+                    <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface"><span className="md:hidden">Historique du litige</span><span className="max-md:hidden">Journal des événements &amp; échanges</span></h2><p className="m-0 text-body-sm text-on-surface-variant">Motif : {DISPUTE_REASON_LABELS[d.reason]}</p></div>
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">{d.events.length} entrée{d.events.length > 1 ? 's' : ''}</span>
                   </div>
                   <div className="mt-4"><DisputeTimeline d={d} perspective="BUYER" /></div>
                 </section>
               </div>
 
-              <aside className="flex flex-col gap-4">
+              <aside className="flex flex-col gap-4 max-lg:contents">
                 {d.listing && (
-                  <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                    <div className="flex items-center justify-between text-label-sm uppercase text-on-surface-variant">Article concerné <span className="rounded bg-surface-container px-1.5 normal-case">{d.listing.category.name}</span></div>
+                  <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:order-1">
+                    <div className="flex items-center justify-between gap-2 text-label-sm uppercase text-on-surface-variant">
+                      <span><span className="md:hidden">Transaction</span><span className="max-md:hidden">Article concerné</span></span>
+                      {disputeIsOpen(d.status)
+                        ? <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-tertiary-soft px-2 py-0.5 normal-case text-tertiary md:hidden"><Icon name="lock" size={13} /> Fonds bloqués</span>
+                        : null}
+                      <span className={`rounded bg-surface-container px-1.5 normal-case ${disputeIsOpen(d.status) ? 'max-md:hidden' : ''}`}>{d.listing.category.name}</span>
+                    </div>
                     <div className="mt-2 flex gap-3">
-                      <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container">{d.listing.coverImageUrl && <img src={d.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
+                      <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={d.listing.coverImageUrl} icon="shopping_bag" /></span>
                       <div className="min-w-0"><div className="truncate text-label-lg text-on-surface">{d.listing.title}</div><div className="text-headline-sm font-extrabold text-primary"><Price amount={d.amount} currency={d.listing.currency} /></div></div>
                     </div>
                     <dl className="m-0 mt-3 flex flex-col gap-1.5 text-body-sm">
@@ -190,7 +205,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                   </section>
                 )}
                 {disputeIsOpen(d.status) && (
-                  <section className="rounded-2xl bg-surface-container-low p-4">
+                  <section className="hidden rounded-2xl bg-surface-container-low p-4 md:block max-lg:order-4">
                     <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="lock" size={19} /></span><div><div className="text-label-md text-on-surface">Code de remise gelé</div><div className="text-body-sm text-on-surface-variant">Commande #{d.orderReference}</div></div></div>
                     <div className="mt-3 rounded-xl bg-surface-lowest p-3 text-center">
                       <div className="text-label-sm uppercase text-on-surface-variant">Code temporairement verrouillé</div>
@@ -200,16 +215,23 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                     <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Aucune vente ne peut être clôturée sans votre accord explicite sur la plateforme.</p>
                   </section>
                 )}
-                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:order-4">
                   <div className="text-label-sm uppercase text-on-surface-variant">Vendeur</div>
                   <div className="mt-2 flex items-center gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{d.seller.avatarUrl ? <img src={d.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : d.seller.fullName.charAt(0)}</span>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{d.seller.avatarUrl ? <SafeImg src={d.seller.avatarUrl} icon="person" fallbackClassName="flex h-full w-full items-center justify-center" /> : d.seller.fullName.charAt(0)}</span>
                     <div className="min-w-0 flex-1"><div className="flex items-center gap-1 text-label-md text-on-surface">{d.seller.fullName}{d.seller.isVerified && <Icon name="verified" size={15} className="text-tertiary" />}</div><div className="text-body-sm text-on-surface-variant">{d.seller.reviewsCount ? `★ ${d.seller.averageRating.toFixed(1)} (${d.seller.reviewsCount} avis)` : 'Nouveau vendeur'}</div></div>
                     {d.listing && <button onClick={() => onOpenConversation(d.seller.id, d.listing!.id)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface" aria-label="Chat"><Icon name="chat" size={18} /></button>}
                   </div>
                 </section>
-                <MediationCard whatsapp={statsData?.myDisputeStats.mediationWhatsapp ?? null} compact />
-                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+                <div className="max-md:hidden max-lg:order-5"><MediationCard whatsapp={statsData?.myDisputeStats.mediationWhatsapp ?? null} compact /></div>
+                {statsData?.myDisputeStats.mediationWhatsapp && (
+                  <a href={`https://wa.me/${statsData.myDisputeStats.mediationWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer" className="order-5 flex items-center gap-3 rounded-2xl bg-surface-container-low p-3 no-underline md:hidden">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="support_agent" size={20} /></span>
+                    <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">Médiateurs Dilchap</span><span className="block truncate text-body-sm text-on-surface-variant">7j/7 • 8h-22h</span></span>
+                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-tertiary px-3 py-2 text-label-md text-white"><Icon name="chat" size={16} /> WhatsApp</span>
+                  </a>
+                )}
+                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-md:hidden max-lg:order-6">
                   <div className="text-label-sm uppercase text-on-surface-variant">Règles d'or de résolution</div>
                   <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
                     {["Ne partagez jamais votre code de remise en dehors de l'application.", "Conservez l'objet dans son état initial tant que la procédure est ouverte.", "Aucun paiement n'est dû au vendeur avant la clôture du litige."].map(r => (

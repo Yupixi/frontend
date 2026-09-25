@@ -10,6 +10,7 @@ import Select from '../components/Select'
 type AuthProps = {
   onNavigate: (page: any) => void
   onLogin: () => void
+  onClose: () => void
 }
 
 const COMMUNES = ['Cocody', 'Marcory', 'Plateau', 'Yopougon', 'Koumassi', 'Treichville', 'Adjamé', 'Abobo', 'Port-Bouët', 'Bingerville', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Korhogo']
@@ -18,6 +19,32 @@ const PERKS = [
   { icon: 'handshake', title: 'Vérification directe avant achat', text: "Testez le smartphone, essayez l'article ou examinez le produit avant de régler." },
   { icon: 'shield', title: 'Points relais & lieux publics', text: 'Rendez-vous dans des lieux éclairés et validation par code de remise.' },
 ]
+// Why the visitor was sent here (favourite, offer…), so the login screen can
+// say it. Set right before navigating; short-lived so a stale value never shows
+// on a later, deliberate visit.
+const REASON_KEY = 'dilchap_auth_reason'
+const REASONS = {
+  favorite: { icon: 'favorite', text: 'Connectez-vous pour enregistrer cet article dans vos favoris.' },
+  offer: { icon: 'sell', text: 'Connectez-vous pour faire une offre au vendeur.' },
+  follow: { icon: 'person_add', text: 'Connectez-vous pour suivre ce vendeur.' },
+  report: { icon: 'flag', text: 'Connectez-vous pour envoyer un signalement.' },
+  alert: { icon: 'notifications', text: 'Connectez-vous pour être alerté des nouvelles annonces.' },
+  contact: { icon: 'chat', text: 'Connectez-vous pour discuter avec le vendeur.' },
+} as const
+export type AuthReason = keyof typeof REASONS
+export const setAuthReason = (reason: AuthReason) => {
+  try { sessionStorage.setItem(REASON_KEY, JSON.stringify({ reason, at: Date.now() })) } catch { /* private mode */ }
+}
+const takeAuthReason = (): AuthReason | null => {
+  try {
+    const raw = sessionStorage.getItem(REASON_KEY)
+    sessionStorage.removeItem(REASON_KEY)
+    if (!raw) return null
+    const { reason, at } = JSON.parse(raw) as { reason: AuthReason; at: number }
+    return Date.now() - at < 5000 && reason in REASONS ? reason : null
+  } catch { return null }
+}
+
 const field = 'w-full rounded-xl border border-transparent bg-surface-container-low px-3 py-3 text-body-md text-on-surface outline-none focus:border-primary'
 
 // Maps API errors to readable French (the backend already answers in French
@@ -42,7 +69,7 @@ function PhoneOrEmail({ value, onChange }: { value: string; onChange: (v: string
   return (
     <div className="flex items-center gap-2 rounded-xl bg-surface-container-low pr-3 focus-within:ring-1 focus-within:ring-primary">
       {!isEmail && <span className="ml-1 flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-2 text-label-md text-on-surface"><span aria-hidden className="flex h-3 w-4 overflow-hidden rounded-sm"><span className="flex-1 bg-orange-500" /><span className="flex-1 bg-white" /><span className="flex-1 bg-green-600" /></span>+225</span>}
-      <input value={value} onChange={e => onChange(e.target.value)} autoComplete="username" placeholder="07 00 00 00 00 ou nom@exemple.ci" className="w-full border-none bg-transparent px-2 py-3 text-body-md text-on-surface outline-none" />
+      <input value={value} onChange={e => onChange(e.target.value)} autoComplete="username" placeholder={isEmail ? 'nom@exemple.ci' : '07 00 00 00 00'} className="w-full border-none bg-transparent px-2 py-3 text-body-md text-on-surface outline-none" />
     </div>
   )
 }
@@ -68,7 +95,8 @@ function LoginForm({ onSuccess, onForgot }: { onSuccess: (p: AuthPayload) => voi
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      <label className="text-label-md text-on-surface">Téléphone ou e-mail
+      <label className="text-label-md text-on-surface">
+        <span className="flex items-center justify-between gap-2">Numéro mobile ou e-mail <span className="text-label-sm text-tertiary">Orange • MTN • Wave</span></span>
         <span className="mt-1.5 block"><PhoneOrEmail value={identifier} onChange={setIdentifier} /></span>
       </label>
       <div>
@@ -79,7 +107,7 @@ function LoginForm({ onSuccess, onForgot }: { onSuccess: (p: AuthPayload) => voi
       </div>
       {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{readable(error.message)}</p>}
       <button type="submit" disabled={loading || !identifier.trim() || !password} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
-        {loading ? 'Connexion…' : <>Se connecter à Dilchap <Icon name="arrow_forward" size={19} /></>}
+        {loading ? 'Connexion…' : <>Continuer <Icon name="arrow_forward" size={19} /></>}
       </button>
     </form>
   )
@@ -149,29 +177,42 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 }
 
 // "Connexion & Inscription" (Stitch desktop split card / mobile stack).
-export default function Auth({ onNavigate, onLogin }: AuthProps) {
+export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
+  const [reason] = useState(takeAuthReason)
+  const { data: footerData } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
+  const supportPhone = footerData?.footerSettings?.supportPhone
   const success = (payload: AuthPayload) => {
     storeTokens(payload.accessToken, payload.refreshToken)
     onLogin()
-    onNavigate('home')
   }
 
   return (
-    <div className="mx-auto max-w-[1180px] px-4 py-6 md:px-8 md:py-12">
+    <div className="mx-auto min-h-screen max-w-[1180px] px-4 py-4 md:px-8 md:py-12">
+      <button onClick={onClose} className="mb-2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface md:mb-4" aria-label="Retour">
+        <Icon name="arrow_back" size={22} />
+      </button>
       <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-3xl border border-outline-variant/60 bg-surface-lowest lg:grid-cols-2">
         <section className="flex flex-col p-6 md:p-10">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2"><Logo size="md" /><span className="hidden items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary sm:flex"><Icon name="verified" size={14} /> Côte d'Ivoire</span></div>
             <button onClick={() => onNavigate('search')} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface"><Icon name="storefront" size={18} /> Explorer le catalogue</button>
           </div>
-          <p className="m-0 mt-4 text-center text-body-md text-on-surface-variant lg:hidden">Achetez, vendez et négociez en toute sécurité.</p>
+          <div className="mt-4 flex flex-col items-center gap-2 lg:hidden">
+            <span className="flex items-center gap-1.5 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="verified" size={15} /> La seconde main de confiance</span>
+            <p className="m-0 text-center text-body-md text-on-surface-variant">Achetez, vendez et négociez en toute sécurité.</p>
+          </div>
+          {reason && mode !== 'forgot' && (
+            <p role="status" className="m-0 mt-4 flex items-center gap-2.5 rounded-xl bg-primary-fixed/60 px-3 py-2.5 text-body-sm text-on-surface">
+              <Icon name={REASONS[reason].icon} size={19} className="shrink-0 text-primary" /> {REASONS[reason].text}
+            </p>
+          )}
 
           {mode !== 'forgot' && (
             <div className="mt-6 grid grid-cols-2 gap-1 rounded-2xl bg-surface-container-low p-1">
-              {([['login', 'login', 'Se connecter'], ['register', 'person_add', 'Créer un compte']] as const).map(([key, icon, label]) => (
-                <button key={key} onClick={() => setMode(key)} className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none py-2.5 text-label-lg ${mode === key ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
-                  <Icon name={icon} size={19} /> {label}
+              {([['login', 'Connexion'], ['register', 'Inscription']] as const).map(([key, label]) => (
+                <button key={key} onClick={() => setMode(key)} className={`flex cursor-pointer items-center justify-center rounded-xl border-none py-2.5 text-label-lg ${mode === key ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
+                  {label}
                 </button>
               ))}
             </div>
@@ -191,7 +232,13 @@ export default function Auth({ onNavigate, onLogin }: AuthProps) {
           </div>
 
           <div className="flex-1" />
-          <p className="m-0 mt-8 text-center text-label-sm text-on-surface-variant lg:text-left">Plateforme sécurisée • En continuant, vous acceptez les conditions d'utilisation et la charte de confiance Dilchap.</p>
+          {supportPhone && (
+            <p className="m-0 mt-6 flex flex-wrap items-center justify-center gap-1 text-body-sm text-on-surface-variant lg:justify-start">
+              <Icon name="support_agent" size={18} /> Besoin d'aide ?
+              <a href={`https://wa.me/${supportPhone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer" className="text-label-md text-primary no-underline">Contacter le support</a>
+            </p>
+          )}
+          <p className="m-0 mt-4 text-center text-label-sm text-on-surface-variant lg:text-left">Plateforme sécurisée • En continuant, vous acceptez les conditions d'utilisation et la charte de confiance Dilchap.</p>
         </section>
 
         <aside className="relative hidden overflow-hidden bg-surface-container-low p-10 lg:block">
