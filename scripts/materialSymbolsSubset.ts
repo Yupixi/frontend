@@ -19,6 +19,14 @@ export const ICON_FONT_AXES = 'opsz,wght,FILL,GRAD@24,400..600,0..1,0'
 
 const NAMES_FILE = path.resolve(__dirname, 'material-symbols-names.txt')
 
+// Icons of the seeded categories (Backend prisma/seed-data/categories.ts):
+// they're on every page (nav, category tiles), so they ship in the subset
+// rather than as an on-demand extra request.
+const CATEGORY_ICONS = [
+  'agriculture', 'apartment', 'category', 'chair', 'checkroom', 'child_care', 'construction',
+  'directions_car', 'handyman', 'pets', 'smartphone', 'sports_soccer', 'work',
+]
+
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name)
@@ -30,7 +38,7 @@ function walk(dir: string, out: string[] = []): string[] {
 
 export function collectIconNames(srcDir: string): string[] {
   const known = new Set(fs.readFileSync(NAMES_FILE, 'utf-8').split(/\r?\n/).filter(Boolean))
-  const used = new Set<string>()
+  const used = new Set<string>(CATEGORY_ICONS)
   const literal = /['"`]([a-z0-9][a-z0-9_]*)['"`]/g
   for (const file of walk(srcDir)) {
     const code = fs.readFileSync(file, 'utf-8')

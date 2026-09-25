@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   ArrowLeft, ArrowRight, ChevronRight, Search, SlidersHorizontal, ShieldCheck, Handshake, Timer, Flame, Loader2,
@@ -11,6 +11,7 @@ import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type RemoteListing } from '../graphql/listings'
 import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign } from '../graphql/content'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
+import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
 import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 import Select from '../components/Select'
@@ -38,19 +39,19 @@ function Accent({ children }: { children: React.ReactNode }) {
 // Desktop hero slides — imagery from the Stitch mockup (public/stitch).
 const SLIDES = [
   {
-    image: '/stitch/hero-0.jpg', badge: 'Plateforme N°1 à Abidjan', badgeIcon: 'local_fire_department', badgeClass: 'bg-primary/25 border-primary/40', iconClass: 'text-amber-400',
+    image: '/stitch/hero-0.webp', badge: 'Plateforme N°1 à Abidjan', badgeIcon: 'local_fire_department', badgeClass: 'bg-primary/25 border-primary/40', iconClass: 'text-amber-400',
     title: <>Achetez et vendez vos <Accent>pépites mode &amp; sneakers</Accent> à Abidjan</>,
     text: "Zéro frais, zéro commission. Des milliers de pièces uniques entre particuliers à Cocody, Marcory, Plateau et partout en Côte d'Ivoire.",
     tags: ['✨ #ModeVintage', '👟 #SneakersRares', '👗 #WaxContemporain', '⚡ #VenteFlash'],
   },
   {
-    image: '/stitch/hero-1.jpg', badge: 'High-Tech & Bons Plans', badgeIcon: 'smartphone', badgeClass: 'bg-blue-500/25 border-blue-400/40', iconClass: 'text-blue-300',
+    image: '/stitch/hero-1.webp', badge: 'High-Tech & Bons Plans', badgeIcon: 'smartphone', badgeClass: 'bg-blue-500/25 border-blue-400/40', iconClass: 'text-blue-300',
     title: <>Donnez une seconde vie à votre <Accent>High-Tech &amp; Audio</Accent> au meilleur prix</>,
     text: 'Smartphones, casques, consoles et accessoires sans intermédiaire. Négociez directement sur le chat.',
     tags: ['🎧 #CasquesSansFil', '📱 #iPhonesReconditionnés', '💻 #LaptopsPro', '🎮 #GamingAbidjan'],
   },
   {
-    image: '/stitch/hero-2.jpg', badge: 'Affaires en or', badgeIcon: 'diamond', badgeClass: 'bg-tertiary/30 border-white/30', iconClass: 'text-emerald-300',
+    image: '/stitch/hero-2.webp', badge: 'Affaires en or', badgeIcon: 'diamond', badgeClass: 'bg-tertiary/30 border-white/30', iconClass: 'text-emerald-300',
     title: <>Trouvez les <Accent>meilleures affaires directes</Accent> 100% P2P</>,
     text: 'Échangez en direct en lieu sécurisé avec Wave, Orange Money ou espèces. Remise en main propre sans surprise.',
     tags: ['📍 #RemiseSécurisée', '🤝 #0Commission', '📲 #PaiementWave', '🛡️ #VendeursVérifiés'],
@@ -67,7 +68,7 @@ const TRENDS: { label: string, term?: string, maxPrice?: number }[] = [
 const MAX_PRICES = [20_000, 50_000, 150_000, 500_000]
 
 // hh:mm:ss (or "Xj hh:mm") until a campaign's end — ticks every second.
-export function useCountdown(endsAt?: string | null) {
+function useCountdown(endsAt?: string | null) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!endsAt) return
@@ -80,6 +81,14 @@ export function useCountdown(endsAt?: string | null) {
   const pad = (n: number) => String(n).padStart(2, '0')
   const h = pad(Math.floor(ms / 3_600_000) % 24), m = pad(Math.floor(ms / 60_000) % 60), sec = pad(Math.floor(ms / 1000) % 60)
   return days > 0 ? `${days}j ${h}h ${m}m` : `${h}h ${m}m ${sec}s`
+}
+
+// The ticking state lives here, so only this badge re-renders every second
+// — not the whole page and its cards.
+function Countdown({ endsAt, className, iconSize }: { endsAt: string, className: string, iconSize: number }) {
+  const countdown = useCountdown(endsAt)
+  if (!countdown) return null
+  return <span className={className}><Timer size={iconSize} /> {countdown}</span>
 }
 
 function SectionHeading({ title, action }: { title: React.ReactNode, action?: React.ReactNode }) {
@@ -98,6 +107,7 @@ function Kicker({ children, className = 'text-primary' }: { children: React.Reac
 // Mobile follows "Dilchap Mobile – Accueil & Découverte"; desktop (lg+)
 // follows the dedicated desktop home mockup.
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, onContactSeller, onSearch }: HomeProps) {
+  const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
   const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
 
@@ -107,7 +117,6 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
   const { data: campaignData } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
   const campaign = campaignData?.activeCampaign
-  const countdown = useCountdown(campaign?.endsAt)
   const bestDiscount = Math.max(0, ...(campaign?.listings ?? []).map(l => l.discountPercent ?? 0))
   const campaignColor = campaign?.themeColor || 'var(--primary)'
 
@@ -124,34 +133,48 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter: marketFilter } })
   const cities = (facetsData?.listingFacets.cities ?? []).map(c => c.value)
 
-  // Dernières annonces — scoped to the market (and city chip), grown in place.
-  const [page, setPage] = useState(1)
+  // Dernières annonces — scoped to the market (and city chip), grown in place:
+  // "Charger plus" fetches only the next page and appends it (it used to
+  // re-request every listing already on screen with a growing pageSize).
   const [feedCity, setFeedCity] = useState<string | null>(null)
-  useEffect(() => setPage(1), [location?.countryCode, location?.city, feedCity])
   const cityFilter = feedCity ?? location?.city
-  const { data: feedData, previousData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
-    variables: {
-      sort: 'RECENT',
-      page: 1,
-      pageSize: PAGE_SIZE * page,
-      filter: marketFilter || cityFilter ? { ...marketFilter, ...(cityFilter ? { city: cityFilter } : {}) } : undefined,
-    },
+  const feedFilter = marketFilter || cityFilter ? { ...marketFilter, ...(cityFilter ? { city: cityFilter } : {}) } : undefined
+  const feedKey = JSON.stringify(feedFilter ?? null)
+  const [pageState, setPageState] = useState({ key: feedKey, page: 1 })
+  const page = pageState.key === feedKey ? pageState.page : 1
+  const setPage = (next: (p: number) => number) => setPageState({ key: feedKey, page: next(page) })
+  const { data: feedData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
+    variables: { sort: 'RECENT', page, pageSize: PAGE_SIZE, filter: feedFilter },
   })
-  const feed = (feedData ?? previousData)?.listings
-  const latest = feed?.items ?? []
-  const canLoadMore = !!feed && feed.totalCount > latest.length
+  // Pages received so far for the current filter; the previous filter's
+  // list stays on screen until the new first page lands.
+  const [feed, setFeed] = useState<{ key: string, pages: RemoteListing[][], totalCount: number } | null>(null)
+  useEffect(() => {
+    const res = feedData?.listings
+    if (!res) return
+    setFeed(prev => {
+      const pages = prev?.key === feedKey ? [...prev.pages] : []
+      pages[page - 1] = res.items
+      return { key: feedKey, pages, totalCount: res.totalCount }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedData])
+  const latest = useMemo(() => {
+    const seen = new Set<string>()
+    return (feed?.pages ?? []).flat().filter(l => l && !seen.has(l.id) && !!seen.add(l.id))
+  }, [feed])
+  const canLoadMore = !!feed && feed.key === feedKey && feed.totalCount > latest.length
 
   // Hero slider (autoplay with progress bar)
+  // One timer per slide (restarted by manual navigation); the progress bar
+  // is a CSS animation keyed on the slide. Ticking React state every 100 ms
+  // here used to re-render the whole home page ten times a second.
   const [slide, setSlide] = useState(0)
-  const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
-    const t = setInterval(() => setElapsed(e => e + 100), 100)
-    return () => clearInterval(t)
-  }, [])
-  useEffect(() => {
-    if (elapsed >= SLIDE_MS) { setSlide(s => (s + 1) % SLIDES.length); setElapsed(0) }
-  }, [elapsed])
-  const goSlide = (i: number) => { setSlide((i + SLIDES.length) % SLIDES.length); setElapsed(0) }
+    const t = setTimeout(() => setSlide(s => (s + 1) % SLIDES.length), SLIDE_MS)
+    return () => clearTimeout(t)
+  }, [slide])
+  const goSlide = (i: number) => setSlide((i + SLIDES.length) % SLIDES.length)
 
   // Hero search form
   const [q, setQ] = useState('')
@@ -182,7 +205,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   return (
     <>
       {/* ================= DESKTOP ================= */}
-      <div className="hidden lg:block">
+      {isDesktop && <div>
         {/* 1. Reassurance band */}
         <section className="bg-surface-lowest shadow-sm">
           <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 px-12 py-2.5">
@@ -213,13 +236,13 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             <div className="relative col-span-8 flex min-h-[500px] flex-col justify-between overflow-hidden rounded-2xl p-10 shadow-md">
               {SLIDES.map((s, i) => (
                 <div key={s.image} className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ${i === slide ? 'opacity-100' : 'opacity-0'}`}>
-                  <img src={s.image} alt="" className="h-full w-full scale-105 object-cover" />
+                  <img src={s.image} alt="" fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" className="h-full w-full scale-105 object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/45" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
                 </div>
               ))}
               <div className="absolute left-0 top-0 z-30 h-1 w-full bg-white/20">
-                <div className="h-full bg-primary" style={{ width: `${Math.min(100, (elapsed / SLIDE_MS) * 100)}%` }} />
+                <div key={slide} className="hero-progress h-full bg-primary" style={{ animationDuration: `${SLIDE_MS}ms` }} />
               </div>
 
               <div className="relative z-20">
@@ -287,15 +310,15 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             {/* Flash card — the live campaign */}
             <div className="relative col-span-4 flex flex-col justify-between overflow-hidden rounded-2xl p-10 text-white shadow-md" style={{ background: campaignColor }}>
               <div className="pointer-events-none absolute inset-0">
-                <img src="/stitch/flash-bg.jpg" alt="" className="h-full w-full object-cover opacity-25" />
+                <img src="/stitch/flash-bg.webp" alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-25" />
                 <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${campaignColor} 30%, transparent)` }} />
               </div>
               <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-xl" />
               <div className="relative z-10">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="rounded bg-white/20 px-2.5 py-1 text-label-sm font-extrabold uppercase">{campaign ? 'Exclusivité flash' : 'Bons plans'}</span>
-                  {countdown && (
-                    <span className="flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1 text-label-sm tabular-nums text-primary-fixed backdrop-blur-sm"><Timer size={16} /> {countdown}</span>
+                  {campaign?.endsAt && (
+                    <Countdown endsAt={campaign.endsAt} iconSize={16} className="flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1 text-label-sm tabular-nums text-primary-fixed backdrop-blur-sm" />
                   )}
                 </div>
                 <h2 className="m-0 mt-2 text-headline-lg font-bold leading-tight">{campaign?.name ?? 'Bons plans du moment'}</h2>
@@ -439,10 +462,10 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </div>
           </section>
         </div>
-      </div>
+      </div>}
 
       {/* ================= MOBILE ================= */}
-      <div className="px-4 pb-4 pt-4 md:px-8 md:pt-6 lg:hidden">
+      {!isDesktop && <div className="px-4 pb-4 pt-4 md:px-8 md:pt-6">
         <div className="mb-6 flex flex-col gap-3">
           <button onClick={() => onNavigate('search')} className="flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest px-4 text-left text-body-md text-on-surface-variant/80">
             <Search size={20} className="text-primary" />
@@ -484,7 +507,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="rounded-md bg-white px-2 py-0.5 text-label-sm uppercase" style={{ color: campaignColor }}>{campaign.name}</span>
-                  {countdown && <span className="flex items-center gap-1 rounded-md bg-black/20 px-2 py-0.5 text-label-sm tabular-nums"><Timer size={13} /> {countdown}</span>}
+                  {campaign.endsAt && <Countdown endsAt={campaign.endsAt} iconSize={13} className="flex items-center gap-1 rounded-md bg-black/20 px-2 py-0.5 text-label-sm tabular-nums" />}
                 </div>
                 <div className="text-headline-lg">{bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Offres à prix cassés'}</div>
                 {campaign.description && <p className="m-0 mt-1 text-body-sm opacity-90">{campaign.description}</p>}
@@ -527,7 +550,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
           {latest.length === 0 && !feedLoading && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-body-md text-on-surface-variant">Aucune annonce pour l'instant dans cette zone.</p>}
           {loadMore}
         </section>
-      </div>
+      </div>}
     </>
   )
 }

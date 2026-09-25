@@ -124,7 +124,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       {/* Header card */}
       <section className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest">
         <div className="relative h-36 bg-surface-container md:h-56">
-          <img src={seller.coverUrl || '/stitch/hero-0.jpg'} alt="" className="h-full w-full object-cover" />
+          <img src={seller.coverUrl || '/stitch/hero-0.webp'} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           <button onClick={() => void share()} className="absolute right-3 top-3 flex h-9 cursor-pointer items-center gap-1 rounded-full border-none bg-surface-lowest/90 px-3 text-label-md text-on-surface" aria-label="Partager">
             <Share2 size={17} /> {copied && 'Lien copié'}
@@ -272,7 +272,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
               <div key={r.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-surface-container-high font-bold text-on-surface-variant">
-                    {r.author.avatarUrl ? <img src={r.author.avatarUrl} alt="" className="h-full w-full object-cover" /> : r.author.fullName.charAt(0)}
+                    {r.author.avatarUrl ? <img loading="lazy" decoding="async" src={r.author.avatarUrl} alt="" className="h-full w-full object-cover" /> : r.author.fullName.charAt(0)}
                   </span>
                   <div className="flex-1"><div className="text-label-md text-on-surface">{r.author.fullName}</div><Stars rating={r.rating} size={13} /></div>
                   <span className="text-body-sm text-outline">{formatRelativeDate(r.createdAt)}</span>

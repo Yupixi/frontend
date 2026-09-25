@@ -8,6 +8,7 @@ import {
 } from '../graphql/categories'
 import type { SearchPreset } from './Home'
 import Select from '../components/Select'
+import { thumbnailUrl } from '../lib/media'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -116,7 +117,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
                   <span className="flex-1" />
                   <span className={`mt-3 flex w-fit items-center gap-1 rounded-lg px-3 py-2 text-label-sm ${i === 0 ? 'bg-inverse-surface text-white' : 'text-primary'}`}>{i === 0 ? 'Découvrir la sélection' : 'Voir les pièces'} <Icon name={i === 0 ? 'north_east' : 'arrow_forward'} size={15} /></span>
                 </div>
-                {cover && <img src={cover} alt="" className="hidden w-40 object-cover sm:block" />}
+                {cover && <img loading="lazy" decoding="async" src={thumbnailUrl(cover)} alt="" className="hidden w-40 object-cover sm:block" />}
               </button>
             )
           })}

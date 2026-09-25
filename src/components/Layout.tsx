@@ -30,7 +30,7 @@ import Logo from './DilchapLogo'
 import SearchOverlay from './SearchOverlay'
 import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteFooterSettings, type ActiveCampaign } from '../graphql/content'
+import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationTarget } from '../graphql/account'
 import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
@@ -105,7 +105,7 @@ export default function Layout({
   // --campaign-accent) without repainting --primary everywhere, which would
   // make every button/link on the site match whatever color an admin picked
   // for the current campaign.
-  const { data: campaignData } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
+  const { data: campaignData } = useQuery<{ activeCampaign: ActiveCampaignBar | null }>(ACTIVE_CAMPAIGN_BAR_QUERY)
   const activeCampaign = campaignData?.activeCampaign
   useEffect(() => {
     const root = document.documentElement

@@ -546,4 +546,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 .ms-x { visibility: hidden; }
+
+/* Home hero slider progress (duration set inline). */
+.hero-progress { width: 0; animation: hero-progress linear forwards; }
+@keyframes hero-progress { to { width: 100%; } }
 .ms-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
