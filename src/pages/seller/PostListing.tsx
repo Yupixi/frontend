@@ -260,12 +260,30 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       document.querySelector('.dashboard-main')?.scrollTo({ top: 0 })
     }
   }
-  // Each step is a history entry, so the phone's back button goes to the
-  // previous step instead of leaving the wizard (and dropping the photos).
+  // Each step — step 0 included — is a history entry, so the phone's back
+  // button walks the wizard. Popping past step 0 lands on the page's own
+  // entry (no wizardStep): that's the user leaving, which asks first when
+  // photos/changes would be lost (see `unsavedRef` / `leavingRef` below).
+  const [quitOpen, setQuitOpen] = useState(false)
+  const unsavedRef = useRef(false)
+  const leavingRef = useRef(false)
   useEffect(() => {
+    if (typeof window.history.state?.wizardStep !== 'number') {
+      window.history.pushState({ ...(window.history.state ?? {}), wizardStep: 0 }, '')
+    }
     const onPop = (e: PopStateEvent) => {
-      const s = (e.state as { wizardStep?: number } | null)?.wizardStep
-      goStep(typeof s === 'number' ? s : 0)
+      const st = e.state as { wizardStep?: number; __yupixiSheetMarker?: boolean } | null
+      if (st?.__yupixiSheetMarker) return
+      if (typeof st?.wizardStep === 'number') { goStep(st.wizardStep); return }
+      if (unsavedRef.current && !leavingRef.current) {
+        // Stay on step 0 and ask.
+        window.history.pushState({ ...(window.history.state ?? {}), wizardStep: 0 }, '')
+        goStep(0)
+        setQuitOpen(true)
+        return
+      }
+      // Leaving for real: step off the page's own entry as well.
+      window.history.back()
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -345,18 +363,20 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   // New listings keep their text in the local draft; only picked photos (and
   // an edit's changes) are lost when leaving.
   const unsaved = imageFiles.length > 0 || (isEditing && initialForm.current != null && JSON.stringify(form) !== initialForm.current)
-  const [quitOpen, setQuitOpen] = useState(false)
-  // Shell back arrow (mobile). Past step 0, history.back() already walks the
-  // wizard steps; on step 0 it would leave the page.
+  unsavedRef.current = unsaved && !result
+  // Shell back arrow (mobile) = the phone's back button: history.back()
+  // walks the steps, and leaving from step 0 goes through the popstate
+  // guard above.
   const shellBack = () => {
-    if (step === 0 && unsaved) { setQuitOpen(true); return }
     if (window.history.length > 1) window.history.back()
     else onNavigate('buyer-dashboard')
   }
   const leave = () => {
-    // -2: the sheet's own history marker, then the page before the wizard.
-    if (window.history.length > 2) window.history.go(-2)
-    else { setQuitOpen(false); onNavigate('buyer-dashboard') }
+    leavingRef.current = true
+    // One traversal over the sheet's marker and step 0 (the sheet closes on
+    // that popstate); the guard then sees `leavingRef` and steps off the
+    // page's own entry too.
+    window.history.go(-2)
   }
 
   const reset = () => {

@@ -46,6 +46,7 @@ import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { formatRelativeDate } from '../lib/format'
 import { thumbnailUrl } from '../lib/media'
 import Select from '../components/Select'
+import Icon from '../components/Icon'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -81,6 +82,9 @@ const TABS = [
   { key: 'safety', label: 'Remise & Sécurité' },
 ] as const
 
+// Small icon per spec row (mobile "Spécifications vérifiées").
+const SPEC_ICONS: Record<string, string> = { Marque: 'sell', Modèle: 'devices', Taille: 'straighten', État: 'verified' }
+
 function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, size?: number }) {
   return (
     <span className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-container-high font-bold text-primary" style={{ width: size, height: size }}>
@@ -101,6 +105,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const [reportDone, setReportDone] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
   const [renewed, setRenewed] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 1024)
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
@@ -144,14 +149,14 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     ? Math.round((1 - listing.price / listing.originalPrice) * 100) : 0
   const location = listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
   const category = categoriesData?.categories.find(c => c.slug === listing.category.slug)
-  const specs = [
+  const specs: { label: string, value: string, icon?: string }[] = [
     ...(listing.brand ? [{ label: 'Marque', value: listing.brand }] : []),
     ...(listing.modelName ? [{ label: 'Modèle', value: listing.modelName }] : []),
     ...(listing.size ? [{ label: 'Taille', value: listing.size }] : []),
     ...(listing.condition && listing.condition !== 'N/A' ? [{ label: 'État', value: listing.condition }] : []),
     ...Object.entries(listing.attributes ?? {})
       .filter(([, v]) => v !== '' && v != null)
-      .map(([k, v]) => ({ label: category?.attributes.find(a => a.key === k)?.label ?? k, value: String(v) })),
+      .map(([k, v]) => ({ label: category?.attributes.find(a => a.key === k)?.label ?? k, value: String(v), icon: 'tune' })),
   ]
   const responseTime = formatResponseTime(seller?.responseTimeMinutes)
   const shareUrl = `${window.location.origin}${window.location.pathname}?listing=${listing.id}`
@@ -172,6 +177,10 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     onNavigate('auth')
   }
   const toggleFav = () => { if (!getAccessToken()) setAuthReason('favorite'); onToggleFavorite(listing.id) }
+  const openReport = requireAuth(() => {
+    setReportOpen(true)
+    setTimeout(() => document.getElementById('listing-report')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+  }, 'report')
 
 
 
@@ -224,12 +233,27 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           <ArrowLeft size={22} />
         </button>
         <span className="min-w-0 flex-1 truncate text-headline-sm text-on-surface">Détails article</span>
-        <button onClick={() => void share()} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label={linkCopied ? 'Lien copié' : 'Partager'}>
-          {linkCopied ? <CheckCircle2 size={21} className="text-tertiary" /> : <Share2 size={21} />}
-        </button>
-        <button onClick={toggleFav} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent" aria-label="Favori">
-          <Heart size={21} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
-        </button>
+        {linkCopied && <span className="flex shrink-0 items-center gap-1 text-label-sm text-tertiary"><CheckCircle2 size={15} /> Lien copié</span>}
+        <div className="relative">
+          <button onClick={() => setMenuOpen(o => !o)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Plus d'actions" aria-expanded={menuOpen}>
+            <Icon name="more_vert" size={22} />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-[1]" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-full z-[2] mt-1 w-48 rounded-xl border border-solid border-outline-variant bg-surface-lowest p-1 shadow-float">
+                <button onClick={() => { setMenuOpen(false); void share() }} className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low">
+                  <Share2 size={17} className="text-on-surface-variant" /> Partager
+                </button>
+                {!isOwner && (
+                  <button onClick={() => { setMenuOpen(false); openReport() }} className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low">
+                    <Flag size={17} className="text-on-surface-variant" /> Signaler
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Meta bar: breadcrumb + actions (desktop) */}
@@ -270,9 +294,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               ) : (
                 <div className="flex h-full items-center justify-center text-outline"><Tag size={56} /></div>
               )}
-              <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-                {listing.seller.isVerified && (
-                  <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><BadgeCheck size={13} /> Vendeur certifié</span>
+              <div className="absolute left-3 right-16 top-3 flex flex-wrap gap-1.5 lg:right-3">
+                {(listing.seller.isVerified || seller?.isVerified) && (
+                  <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><BadgeCheck size={13} /> <span className="lg:hidden">Authentique certifié</span><span className="hidden lg:inline">Vendeur certifié</span></span>
                 )}
                 {listing.condition && listing.condition !== 'N/A' && (
                   <span className="rounded-full bg-surface-lowest px-2.5 py-1 text-label-sm uppercase text-on-surface">{listing.condition}</span>
@@ -281,6 +305,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <span className="rounded-full bg-primary px-2.5 py-1 text-label-sm uppercase text-white">Urgent</span>
                 )}
               </div>
+              {/* Mobile: the favourite sits on the photo (mockup); desktop has it in the meta bar. */}
+              <button onClick={toggleFav} className="absolute right-3 top-3 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 shadow-sm backdrop-blur-sm lg:hidden" aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
+                <Heart size={20} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
+              </button>
+              {images.length === 1 && (
+                <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-0.5 text-label-sm text-white lg:hidden"><Icon name="photo_library" size={14} /> 1 / 1</span>
+              )}
               {images.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)} className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronLeft size={20} /></button>
@@ -288,7 +319,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <div className="absolute bottom-3 left-3 flex gap-1 lg:hidden">
                     {images.map((_, i) => <button key={i} onClick={() => setImgIdx(i)} className={`h-1.5 cursor-pointer rounded-full border-none p-0 ${i === imgIdx ? 'w-5 bg-primary' : 'w-1.5 bg-white/80'}`} aria-label={`Photo ${i + 1}`} />)}
                   </div>
-                  <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-0.5 text-label-sm text-white">{imgIdx + 1} / {images.length}</span>
+                  <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-0.5 text-label-sm text-white"><Icon name="photo_library" size={14} /> {imgIdx + 1} / {images.length}</span>
                 </>
               )}
             </div>
@@ -327,12 +358,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           {/* Specs grid (mobile mockup "Spécifications vérifiées") */}
           {specs.length > 0 && (
             <div className="px-4 pt-6 max-lg:order-4 lg:hidden">
-              <h2 className="m-0 mb-3 text-headline-sm text-on-surface">Spécifications</h2>
+              <h2 className="m-0 mb-3 text-label-lg text-on-surface">Spécifications vérifiées</h2>
               <div className="grid grid-cols-2 gap-2">
                 {specs.map((s, i) => (
                   <div key={s.label} className={`min-w-0 rounded-xl bg-surface-container-low p-3 ${i === specs.length - 1 && specs.length % 2 === 1 ? 'col-span-2' : ''}`}>
-                    <div className="truncate text-label-sm uppercase text-tertiary">{s.label}</div>
-                    <div className="break-words text-label-lg text-on-surface">{s.value}</div>
+                    <div className="flex min-w-0 items-center gap-1 text-label-sm text-tertiary">
+                      <Icon name={s.icon ?? SPEC_ICONS[s.label] ?? 'info'} size={14} className="shrink-0" />
+                      <span className="truncate">{s.label}</span>
+                    </div>
+                    <div className="mt-0.5 break-words text-label-lg text-on-surface">{s.value}</div>
                   </div>
                 ))}
               </div>
@@ -350,8 +384,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </div>
             <div className="lg:p-6">
               <section className={tab === 'description' ? '' : 'lg:hidden'}>
-                <h2 className="m-0 mb-3 text-headline-sm text-on-surface lg:hidden">Description de l'article</h2>
-                <div className="rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }} />
+                <h2 className="m-0 mb-3 text-label-lg text-on-surface lg:hidden">Description de l'article</h2>
+                <div className="rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface max-lg:border max-lg:border-solid max-lg:border-outline-variant/60 max-lg:p-4 lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }} />
                 <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</p>
               </section>
               <section className={tab === 'specs' ? 'hidden lg:block' : 'hidden'}>
@@ -367,9 +401,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 )}
               </section>
               <section className={tab === 'safety' ? 'mt-6 lg:mt-0' : 'mt-6 lg:hidden'}>
-                <h2 className="m-0 mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-headline-sm text-on-surface">
-                  Lieu de rencontre suggéré
-                  <span className="flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><ShieldCheck size={12} /> Espace public</span>
+                <h2 className="m-0 mb-3 flex items-center justify-between gap-2 text-label-lg text-on-surface lg:justify-start lg:text-headline-sm">
+                  <span className="min-w-0 truncate">Lieu de rencontre suggéré</span>
+                  <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><ShieldCheck size={12} /> Espace public sécurisé</span>
                 </h2>
                 <div className="map-placeholder mb-4 h-40 items-end! justify-start! p-3">
                   <div className="relative z-[1] flex w-full items-center gap-3 rounded-xl bg-surface-lowest p-3 shadow-float">
@@ -467,8 +501,39 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </div>
           </div>
 
-          {/* Seller card */}
-          <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 max-lg:order-3 max-lg:mx-4 max-lg:mt-5 lg:p-5">
+          {/* Seller card — mobile: the mockup's compact card (Suivre lives on the profile) */}
+          <div className="order-3 mx-4 mt-5 rounded-2xl bg-surface-container-low p-4 lg:hidden">
+            <div className="flex items-center gap-3">
+              <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0" aria-label={`Profil de ${listing.seller.fullName}`}>
+                <Avatar url={listing.seller.avatarUrl} name={listing.seller.fullName} size={44} />
+                {seller?.isVerified && <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-solid border-surface-container-low bg-tertiary text-white"><Icon name="check" size={10} /></span>}
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-1 text-label-lg text-on-surface">
+                  <span className="truncate">{listing.seller.fullName}</span>
+                  {seller?.isVerified && <Icon name="verified" size={16} className="shrink-0 text-tertiary" title="Vendeur vérifié" />}
+                </div>
+                {seller && seller.reviewsCount > 0 ? (
+                  <div className="truncate text-label-sm text-primary">{seller.averageRating.toFixed(1)} ★ <span className="text-on-surface-variant">({seller.reviewsCount} avis vérifié{seller.reviewsCount > 1 ? 's' : ''})</span></div>
+                ) : seller && (
+                  <div className="truncate text-label-sm text-on-surface-variant">{seller.salesCount > 0 ? `${seller.salesCount} vente${seller.salesCount > 1 ? 's' : ''}` : 'Nouveau vendeur'}</div>
+                )}
+              </div>
+              <button onClick={() => onSelectSeller(listing.seller.id)} className="shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none bg-surface-container-high px-3.5 py-1.5 text-label-md text-on-surface">Profil</button>
+            </div>
+            <div className="mt-3 flex gap-2">
+              {responseTime && (
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg bg-surface-lowest px-2.5 py-2 text-label-sm text-on-surface">
+                  <Zap size={14} className="shrink-0 text-tertiary" /> <span className="truncate">Répond en {responseTime}</span>
+                </span>
+              )}
+              <span className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg bg-surface-lowest px-2.5 py-2 text-label-sm text-on-surface">
+                <MapPin size={14} className="shrink-0 text-primary" /> <span className="truncate">{listing.locationLabel || listing.city}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="hidden rounded-2xl border border-outline-variant bg-surface-lowest p-5 lg:block">
             <div className="flex items-center gap-3">
               <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0">
                 <Avatar url={listing.seller.avatarUrl} name={listing.seller.fullName} size={52} />
@@ -507,7 +572,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </button>
           </div>
 
-          <div className="text-center max-lg:order-6 max-lg:mx-4 max-lg:mt-4">
+          <div id="listing-report" className="text-center max-lg:order-6 max-lg:mx-4 max-lg:mt-4">
             {reportDone ? (
               <p className="m-0 text-body-sm text-on-surface-variant">Merci, votre signalement a été transmis.</p>
             ) : reportOpen ? (
@@ -520,7 +585,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 </div>
               </div>
             ) : (
-              <button onClick={requireAuth(() => setReportOpen(true), 'report')} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent text-body-sm text-on-surface-variant hover:text-primary"><Flag size={13} /> Signaler cette annonce</button>
+              <button onClick={openReport} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent text-body-sm text-on-surface-variant hover:text-primary"><Flag size={13} /> Signaler cette annonce</button>
             )}
           </div>
         </aside>

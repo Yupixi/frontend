@@ -13,6 +13,7 @@ import { BOOST_PACKS_QUERY, CREATE_BOOST_MUTATION, MY_BOOSTS_QUERY, type BoostPa
 import type { AuthUser } from '../../graphql/auth'
 import { MY_WALLET_QUERY, type WalletSummary } from '../../graphql/sellerHub'
 import Select from '../../components/Select'
+import BoosterMobile from './BoosterMobile'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -98,8 +99,23 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const packLabel = (p: BoostPack) => pack(p)?.label ?? p
 
   return (
-    <AccountLayout active="seller-premium" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <div className="mx-auto max-w-[1120px]">
+    <AccountLayout active="seller-premium" title="Booster & Visibilité" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+      <div className="lg:hidden">
+        <BoosterMobile
+          live={live}
+          listing={listing}
+          onSelectListing={setListingId}
+          packs={packs}
+          credits={credits}
+          busy={activating || bumping}
+          done={done}
+          error={error}
+          onChoose={activate}
+          onBump={() => setConfirmBump(true)}
+          onNavigate={onNavigate}
+        />
+      </div>
+      <div className="mx-auto hidden max-w-[1120px] lg:block">
         {/* Hero */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-surface-lowest via-surface-lowest to-primary-fixed/60 p-6 md:p-8">
           <div className="grid items-center gap-6 md:grid-cols-[1.5fr_1fr]">

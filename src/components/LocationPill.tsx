@@ -17,6 +17,8 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
   const [city, setCity] = useState(location?.city ?? '')
   const market = location?.countryCode ? MARKETS.find(m => m.countryCode === location.countryCode) : undefined
   const label = market ? (location?.city ? `${location.city}, ${market.country}` : market.country) : 'Tous les pays'
+  // Mobile header pill (Stitch "Abidjan ▾"): the city alone, else the country.
+  const shortLabel = location?.city || market?.country || 'Tous pays'
 
   useEffect(() => setCity(location?.city ?? ''), [location?.city])
 
@@ -41,17 +43,18 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
       <button
         onClick={() => setOpen(o => !o)}
         title={label}
-        className={`flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-low text-label-md text-on-surface hover:bg-surface-container ${compact ? 'w-10' : 'px-3'}`}
+        className={`flex cursor-pointer items-center justify-center rounded-xl border-none text-label-md text-on-surface ${compact ? 'h-9 gap-1 rounded-full bg-surface-container pl-2 pr-1.5 hover:bg-surface-container-high' : 'h-10 gap-1.5 bg-surface-container-low px-3 hover:bg-surface-container'}`}
       >
-        <Icon name="location_on" size={18} className="text-primary" />
-        {!compact && <span className="max-w-[140px] truncate">{label}</span>}
-        {!compact && <Icon name="expand_more" size={17} className="text-on-surface-variant" />}
+        <Icon name="location_on" size={compact ? 16 : 18} className="text-primary" />
+        <span className={`truncate ${compact ? 'max-w-[76px]' : 'max-w-[140px]'}`}>{compact ? shortLabel : label}</span>
+        <Icon name="expand_more" size={compact ? 16 : 17} className="text-on-surface-variant" />
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-[29]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-30 mt-2 max-h-[380px] w-64 overflow-y-auto rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float">
+          {/* Phones: pinned under the header so it never spills off-screen. */}
+          <div className={`z-30 max-h-[380px] overflow-y-auto rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float ${compact ? 'fixed left-4 right-4 top-16' : 'absolute right-0 top-full mt-2 w-64'}`}>
             <div className="px-2 pb-1 pt-1 text-label-sm uppercase text-on-surface-variant">Pays</div>
             <button onClick={() => pick(null)} className={option(!market)}>Tous les pays{!market && <Icon name="check" size={17} />}</button>
             {MARKETS.map(m => (

@@ -158,14 +158,21 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       {priceSuffix && <span className="text-[0.65em] font-semibold text-on-surface-variant"> {priceSuffix}</span>}
     </>
   )
+  const verified = !!listing.seller.isVerified
   const place = isRoute
     ? <ArchetypeLine listing={listing} />
     : (
       <p className="m-0 flex min-w-0 items-center gap-0.5 text-[11px] text-on-surface-variant md:mt-1 md:gap-1 md:text-body-sm">
-        <Icon name="location_on" size={14} className="shrink-0 text-tertiary" />
+        {/* Phones: a verified seller swaps the pin for the check (mockup). */}
+        {verified && <span className="flex shrink-0 md:hidden"><Icon name="verified" size={14} className="text-tertiary" /></span>}
+        <span className={`shrink-0 ${verified ? 'hidden md:flex' : 'flex'}`}><Icon name="location_on" size={14} className="text-tertiary" /></span>
         <span className="truncate">{listingLocation(listing)}</span>
       </p>
     )
+  // Phone photo tag: rail cards lead with the condition, feed cards with the size.
+  const phoneTag = featured
+    ? condition ?? (listing.size ? `Taille ${listing.size}` : category)
+    : listing.size ? `Taille ${listing.size}` : condition ?? category
 
   return (
     <div
@@ -174,7 +181,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       {...prefetchOnIntent(listing.id)}
     >
       <div>
-        <div className="relative aspect-square w-full overflow-hidden bg-surface-container-low">
+        <div className={`relative w-full overflow-hidden bg-surface-container-low ${featured ? 'aspect-[260/192] md:aspect-square' : 'aspect-square'}`}>
           {image.src ? (
             <img
               src={image.src}
@@ -197,9 +204,15 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <PromoBadge listing={listing} />
             {isUrgent(listing) && <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2 md:text-label-sm">Urgent</span>}
             {/* Phone: size or category tag. Desktop: the condition. */}
-            <span className="max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface backdrop-blur-sm md:hidden">{listing.size ? `Taille ${listing.size}` : category}</span>
+            <span className="max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface backdrop-blur-sm md:hidden">{phoneTag}</span>
             {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface backdrop-blur md:inline">{condition}</span>}
           </div>
+
+          {featured && verified && (
+            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-tertiary px-1.5 py-0.5 text-[10px] font-bold text-white md:hidden">
+              <Icon name="verified_user" size={12} /> Vendeur vérifié
+            </span>
+          )}
 
           <button
             onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
@@ -212,8 +225,11 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
 
         {/* Phone body */}
         <div className="flex flex-col gap-0.5 p-2.5 md:hidden">
-          <span className="text-headline-sm font-bold text-primary">{price}</span>
-          <h4 className="m-0 truncate text-label-md font-semibold text-on-surface">{listing.title}</h4>
+          <div className="flex min-w-0 items-baseline justify-between gap-1.5">
+            <span className="shrink-0 text-headline-sm font-bold text-primary">{price}</span>
+            {struck != null && <span className={`min-w-0 truncate text-on-surface-variant line-through ${featured ? 'text-body-sm' : 'text-[11px]'}`}><Price amount={struck} currency={listing.currency} /></span>}
+          </div>
+          <h4 className={`m-0 truncate text-on-surface ${featured ? 'text-label-lg font-bold' : 'text-label-md font-semibold'}`}>{listing.title}</h4>
           {place}
         </div>
 
@@ -242,7 +258,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
         <>
           <div className="px-2.5 pb-2.5 md:hidden">
             {featured ? (
-              <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-2 text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
+              <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary py-2 shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
                 <Icon name="chat" size={16} /> Discuter
               </button>
             ) : (
