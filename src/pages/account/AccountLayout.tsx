@@ -233,14 +233,18 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
   )
 }
 
-export function AccountLayout({ active, onNavigate, children, currentUser, onLogout, title, onBack, hideBottomNav }: {
+export function AccountLayout({ active, onNavigate, children, currentUser, onLogout, title, onBack, hideBottomNav, fill }: {
   active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null, onLogout: () => void,
   /** Mobile header title, when the page isn't the one `active` names (e.g. a sub-step). */
   title?: string
   /** Mobile back arrow override (e.g. conversation → conversation list). */
   onBack?: () => void
-  /** Full-screen mobile moments (an open chat thread) where the bar would cover the input. */
+  /** Full-screen mobile moments where the page has its own footer. */
   hideBottomNav?: boolean
+  /** The page manages its own scrolling (chat): <main> gets no padding and
+      exactly the height left between the header and the bottom bar, which
+      then sits in the flow instead of floating over the content. */
+  fill?: boolean
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { listingsCount, unreadMessages, unreadNotifications, activeDisputes } = useUnreadCounts()
@@ -250,7 +254,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
   const go = (p: string) => { setSidebarOpen(false); onNavigate(p) }
 
   return (
-    <div className="flex h-screen bg-surface">
+    <div className={`flex bg-surface ${fill ? 'h-[100dvh]' : 'h-screen'}`}>
       <aside className="hidden w-64 shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest lg:block">
         <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} />
       </aside>
@@ -272,11 +276,11 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
 
       <div className="flex min-w-0 flex-1 flex-col">
         <AccountHeader activeLabel={title || ACCOUNT_PAGE_LABELS[active] || active} isHome={active === 'buyer-dashboard' || active === 'seller-dashboard'} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onBack={back} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} />
-        <main className={`dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6 ${tabs && !isGuest ? 'pb-24 lg:pb-6' : ''}`}>
+        <main className={fill ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : `dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6 ${tabs && !isGuest ? 'pb-24 lg:pb-6' : ''}`}>
           {children}
         </main>
         {!isGuest && tabs && (
-          <nav aria-label="Navigation du compte" className="fixed inset-x-0 bottom-0 z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+          <nav aria-label="Navigation du compte" className={`${fill ? 'relative shrink-0' : 'fixed inset-x-0 bottom-0'} z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden`}>
             {tabs.map(t => {
               const on = t.match.includes(active)
               if (t.primary) {
