@@ -259,6 +259,16 @@ export const MY_LISTING_QUERY = gql`
       currency
       countryCode
       city
+      locationLabel
+      condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      deliveryAvailable
       negotiable
       status
       attributes
@@ -392,6 +402,16 @@ export type MyListingDetail = {
   currency: string
   countryCode: string
   city: string
+  locationLabel: string | null
+  condition: string | null
+  brand: string | null
+  modelName: string | null
+  size: string | null
+  originalPrice: number | null
+  meetupSpot: string | null
+  paymentMethods: string[]
+  minOfferPrice: number | null
+  deliveryAvailable: boolean
   negotiable: boolean
   status: string
   attributes: Record<string, string>
@@ -513,3 +533,10 @@ export const CREATE_SAVED_SEARCH_MUTATION = gql`
     createSavedSearch(label: $label, filter: $filter) { id label }
   }
 `
+
+export const PRICE_RANGE_QUERY = gql`
+  query PriceRange($categoryId: String!, $subcategoryId: String, $countryCode: String) {
+    priceRange(categoryId: $categoryId, subcategoryId: $subcategoryId, countryCode: $countryCode) { low median high sampleSize }
+  }
+`
+export type PriceRange = { low: number; median: number; high: number; sampleSize: number }
