@@ -8,6 +8,7 @@ import { AccountLayout } from '../account/AccountLayout'
 import StatsMobile from './StatsMobile'
 import { SELLER_STATS_QUERY, type ListingPerformance, type SellerStats } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
+import Select from '../../components/Select'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -122,9 +123,9 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           <div className="flex flex-wrap gap-2 md:flex-col md:items-stretch">
             <label className="flex items-center gap-2 rounded-xl bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm">
               <Icon name="calendar_month" size={18} className="text-primary" />
-              <select value={period} onChange={e => setPeriod(e.target.value)} className="cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
+              <Select value={period} onChange={e => setPeriod(e.target.value)} className="cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
                 {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
-              </select>
+              </Select>
             </label>
             <div className="relative">
               <button onClick={() => setExportOpen(o => !o)} disabled={!s} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container-low">

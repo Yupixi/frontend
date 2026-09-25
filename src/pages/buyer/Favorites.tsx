@@ -6,6 +6,7 @@ import { AccountLayout } from '../account/AccountLayout'
 import { formatNumber } from '../../lib/format'
 import { MY_FAVORITE_ENTRIES_QUERY, listingPlace, type FavoriteEntry } from '../../graphql/buyerSpace'
 import type { AuthUser } from '../../graphql/auth'
+import Select from '../../components/Select'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -130,9 +131,9 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
               ))}
             </div>
             <label className="flex items-center gap-2 text-label-sm text-on-surface-variant">Trier par :
-              <select value={sort} onChange={e => setSort(e.target.value)} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-2 py-1.5 text-label-md text-on-surface">
+              <Select value={sort} onChange={e => setSort(e.target.value)} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-2 py-1.5 text-label-md text-on-surface">
                 {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select>
+              </Select>
             </label>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-4 px-1 text-label-sm text-on-surface">

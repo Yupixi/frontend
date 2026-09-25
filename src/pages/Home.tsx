@@ -13,6 +13,7 @@ import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign } from '../graphql/content'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
+import Select from '../components/Select'
 
 export type SearchPreset = { city?: string, maxPrice?: number }
 
@@ -256,17 +257,17 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                   </label>
                   <label className="flex min-w-[165px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
                     <MapPin size={20} className="mr-2 text-tertiary" />
-                    <select value={heroCity} onChange={e => setHeroCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
+                    <Select value={heroCity} onChange={e => setHeroCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
                       <option value="">Toutes les villes</option>
                       {cities.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    </Select>
                   </label>
                   <label className="flex min-w-[165px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
                     <Wallet size={20} className="mr-2 text-outline" />
-                    <select value={heroMax} onChange={e => setHeroMax(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
+                    <Select value={heroMax} onChange={e => setHeroMax(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
                       <option value="">Prix max</option>
                       {MAX_PRICES.map(p => <option key={p} value={p}>Moins de {p.toLocaleString('fr-FR')} F</option>)}
-                    </select>
+                    </Select>
                   </label>
                   <button type="submit" className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-6 py-3 text-label-lg font-bold text-white shadow-sm hover:bg-primary-container">
                     <Icon name="near_me" size={20} /> Trouver à proximité

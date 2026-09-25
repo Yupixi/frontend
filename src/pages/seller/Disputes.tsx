@@ -13,6 +13,7 @@ import { MY_SALES_ORDERS_QUERY, type SalesOrder } from '../../graphql/sellerHub'
 import { CREATE_REPORT_MUTATION } from '../../graphql/reports'
 import { PAYMENT_LABELS } from '../ListingDetail'
 import type { AuthUser } from '../../graphql/auth'
+import Select from '../../components/Select'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; focusDisputeId?: string; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -199,15 +200,15 @@ function ReportModal({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <label className="mt-4 block text-label-md text-on-surface">Acheteur concerné
-              <select value={userId} onChange={e => setUserId(e.target.value)} className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-body-md text-on-surface">
+              <Select value={userId} onChange={e => setUserId(e.target.value)} className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-body-md text-on-surface">
                 <option value="">Choisir parmi vos acheteurs…</option>
                 {buyers.map(b => <option key={b.id} value={b.id}>{b.fullName}{b.city ? ` — ${b.city}` : ''}</option>)}
-              </select>
+              </Select>
             </label>
             <label className="mt-3 block text-label-md text-on-surface">Motif
-              <select value={reason} onChange={e => setReason(e.target.value as DisputeReason)} className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-body-md text-on-surface">
+              <Select value={reason} onChange={e => setReason(e.target.value as DisputeReason)} className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-body-md text-on-surface">
                 {(Object.keys(DISPUTE_REASON_LABELS) as DisputeReason[]).map(r => <option key={r} value={r}>{DISPUTE_REASON_LABELS[r]}</option>)}
-              </select>
+              </Select>
             </label>
             <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="Décrivez ce qui s'est passé…" className="mt-3 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
             {error && <p className="m-0 mt-1 text-body-sm text-primary">{error.message}</p>}
@@ -325,14 +326,14 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
               <Icon name="search" size={18} className="text-on-surface-variant" />
               <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Rechercher par référence (#LIT-xxxx), nom de l'acheteur..." className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
             </label>
-            <select value={reason} onChange={e => { setReason(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
+            <Select value={reason} onChange={e => { setReason(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
               <option value="">Tous les motifs de litige</option>
               {(Object.keys(DISPUTE_REASON_LABELS) as DisputeReason[]).map(r => <option key={r} value={r}>{DISPUTE_REASON_LABELS[r]}</option>)}
-            </select>
-            <select value={place} onChange={e => { setPlace(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
+            </Select>
+            <Select value={place} onChange={e => { setPlace(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
               <option value="">Tous les lieux de remise</option>
               {places.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
+            </Select>
           </div>
         </section>
 

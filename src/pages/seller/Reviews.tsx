@@ -9,6 +9,7 @@ import { formatResponseTime } from '../../graphql/reviews'
 import { MY_REPUTATION_QUERY, SELLER_REVIEWS_FULL_QUERY, REPLY_TO_REVIEW_MUTATION, type Reputation, type FullReview } from '../../graphql/sellerHub'
 import { formatRelativeDate } from '../../lib/format'
 import type { AuthUser } from '../../graphql/auth'
+import Select from '../../components/Select'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 const PAGE = 5
@@ -131,9 +132,9 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                 <button key={k} onClick={() => setFilter(k)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>{l}</button>
               ))}
               <label className="ml-auto flex items-center gap-1 text-label-md text-on-surface-variant">Trier par :
-                <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-2 py-1.5 text-label-md text-on-surface outline-none">
+                <Select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-2 py-1.5 text-label-md text-on-surface outline-none">
                   <option value="recent">Plus récents d'abord</option><option value="best">Meilleures notes</option><option value="worst">Notes les plus basses</option>
-                </select>
+                </Select>
               </label>
             </div>
 

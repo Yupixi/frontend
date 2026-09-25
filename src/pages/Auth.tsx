@@ -5,6 +5,7 @@ import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, type AuthPayload } from '../graphql/auth'
 import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 import { storeTokens } from '../lib/auth'
+import Select from '../components/Select'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -105,10 +106,10 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
         </label>
       </div>
       <label className="text-label-md text-on-surface">Ville / commune
-        <select value={form.city} onChange={set('city')} className={`${field} mt-1.5 cursor-pointer`}>
+        <Select value={form.city} onChange={set('city')} className={`${field} mt-1.5 cursor-pointer`}>
           <option value="">Choisir…</option>
           {COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        </Select>
       </label>
       <label className="text-label-md text-on-surface">Mot de passe
         <span className="mt-1.5 block"><PasswordInput value={form.password} onChange={v => setForm(f => ({ ...f, password: v }))} placeholder="8 caractères minimum" autoComplete="new-password" /></span>

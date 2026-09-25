@@ -11,6 +11,7 @@ import { MY_LISTINGS_QUERY, BUMP_LISTING_MUTATION, type MyListingRow } from '../
 import { BOOST_PACKS_QUERY, CREATE_BOOST_MUTATION, MY_BOOSTS_QUERY, type BoostPack, type BoostPackInfo, type RemoteBoost } from '../../graphql/promotions'
 import type { AuthUser } from '../../graphql/auth'
 import { MY_WALLET_QUERY, type WalletSummary } from '../../graphql/sellerHub'
+import Select from '../../components/Select'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -143,9 +144,9 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
             {live.length > 0 && (
               <label className="flex items-center gap-2 text-body-sm text-on-surface-variant">
                 Changer d'article :
-                <select value={listingId} onChange={e => setListingId(e.target.value)} className="max-w-[280px] cursor-pointer rounded-lg border border-outline-variant bg-surface-lowest px-3 py-2 text-label-md text-on-surface outline-none">
+                <Select value={listingId} onChange={e => setListingId(e.target.value)} className="max-w-[280px] cursor-pointer rounded-lg border border-outline-variant bg-surface-lowest px-3 py-2 text-label-md text-on-surface outline-none">
                   {live.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
-                </select>
+                </Select>
               </label>
             )}
           </div>

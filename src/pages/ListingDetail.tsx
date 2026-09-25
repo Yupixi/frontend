@@ -41,6 +41,7 @@ import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
 import { formatRelativeDate } from '../lib/format'
+import Select from '../components/Select'
 
 type ListingDetailProps = {
   listingId: string
@@ -470,7 +471,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <p className="m-0 text-body-sm text-on-surface-variant">Merci, votre signalement a été transmis.</p>
             ) : reportOpen ? (
               <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3 text-left">
-                <select className="input mb-2" value={reportReason} onChange={e => setReportReason(e.target.value)}>{REPORT_REASONS.map(r => <option key={r}>{r}</option>)}</select>
+                <Select className="input mb-2" value={reportReason} onChange={e => setReportReason(e.target.value)}>{REPORT_REASONS.map(r => <option key={r}>{r}</option>)}</Select>
                 <textarea className="input mb-2" rows={2} placeholder="Détails (optionnel)" value={reportMessage} onChange={e => setReportMessage(e.target.value)} />
                 <div className="flex gap-2">
                   <button disabled={reporting} onClick={() => void createReport({ variables: { targetType: 'LISTING', targetListingId: listing.id, reason: reportReason, message: reportMessage || undefined } }).then(() => setReportDone(true))} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">{reporting ? 'Envoi…' : 'Envoyer'}</button>

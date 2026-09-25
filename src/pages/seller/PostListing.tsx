@@ -17,6 +17,7 @@ import {
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
 import type { AuthUser } from '../../graphql/auth'
+import Select from '../../components/Select'
 
 const MAX_PHOTOS = 8
 const TITLE_MAX = 80
@@ -403,15 +404,15 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-primary">{category ? <CategoryIcon icon={category.icon} size={20} /> : <Tag size={18} />}</span>
-                      <select className={`${inputCls} pl-10`} value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategoryId: '', attributes: {} }))}>
+                      <Select className={`${inputCls} pl-10`} value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategoryId: '', attributes: {} }))}>
                         <option value="">Choisir une catégorie…</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
+                      </Select>
                     </div>
-                    <select className={inputCls} value={form.subcategoryId} disabled={!category} onChange={e => set('subcategoryId', e.target.value)}>
+                    <Select className={inputCls} value={form.subcategoryId} disabled={!category} onChange={e => set('subcategoryId', e.target.value)}>
                       <option value="">{category ? 'Sous-catégorie…' : '—'}</option>
                       {category?.subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
+                    </Select>
                   </div>
                   {category && (
                     <span className="mt-2 flex items-center gap-1 text-body-sm text-on-surface-variant">
@@ -444,10 +445,10 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   {category?.attributes.map(a => (
                     <Field key={a.key} label={a.label} required={a.required}>
                       {a.type === 'SELECT' ? (
-                        <select className={inputCls} value={form.attributes[a.key] ?? ''} onChange={e => set('attributes', { ...form.attributes, [a.key]: e.target.value })}>
+                        <Select className={inputCls} value={form.attributes[a.key] ?? ''} onChange={e => set('attributes', { ...form.attributes, [a.key]: e.target.value })}>
                           <option value="">—</option>
                           {a.options.map(o => <option key={o}>{o}</option>)}
-                        </select>
+                        </Select>
                       ) : (
                         <input className={inputCls} type={a.type === 'NUMBER' ? 'number' : 'text'} value={form.attributes[a.key] ?? ''} onChange={e => set('attributes', { ...form.attributes, [a.key]: e.target.value })} />
                       )}
@@ -479,9 +480,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Field label="Prix neuf (optionnel)"><input type="number" min={0} className={inputCls} value={form.originalPrice} onChange={e => set('originalPrice', e.target.value)} placeholder="Barré sur l'annonce" /></Field>
                     <Field label="Pays">
-                      <select className={inputCls} value={form.countryCode} onChange={e => setForm(f => ({ ...f, countryCode: e.target.value, currency: marketForCountry(e.target.value)?.currency ?? f.currency }))}>
+                      <Select className={inputCls} value={form.countryCode} onChange={e => setForm(f => ({ ...f, countryCode: e.target.value, currency: marketForCountry(e.target.value)?.currency ?? f.currency }))}>
                         {MARKETS.map(m => <option key={m.countryCode} value={m.countryCode}>{m.country}</option>)}
-                      </select>
+                      </Select>
                     </Field>
                   </div>
                 </div>
