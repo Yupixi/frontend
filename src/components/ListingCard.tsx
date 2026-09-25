@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Heart, MapPin, Eye, Tag, Handshake, MessageSquare, BadgeCheck, Star, Rocket, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type AppIcon } from './icons'
+import { Heart, MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type AppIcon } from './icons'
+import Icon from './Icon'
 import Price from './Price'
 import BoostMenu from './BoostMenu'
 import type { RemoteListing } from '../graphql/listings'
@@ -107,30 +108,18 @@ function PromoBadge({ listing }: { listing: RemoteListing }) {
   )
 }
 
-function SellerChip({ listing }: { listing: RemoteListing }) {
-  const name = listing.seller.fullName
-  return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-container-high text-[10px] font-bold text-on-surface-variant">
-        {listing.seller.avatarUrl ? <img src={listing.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
-      </span>
-      <span className="truncate">{name}</span>
-      {listing.seller.isVerified && <BadgeCheck size={13} className="shrink-0 text-tertiary" aria-label="Vendeur certifié" />}
-    </span>
-  )
-}
-
 function isUrgent(listing: RemoteListing) {
   return !!listing.urgentUntil && new Date(listing.urgentUntil) > new Date()
 }
 
-export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact, cta = 'icon' }: {
+// Product card from the Stitch mockups. Phones get the compact "Dilchap
+// Mobile – Accueil" card (price first, one Contacter button); from md up
+// it's the desktop "Pépites à la Une" card (category + trust signal, title,
+// location, price, Détails / Discuter).
+export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact }: {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
-  // 'icon': red chat square (catalogue); 'split': Détails + Discuter;
-  // 'full': one full-width Discuter button (home feeds).
-  cta?: 'icon' | 'split' | 'full'
-  // Opens the chat with the seller straight from the card (mockup
-  // "Contacter" / "Discuter"). Falls back to opening the listing.
+  // Opens the chat with the seller straight from the card. Falls back to
+  // opening the listing.
   onContact?: () => void
 }) {
   const [imgError, setImgError] = useState(false)
@@ -138,134 +127,111 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   const priceSuffix = archetypePriceSuffix(listing)
   const isRoute = getArchetype(listing) === 'route'
   const isOwn = !!currentUserId && listing.seller.id === currentUserId
-  const eyebrow = listing.brand || listing.subcategory?.name || listing.category.name
+  const category = listing.subcategory?.name || listing.category.name
   // Campaign price wins; otherwise the seller's "prix neuf" is struck through.
   const struck = salePrice != null ? listing.price : (listing.originalPrice && listing.price != null && listing.originalPrice > listing.price ? listing.originalPrice : null)
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
+  const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
+  const contact = (e: React.MouseEvent) => { e.stopPropagation(); (onContact ?? onSelect)() }
+  const price = (
+    <>
+      <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
+      {priceSuffix && <span className="text-[0.65em] font-semibold text-on-surface-variant"> {priceSuffix}</span>}
+    </>
+  )
+  const place = isRoute
+    ? <ArchetypeLine listing={listing} />
+    : (
+      <p className="m-0 flex min-w-0 items-center gap-0.5 text-[11px] text-on-surface-variant md:mt-1 md:gap-1 md:text-body-sm">
+        <Icon name="location_on" size={14} className="shrink-0 text-tertiary" />
+        <span className="truncate">{listingLocation(listing)}</span>
+      </p>
+    )
 
   return (
     <div
-      className="listing-card group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover"
+      className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-xl bg-surface-lowest shadow-sm transition-all duration-300 active:scale-[0.98] hover:shadow-card-hover md:rounded-2xl md:active:scale-100"
       onClick={onSelect}
     >
-      {/* Image — soft gray backdrop so second-hand photos read as
-          "detoured" (design system: Cartes Produits). */}
-      <div className="relative aspect-square overflow-hidden bg-surface-container-low">
-        {!imgError && listingImage(listing) ? (
-          <img
-            src={listingImage(listing)}
-            alt={listing.title}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-outline">
-            <Tag size={40} />
+      <div>
+        <div className="relative aspect-square w-full overflow-hidden bg-surface-container-low">
+          {!imgError && listingImage(listing) ? (
+            <img
+              src={listingImage(listing)}
+              alt={listing.title}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-outline"><Tag size={40} /></div>
+          )}
+
+          <div className="absolute left-2 top-2 flex flex-col items-start gap-1 md:left-3 md:top-3">
+            {isActivelyBoosted(listing) && (
+              <span className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2.5 md:py-1 md:text-label-sm">
+                <Icon name="rocket_launch" size={14}/> Boosté
+              </span>
+            )}
+            <PromoBadge listing={listing} />
+            {isUrgent(listing) && <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2 md:text-label-sm">Urgent</span>}
+            {/* Phone: size or category tag. Desktop: the condition. */}
+            <span className="rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface backdrop-blur-sm md:hidden">{listing.size ? `Taille ${listing.size}` : category}</span>
+            {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface backdrop-blur md:inline">{condition}</span>}
           </div>
-        )}
 
-        <div className="absolute left-2 top-2 z-[2] flex flex-col items-start gap-1 md:left-3 md:top-3">
-          {isActivelyBoosted(listing) && (
-            <span className="flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"><Rocket size={13} /> Boosté</span>
-          )}
-          {listing.condition && listing.condition !== 'N/A' && (
-            <span className="rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface md:px-2 md:text-label-sm">{listing.condition}</span>
-          )}
-          <PromoBadge listing={listing} />
-          {isUrgent(listing) && (
-            <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm">Urgent</span>
-          )}
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFav() }}
+            className={`absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 backdrop-blur-sm transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
+            aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          >
+            <Icon name="favorite" size={17} fill={isFav} />
+          </button>
         </div>
 
-        <button
-          onClick={e => { e.stopPropagation(); onToggleFav() }}
-          className="absolute right-2 top-2 z-[2] flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm md:right-3 md:top-3 md:h-9 md:w-9"
-          title={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        >
-          <Heart size={17} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
-        </button>
-
-        {listing.negotiable && (
-          <span className="absolute bottom-2 left-2 z-[2] flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-bold text-white md:bottom-3 md:left-3 md:text-label-sm">
-            <Handshake size={12} /> Négociable
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col p-2.5 md:p-3.5">
-        <div className="mb-0.5 flex items-center justify-between gap-2">
-          <span className="truncate text-[10px] font-bold uppercase tracking-wide text-on-surface-variant md:text-label-sm">{eyebrow}</span>
-          {listing.size && <span className="shrink-0 rounded bg-surface-container-low px-1.5 text-[10px] font-semibold text-on-surface-variant md:text-[11px]">Taille {listing.size}</span>}
+        {/* Phone body */}
+        <div className="flex flex-col gap-0.5 p-2.5 md:hidden">
+          <span className="text-headline-sm font-bold text-primary">{price}</span>
+          <h4 className="m-0 truncate text-label-md font-semibold text-on-surface">{listing.title}</h4>
+          {place}
         </div>
-        <h3 className="m-0 line-clamp-2 text-[13px] font-semibold leading-snug text-on-surface md:text-label-lg">
-          {listing.title}
-        </h3>
 
-        <div className="mt-1.5 flex items-end justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-[16px] font-extrabold leading-tight tracking-tight text-primary md:text-headline-sm md:font-extrabold">
-              <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
-              {priceSuffix && <span className="text-[0.7em] font-semibold text-on-surface-variant"> {priceSuffix}</span>}
-            </div>
-            {struck != null && (
-              <div className="text-body-sm text-outline line-through">
-                <Price amount={struck} currency={listing.currency} />
-              </div>
+        {/* Desktop body */}
+        <div className="hidden p-4 md:block">
+          <div className="mb-1 flex items-center justify-between gap-2 text-body-sm text-on-surface-variant">
+            <span className="truncate">{category}{listing.size && ` • T. ${listing.size}`}</span>
+            {listing.seller.isVerified ? (
+              <span className="flex shrink-0 items-center gap-1 text-label-sm font-semibold text-tertiary"><Icon name="verified" size={14} /> Vérifié</span>
+            ) : rating != null && (
+              <span className="flex shrink-0 items-center gap-1 text-label-sm font-semibold text-primary">★ {rating.toFixed(1)} ({listing.seller.reviewsCount})</span>
             )}
           </div>
-          {!isOwn && cta === 'icon' && (
-            <button
-              onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }}
-              className="hidden h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-primary text-white transition-colors hover:bg-primary-dark md:flex"
-              title="Discuter avec le vendeur"
-            >
-              <MessageSquare size={17} />
-            </button>
-          )}
+          <h4 className="m-0 line-clamp-1 text-headline-sm font-bold text-on-surface">{listing.title}</h4>
+          {place}
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
+            <span className={`text-headline-md font-extrabold ${struck != null ? 'text-primary' : 'text-on-surface'}`}>{price}</span>
+            {struck != null && <span className="text-body-sm text-outline line-through"><Price amount={struck} currency={listing.currency} /></span>}
+          </div>
         </div>
+      </div>
 
-        <div className="mt-1.5 flex flex-col gap-0.5 text-[11px] md:text-body-sm">
-          <ArchetypeLine listing={listing} />
-          {!isRoute && (
-            <div className="flex min-w-0 items-center gap-1 text-tertiary">
-              <MapPin size={12} className="shrink-0" />
-              <span className="truncate">{listingLocation(listing)}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="min-h-2.5 flex-1" />
-        <div className="flex items-center justify-between gap-2 border-0 border-t border-solid border-surface-container-low pt-2 text-[11px] text-on-surface-variant md:text-label-sm md:font-medium">
-          <SellerChip listing={listing} />
-          {rating != null ? (
-            <span className="flex shrink-0 items-center gap-0.5 font-semibold text-on-surface">
-              <Star size={12} fill="#F59E0B" color="#F59E0B" />{rating.toFixed(1)}
-              <span className="font-normal text-on-surface-variant">({listing.seller.reviewsCount})</span>
-            </span>
-          ) : (
-            <span className="shrink-0">{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
-          )}
-        </div>
-
-        {!isOwn && cta === 'split' && (
-          <div className="mt-3 flex gap-2">
-            <button onClick={e => { e.stopPropagation(); onSelect() }} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-low py-2 text-label-md font-bold text-on-surface hover:bg-surface-container">Détails</button>
-            <button onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }} className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl border-none bg-primary py-2 text-label-md font-bold text-white hover:bg-primary-container">
-              <MessageSquare size={16} /> Discuter
+      {isOwn ? (
+        <div className="px-2.5 pb-2.5 md:px-4 md:pb-4"><OwnListingBoostCta listing={listing} /></div>
+      ) : (
+        <>
+          <div className="px-2.5 pb-2.5 md:hidden">
+            <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-surface-container py-1.5 text-label-sm font-bold text-on-surface transition-colors hover:bg-primary hover:text-white">
+              <Icon name="chat_bubble" size={14} /> Contacter
             </button>
           </div>
-        )}
-        {!isOwn && cta !== 'split' && (
-          <button
-            onClick={e => { e.stopPropagation(); (onContact ?? onSelect)() }}
-            className={`mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-1.5 text-label-md text-on-surface hover:bg-primary hover:text-white ${cta === 'full' ? 'md:mt-3 md:rounded-xl md:py-2.5 md:font-bold' : 'md:hidden'}`}
-          >
-            <MessageSquare size={cta === 'full' ? 18 : 14} /> {cta === 'full' ? 'Discuter' : 'Contacter'}
-          </button>
-        )}
-        {isOwn && <OwnListingBoostCta listing={listing} />}
-      </div>
+          <div className="hidden gap-2 px-4 pb-4 md:flex">
+            <button onClick={e => { e.stopPropagation(); onSelect() }} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-low py-2 text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container">Détails</button>
+            <button onClick={contact} className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl border-none bg-primary py-2 text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
+              <Icon name="chat" size={16} /> Discuter
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

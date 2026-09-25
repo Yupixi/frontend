@@ -228,7 +228,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           </div>
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {filtered.slice(0, shown).map(l => (
-              <ListingCard key={l.id} listing={l} cta="full" onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(seller.id, l.id))} />
+              <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(seller.id, l.id))} />
             ))}
           </div>
           {filtered.length === 0 && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-on-surface-variant">Aucune pièce ne correspond.</p>}

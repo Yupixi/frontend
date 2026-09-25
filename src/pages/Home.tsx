@@ -163,8 +163,8 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
   const contact = (l: RemoteListing) => () =>
     currentUser && !currentUser.isGuest && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id)
-  const card = (l: RemoteListing, cta: 'icon' | 'split' | 'full' = 'icon') => (
-    <ListingCard key={l.id} listing={l} cta={cta} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} />
+  const card = (l: RemoteListing) => (
+    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} />
   )
   const zone = location?.city ?? 'Toute la Côte d’Ivoire'
 
@@ -354,7 +354,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 </div>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">Priorité visibilité</span>
               </div>
-              <div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l, 'split'))}</div>
+              <div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div>
             </section>
           )}
 
@@ -406,7 +406,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l, 'full'))}</div>
+            <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div>
             {latest.length === 0 && !feedLoading && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-body-md text-on-surface-variant">Aucune annonce pour l'instant dans cette zone.</p>}
             <div className="flex justify-center">{loadMore}</div>
           </section>
