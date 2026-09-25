@@ -6,6 +6,7 @@ import { LOGIN_MUTATION, REGISTER_MUTATION, type AuthPayload } from '../graphql/
 import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 import { storeTokens } from '../lib/auth'
 import Select from '../components/Select'
+import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -19,31 +20,7 @@ const PERKS = [
   { icon: 'handshake', title: 'Vérification directe avant achat', text: "Testez le smartphone, essayez l'article ou examinez le produit avant de régler." },
   { icon: 'shield', title: 'Points relais & lieux publics', text: 'Rendez-vous dans des lieux éclairés et validation par code de remise.' },
 ]
-// Why the visitor was sent here (favourite, offer…), so the login screen can
-// say it. Set right before navigating; short-lived so a stale value never shows
-// on a later, deliberate visit.
-const REASON_KEY = 'dilchap_auth_reason'
-const REASONS = {
-  favorite: { icon: 'favorite', text: 'Connectez-vous pour enregistrer cet article dans vos favoris.' },
-  offer: { icon: 'sell', text: 'Connectez-vous pour faire une offre au vendeur.' },
-  follow: { icon: 'person_add', text: 'Connectez-vous pour suivre ce vendeur.' },
-  report: { icon: 'flag', text: 'Connectez-vous pour envoyer un signalement.' },
-  alert: { icon: 'notifications', text: 'Connectez-vous pour être alerté des nouvelles annonces.' },
-  contact: { icon: 'chat', text: 'Connectez-vous pour discuter avec le vendeur.' },
-} as const
-export type AuthReason = keyof typeof REASONS
-export const setAuthReason = (reason: AuthReason) => {
-  try { sessionStorage.setItem(REASON_KEY, JSON.stringify({ reason, at: Date.now() })) } catch { /* private mode */ }
-}
-const takeAuthReason = (): AuthReason | null => {
-  try {
-    const raw = sessionStorage.getItem(REASON_KEY)
-    sessionStorage.removeItem(REASON_KEY)
-    if (!raw) return null
-    const { reason, at } = JSON.parse(raw) as { reason: AuthReason; at: number }
-    return Date.now() - at < 5000 && reason in REASONS ? reason : null
-  } catch { return null }
-}
+const REASONS = AUTH_REASONS
 
 const field = 'w-full rounded-xl border border-transparent bg-surface-container-low px-3 py-3 text-body-md text-on-surface outline-none focus:border-primary'
 

@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v9'
+const VERSION = 'v10'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -107,6 +107,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+  // Cross-origin requests (listing photos on the media host, Google Fonts)
+  // were never cached here anyway — going through the worker only added a
+  // hop and turned any worker-side network hiccup into a 504. The browser's
+  // HTTP cache handles them (media is served `immutable`).
+  if (url.origin !== self.location.origin) return
 
   // HTML navigations: network-first (always serve the latest shell when
   // online), falling back to a cached copy or the offline page.

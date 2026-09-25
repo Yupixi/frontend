@@ -11,7 +11,7 @@ import {
 } from '../graphql/listings'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
-import { setAuthReason } from './Auth'
+import { setAuthReason } from '../lib/authReason'
 
 const PAGE_SIZE = 18
 

@@ -5,6 +5,7 @@ import Icon, { CategoryIcon } from '../components/Icon'
 import Price from '../components/Price'
 import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign, type ActiveCampaignListing } from '../graphql/content'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
+import { thumbnailUrl } from '../lib/media'
 
 type FlashOffersProps = {
   onNavigate: (page: any) => void
@@ -15,13 +16,13 @@ type FlashOffersProps = {
   isLoggedIn?: boolean
 }
 
-function useCountdown(endsAt?: string) {
+function useCountdown(endsAt?: string, tickMs = 1000) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!endsAt) return
-    const t = setInterval(() => setNow(Date.now()), 1000)
+    const t = setInterval(() => setNow(Date.now()), tickMs)
     return () => clearInterval(t)
-  }, [endsAt])
+  }, [endsAt, tickMs])
   if (!endsAt) return null
   const ms = Math.max(0, new Date(endsAt).getTime() - now)
   return {
@@ -35,6 +36,24 @@ function useCountdown(endsAt?: string) {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
+function HeroCountdown({ endsAt }: { endsAt: string }) {
+  const countdown = useCountdown(endsAt)
+  if (!countdown || countdown.ended) return null
+  return (
+    <div className="mt-6 flex items-center justify-center gap-2">
+      {[['Jours', countdown.days], ['Heures', countdown.hours], ['Minutes', countdown.minutes], ['Secondes', countdown.seconds]].map(([label, v], i) => (
+        <div key={label as string} className="flex items-center gap-2">
+          {i > 0 && <span className="text-headline-md text-white/50">:</span>}
+          <div className="w-16 rounded-xl bg-white/10 py-2 backdrop-blur-sm md:w-20">
+            <div className={`text-headline-lg font-extrabold tabular-nums md:text-[40px] ${i === 3 ? 'text-primary-container' : ''}`}>{pad(v as number)}</div>
+            <div className="text-[10px] uppercase tracking-wider text-white/60">{label as string}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function salePrice(entry: ActiveCampaignListing): number | null {
   const { price } = entry.listing
   if (price == null) return null
@@ -47,7 +66,8 @@ function discountOf(entry: ActiveCampaignListing): number {
   const sale = salePrice(entry)
   return sale != null && entry.listing.price ? Math.round((1 - sale / entry.listing.price) * 100) : 0
 }
-const imageOf = (e: ActiveCampaignListing) => e.listing.coverImageUrl ?? e.listing.media[0]?.url ?? ''
+// Thumbnails: every picture on this page is card-sized.
+const imageOf = (e: ActiveCampaignListing) => thumbnailUrl(e.listing.coverImageUrl ?? e.listing.media[0]?.url ?? '')
 
 // "Campagnes & Black Friday" mockup — everything is driven by the live
 // campaign (name, colour, window, discounted listings) authored in the BO.
@@ -55,7 +75,9 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
   const { data, loading } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const campaign = data?.activeCampaign
-  const countdown = useCountdown(campaign?.endsAt)
+  // Minute precision is all the cards' "Fin dans" needs — the per-second
+  // hero clock is its own component so it doesn't re-render every card.
+  const countdown = useCountdown(campaign?.endsAt, 60_000)
   const entries = campaign?.listings ?? []
   const color = campaign?.themeColor || 'var(--primary)'
   const [cat, setCat] = useState<string | null>(null)
@@ -103,19 +125,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
             {bestDiscount > 0 && <>Jusqu'à <b className="text-emerald-300 underline">-{bestDiscount}%</b> sur la seconde main. </>}
             {campaign.description || 'Des articles uniques à prix cassés, prêts pour une remise en main propre immédiate.'}
           </p>
-          {countdown && !countdown.ended && (
-            <div className="mt-6 flex items-center justify-center gap-2">
-              {[['Jours', countdown.days], ['Heures', countdown.hours], ['Minutes', countdown.minutes], ['Secondes', countdown.seconds]].map(([label, v], i) => (
-                <div key={label as string} className="flex items-center gap-2">
-                  {i > 0 && <span className="text-headline-md text-white/50">:</span>}
-                  <div className="w-16 rounded-xl bg-white/10 py-2 backdrop-blur-sm md:w-20">
-                    <div className={`text-headline-lg font-extrabold tabular-nums md:text-[40px] ${i === 3 ? 'text-primary-container' : ''}`}>{pad(v as number)}</div>
-                    <div className="text-[10px] uppercase tracking-wider text-white/60">{label as string}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {campaign.endsAt && <HeroCountdown endsAt={campaign.endsAt} />}
           {groups.length > 0 && (
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <button onClick={() => setCat(null)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${cat === null ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>Tout {campaign.name}</button>
@@ -159,7 +169,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               return (
                 <div key={e.id} onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
                   <div className="relative aspect-square bg-surface-container-low">
-                    {imageOf(e) ? <img src={imageOf(e)} alt={e.listing.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
+                    {imageOf(e) ? <img loading="lazy" decoding="async" src={imageOf(e)} alt={e.listing.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
                     {d > 0 && <span className="absolute left-2 top-2 rounded-md px-2 py-0.5 text-label-sm uppercase text-white" style={{ background: color }}>-{d}% Flash</span>}
                     <button onClick={ev => { ev.stopPropagation(); onToggleFavorite(e.listing.id) }} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm" aria-label="Favori">
                       <Heart size={17} fill={fav ? 'var(--primary)' : 'none'} color={fav ? 'var(--primary)' : 'var(--fg)'} />
@@ -219,7 +229,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                       <div className={`grid gap-2 ${pics.length > 1 ? 'grid-cols-2' : 'max-w-[220px] grid-cols-1'} ${i === 2 ? 'md:w-80' : ''}`}>
                         {pics.map(e => (
                           <button key={e.id} onClick={() => onSelectListing(e.listing.id)} className="relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0">
-                            <img src={imageOf(e)} alt="" className="h-full w-full object-cover" />
+                            <img loading="lazy" decoding="async" src={imageOf(e)} alt="" className="h-full w-full object-cover" />
                             <span className="absolute bottom-1.5 left-1.5 rounded bg-surface-lowest/95 px-1.5 text-[10px] font-semibold text-on-surface"><Price amount={salePrice(e) ?? e.listing.price} /></span>
                           </button>
                         ))}
@@ -249,7 +259,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               {latest.slice(railStart, railStart + 6).map(e => (
                 <button key={e.id} onClick={() => onSelectListing(e.listing.id)} className="w-36 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest p-0 text-left md:w-auto">
                   <div className="relative aspect-square bg-surface-container-low">
-                    {imageOf(e) && <img src={imageOf(e)} alt="" className="h-full w-full object-cover" />}
+                    {imageOf(e) && <img loading="lazy" decoding="async" src={imageOf(e)} alt="" className="h-full w-full object-cover" />}
                     {discountOf(e) > 0 && <span className="absolute left-1.5 top-1.5 rounded px-1.5 text-[10px] font-bold text-white" style={{ background: color }}>-{discountOf(e)}%</span>}
                   </div>
                   <div className="p-2">

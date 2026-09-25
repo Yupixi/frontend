@@ -4,6 +4,7 @@ import Icon, { CategoryIcon } from './Icon'
 import Price from './Price'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { CATEGORIES_QUERY, POPULAR_SEARCHES_QUERY, type PopularSearch, type RemoteCategory } from '../graphql/categories'
+import { thumbnailUrl } from '../lib/media'
 
 type Props = {
   query: string
@@ -152,7 +153,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                       onMouseEnter={() => setSelectedIdx(i)}
                       className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-none p-2 text-left ${i === selectedIdx ? 'bg-surface-container-low' : 'bg-transparent'}`}
                     >
-                      <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{s.coverImageUrl ? <img src={s.coverImageUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="image" size={20} className="m-2.5 text-on-surface-variant" />}</span>
+                      <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{s.coverImageUrl ? <img loading="lazy" decoding="async" src={thumbnailUrl(s.coverImageUrl)} alt="" className="h-full w-full object-cover" /> : <Icon name="image" size={20} className="m-2.5 text-on-surface-variant" />}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-label-lg text-on-surface">{before}<b className="text-primary">{match}</b>{after}</span>
                         <span className="block text-body-sm text-on-surface-variant">dans <span className="text-primary">{s.category.name}</span> • {s.city}</span>
