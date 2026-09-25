@@ -77,7 +77,7 @@ function LoginForm({ onSuccess, onForgot }: { onSuccess: (p: AuthPayload) => voi
         <div className="mt-1.5"><PasswordInput value={password} onChange={setPassword} placeholder="Votre mot de passe" autoComplete="current-password" /></div>
       </div>
       {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{readable(error.message)}</p>}
-      <button type="submit" disabled={loading || !identifier.trim() || !password} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white shadow-float hover:bg-primary-dark disabled:opacity-60">
+      <button type="submit" disabled={loading || !identifier.trim() || !password} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
         {loading ? 'Connexion…' : <>Se connecter à Dilchap <Icon name="arrow_forward" size={19} /></>}
       </button>
     </form>
@@ -118,7 +118,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
         J'accepte les conditions d'utilisation et la charte de confiance Dilchap.
       </label>
       {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{readable(error.message)}</p>}
-      <button type="submit" disabled={loading || !accepted || form.fullName.trim().length < 2 || !form.email || form.password.length < 8} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white shadow-float hover:bg-primary-dark disabled:opacity-60">
+      <button type="submit" disabled={loading || !accepted || form.fullName.trim().length < 2 || !form.email || form.password.length < 8} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
         {loading ? 'Création…' : <>Créer mon compte <Icon name="arrow_forward" size={19} /></>}
       </button>
     </form>
@@ -158,7 +158,7 @@ export default function Auth({ onNavigate, onLogin }: AuthProps) {
 
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-6 md:px-8 md:py-12">
-      <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-3xl bg-surface-lowest shadow-card-hover lg:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-3xl border border-outline-variant/60 bg-surface-lowest lg:grid-cols-2">
         <section className="flex flex-col p-6 md:p-10">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2"><Logo size="md" /><span className="hidden items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary sm:flex"><Icon name="verified" size={14} /> Côte d'Ivoire</span></div>

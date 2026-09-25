@@ -213,7 +213,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                 </section>
 
                 {confirmError && <p className="m-0 text-center text-body-sm text-primary">{confirmError.message}</p>}
-                <button onClick={submit} disabled={!ready || confirming} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-primary px-4 py-4 text-label-lg text-white shadow-float hover:bg-primary-dark disabled:opacity-50">
+                <button onClick={submit} disabled={!ready || confirming} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-primary px-4 py-4 text-label-lg text-white hover:bg-primary-dark disabled:opacity-50">
                   <Icon name="task_alt" size={22} /> Valider la remise &amp; Clôturer la vente
                 </button>
               </>

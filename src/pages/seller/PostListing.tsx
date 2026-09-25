@@ -542,7 +542,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   <Icon name="save" size={19} /> Sauvegarder en brouillon
                 </button>
               ) : <span />}
-              <button disabled={busy} onClick={() => void save(!isEditing)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-8 py-3.5 text-headline-sm text-white shadow-md hover:bg-primary-dark disabled:opacity-60">
+              <button disabled={busy} onClick={() => void save(!isEditing)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-8 py-3.5 text-headline-sm text-white hover:bg-primary-dark disabled:opacity-60">
                 {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {isEditing ? 'Enregistrer les modifications' : 'Publier mon annonce'}
               </button>
             </div>

@@ -454,7 +454,7 @@ export default function App() {
         case 'buyer-history':
           return <History onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} onSearch={term => searchFromHome(term)} onSearchCategory={navigateToCategory} currentUser={currentUser} onProfileUpdated={setCurrentUser} onLogout={logout} />
         case 'buyer-settings':
-          return <Settings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
+          return <Settings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} onViewShop={selectSeller} />
         default:
           return <Dashboard onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} onOpenConversation={contactSellerAbout} onOpenHandover={openHandover} currentUser={currentUser} onLogout={logout} />
       }
