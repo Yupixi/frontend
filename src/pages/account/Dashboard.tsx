@@ -1,6 +1,7 @@
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from './AccountLayout'
 import { formatNumber } from '../../lib/format'
 import { MY_LISTINGS_QUERY, type MyListingRow } from '../../graphql/listings'
@@ -22,10 +23,12 @@ type Props = {
 
 type Upcoming = { id: string; role: 'BUYER' | 'SELLER'; listing: { id: string; title: string; price: number | null; currency: string; coverImageUrl: string | null; condition?: string | null }; otherId: string; other: string; place: string; at: string; amount: number | null; reference: string }
 
-function Kpi({ label, icon, value, sub, onClick, accent }: { label: string; icon: string; value: React.ReactNode; sub: React.ReactNode; onClick: () => void; accent?: string }) {
+// `short` is the mobile label (Stitch mobile tiles use one word); `className`
+// lets a tile be desktop-only.
+function Kpi({ label, short, icon, value, sub, onClick, accent, className = 'flex' }: { label: string; short?: string; icon: string; value: React.ReactNode; sub: React.ReactNode; onClick: () => void; accent?: string; className?: string }) {
   return (
-    <button onClick={onClick} className="flex cursor-pointer flex-col rounded-2xl border-none bg-surface-lowest p-4 text-left shadow-sm hover:shadow-card-hover">
-      <div className="flex items-start justify-between gap-2"><span className="text-label-sm uppercase text-on-surface-variant">{label}</span><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-fixed/60 text-primary"><Icon name={icon} size={18} /></span></div>
+    <button onClick={onClick} className={`${className} min-w-0 cursor-pointer flex-col rounded-2xl border-none bg-surface-lowest p-4 text-left shadow-sm hover:shadow-card-hover`}>
+      <div className="flex items-start justify-between gap-2 max-md:flex-row-reverse"><span className="text-label-sm uppercase text-on-surface-variant max-md:normal-case">{short ? <><span className="md:hidden">{short}</span><span className="max-md:hidden">{label}</span></> : label}</span><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-fixed/60 text-primary"><Icon name={icon} size={18} /></span></div>
       <div className={`mt-2 text-headline-sm font-extrabold ${accent ?? 'text-on-surface'}`}>{value}</div>
       <div className="truncate text-body-sm text-on-surface-variant">{sub}</div>
     </button>
@@ -49,8 +52,13 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
   const purchases = purchasesData?.myPurchaseOrders ?? []
   const activeSales = sales.filter(o => o.stage === 'PENDING' || o.stage === 'IN_PROGRESS')
   const activePurchases = purchases.filter(o => o.stage === 'PENDING' || o.stage === 'IN_PROGRESS')
+  // A purchase under an open dispute has its code frozen: never push it as
+  // the next hand-over or show its code.
+  const handoverPurchases = activePurchases.filter(o => !(o.disputeStatus && disputeIsOpen(o.disputeStatus)))
   const unreadConvs = (convData?.myConversations ?? []).filter(c => c.unreadCount > 0).length
-  const activeDisputes = (disputeStats?.myDisputeStats.active ?? 0) + (buyerDisputes?.myBuyerDisputes ?? []).filter(d => disputeIsOpen(d.status)).length
+  const buyerOpenDisputes = (buyerDisputes?.myBuyerDisputes ?? []).filter(d => disputeIsOpen(d.status)).length
+  const sellerOpenDisputes = disputeStats?.myDisputeStats.active ?? 0
+  const activeDisputes = sellerOpenDisputes + buyerOpenDisputes
   const rep = repData?.myReputation
   const wallet = walletData?.myWallet
   const stats = statsData?.sellerStats
@@ -60,7 +68,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
   const upcoming: Upcoming | undefined = [
     // Only deals still to hand over — a finished or disputed sale must not be
     // pushed as "today's meet-up" with a code that no longer applies.
-    ...activePurchases.map(o => ({ id: o.id, role: 'BUYER' as const, listing: o.listing, otherId: o.seller.id, other: o.seller.fullName, m: o.meetup, amount: o.agreedPrice, reference: o.reference })),
+    ...handoverPurchases.map(o => ({ id: o.id, role: 'BUYER' as const, listing: o.listing, otherId: o.seller.id, other: o.seller.fullName, m: o.meetup, amount: o.agreedPrice, reference: o.reference })),
     ...activeSales.map(o => ({ id: o.id, role: 'SELLER' as const, listing: o.listing, otherId: o.buyer.id, other: o.buyer.fullName, m: o.meetup, amount: o.agreedPrice, reference: o.reference })),
   ].filter(o => o.m?.status === 'CONFIRMED' && o.m && new Date(o.m.scheduledAt).getTime() > Date.now() - 3 * 3600_000)
     .sort((a, b) => new Date(a.m!.scheduledAt).getTime() - new Date(b.m!.scheduledAt).getTime())
@@ -73,7 +81,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
   const toBoost = [...live].sort((a, b) => b.viewsCount - a.viewsCount).slice(0, 3)
   const series = stats?.series ?? []
   const maxDay = Math.max(1, ...series.map(s => s.views))
-  const codePurchase = activePurchases.find(o => o.meetup?.status === 'CONFIRMED' && o.meetup.handoverCode)
+  const codePurchase = handoverPurchases.find(o => o.meetup?.status === 'CONFIRMED' && o.meetup.handoverCode)
 
   return (
     <AccountLayout active="buyer-dashboard" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
@@ -92,7 +100,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-on-surface-variant">
               {currentUser?.city && <span className="flex items-center gap-1"><Icon name="location_on" size={14} className="text-primary" /> {currentUser.city}</span>}
               {!!rep?.reviewsCount && <span className="flex items-center gap-1"><Icon name="star" size={14} className="text-primary" /> {rep.averageRating.toFixed(1)}/5 ({rep.reviewsCount} avis)</span>}
-              {currentUser?.isVerified && <span className="flex items-center gap-1 text-tertiary"><Icon name="verified_user" size={14} /> Identité certifiée</span>}
+              {currentUser?.isVerified && <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified_user" size={14} /> Identité vérifiée</span>}
             </div>
           </div>
           <div className="flex basis-full items-center gap-3 rounded-xl bg-surface-container-low px-4 py-2.5 sm:basis-auto">
@@ -107,7 +115,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           <section className="mt-4 rounded-2xl bg-primary p-4 text-white md:hidden">
             <div className="flex items-center justify-between"><span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-label-sm uppercase"><Icon name="alarm" size={14} /> {upcomingIsToday ? "Rendez-vous aujourd'hui" : 'Prochain rendez-vous'}</span><span className="text-label-lg">{time(upcoming.at)}</span></div>
             <div className="mt-3 flex gap-3">
-              <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white/20">{upcoming.listing.coverImageUrl && <img src={upcoming.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
+              <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white/20"><SafeImg src={upcoming.listing.coverImageUrl} fallbackClassName="flex h-full w-full items-center justify-center text-white/80" /></span>
               <div className="min-w-0"><div className="truncate text-label-lg">{upcoming.listing.title}</div><div className="flex items-center gap-1 text-body-sm text-white/85"><Icon name="location_on" size={14} /> {upcoming.place}</div><div className="text-label-md"><Price amount={upcoming.amount} currency={upcoming.listing.currency} /></div></div>
             </div>
             <div className="mt-3 flex gap-2">
@@ -118,13 +126,32 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
         )}
 
         {/* KPIs */}
-        <section className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <Kpi label="Ventes en cours" icon="storefront" value={`${activeSales.length} active${activeSales.length > 1 ? 's' : ''}`} sub={<><Price amount={activeSales.reduce((n, o) => n + (o.agreedPrice ?? 0), 0)} /> en attente</>} onClick={() => onNavigate('seller-orders')} />
-          <Kpi label="RDV du jour" icon="event_available" accent="text-primary" value={upcoming && upcomingIsToday ? time(upcoming.at) : '—'} sub={upcoming && upcomingIsToday ? upcoming.place : 'Aucun rendez-vous'} onClick={() => (upcoming ? (upcoming.role === 'BUYER' ? onOpenPurchase(upcoming.id) : onOpenHandover(upcoming.id)) : onNavigate('seller-orders'))} />
-          <Kpi label="Achats en cours" icon="shopping_bag" value={`${activePurchases.length} achat${activePurchases.length > 1 ? 's' : ''}`} sub={<span className="text-tertiary">{codePurchase ? 'Code de remise prêt' : 'Voir mes achats'}</span>} onClick={() => onNavigate('buyer-purchases')} />
-          <Kpi label="Crédits boost" icon="bolt" value={<>{wallet?.credits ?? 0} <span className="text-body-sm font-normal text-on-surface-variant">crédits</span></>} sub={<span className="text-primary">+ Recharger</span>} onClick={() => onNavigate('seller-wallet')} />
-          <Kpi label="Discussions" icon="forum" value={<>{unreadConvs} {unreadConvs > 0 && <span className="inline-block h-2 w-2 rounded-full bg-primary align-middle" />}</>} sub={unreadConvs ? `${unreadConvs} conversation${unreadConvs > 1 ? 's' : ''} en attente` : 'Tout est lu'} onClick={() => onNavigate('buyer-messages')} />
-          <Kpi label="Garantie Dilchap" icon="verified_user" accent={activeDisputes ? 'text-primary' : 'text-tertiary'} value={`${activeDisputes} litige${activeDisputes > 1 ? 's' : ''}`} sub={activeDisputes ? 'Dossier en cours' : 'Aucun incident'} onClick={() => onNavigate(activeDisputes ? 'seller-disputes' : 'buyer-disputes')} />
+        <div className="mb-2 mt-5 flex items-center justify-between md:hidden">
+          <h2 className="m-0 text-headline-sm text-on-surface">Activité en direct</h2>
+          <span className="flex items-center gap-1 text-label-sm text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Synchronisé</span>
+        </div>
+        <section className="grid grid-cols-2 gap-3 md:mt-4 md:grid-cols-3 lg:grid-cols-6">
+          <Kpi label="Ventes en cours" short="Ventes" icon="storefront" value={`${activeSales.length} active${activeSales.length > 1 ? 's' : ''}`} sub={<><Price amount={activeSales.reduce((n, o) => n + (o.agreedPrice ?? 0), 0)} /> en attente</>} onClick={() => onNavigate('seller-orders')} />
+          <Kpi label="RDV du jour" className="hidden md:flex" icon="event_available" accent="text-primary" value={upcoming && upcomingIsToday ? time(upcoming.at) : '—'} sub={upcoming && upcomingIsToday ? upcoming.place : 'Aucun rendez-vous'} onClick={() => (upcoming ? (upcoming.role === 'BUYER' ? onOpenPurchase(upcoming.id) : onOpenHandover(upcoming.id)) : onNavigate('seller-orders'))} />
+          <Kpi label="Achats en cours" short="Achats" icon="shopping_bag" value={`${activePurchases.length} achat${activePurchases.length > 1 ? 's' : ''}`} sub={<span className="text-tertiary">{codePurchase ? 'Code de remise prêt' : 'Voir mes achats'}</span>} onClick={() => onNavigate('buyer-purchases')} />
+          <Kpi label="Crédits boost" short="Visibilité" icon="bolt" value={<>{wallet?.credits ?? 0} <span className="text-body-sm font-normal text-on-surface-variant">crédits</span></>} sub={<span className="text-primary">+ Recharger</span>} onClick={() => onNavigate('seller-wallet')} />
+          <Kpi label="Discussions" short="Échanges" icon="forum" value={<>{unreadConvs} {unreadConvs > 0 && <span className="inline-block h-2 w-2 rounded-full bg-primary align-middle" />}</>} sub={unreadConvs ? `${unreadConvs} conversation${unreadConvs > 1 ? 's' : ''} en attente` : 'Tout est lu'} onClick={() => onNavigate('buyer-messages')} />
+          <Kpi label="Garantie Dilchap" className="hidden md:flex" icon="verified_user" accent={activeDisputes ? 'text-primary' : 'text-tertiary'} value={`${activeDisputes} litige${activeDisputes > 1 ? 's' : ''}`} sub={activeDisputes ? 'Dossier en cours' : 'Aucun incident'} onClick={() => onNavigate(sellerOpenDisputes && !buyerOpenDisputes ? 'seller-disputes' : 'buyer-disputes')} />
+        </section>
+
+        {/* Mobile: round shortcuts (Stitch mobile dashboard) */}
+        <section className="mt-4 grid grid-cols-4 gap-2 rounded-2xl bg-surface-container-low p-3 md:hidden">
+          {[
+            { icon: 'account_balance_wallet', label: 'Portefeuille', go: () => onNavigate('seller-wallet') },
+            { icon: 'history', label: 'Historique', go: () => onNavigate('buyer-history') },
+            { icon: 'favorite', label: 'Favoris', go: () => onNavigate('buyer-favorites') },
+            ...(support ? [{ icon: 'support_agent', label: 'WhatsApp', go: () => window.open(`https://wa.me/${support.replace(/[^\d]/g, '')}`, '_blank'), sos: true }] : []),
+          ].map(s => (
+            <button key={s.label} onClick={s.go} className="flex min-w-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0 text-center">
+              <span className={`flex h-11 w-11 items-center justify-center rounded-full shadow-sm ${'sos' in s ? 'bg-tertiary text-white' : 'bg-surface-lowest text-on-surface'}`}><Icon name={s.icon} size={20} /></span>
+              <span className="whitespace-nowrap text-label-sm leading-tight text-on-surface">{s.label}</span>
+            </button>
+          ))}
         </section>
 
         {/* Desktop: today's meet-up */}
@@ -136,7 +163,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           {upcoming ? (
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
               <div className="relative h-60 overflow-hidden rounded-2xl bg-surface-container">
-                {upcoming.listing.coverImageUrl && <img src={upcoming.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}
+                <SafeImg src={upcoming.listing.coverImageUrl} iconSize={40} />
                 {upcoming.listing.condition && upcoming.listing.condition !== 'N/A' && <span className="absolute left-3 top-3 rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm uppercase text-tertiary">{upcoming.listing.condition}</span>}
                 <span className="absolute bottom-3 right-3 rounded bg-inverse-surface/80 px-2 py-0.5 text-label-sm text-white">Réf : #{upcoming.reference}</span>
               </div>
@@ -168,7 +195,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
             <div className="mb-2 flex items-center justify-between"><h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="verified_user" size={20} className="text-tertiary" /> Achats sécurisés</h2><span className="text-label-sm text-on-surface-variant">{activePurchases.length} actif{activePurchases.length > 1 ? 's' : ''}</span></div>
             <div className="rounded-2xl bg-surface-lowest p-3 shadow-sm">
               <div className="flex gap-3">
-                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-container">{codePurchase.listing.coverImageUrl && <img src={codePurchase.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
+                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={codePurchase.listing.coverImageUrl} icon="shopping_bag" /></span>
                 <div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><span className="rounded bg-tertiary-soft px-1.5 text-label-sm text-tertiary">Remise en main propre</span><span className="text-label-md text-on-surface"><Price amount={codePurchase.agreedPrice} /></span></div><div className="truncate text-label-lg text-on-surface">{codePurchase.listing.title}</div><div className="text-body-sm text-on-surface-variant">Vendeur : {codePurchase.seller.fullName}</div></div>
               </div>
               <div className="mt-2 flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
@@ -184,7 +211,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           {/* Listings */}
           <section className="min-w-0">
             <div className="mb-3 flex items-end justify-between gap-2">
-              <div><h2 className="m-0 text-headline-md text-on-surface">Mes annonces actives</h2><p className="m-0 hidden text-body-sm text-on-surface-variant md:block">Surveillez vos vues et boostez pour multiplier les prises de contact.</p></div>
+              <div><h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Mes annonces actives</h2><p className="m-0 hidden text-body-sm text-on-surface-variant md:block">Surveillez vos vues et boostez pour multiplier les prises de contact.</p></div>
               <button onClick={() => onNavigate('seller-listings')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir ({live.length}) <Icon name="chevron_right" size={17} /></button>
             </div>
             {toBoost.length === 0 && (
@@ -196,7 +223,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                 const boosted = !!l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()
                 return (
                   <article key={l.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm">
-                    <button onClick={() => onSelectListing(l.id)} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0">{l.coverImageUrl && <img src={l.coverImageUrl} alt="" className="h-full w-full object-cover" />}</button>
+                    <button onClick={() => onSelectListing(l.id)} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0"><SafeImg src={l.coverImageUrl} /></button>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-label-sm text-on-surface-variant">{l.condition && l.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 text-tertiary">{l.condition}</span>}<span>{l.city}</span></div>
                       <button onClick={() => onSelectListing(l.id)} className="block max-w-full cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg text-on-surface">{l.title}</button>
@@ -206,13 +233,13 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                     </div>
                     {boosted
                       ? <span className="flex items-center gap-1 rounded-lg bg-tertiary-soft px-2.5 py-1.5 text-label-sm text-tertiary"><Icon name="bolt" size={14} /> Boost actif{p ? ` • ${p.boostedViews} vues` : ''}</span>
-                      : <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white"><Icon name="bolt" size={16} /> Booster dès 500 F</button>}
+                      : <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white"><Icon name="bolt" size={16} /> <span className="max-sm:hidden">Booster dès 500 F</span><span className="sm:hidden">Booster</span></button>}
                   </article>
                 )
               })}
             </div>
             {stats && (
-              <div className="mt-3 flex flex-wrap items-center gap-4 rounded-2xl bg-surface-container-low p-4">
+              <div className="mt-3 hidden flex-wrap items-center gap-4 rounded-2xl bg-surface-container-low p-4 md:flex">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface-lowest text-primary"><Icon name="trending_up" size={22} /></span>
                 <div className="min-w-0 flex-1">
                   <div className="text-label-sm uppercase text-on-surface-variant">Performance 7 derniers jours</div>
@@ -225,7 +252,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
 
           {/* Shortcuts + safety */}
           <aside className="flex flex-col gap-4">
-            <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+            <section className="hidden rounded-2xl bg-surface-lowest p-4 shadow-sm md:block">
               <h2 className="m-0 text-headline-sm text-on-surface">Raccourcis rapides</h2>
               <div className="mt-3 flex flex-col gap-1">
                 {[
@@ -242,7 +269,11 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                 ))}
               </div>
             </section>
-            <section className="rounded-2xl bg-tertiary-soft p-4">
+            <section className="flex gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm md:hidden">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="verified_user" size={20} /></span>
+              <div><div className="text-label-lg text-on-surface">Protocole de remise garanti</div><p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Ne donnez votre code de remise au vendeur qu'après avoir inspecté et testé l'article.</p></div>
+            </section>
+            <section className="hidden rounded-2xl bg-tertiary-soft p-4 md:block">
               <div className="flex items-center gap-2 text-label-lg text-tertiary"><Icon name="verified_user" size={20} /> Sécurité anti-arnaque Dilchap</div>
               <p className="m-0 mt-1 text-body-sm text-on-surface">Ne payez jamais avant d'avoir inspecté l'article, et ne donnez votre code de remise qu'une fois l'article vérifié.</p>
               <div className="mt-2 flex flex-wrap gap-1.5">{['Wave', 'Orange Money', 'MTN MoMo', 'Espèces'].map(m => <span key={m} className="rounded-lg bg-surface-lowest px-2 py-1 text-label-sm text-on-surface">{m}</span>)}</div>

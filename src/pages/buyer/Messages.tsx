@@ -6,6 +6,7 @@ import {
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import SafeImg from '../../components/SafeImg'
 import OfferBubble from '../../components/OfferBubble'
 import PriceSuggestionHint from '../../components/PriceSuggestionHint'
 import { AccountLayout } from '../account/AccountLayout'
@@ -53,7 +54,7 @@ function Avatar({ url, name, size = 40, verified }: { url?: string | null, name:
   return (
     <span className="relative shrink-0">
       <span className="flex items-center justify-center overflow-hidden rounded-full bg-surface-container-high font-bold text-on-surface-variant" style={{ width: size, height: size }}>
-        {url ? <img src={url} alt={name} className="h-full w-full object-cover" /> : name.charAt(0).toUpperCase()}
+        {url ? <SafeImg src={url} alt={name} icon="person" iconSize={Math.round(size / 2)} fallbackClassName="flex h-full w-full items-center justify-center" /> : name.charAt(0).toUpperCase()}
       </span>
       {verified && <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-solid border-surface-lowest bg-tertiary" />}
     </span>
@@ -282,8 +283,13 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                 const active = c.id === activeId
                 return (
                   <button key={c.id} onClick={() => { setActiveId(c.id); setShowList(false) }} className={`flex w-full cursor-pointer gap-3 border-0 border-b border-l-[3px] border-solid border-b-surface-container-low px-3 py-3 text-left ${active ? 'border-l-primary bg-primary-fixed/30' : 'border-l-transparent bg-transparent hover:bg-surface-container-low'}`}>
+                    {/* Listing photo, else the contact's avatar/initial — never an empty tag glyph */}
                     <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container">
-                      {c.listing?.coverImageUrl ? <img src={c.listing.coverImageUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-outline"><Tag size={18} /></span>}
+                      {c.listing?.coverImageUrl
+                        ? <SafeImg src={c.listing.coverImageUrl} icon="sell" />
+                        : c.otherParticipant.avatarUrl
+                          ? <SafeImg src={c.otherParticipant.avatarUrl} icon="person" />
+                          : <span className="flex h-full w-full items-center justify-center bg-primary-fixed text-label-lg text-primary">{c.otherParticipant.fullName.charAt(0).toUpperCase()}</span>}
                       {c.unreadCount > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-solid border-white bg-primary" />}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -293,7 +299,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       </span>
                       {c.listing && <span className="block truncate text-body-sm text-primary">{c.listing.title}</span>}
                       <span className="flex items-center gap-1.5">
-                        <span className={`min-w-0 flex-1 truncate text-body-sm ${c.unreadCount ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}`}>{c.lastMessage?.body ?? 'Nouvelle conversation'}</span>
+                        <span className={`min-w-0 flex-1 truncate text-body-sm ${c.unreadCount ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}`}>{c.lastMessage?.body || (c.lastMessage ? 'Offre ou rendez-vous' : 'Démarrez la discussion')}</span>
                         {c.dealStatus !== 'DISCUSSING' && <span className={`shrink-0 rounded-full px-1.5 text-[10px] font-bold ${c.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.dealStatus === 'CONCLUDED' ? 'CONCLU' : 'NON CONCLU'}</span>}
                         <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${c.canManageDeal ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.canManageDeal ? 'Vente' : 'Achat'}</span>
                       </span>
@@ -341,18 +347,19 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                 {/* Listing strip */}
                 {conv.listing && (
                   <button onClick={() => onSelectListing?.(conv.listing!.id)} className="mx-3 mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-2.5 text-left md:mx-4">
-                    <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container">{conv.listing.coverImageUrl && <img src={conv.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
+                    <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container"><SafeImg src={conv.listing.coverImageUrl} icon="sell" /></span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2">
                         <span className="truncate text-label-md text-on-surface">{conv.listing.title}</span>
                         {conv.listing.condition && conv.listing.condition !== 'N/A' && <span className="shrink-0 rounded bg-tertiary px-1.5 text-[10px] font-bold text-white">{conv.listing.condition}</span>}
                       </span>
-                      <span className="flex items-baseline gap-2">
+                      <span className="flex flex-wrap items-baseline gap-x-2">
                         <span className="text-headline-sm font-extrabold text-primary"><Price amount={conv.listing.price} currency={conv.listing.currency} /></span>
-                        {conv.listing.originalPrice && <span className="text-body-sm text-outline line-through"><Price amount={conv.listing.originalPrice} currency={conv.listing.currency} /></span>}
+                        {!!conv.listing.originalPrice && conv.listing.price != null && conv.listing.originalPrice > conv.listing.price && <span className="text-body-sm text-outline line-through"><Price amount={conv.listing.originalPrice} currency={conv.listing.currency} /></span>}
+                        <span className="self-center rounded bg-tertiary-soft px-1.5 text-[10px] font-bold uppercase text-tertiary">Main propre</span>
                       </span>
                     </span>
-                    <span className="flex shrink-0 items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1.5 text-label-sm text-on-surface">Voir fiche <ExternalLink size={13} /></span>
+                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2.5 py-1.5 text-label-sm text-on-surface"><span className="max-sm:hidden">Voir fiche</span> <ExternalLink size={13} /></span>
                   </button>
                 )}
 
