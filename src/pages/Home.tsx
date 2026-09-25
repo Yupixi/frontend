@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Search, SlidersHorizontal, ShieldCheck, Timer, Flame, Loader2,
+  ArrowLeft, ArrowRight, ChevronRight, Search, Timer, Flame, Loader2,
   Percent, MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
-import ViewToggle from '../components/ViewToggle'
-import { ListingCard, ListingListCard } from '../components/ListingCard'
+import { ListingCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type RemoteListing } from '../graphql/listings'
+import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type ListingSort, type RemoteListing } from '../graphql/listings'
 import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign } from '../graphql/content'
-import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 import Select from '../components/Select'
@@ -29,7 +27,43 @@ type HomeProps = {
   onSearch?: (term: string, preset?: SearchPreset) => void
 }
 
+// Desktop fills 3 rows of 4; phones show 3 rows of 2 before "Charger plus".
 const PAGE_SIZE = 12
+const MOBILE_PAGE_SIZE = 6
+
+const SORTS: { value: ListingSort, label: string }[] = [
+  { value: 'RECENT', label: 'Récents' },
+  { value: 'PRICE_ASC', label: 'Prix croissant' },
+  { value: 'PRICE_DESC', label: 'Prix décroissant' },
+  { value: 'POPULAR', label: 'Populaires' },
+]
+
+// "Explorer par rayon" tiles cycle through the mockup's tints.
+const TILE_TINTS = [
+  'bg-primary-fixed/50 text-primary',
+  'bg-primary-fixed/50 text-primary',
+  'bg-surface-container-high text-on-surface',
+  'bg-surface-container-high text-on-surface',
+  'bg-tertiary-soft text-tertiary',
+  'bg-surface-container-high text-on-surface',
+  'bg-surface-container-high text-on-surface',
+]
+
+// "04h : 22m : 13s" until the given time (or tonight's midnight), ticking every second.
+function useClock(endsAt?: string | null) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const midnight = new Date(now); midnight.setHours(24, 0, 0, 0)
+  const end = endsAt ? new Date(endsAt).getTime() : midnight.getTime()
+  const ms = Math.max(0, end - now)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const days = Math.floor(ms / 86_400_000)
+  const hms = `${pad(Math.floor(ms / 3_600_000) % 24)}h : ${pad(Math.floor(ms / 60_000) % 60)}m : ${pad(Math.floor(ms / 1000) % 60)}s`
+  return days > 0 ? `${days}j ${hms}` : hms
+}
 
 function Accent({ children }: { children: React.ReactNode }) {
   return <span className="bg-gradient-to-r from-red-500 to-amber-400 bg-clip-text font-extrabold text-transparent">{children}</span>
@@ -98,8 +132,8 @@ function Kicker({ children, className = 'text-primary' }: { children: React.Reac
 // Mobile follows "Dilchap Mobile – Accueil & Découverte"; desktop (lg+)
 // follows the dedicated desktop home mockup.
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, onContactSeller, onSearch }: HomeProps) {
-  const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
-  const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
+  const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
+  const [sort, setSort] = useState<ListingSort>('RECENT')
 
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const categories = categoriesData?.categories ?? []
@@ -127,13 +161,13 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // Dernières annonces — scoped to the market (and city chip), grown in place.
   const [page, setPage] = useState(1)
   const [feedCity, setFeedCity] = useState<string | null>(null)
-  useEffect(() => setPage(1), [location?.countryCode, location?.city, feedCity])
+  useEffect(() => setPage(1), [location?.countryCode, location?.city, feedCity, sort])
   const cityFilter = feedCity ?? location?.city
   const { data: feedData, previousData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: {
-      sort: 'RECENT',
+      sort,
       page: 1,
-      pageSize: PAGE_SIZE * page,
+      pageSize: pageSize * page,
       filter: marketFilter || cityFilter ? { ...marketFilter, ...(cityFilter ? { city: cityFilter } : {}) } : undefined,
     },
   })
@@ -169,13 +203,24 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   )
   const zone = location?.city ?? 'Toute la Côte d’Ivoire'
 
+  // Mobile deals banner: always shown. A live campaign drives it; otherwise it
+  // falls back to the real markdowns (originalPrice > price) of loaded listings.
+  const mobileClock = useClock(campaign?.endsAt)
+  const realMarkdown = Math.max(0, ...[...pepites, ...latest].map(l =>
+    l.originalPrice && l.price != null && l.originalPrice > l.price ? Math.round((1 - l.price / l.originalPrice) * 100) : 0))
+  const dealsCity = feedCity ?? location?.city
+  const deals = campaign
+    ? { tag: campaign.name, title: bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Offres à prix cassés', text: campaign.description }
+    : { tag: dealsCity ? `Bons plans ${dealsCity}` : 'Bons plans', title: realMarkdown > 0 ? `Jusqu'à -${realMarkdown}%` : 'Petits prix du jour', text: 'Dégagement de dressing & fins de stock express' }
+  const hasExpress = latest.some(l => !!l.urgentUntil && new Date(l.urgentUntil) > new Date())
+
   const loadMore = canLoadMore && (
     <button
       onClick={() => setPage(p => p + 1)}
       disabled={feedLoading}
       className="mx-auto mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container-low px-10 py-3.5 text-label-lg font-bold text-on-surface hover:bg-surface-container disabled:opacity-60 lg:w-auto"
     >
-      {feedLoading ? <Loader2 size={18} className="animate-spin" /> : <>Charger plus d'annonces <Icon name="refresh" size={20} /></>}
+      {feedLoading ? <Loader2 size={18} className="animate-spin" /> : <>Charger plus d'annonces <Icon name="arrow_downward" size={20} /></>}
     </button>
   )
 
@@ -443,32 +488,46 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
       {/* ================= MOBILE ================= */}
       <div className="px-4 pb-4 pt-3 md:px-8 md:pt-6 lg:hidden">
-        <div className="mb-6 flex flex-col gap-3">
+        <div className="mb-4 flex flex-col gap-3">
           {/* "Zone active": scopes the latest-listings feed, like the desktop city chips */}
           {cities.length > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="shrink-0 text-label-sm uppercase leading-tight text-on-surface-variant">Zone<br />active</span>
-              <span className="relative flex min-w-0 flex-1 items-center rounded-full bg-surface-container-low">
-                <span className="pointer-events-none absolute left-3 h-2 w-2 rounded-full bg-tertiary" />
-                <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Zone active" className="w-full min-w-0 cursor-pointer truncate border-none bg-transparent py-2 pl-7 pr-8 text-label-md text-on-surface outline-none">
-                  <option value="">{zone}</option>
-                  {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
-                </Select>
-              </span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="shrink-0 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">Zone active</span>
+                <span className="relative flex min-w-0 items-center rounded-full bg-surface-container shadow-sm">
+                  <span className="pointer-events-none absolute left-2.5 h-2 w-2 animate-pulse rounded-full bg-tertiary" />
+                  <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Zone active" className="min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-1.5 text-label-md text-on-surface outline-none">
+                    <option value="">{location?.city ? `Tout ${location.city}` : zone}</option>
+                    {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
+                  </Select>
+                </span>
+              </div>
+              {(hasExpress || campaign) && (
+                <button onClick={() => onNavigate('flash-offers')} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary-fixed/50 px-2 py-1 text-label-sm text-primary">
+                  <Icon name="bolt" size={16} /> Express
+                </button>
+              )}
             </div>
           )}
-          <button onClick={() => onNavigate('search')} className="flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest px-4 text-left text-body-md text-on-surface-variant/80">
-            <Search size={20} className="text-primary" />
-            <span className="flex-1 truncate">Que recherchez-vous aujourd'hui ?</span>
-            <SlidersHorizontal size={19} className="text-on-surface-variant" />
-          </button>
-          <div className="flex items-center gap-3 rounded-xl bg-surface-container px-3 py-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><ShieldCheck size={18} /></span>
-            <div className="min-w-0 text-body-sm leading-tight">
-              <div className="font-bold text-on-surface">100% P2P • 0% Commission</div>
-              <div className="text-on-surface-variant">Remise directe • Wave • OM • Cash</div>
+          <div className="flex h-12 w-full items-center rounded-xl bg-surface-lowest px-3 shadow-sm">
+            <button onClick={() => onNavigate('search')} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-body-md text-outline">
+              <Search size={22} className="ml-1 shrink-0 text-primary" />
+              <span className="truncate">Que recherchez-vous aujourd'hui ?</span>
+            </button>
+            <button onClick={() => onNavigate('search')} aria-label="Filtres avancés" className="flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container p-1 text-on-surface-variant">
+              <Icon name="tune" size={20} />
+            </button>
+          </div>
+        </div>
+        <div className="mb-6 flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-high p-3 shadow-sm">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-label-sm font-bold text-on-surface">100% P2P • 0% Commission</div>
+              <div className="truncate text-body-sm text-on-surface-variant">Remise directe • Wave • OM • Cash</div>
             </div>
           </div>
+          <Icon name="handshake" size={18} className="shrink-0 text-on-surface-variant" />
         </div>
 
         {categories.length > 0 && (
@@ -477,44 +536,47 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               title="Explorer par rayon"
               action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir <ChevronRight size={16} /></button>}
             />
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-8 md:px-8">
-              {categories.map(cat => (
-                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="group flex w-[72px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0">
-                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container text-primary transition-transform group-hover:-translate-y-0.5">
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none] md:-mx-8 md:px-8">
+              {categories.map((cat, i) => (
+                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="group flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0">
+                  <span className={`flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-transform active:scale-95 group-hover:-translate-y-0.5 ${TILE_TINTS[i % TILE_TINTS.length]}`}>
                     <CategoryIcon icon={cat.icon} size={28} />
                   </span>
-                  <span title={cat.name} className="w-full truncate text-center text-label-md text-on-surface">{cat.name}</span>
+                  <span title={cat.name} className="w-full truncate text-center text-label-sm font-semibold text-on-surface">{cat.name}</span>
                 </button>
               ))}
             </div>
           </section>
         )}
 
-        {campaign && (
-          <section className="relative mb-8 overflow-hidden rounded-2xl p-5 text-white" style={{ background: campaignColor }}>
-            <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10" />
-            <div className="relative flex flex-wrap items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-md bg-white px-2 py-0.5 text-label-sm uppercase" style={{ color: campaignColor }}>{campaign.name}</span>
-                  {countdown && <span className="flex items-center gap-1 rounded-md bg-black/20 px-2 py-0.5 text-label-sm tabular-nums"><Timer size={13} /> {countdown}</span>}
-                </div>
-                <div className="text-headline-lg">{bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Offres à prix cassés'}</div>
-                {campaign.description && <p className="m-0 mt-1 text-body-sm opacity-90">{campaign.description}</p>}
-              </div>
-              <button onClick={() => onNavigate('flash-offers')} className="shrink-0 cursor-pointer rounded-lg border-none bg-white px-5 py-2.5 text-label-lg" style={{ color: campaignColor }}>Profiter</button>
+        <section
+          className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary-dark to-primary-container p-4 text-white shadow-md"
+          style={campaign?.themeColor ? { background: campaign.themeColor } : undefined}
+        >
+          <div className="pointer-events-none absolute -bottom-8 right-0 h-36 w-36 rounded-full bg-white/10 blur-xl" />
+          <div className="relative flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate rounded-full bg-white px-2.5 py-0.5 text-label-sm font-extrabold uppercase tracking-wide text-primary" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>{deals.tag}</span>
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-label-sm tabular-nums backdrop-blur-sm"><Icon name="timer" size={14} /> {mobileClock}</span>
             </div>
-          </section>
-        )}
+            <div className="mt-1 flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="m-0 text-headline-md font-extrabold leading-tight text-white">{deals.title}</h2>
+                {deals.text && <p className="m-0 mt-0.5 text-body-sm text-white/90">{deals.text}</p>}
+              </div>
+              <button onClick={() => onNavigate('flash-offers')} className="shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none bg-white px-4 py-2 text-label-md font-bold text-primary shadow active:scale-95" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>Profiter</button>
+            </div>
+          </div>
+        </section>
 
         {pepites.length > 0 && (
           <section className="mb-8">
             <SectionHeading
               title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
-              action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2.5 py-0.5 text-label-sm text-tertiary">Boostées</span> : undefined}
+              action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">Boostées</span> : undefined}
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
-              {pepites.map(l => <div key={l.id} className="w-[210px] shrink-0 snap-start">{card(l, true)}</div>)}
+              {pepites.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
             </div>
           </section>
         )}
@@ -522,13 +584,13 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
         <section>
           <SectionHeading
             title={<>Dernières annonces <span className="h-2 w-2 rounded-full bg-primary" /></>}
-            action={<ViewToggle viewMode={viewMode} onChange={setViewMode} />}
+            action={
+              <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} aria-label="Trier les annonces" className="cursor-pointer whitespace-nowrap border-none bg-transparent px-1 py-1 text-label-md text-on-surface-variant outline-none">
+                {SORTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+            }
           />
-          {viewMode === 'grid'
-            ? <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div>
-            : <div className="flex flex-col gap-3">{latest.map(l => (
-                <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
-              ))}</div>}
+          <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div>
           {latest.length === 0 && !feedLoading && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-body-md text-on-surface-variant">Aucune annonce pour l'instant dans cette zone.</p>}
           {loadMore}
         </section>
