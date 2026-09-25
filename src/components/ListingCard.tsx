@@ -3,6 +3,7 @@ import { Heart, MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, B
 import Icon from './Icon'
 import Price from './Price'
 import BoostMenu from './BoostMenu'
+import BottomSheet from './BottomSheet'
 import type { RemoteListing } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
 import { prefetchOnIntent } from '../lib/prefetchListing'
@@ -152,6 +153,10 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
   const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
   const contact = (e: React.MouseEvent) => { e.stopPropagation(); (onContact ?? onSelect)() }
+  // Phone button of the mockup card. Sellers' numbers aren't public: the
+  // number is shared in the conversation, so the button says so and leads
+  // there instead of faking a call.
+  const [callInfo, setCallInfo] = useState(false)
   const price = (
     <>
       <Price amount={salePrice ?? listing.price} currency={listing.currency} fallback={archetypePriceFallback(listing)} />
@@ -258,9 +263,22 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
         <>
           <div className="px-2.5 pb-2.5 md:hidden">
             {featured ? (
-              <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary py-2 shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
-                <Icon name="chat" size={16} /> Discuter
-              </button>
+              <div className="flex gap-2">
+                <button onClick={contact} className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
+                  <Icon name="chat" size={16} /> Discuter
+                </button>
+                <button onClick={e => { e.stopPropagation(); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container text-on-surface">
+                  <Icon name="call" size={18} />
+                </button>
+                <div onClick={e => e.stopPropagation()}>
+                  <BottomSheet open={callInfo} onClose={() => setCallInfo(false)} title={`Appeler ${listing.seller.fullName.split(' ')[0]}`}>
+                    <p className="m-0 text-body-md text-on-surface-variant">Pour votre sécurité, le numéro du vendeur est partagé dans la discussion, une fois le rendez-vous convenu.</p>
+                    <button onClick={e => { setCallInfo(false); contact(e) }} className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white">
+                      <Icon name="chat" size={18} /> Discuter avec le vendeur
+                    </button>
+                  </BottomSheet>
+                </div>
+              </div>
             ) : (
               <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-surface-container py-1.5 text-label-sm font-bold text-on-surface transition-colors hover:bg-primary hover:text-white">
                 <Icon name="chat_bubble" size={14} /> Contacter
