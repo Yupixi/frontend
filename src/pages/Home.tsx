@@ -250,27 +250,27 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               </div>
 
               <div className="relative z-20 mt-4 rounded-2xl border border-solid border-white/40 bg-white/95 p-2 shadow-xl backdrop-blur-md">
-                <form className="flex gap-2" onSubmit={submitSearch}>
-                  <label className="flex min-w-0 flex-[1.5] items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2 focus-within:border-primary focus-within:bg-surface-lowest">
+                <form className="flex flex-wrap gap-2" onSubmit={submitSearch}>
+                  <label className="flex min-w-0 basis-full items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2 focus-within:border-primary focus-within:bg-surface-lowest">
                     <Search size={22} className="mr-2 text-outline" />
                     <input value={q} onChange={e => setQ(e.target.value)} placeholder="Que cherchez-vous ? (iPhone, robe, frigo…)" className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none placeholder:text-outline" />
                   </label>
-                  <label className="flex min-w-[165px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
+                  <label className="flex min-w-[200px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
                     <MapPin size={20} className="mr-2 text-tertiary" />
                     <Select value={heroCity} onChange={e => setHeroCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
                       <option value="">Toutes les villes</option>
                       {cities.map(c => <option key={c} value={c}>{c}</option>)}
                     </Select>
                   </label>
-                  <label className="flex min-w-[165px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
+                  <label className="flex min-w-[190px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
                     <Wallet size={20} className="mr-2 text-outline" />
                     <Select value={heroMax} onChange={e => setHeroMax(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
                       <option value="">Prix max</option>
                       {MAX_PRICES.map(p => <option key={p} value={p}>Moins de {p.toLocaleString('fr-FR')} F</option>)}
                     </Select>
                   </label>
-                  <button type="submit" className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-6 py-3 text-label-lg font-bold text-white shadow-sm hover:bg-primary-container">
-                    <Icon name="near_me" size={20} /> Trouver à proximité
+                  <button type="submit" aria-label="Trouver à proximité" className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-6 py-3 text-label-lg font-bold text-white shadow-sm hover:bg-primary-container">
+                    <Icon name="near_me" size={20} /> <span className="hidden xl:inline">Trouver à proximité</span>
                   </button>
                 </form>
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-0 border-t border-solid border-surface-container-high px-2 pt-2">
