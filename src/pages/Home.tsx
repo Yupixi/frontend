@@ -5,7 +5,7 @@ import {
   Percent, MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
-import { ListingCard } from '../components/ListingCard'
+import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type ListingSort, type RemoteListing } from '../graphql/listings'
 import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign } from '../graphql/content'
@@ -164,7 +164,11 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     variables: { limit: 12, countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined },
   })
   const isBoosted = (l: RemoteListing) => !!l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()
-  const pepites = [...(recommendedData?.recommendedListings ?? [])].sort((a, b) => Number(isBoosted(b)) - Number(isBoosted(a)))
+  // A showcase rail: listings with a photo only (a grey placeholder card as
+  // the first "pépite" reads as broken), boosted ones first.
+  const recommended = recommendedData?.recommendedListings ?? []
+  const withPhoto = recommended.filter(l => !!listingImage(l))
+  const pepites = [...(withPhoto.length ? withPhoto : recommended)].sort((a, b) => Number(isBoosted(b)) - Number(isBoosted(a)))
   const hasBoosted = pepites.some(isBoosted)
 
   // Cities (desktop quick filters + hero select) — real cities facet.
