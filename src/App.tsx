@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
+import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
@@ -207,13 +208,13 @@ export default function App() {
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e)
-      if (isMobile) setShowInstallBanner(true)
+      if (isMobile && !isSnoozed('install')) setShowInstallBanner(true)
     }
     window.addEventListener('beforeinstallprompt', handler)
     const installed = () => { setDeferredPrompt(null); setShowInstallBanner(false); setShowInstallGuide(false) }
     window.addEventListener('appinstalled', installed)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    if (isMobile && !isStandalone) {
+    if (isMobile && !isStandalone && !isSnoozed('install')) {
       const timer = setTimeout(() => setShowInstallBanner(true), 5000)
       return () => {
         clearTimeout(timer)
@@ -237,6 +238,7 @@ export default function App() {
   }
 
   const handleDismiss = () => {
+    snooze('install')
     setShowInstallBanner(false)
     setShowInstallGuide(false)
   }
@@ -488,99 +490,10 @@ export default function App() {
         {renderPage()}
       </Layout>
       <InstallBanner show={showInstallBanner} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
-      {isLoggedIn && pushStatus && pushStatus !== 'subscribed' && !pushDismissed && (
-        <div role="status" style={{ position: 'fixed', top: 76, left: 16, right: 16, zIndex: 1000, margin: '0 auto', maxWidth: 600, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
-          <strong>Recevoir les notifications sur cet appareil</strong>
-          <p style={{ margin: '8px 0', fontSize: '0.85rem' }}>{
-            pushStatus === 'ios-install-required' ? 'Sur iPhone ou iPad, ajoutez Dilchap à l’écran d’accueil puis ouvrez-le depuis son icône pour activer les notifications.'
-              : pushStatus === 'permission-denied' ? 'Les notifications sont bloquées. Autorisez-les dans les réglages du navigateur puis réessayez.'
-              : pushStatus === 'not-configured' ? 'Le serveur de notifications n’est pas configuré. L’activation sera possible une fois le service rétabli.'
-              : pushStatus === 'unsupported' ? 'Les notifications ne sont pas disponibles dans ce navigateur. Ouvrez le site en HTTPS dans un navigateur compatible.'
-              : pushStatus === 'error' ? 'Cet appareil n’a pas pu être inscrit aux notifications. Vérifiez la connexion puis réessayez.'
-              : 'Activez les notifications pour recevoir vos nouveaux messages même lorsque Dilchap est fermé.'
-          }</p>
-          {!['ios-install-required', 'unsupported', 'not-configured'].includes(pushStatus) && <button className="btn-primary" disabled={enablingPush} onClick={enablePush}>{enablingPush ? 'Activation…' : pushStatus === 'permission-required' ? 'Activer les notifications' : 'Réessayer'}</button>}
-          <button className="btn-ghost" onClick={() => setPushDismissed(true)} style={{ marginLeft: 8 }}>Plus tard</button>
-        </div>
+      {isLoggedIn && pushStatus && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
+        <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
     </div>
-  )
-}
-
-function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onUpdate: () => void; onDismiss: () => void }) {
-  if (!show) return null
-  return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-      background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
-      padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12,
-      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-    }}>
-      <div style={{ flex: 1, fontWeight: 700, fontSize: '0.85rem' }}>
-        Une nouvelle version de Dilchap est disponible.
-      </div>
-      <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.8rem', fontWeight: 600 }}>Plus tard</button>
-      <button onClick={onUpdate} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-        Mettre à jour
-      </button>
-    </div>
-  )
-}
-
-function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; guide: boolean; onInstall: () => void; onDismiss: () => void }) {
-  if (!show) return null
-  const isSafari = /iphone|ipad|ipod/i.test(navigator.userAgent)
-  const isChrome = /chrome|crios/i.test(navigator.userAgent)
-  return (
-    <>
-      {guide && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 10000,
-          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-        }} onClick={onDismiss}>
-          <div style={{
-            background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 420,
-            padding: '2rem 1.5rem', textAlign: 'center',
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-              <img src="/icon-192.png" alt="Dilchap" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-            </div>
-            <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.2rem', margin: '0 0 0.5rem' }}>Installer Dilchap</h3>
-            <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
-              {isSafari
-                ? 'Appuyez sur le bouton Partager <span style="font-size:1.2rem">⬆️</span> puis choisissez "Sur l\'écran d\'accueil".'
-                : isChrome
-                  ? 'Appuyez sur le menu ⋮ puis choisissez "Ajouter à l\'écran d\'accueil".'
-                  : 'Utilisez le menu du navigateur pour ajouter à l\'écran d\'accueil.'}
-            </p>
-            <button onClick={onDismiss} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', width: '100%' }}>
-              J'ai compris
-            </button>
-          </div>
-        </div>
-      )}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
-        background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
-        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-      }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#BB0013', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <img src="/icon-192.png" alt="Dilchap" style={{ width: 30, height: 30, objectFit: 'contain' }} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>Installer Dilchap</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--fg-muted)' }}>sur l'écran d'accueil</div>
-        </div>
-        <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 6, fontSize: '0.85rem', fontWeight: 600 }}>Plus tard</button>
-        <button onClick={onInstall} style={{ background: '#BB0013', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-          Installer
-        </button>
-      </div>
-    </>
   )
 }

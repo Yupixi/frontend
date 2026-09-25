@@ -643,7 +643,7 @@ export default function Layout({
             if (item.primary) {
               return (
                 <button key={item.label} onClick={() => onNavigate(item.page)} className="flex cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
-                  <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(187,0,19,0.4)]">
+                  <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]">
                     <IconComp size={26} strokeWidth={2.6} color="#fff" />
                   </span>
                   {item.label}

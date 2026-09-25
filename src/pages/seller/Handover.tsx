@@ -189,7 +189,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                     </div>
                   )}
                   <label className="mt-3 flex cursor-pointer items-start gap-3">
-                    <input type="checkbox" checked={attested} onChange={e => setAttested(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#BB0013]" />
+                    <input type="checkbox" checked={attested} onChange={e => setAttested(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
                     <span className="text-body-md text-on-surface">J'atteste sur l'honneur avoir {method === 'CASH' ? 'reçu' : 'visualisé et encaissé'} <Price amount={amount} currency={o.listing.currency} /> nets {method === 'CASH' ? 'en espèces' : `sur mon compte ${PAYMENT_LABELS[method] ?? ''}`}.</span>
                   </label>
                 </section>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapPin, ChevronDown } from './icons'
+import Icon from './Icon'
 import { MARKETS } from '../data/markets'
 import type { StoredLocation } from '../lib/location'
 
@@ -34,53 +34,37 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
     setOpen(false)
   }
 
+  const option = (active: boolean) => `flex w-full cursor-pointer items-center justify-between rounded-lg border-none px-3 py-2 text-left text-label-md ${active ? 'bg-primary-fixed/60 text-primary' : 'bg-transparent text-on-surface hover:bg-surface-container-low'}`
+
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
         title={label}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-          background: 'var(--border-subtle)', border: '1px solid var(--border)', borderRadius: 10,
-          color: 'var(--fg-muted)', fontSize: '0.8rem', fontWeight: 700,
-          padding: compact ? 0 : '0 12px', width: compact ? 38 : undefined, height: 38,
-          justifyContent: 'center',
-        }}
+        className={`flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-low text-label-md text-on-surface hover:bg-surface-container ${compact ? 'w-10' : 'px-3'}`}
       >
-        <MapPin size={16} />
-        {!compact && <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>}
-        {!compact && <ChevronDown size={13} />}
+        <Icon name="location_on" size={18} className="text-primary" />
+        {!compact && <span className="max-w-[140px] truncate">{label}</span>}
+        {!compact && <Icon name="expand_more" size={17} className="text-on-surface-variant" />}
       </button>
 
       {open && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 29 }} onClick={() => setOpen(false)} />
-          <div style={{
-            position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 30,
-            background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 6, width: 250, maxHeight: 380, overflowY: 'auto',
-          }}>
-            <button
-              onClick={() => pick(null)}
-              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', background: !market ? 'var(--border-subtle)' : 'none', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, color: 'var(--fg)' }}
-            >
-              Tous les pays
-            </button>
+          <div className="fixed inset-0 z-[29]" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-30 mt-2 max-h-[380px] w-64 overflow-y-auto rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float">
+            <div className="px-2 pb-1 pt-1 text-label-sm uppercase text-on-surface-variant">Pays</div>
+            <button onClick={() => pick(null)} className={option(!market)}>Tous les pays{!market && <Icon name="check" size={17} />}</button>
             {MARKETS.map(m => (
-              <button
-                key={m.countryCode}
-                onClick={() => pick(m.countryCode)}
-                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', background: market?.countryCode === m.countryCode ? 'var(--border-subtle)' : 'none', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, color: 'var(--fg)' }}
-              >
-                {m.country}
+              <button key={m.countryCode} onClick={() => pick(m.countryCode)} className={option(market?.countryCode === m.countryCode)}>
+                {m.country}{market?.countryCode === m.countryCode && <Icon name="check" size={17} />}
               </button>
             ))}
             {market && (
-              <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, padding: '10px 6px 4px' }}>
-                <label style={{ display: 'block', marginBottom: 5, color: 'var(--fg-muted)', fontSize: '0.72rem', fontWeight: 700 }}>Ville ou commune</label>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input className="input" value={city} onChange={e => setCity(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCity()} placeholder="Ex : Cocody" style={{ minWidth: 0, padding: '7px 8px', fontSize: '0.78rem' }} />
-                  <button className="btn-primary" onClick={applyCity} style={{ padding: '7px 9px', fontSize: '0.75rem' }}>OK</button>
+              <div className="mt-2 border-0 border-t border-solid border-outline-variant px-1 pb-1 pt-3">
+                <label className="mb-1.5 block text-label-sm text-on-surface-variant">Ville ou commune</label>
+                <div className="flex gap-1.5">
+                  <input value={city} onChange={e => setCity(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCity()} placeholder="Ex : Cocody" className="min-w-0 flex-1 rounded-lg border border-transparent bg-surface-container-low px-2.5 py-2 text-body-sm text-on-surface outline-none focus:border-primary" />
+                  <button onClick={applyCity} className="cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white">OK</button>
                 </div>
               </div>
             )}

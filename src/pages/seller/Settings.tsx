@@ -330,7 +330,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     const on = form.meetupSpots.includes(s.name)
                     return (
                       <label key={s.name} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${on ? 'border-primary/40 bg-primary-fixed/20' : 'border-outline-variant bg-surface-container-low'}`}>
-                        <input type="checkbox" checked={on} onChange={e => set('meetupSpots', e.target.checked ? [...form.meetupSpots, s.name] : form.meetupSpots.filter(x => x !== s.name))} className="mt-0.5 h-4 w-4 accent-[#BB0013]" />
+                        <input type="checkbox" checked={on} onChange={e => set('meetupSpots', e.target.checked ? [...form.meetupSpots, s.name] : form.meetupSpots.filter(x => x !== s.name))} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
                         <span><span className="block text-label-md text-on-surface">{s.name}</span><span className="block text-body-sm text-on-surface-variant">{s.sub}</span></span>
                       </label>
                     )
@@ -346,7 +346,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     const on = form.paymentMethods.includes(p.code)
                     return (
                       <label key={p.code} className={`relative flex cursor-pointer flex-col gap-1 rounded-xl border p-3 ${on ? 'border-primary/40 bg-surface-lowest' : 'border-outline-variant bg-surface-container-low'}`}>
-                        <span className="flex items-start justify-between"><Icon name={p.icon} size={22} className="text-primary" /><input type="checkbox" checked={on} onChange={e => set('paymentMethods', e.target.checked ? [...form.paymentMethods, p.code] : form.paymentMethods.filter(x => x !== p.code))} className="h-4 w-4 accent-[#BB0013]" /></span>
+                        <span className="flex items-start justify-between"><Icon name={p.icon} size={22} className="text-primary" /><input type="checkbox" checked={on} onChange={e => set('paymentMethods', e.target.checked ? [...form.paymentMethods, p.code] : form.paymentMethods.filter(x => x !== p.code))} className="h-4 w-4 accent-[var(--primary)]" /></span>
                         <span className="text-label-md text-on-surface">{p.title}</span>
                         <span className="text-body-sm text-on-surface-variant">{p.sub}</span>
                       </label>

@@ -1,6 +1,6 @@
-import { cloneElement, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
-import { Send, Tag, X, User, Mail, Phone, CheckCheck } from './icons'
+import Icon from './Icon'
 import {
   CONVERSATION_QUERY,
   MARK_CONVERSATION_READ_MUTATION,
@@ -33,16 +33,9 @@ type InlineConversationProps = {
   onClose: () => void
 }
 
-// A visibly distinct "panel within the card" — a sunken/tinted surface so
-// the chat reads as its own widget rather than blending into the flat
-// white "Discutez avec le vendeur" card around it.
-const PANEL_STYLE: React.CSSProperties = {
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius-sm)',
-  padding: '0.85rem',
-  marginBottom: '1.25rem',
-}
+const panel = 'mb-5 rounded-2xl bg-surface-container-low p-3.5'
+const field = 'w-full rounded-xl border border-transparent bg-surface-lowest py-2.5 text-body-md text-on-surface outline-none focus:border-primary'
+const chip = 'shrink-0 cursor-pointer rounded-full border-none bg-surface-lowest px-3 py-1.5 text-label-sm text-on-surface-variant hover:text-on-surface'
 
 // The whole point: never navigate away from the listing to talk to a
 // seller. A logged-in visitor goes straight to the thread; an anonymous
@@ -58,7 +51,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
     setStartError(null)
     void startConversation({ variables: { recipientId: sellerId, listingId } })
       .then(({ data }) => data?.startConversation && setConversationId(data.startConversation.id))
-      .catch(() => setStartError("Impossible de démarrer la discussion. Réessayez."))
+      .catch(() => setStartError('Impossible de démarrer la discussion. Réessayez.'))
   }
 
   // Already authenticated (real account or a guest session from earlier in
@@ -69,34 +62,21 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   }, [])
 
   if (conversationId) {
-    return (
-      <div style={PANEL_STYLE}>
-        <ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} />
-      </div>
-    )
+    return <div className={panel}><ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} /></div>
   }
 
   if (getAccessToken()) {
     return (
-      <div style={{ ...PANEL_STYLE, textAlign: 'center', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
-        {starting ? 'Connexion à la discussion...' : (startError ?? '')}
-        {startError && (
-          <button className="btn-primary" style={{ display: 'block', margin: '0.75rem auto 0', padding: '0.5rem 1rem', fontSize: '0.82rem' }} onClick={beginThread}>
-            Réessayer
-          </button>
-        )}
+      <div className={`${panel} text-center text-body-sm text-on-surface-variant`}>
+        {starting ? 'Connexion à la discussion…' : (startError ?? '')}
+        {startError && <button onClick={beginThread} className="mx-auto mt-3 block cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white">Réessayer</button>}
       </div>
     )
   }
 
   return (
-    <div style={PANEL_STYLE}>
-      <GuestForm
-        sellerId={sellerId}
-        listingId={listingId}
-        onAuthenticated={onAuthenticated}
-        onStarted={setConversationId}
-      />
+    <div className={panel}>
+      <GuestForm sellerId={sellerId} listingId={listingId} onAuthenticated={onAuthenticated} onStarted={setConversationId} />
     </div>
   )
 }
@@ -120,7 +100,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.trim() && !phone.trim()) {
-      setError('Indiquez au moins un email ou un numéro de téléphone.')
+      setError('Indiquez au moins un e-mail ou un numéro de téléphone.')
       return
     }
     setError(null)
@@ -150,49 +130,28 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
     }
   }
 
+  const withIcon = (icon: string, input: React.ReactNode) => (
+    <label className="relative block">
+      <Icon name={icon} size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+      {input}
+    </label>
+  )
+
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-      <p style={{ margin: '0 0 0.2rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
-        Indiquez comment le vendeur peut vous identifier — aucun compte n'est nécessaire. Email ou téléphone suffit.
-      </p>
-
-      {error && (
-        <div style={{ background: 'rgba(187, 0, 19,0.06)', border: '1px solid rgba(187, 0, 19,0.2)', borderRadius: 8, padding: '0.6rem 0.75rem', color: 'var(--primary-dark)', fontSize: '0.8rem', fontWeight: 600 }}>
-          {error}
-        </div>
-      )}
-
-      <MiniField icon={User}><input className="input" placeholder="Votre nom" value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} /></MiniField>
-      <MiniField icon={Phone}><input className="input" type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} /></MiniField>
-      <MiniField icon={Mail}><input className="input" type="email" placeholder="Email (optionnel)" value={email} onChange={e => setEmail(e.target.value)} /></MiniField>
-
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-        {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMessage(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg-card)', color: 'var(--fg-muted)', padding: '6px 10px', fontSize: '0.72rem', cursor: 'pointer' }}>{text}</button>)}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+      <p className="m-0 flex gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="shrink-0 text-tertiary" /> Pas besoin de compte : indiquez comment le vendeur peut vous identifier (e-mail ou téléphone).</p>
+      {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{error}</p>}
+      {withIcon('person', <input className={`${field} pl-10 pr-3`} placeholder="Votre nom" value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} />)}
+      {withIcon('call', <input className={`${field} pl-10 pr-3`} type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} />)}
+      {withIcon('mail', <input className={`${field} pl-10 pr-3`} type="email" placeholder="E-mail (optionnel)" value={email} onChange={e => setEmail(e.target.value)} />)}
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+        {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMessage(text)} className={chip}>{text}</button>)}
       </div>
-      <textarea
-        className="input"
-        placeholder="Votre message..."
-        value={message}
-        onChange={e => setMessage(e.target.value)}
-        required
-        minLength={2}
-        rows={3}
-        style={{ resize: 'vertical' }}
-      />
-
-      <button type="submit" className="btn-primary" disabled={sending || loggingIn} style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: sending || loggingIn ? 0.7 : 1 }}>
-        <Send size={16} /> {sending || loggingIn ? 'Envoi...' : 'Envoyer le message'}
+      <textarea className={`${field} resize-y px-3`} placeholder="Votre message…" value={message} onChange={e => setMessage(e.target.value)} required minLength={2} rows={3} />
+      <button type="submit" disabled={sending || loggingIn} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
+        <Icon name="send" size={18} /> {sending || loggingIn ? 'Envoi…' : 'Envoyer le message'}
       </button>
     </form>
-  )
-}
-
-function MiniField({ icon: Icon, children }: { icon: typeof User, children: React.ReactElement<{ style?: React.CSSProperties, className?: string }> }) {
-  return (
-    <div style={{ position: 'relative' }}>
-      <Icon size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)', pointerEvents: 'none' }} />
-      {cloneElement(children, { style: { ...children.props.style, paddingLeft: 34 } })}
-    </div>
   )
 }
 
@@ -279,45 +238,31 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
   const canOffer = data?.conversation?.listing?.negotiable && data.conversation.dealStatus === 'DISCUSSING'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 380 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <p style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.88rem' }}>Discussion avec {sellerName}</p>
-        <button onClick={onClose} aria-label="Fermer" style={{ background: 'var(--border-subtle)', border: 'none', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
-          <X size={13} />
-        </button>
+    <div className="flex h-[400px] flex-col">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="m-0 flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="chat" size={18} className="text-primary" /> Discussion avec {sellerName}</p>
+        <button onClick={onClose} aria-label="Fermer" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={16} /></button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.25rem 0' }}>
-        {messages.length === 0 && (
-          <p style={{ textAlign: 'center', color: 'var(--fg-subtle)', fontSize: '0.8rem', margin: 'auto' }}>Message envoyé — la réponse apparaîtra ici.</p>
-        )}
+      <div className="flex flex-1 flex-col gap-2 overflow-y-auto py-1">
+        {messages.length === 0 && <p className="m-auto text-center text-body-sm text-on-surface-variant">Message envoyé — la réponse apparaîtra ici.</p>}
         {messages.map((m: RemoteMessage, i: number) => {
           const isMe = m.senderId !== otherId
           const prev = messages[i - 1]
           const showDivider = !prev || messageDayLabel(prev.createdAt) !== messageDayLabel(m.createdAt)
           return (
             <div key={m.id}>
-              {showDivider && <div className="chat-day-divider" style={{ fontSize: '0.65rem', margin: '0.35rem 0' }}>{messageDayLabel(m.createdAt)}</div>}
-              <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-                <div>
+              {showDivider && <div className="my-1.5 text-center"><span className="rounded-full bg-surface-container-high px-2.5 py-0.5 text-label-sm text-on-surface-variant">{messageDayLabel(m.createdAt)}</span></div>}
+              <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div className="max-w-[85%]">
                   {m.offer ? (
-                    <OfferBubble
-                      offer={m.offer}
-                      currency={data?.conversation?.listing?.currency ?? 'XOF'}
-                      isMine={isMe}
-                      canRespond={false}
-                      responding={false}
-                      onAccept={() => {}}
-                      onReject={() => {}}
-                    />
+                    <OfferBubble offer={m.offer} currency={data?.conversation?.listing?.currency ?? 'XOF'} isMine={isMe} canRespond={false} responding={false} onAccept={() => {}} onReject={() => {}} />
                   ) : (
-                    <div className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}`} style={{ fontSize: '0.82rem', padding: '0.5rem 0.75rem' }}>
-                      {m.body}
-                    </div>
+                    <div className={`px-3 py-2 text-body-sm ${isMe ? 'rounded-2xl rounded-br-md bg-primary text-white' : 'rounded-2xl rounded-bl-md bg-surface-lowest text-on-surface'}`}>{m.body}</div>
                   )}
-                  <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)', marginTop: 2, textAlign: isMe ? 'right' : 'left', display: 'flex', alignItems: 'center', justifyContent: isMe ? 'flex-end' : 'flex-start', gap: 3 }}>
+                  <div className={`mt-0.5 flex items-center gap-1 text-label-sm text-on-surface-variant ${isMe ? 'justify-end' : 'justify-start'}`}>
                     {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    {isMe && <CheckCheck size={11} color={m.readAt ? '#3B82F6' : 'var(--fg-subtle)'} />}
+                    {isMe && <Icon name="done_all" size={14} className={m.readAt ? 'text-tertiary' : ''} />}
                   </div>
                 </div>
               </div>
@@ -327,47 +272,36 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
         <div ref={messagesEndRef} />
       </div>
 
-      {otherIsTyping && (
-        <p style={{ margin: '0 0 0.35rem', fontSize: '0.72rem', color: 'var(--fg-subtle)', fontStyle: 'italic' }}>
-          {sellerName} est en train d'écrire...
-        </p>
-      )}
+      {otherIsTyping && <p className="m-0 mb-1 text-label-sm italic text-on-surface-variant">{sellerName} est en train d'écrire…</p>}
 
       {offerFormOpen ? (
-        <div style={{ border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.65rem', marginTop: '0.5rem' }}>
-          <label style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.78rem', display: 'block', marginBottom: 5 }}>
-            Votre offre ({data?.conversation?.listing?.currency ?? 'XOF'})
-          </label>
+        <div className="mt-2 rounded-xl bg-surface-lowest p-3">
+          <label className="mb-1.5 block text-label-md text-on-surface">Votre offre ({data?.conversation?.listing?.currency === 'XOF' || !data?.conversation?.listing?.currency ? 'F' : data.conversation.listing.currency})</label>
           <PriceSuggestionHint listingId={data?.conversation?.listingId} onUseAmount={amount => setOfferAmount(String(amount))} />
-          <input className="input" style={{ marginBottom: 6, fontSize: '0.85rem' }} placeholder="Ex: 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
-          {offerError && <p style={{ color: 'var(--primary)', fontSize: '0.74rem', margin: '0 0 6px' }}>{offerError}</p>}
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn-primary" disabled={sendingOffer} onClick={submitOffer} style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}>{sendingOffer ? 'Envoi...' : "Envoyer l'offre"}</button>
-            <button onClick={() => { setOfferFormOpen(false); setOfferError(null) }} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '0.5rem', cursor: 'pointer', color: 'var(--fg-muted)' }}><X size={14} /></button>
+          <input className={`${field} mb-2 bg-surface-container-low px-3`} inputMode="numeric" placeholder="Ex : 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
+          {offerError && <p className="m-0 mb-2 text-body-sm text-primary">{offerError}</p>}
+          <div className="flex gap-2">
+            <button disabled={sendingOffer} onClick={submitOffer} className="flex-1 cursor-pointer rounded-xl border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-60">{sendingOffer ? 'Envoi…' : "Envoyer l'offre"}</button>
+            <button onClick={() => { setOfferFormOpen(false); setOfferError(null) }} aria-label="Annuler" className="flex w-11 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={18} /></button>
           </div>
         </div>
       ) : (
-        <div style={{ marginTop: '0.5rem' }}>
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '2px 0 6px' }}>
-            {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMsg(text)} style={{ flexShrink: 0, border: '1px solid var(--border)', borderRadius: 999, background: 'var(--bg)', color: 'var(--fg-muted)', padding: '5px 9px', fontSize: '0.68rem', cursor: 'pointer' }}>{text}</button>)}
+        <div className="mt-2">
+          <div className="flex gap-1.5 overflow-x-auto pb-1.5">
+            {QUICK_MESSAGES.map(text => <button key={text} type="button" onClick={() => setMsg(text)} className={chip}>{text}</button>)}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2">
             {canOffer && (
-              <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: '50%', width: 38, height: 38, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-muted)' }}>
-                <Tag size={16} />
-              </button>
+              <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-lowest text-primary"><Icon name="sell" size={19} /></button>
             )}
             <input
-              className="input"
-              style={{ flex: 1, minWidth: 0, padding: '0.55rem 0.75rem', fontSize: '0.85rem' }}
-              placeholder="Écrivez votre message..."
+              className={`${field} min-w-0 flex-1 px-3`}
+              placeholder="Écrivez votre message…"
               value={msg}
               onChange={e => { setMsg(e.target.value); notifyTyping() }}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
             />
-            <button className="btn-primary" disabled={sending || !msg.trim()} style={{ padding: '0.55rem', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sending || !msg.trim() ? 0.6 : 1, flexShrink: 0 }} onClick={handleSend}>
-              <Send size={16} />
-            </button>
+            <button onClick={handleSend} disabled={sending || !msg.trim()} aria-label="Envoyer" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-primary text-white disabled:opacity-50"><Icon name="send" size={19} /></button>
           </div>
         </div>
       )}

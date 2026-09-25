@@ -136,8 +136,8 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
             </label>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-4 px-1 text-label-sm text-on-surface">
-            <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={dropsOnly} onChange={e => setDropsOnly(e.target.checked)} className="accent-[#BB0013]" /> Uniquement en baisse de prix</label>
-            <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={hideSold} onChange={e => setHideSold(e.target.checked)} className="accent-[#BB0013]" /> Masquer les annonces vendues</label>
+            <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={dropsOnly} onChange={e => setDropsOnly(e.target.checked)} className="accent-[var(--primary)]" /> Uniquement en baisse de prix</label>
+            <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={hideSold} onChange={e => setHideSold(e.target.checked)} className="accent-[var(--primary)]" /> Masquer les annonces vendues</label>
             <span className="ml-auto text-on-surface-variant">Affichage de {shown.length} article{shown.length > 1 ? 's' : ''}</span>
           </div>
         </section>
