@@ -289,10 +289,40 @@ export default function App() {
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
   }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId])
 
+  // Where to land after signing in: the page the visitor was on (or tried to
+  // open) when they were sent to the auth screen, instead of always home.
+  const [authReturn, setAuthReturn] = useState<Page | null>(null)
+
+  const isAccountPage = (p: Page) => (p.startsWith('seller-') && p !== 'seller-profile') || p.startsWith('buyer-')
+
   const navigate = (p: Page) => {
+    // Account pages need a session: go straight to auth rather than mounting
+    // the page and bouncing from an effect, which left the account page in
+    // the history and trapped the back button in a redirect loop.
+    if (isAccountPage(p) && !isLoggedIn) {
+      setAuthReturn(p)
+      p = 'auth'
+    } else if (p === 'auth' && page !== 'auth') {
+      setAuthReturn(page)
+    }
     setPage(p)
     window.history.pushState({ __yupixiPage: p }, '')
   }
+
+  const replacePage = (p: Page) => {
+    setPage(p)
+    window.history.replaceState({ __yupixiPage: p }, '')
+  }
+
+  // Same guard for pages reached without navigate(): session restore after a
+  // reload, browser back/forward, or a session that just expired.
+  useEffect(() => {
+    if (isAccountPage(page) && !isLoggedIn) {
+      setAuthReturn(page)
+      replacePage('auth')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, isLoggedIn])
 
   const selectListing = (id: string) => {
     setSelectedListingId(id)
@@ -391,9 +421,6 @@ export default function App() {
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} onSearch={searchFromHome} />
       case 'flash-offers':
         return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
-      case 'auth':
-        return <Auth onNavigate={navigate} onLogin={handleAuthenticated} />
-
       default:
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} location={location} />
     }
@@ -406,7 +433,27 @@ export default function App() {
   // else's profile, viewed through the normal site Layout below), not
   // part of the account shell. It was silently falling into this block's
   // default case (the dashboard) and was never actually reachable.
-  if ((page.startsWith('seller-') && page !== 'seller-profile') || page.startsWith('buyer-')) {
+  // Sign-in is a full-screen step (Stitch mobile "Connexion & Inscription"),
+  // without the storefront header, bottom nav and footer around it.
+  if (page === 'auth') {
+    const close = () => (window.history.length > 1 ? window.history.back() : navigate('home'))
+    return (
+      <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
+        <Auth
+          onNavigate={navigate}
+          onClose={close}
+          onLogin={() => {
+            handleAuthenticated()
+            // Replace the auth entry so "back" doesn't reopen the login form.
+            replacePage(authReturn && authReturn !== 'auth' ? authReturn : 'home')
+            setAuthReturn(null)
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (isAccountPage(page)) {
     // A guest identity only exists to hold a conversation open (see
     // AuthService.guestLogin) — there's no real seller/buyer account behind
     // it, so every account-shell page except messaging is off-limits.
@@ -464,7 +511,7 @@ export default function App() {
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         {accountContent}
-        <InstallBanner show={showInstallBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+        <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
   }
@@ -489,8 +536,9 @@ export default function App() {
       >
         {renderPage()}
       </Layout>
-      <InstallBanner show={showInstallBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
-      {isLoggedIn && pushStatus && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
+      <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      {/* One prompt at a time — stacked banners hid the page on a phone. */}
+      {isLoggedIn && pushStatus && !showUpdateBanner && !showInstallBanner && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />

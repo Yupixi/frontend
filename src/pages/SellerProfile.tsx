@@ -113,7 +113,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-4 md:px-8 lg:px-12">
-      <nav className="mb-3 flex items-center gap-1 text-label-md text-on-surface-variant">
+      <nav className="mb-3 hidden items-center md:flex gap-1 text-label-md text-on-surface-variant">
         <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
         <ChevronRight size={14} className="text-outline-variant" />
         <span>{seller.isVerified ? 'Vendeurs certifiés Dilchap' : 'Vendeurs'}</span>
@@ -132,14 +132,16 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
         </div>
         <div className="px-4 pb-5 md:px-6">
           <div className="-mt-10 flex flex-col gap-4 md:-mt-12 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-end gap-4">
-              <div className="relative shrink-0">
+            {/* Mobile: name below the avatar — side by side, the -mt pulls
+                the name up over the dark cover where it can't be read. */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+              <div className="relative w-fit shrink-0">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-solid border-surface-lowest bg-surface-container-high text-headline-lg text-primary md:h-28 md:w-28">
                   {seller.avatarUrl ? <img src={seller.avatarUrl} alt={seller.fullName} className="h-full w-full object-cover" /> : seller.fullName.charAt(0).toUpperCase()}
                 </div>
                 {seller.isVerified && <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={15} /></span>}
               </div>
-              <div className="min-w-0 pb-1">
+              <div className="min-w-0 md:pb-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="m-0 text-headline-md text-on-surface md:text-headline-lg">{seller.fullName}</h1>
                   {seller.isVerified && <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><BadgeCheck size={13} /> Vendeur certifié</span>}

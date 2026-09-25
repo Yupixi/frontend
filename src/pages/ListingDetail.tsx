@@ -28,6 +28,7 @@ import {
   UserPlus,
   UserCheck,
   Percent,
+  ArrowLeft,
 } from '../components/icons'
 import Price from '../components/Price'
 import BottomSheet from '../components/BottomSheet'
@@ -81,6 +82,7 @@ function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, s
 
 export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser, onContactSeller }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
+  const [brokenImgs, setBrokenImgs] = useState<number[]>([])
   const [tab, setTab] = useState<typeof TABS[number]['key']>('description')
   const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
@@ -193,6 +195,20 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   return (
     <div className="pb-24 lg:pb-8">
+      {/* Mobile app bar (Stitch "Détails Article") — replaces the site header here */}
+      <div className="sticky top-0 z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface/95 px-2 backdrop-blur-md lg:hidden">
+        <button onClick={() => (window.history.length > 1 ? window.history.back() : onNavigate('home'))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Retour">
+          <ArrowLeft size={22} />
+        </button>
+        <span className="min-w-0 flex-1 truncate text-headline-sm text-on-surface">Détails article</span>
+        <button onClick={() => void share()} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label={linkCopied ? 'Lien copié' : 'Partager'}>
+          {linkCopied ? <CheckCircle2 size={21} className="text-tertiary" /> : <Share2 size={21} />}
+        </button>
+        <button onClick={() => onToggleFavorite(listing.id)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent" aria-label="Favori">
+          <Heart size={21} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
+        </button>
+      </div>
+
       {/* Meta bar: breadcrumb + actions (desktop) */}
       <div className="hidden border-0 border-b border-solid border-outline-variant bg-surface-lowest lg:block">
         <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-12 py-2.5 text-label-md text-on-surface-variant">
@@ -223,8 +239,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           {/* Gallery */}
           <div className="overflow-hidden bg-surface-lowest lg:rounded-2xl lg:border lg:border-outline-variant lg:p-3">
             <div className="relative aspect-square overflow-hidden bg-surface-container-low lg:aspect-[4/3] lg:rounded-xl">
-              {images.length > 0 ? (
-                <img src={images[imgIdx]} alt={listing.title} className="h-full w-full object-cover" />
+              {images.length > 0 && !brokenImgs.includes(imgIdx) ? (
+                <img src={images[imgIdx]} alt={listing.title} onError={() => setBrokenImgs(b => [...b, imgIdx])} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center text-outline"><Tag size={56} /></div>
               )}
@@ -239,9 +255,6 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <span className="rounded-full bg-primary px-2.5 py-1 text-label-sm uppercase text-white">Urgent</span>
                 )}
               </div>
-              <button onClick={() => onToggleFavorite(listing.id)} className="absolute right-3 top-3 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm lg:hidden" aria-label="Favori">
-                <Heart size={19} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
-              </button>
               {images.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)} className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronLeft size={20} /></button>

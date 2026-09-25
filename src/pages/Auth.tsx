@@ -10,6 +10,7 @@ import Select from '../components/Select'
 type AuthProps = {
   onNavigate: (page: any) => void
   onLogin: () => void
+  onClose: () => void
 }
 
 const COMMUNES = ['Cocody', 'Marcory', 'Plateau', 'Yopougon', 'Koumassi', 'Treichville', 'Adjamé', 'Abobo', 'Port-Bouët', 'Bingerville', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Korhogo']
@@ -149,16 +150,18 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 }
 
 // "Connexion & Inscription" (Stitch desktop split card / mobile stack).
-export default function Auth({ onNavigate, onLogin }: AuthProps) {
+export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const success = (payload: AuthPayload) => {
     storeTokens(payload.accessToken, payload.refreshToken)
     onLogin()
-    onNavigate('home')
   }
 
   return (
-    <div className="mx-auto max-w-[1180px] px-4 py-6 md:px-8 md:py-12">
+    <div className="mx-auto min-h-screen max-w-[1180px] px-4 py-4 md:px-8 md:py-12">
+      <button onClick={onClose} className="mb-2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface md:mb-4" aria-label="Retour">
+        <Icon name="arrow_back" size={22} />
+      </button>
       <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-3xl border border-outline-variant/60 bg-surface-lowest lg:grid-cols-2">
         <section className="flex flex-col p-6 md:p-10">
           <div className="flex items-center justify-between gap-3">

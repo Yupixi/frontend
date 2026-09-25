@@ -1,6 +1,16 @@
 ﻿@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0&display=block');
 @import 'tailwindcss';
+
+/* Material Symbols, self-hosted: the Google CDN copy (display=block) left
+   every icon invisible — or showing its raw ligature name — until a ~900 KB
+   font arrived from a third party, which on a slow mobile link is seconds. */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: block;
+  src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
+}
 
 /* "Circulaire Dynamique" design system (Stitch — SecondHand Marketplace).
    Tailwind utilities (bg-surface-container-low, text-on-surface-variant,

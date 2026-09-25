@@ -231,7 +231,10 @@ export default function Layout({
         </button>
       )}
 
-      <header className="sticky top-0 z-[100] bg-surface/95 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-md">
+      {/* Listing detail brings its own mobile app bar (back + title +
+          share), as in the Stitch mockup — the site header is desktop-only
+          there. */}
+      <header className={`sticky top-0 z-[100] bg-surface/95 ${currentPage === 'listing-detail' ? 'hidden lg:block' : ''} shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-md`}>
         {/* Reassurance strip — desktop only */}
         <div className="hidden h-9 items-center justify-between bg-surface-container-low px-4 text-label-sm text-on-surface-variant lg:flex lg:px-12">
           <div className="flex items-center gap-6">
@@ -505,7 +508,7 @@ export default function Layout({
       </header>
 
       {/* Main Content View */}
-      <main className="page-enter flex-1">
+      <main className={`page-enter flex-1 ${isMobile && currentPage !== 'listing-detail' ? 'pb-24' : ''}`}>
         {children}
       </main>
 
@@ -519,8 +522,9 @@ export default function Layout({
         </div>
       )}
 
-      {/* Reassurance band */}
-      <section className="mt-16 bg-surface-container px-4 py-8 lg:px-12">
+      {/* Reassurance band + footer — desktop only: the mobile mockups end
+          each page on its content, above the bottom nav. */}
+      <section className="mt-16 hidden bg-surface-container px-4 py-8 lg:block lg:px-12">
         <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: Percent, title: '0% Commission', text: 'Publiez et achetez librement, sans frais cachés ni commission prélevée.', accent: true },
@@ -542,7 +546,7 @@ export default function Layout({
       </section>
 
       {/* Footer — copy is BO-editable (FooterSettings), with fallbacks */}
-      <footer className={`bg-surface px-4 pt-12 lg:px-12 ${isMobile ? 'pb-28' : 'pb-8'}`}>
+      <footer className="hidden bg-surface px-4 pb-8 pt-12 lg:block lg:px-12">
         <div className="mx-auto max-w-[1320px]">
           <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
             <div>
