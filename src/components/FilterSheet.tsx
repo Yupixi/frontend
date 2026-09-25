@@ -3,6 +3,7 @@ import BottomSheet from './BottomSheet'
 import { formatNumber } from '../lib/format'
 import type { ListingFacets, ListingSort } from '../graphql/listings'
 import type { RemoteCategory } from '../graphql/categories'
+import PaymentLogo from './PaymentLogo'
 
 // "Filtres de recherche" mobile bottom sheet (Stitch mockup). Filters
 // apply live, the result count comes from the search query.
@@ -193,7 +194,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
               ['mobileMoneyOnly', 'account_balance_wallet', 'Wave & Orange Money acceptés', 'Paiement mobile direct à la remise'],
             ] as const).map(([key, icon, title, sub]) => (
               <label key={key} className="flex cursor-pointer items-center gap-3 py-2">
-                <Icon name={icon} size={20} className="text-tertiary" />
+                {key === 'mobileMoneyOnly' ? <span className="flex shrink-0 -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={22} className="ring-2 ring-surface-lowest" />)}</span> : <Icon name={icon} size={20} className="text-tertiary" />}
                 <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">{title}</span><span className="block text-body-sm text-on-surface-variant">{sub}</span></span>
                 <input type="checkbox" className="peer sr-only" checked={state[key]} onChange={() => onChange({ [key]: !state[key] } as Partial<SheetState>)} />
                 <span className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-tertiary peer-checked:after:translate-x-5" />

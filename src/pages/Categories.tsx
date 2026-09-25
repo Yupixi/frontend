@@ -9,6 +9,7 @@ import {
 import type { SearchPreset } from './Home'
 import Select from '../components/Select'
 import { thumbnailUrl } from '../lib/media'
+import PaymentLogo from '../components/PaymentLogo'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -21,7 +22,7 @@ const CITIES = ['Abidjan', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Ko
 const TONES = ['bg-primary-fixed text-primary', 'bg-primary-fixed/60 text-primary', 'bg-tertiary-soft text-tertiary', 'bg-surface-container text-on-surface', 'bg-primary-fixed text-primary', 'bg-tertiary-soft text-tertiary']
 const TRUST = [
   { icon: 'verified_user', title: '0% Commission Vendeur', text: 'Gardez l’intégralité de vos gains. Vendez et achetez sans frais cachés partout en Côte d’Ivoire.', cls: 'bg-primary-fixed text-primary' },
-  { icon: 'payments', title: 'Wave & Orange Money', text: 'Vous payez le vendeur directement, après avoir vérifié l’article sur place.', cls: 'bg-tertiary-soft text-tertiary' },
+  { icon: 'payments', logos: true, title: 'Wave & Orange Money', text: 'Vous payez le vendeur directement, après avoir vérifié l’article sur place.', cls: 'bg-tertiary-soft text-tertiary' },
   { icon: 'handshake', title: 'Remise en main propre sûre', text: 'Points de rencontre publics et validation par code de remise à 4 chiffres.', cls: 'bg-primary-fixed text-primary' },
 ]
 
@@ -183,7 +184,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
       <section className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
         {TRUST.map(t => (
           <div key={t.title} className="flex items-start gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.cls}`}><Icon name={t.icon} size={22} /></span>
+            {'logos' in t ? <span className="flex shrink-0 -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={32} className="ring-2 ring-surface-lowest" />)}</span> : <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.cls}`}><Icon name={t.icon} size={22} /></span>}
             <div><div className="text-headline-sm text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
           </div>
         ))}

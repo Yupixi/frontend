@@ -13,6 +13,7 @@ import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
 import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 import Select from '../components/Select'
+import { PaymentLogos } from '../components/PaymentLogo'
 
 export type SearchPreset = { city?: string, maxPrice?: number }
 
@@ -261,13 +262,14 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             {[
               { icon: <Percent size={20} />, box: 'bg-primary/10 text-primary', title: '100% P2P & Gratuit', text: '0% de commission sur toutes vos ventes' },
               { icon: <Icon name="shield_with_heart" size={20} />, box: 'bg-tertiary/10 text-tertiary', title: 'Remise en main propre', text: 'Vérifiez le produit avant paiement en lieu sécurisé' },
-              { icon: <Icon name="contactless" size={20} />, box: 'bg-primary-container/15 text-primary', title: 'Paiements directs acceptés', text: 'Wave, Orange Money ou espèces sans intermédiaire' },
+              { icon: <Icon name="contactless" size={20} />, box: 'bg-primary-container/15 text-primary', title: 'Paiements directs acceptés', text: 'Wave, Orange Money ou espèces sans intermédiaire', logos: true },
             ].map(item => (
               <div key={item.title} className="flex items-center gap-3">
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.box}`}>{item.icon}</span>
                 <div>
                   <p className="m-0 text-label-md font-bold text-on-surface">{item.title}</p>
                   <p className="m-0 text-body-sm text-on-surface-variant">{item.text}</p>
+                  {'logos' in item && <PaymentLogos size={18} className="mt-1" />}
                 </div>
               </div>
             ))}
@@ -551,7 +553,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
             <div className="min-w-0 leading-tight">
               <div className="truncate text-label-sm font-bold text-on-surface">100% P2P • 0% Commission</div>
-              <div className="truncate text-body-sm text-on-surface-variant">Remise directe • Wave • OM • Cash</div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant">Remise directe <PaymentLogos size={16} methods={['WAVE', 'ORANGE_MONEY', 'MTN_MOMO']} /> ou espèces</div>
             </div>
           </div>
           <Icon name="handshake" size={18} className="shrink-0 text-on-surface-variant" />
