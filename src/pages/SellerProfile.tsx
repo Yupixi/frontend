@@ -12,6 +12,7 @@ import {
 } from '../graphql/reviews'
 import { PAYMENT_LABELS } from './ListingDetail'
 import { formatRelativeDate } from '../lib/format'
+import Select from '../components/Select'
 
 type SellerProfileProps = {
   sellerId: string
@@ -219,12 +220,12 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                 {c.name} ({c.count})
               </button>
             ))}
-            <select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="ml-auto cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
+            <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="ml-auto cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
               <option value="RECENT">Plus récents</option>
               <option value="PRICE_ASC">Prix croissant</option>
               <option value="PRICE_DESC">Prix décroissant</option>
               <option value="POPULAR">Plus populaires</option>
-            </select>
+            </Select>
           </div>
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {filtered.slice(0, shown).map(l => (

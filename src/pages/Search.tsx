@@ -10,6 +10,7 @@ import {
   type RemoteListing, type ListingSort, type ListingFacets, type ListingFilterInput, type FacetCount,
 } from '../graphql/listings'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
+import Select from '../components/Select'
 
 const PAGE_SIZE = 18
 
@@ -344,9 +345,9 @@ export default function SearchPage({
           </button>
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-1.5">
             <span className="hidden text-label-sm uppercase text-on-surface-variant sm:inline">Trier :</span>
-            <select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="cursor-pointer border-none bg-transparent py-1 text-label-md font-bold text-on-surface outline-none">
+            <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="cursor-pointer border-none bg-transparent py-1 text-label-md font-bold text-on-surface outline-none">
               {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            </Select>
           </label>
           <div className="flex items-center rounded-xl bg-surface-container-low p-1">
             {([['grid', LayoutGrid, 'Vue grille'], ['list', List, 'Vue liste']] as const).map(([mode, Icon, label]) => (

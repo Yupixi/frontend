@@ -5,6 +5,7 @@ import Price from '../../components/Price'
 import { formatNumber } from '../../lib/format'
 import { MY_REPUTATION_QUERY } from '../../graphql/sellerHub'
 import type { SellerStats } from '../../graphql/sellerTools'
+import Select from '../../components/Select'
 
 type Props = {
   s?: SellerStats
@@ -47,9 +48,9 @@ export default function StatsMobile({ s, period, periods, onPeriod, verified, on
         </div>
         <label className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-2.5 py-2 text-label-md text-on-surface">
           <Icon name="calendar_month" size={17} />
-          <select value={period} onChange={e => onPeriod(e.target.value)} className="border-none bg-transparent text-label-md text-on-surface outline-none">
+          <Select value={period} onChange={e => onPeriod(e.target.value)} className="border-none bg-transparent text-label-md text-on-surface outline-none">
             {periods.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
-          </select>
+          </Select>
         </label>
       </div>
 

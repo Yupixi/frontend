@@ -12,6 +12,7 @@ import { MY_LISTINGS_QUERY, DELETE_LISTING_MUTATION, BUMP_LISTING_MUTATION, type
 import { CREATE_BOOST_MUTATION } from '../../graphql/promotions'
 import { MY_REPUTATION_QUERY, MY_WALLET_QUERY, type Reputation, type WalletSummary } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
+import Select from '../../components/Select'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -160,22 +161,22 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             <Search size={17} className="text-outline" />
             <input value={q} onChange={e => { setQ(e.target.value); setPage(1) }} placeholder="Rechercher par titre, marque ou référence…" className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
           </label>
-          <select value={cat} onChange={e => { setCat(e.target.value); setPage(1) }} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
+          <Select value={cat} onChange={e => { setCat(e.target.value); setPage(1) }} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
             <option value="">Toutes catégories</option>
             {categories.map(([slug, name]) => <option key={slug} value={slug}>{name}</option>)}
-          </select>
-          <select value={city} onChange={e => { setCity(e.target.value); setPage(1) }} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
+          </Select>
+          <Select value={city} onChange={e => { setCity(e.target.value); setPage(1) }} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
             <option value="">Toutes communes</option>
             {cities.map(c => <option key={c}>{c}</option>)}
-          </select>
+          </Select>
           <label className="flex items-center gap-1 text-label-md text-on-surface-variant">
             Trier :
-            <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-transparent py-2 text-label-md text-on-surface outline-none">
+            <Select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-transparent py-2 text-label-md text-on-surface outline-none">
               <option value="recent">Plus récentes</option>
               <option value="views">Plus vues</option>
               <option value="price-desc">Prix décroissant</option>
               <option value="price-asc">Prix croissant</option>
-            </select>
+            </Select>
           </label>
         </div>
 

@@ -7,6 +7,7 @@ import {
   type ActiveCampaignTile, type PopularSearch, type RemoteCategory,
 } from '../graphql/categories'
 import type { SearchPreset } from './Home'
+import Select from '../components/Select'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -58,10 +59,10 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
           </label>
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2.5 md:w-60">
             <Icon name="location_on" size={18} className="text-primary" />
-            <select value={city} onChange={e => setCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-body-md text-on-surface outline-none">
+            <Select value={city} onChange={e => setCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-body-md text-on-surface outline-none">
               <option value="">Toute la Côte d'Ivoire</option>
               {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            </Select>
           </label>
           <button type="submit" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white hover:bg-primary-dark"><Icon name="tune" size={18} /> Explorer</button>
         </form>

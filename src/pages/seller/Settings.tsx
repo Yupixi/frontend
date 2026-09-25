@@ -11,6 +11,7 @@ import { getRefreshToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
 import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } from '../../lib/pushNotifications'
 import type { AuthUser } from '../../graphql/auth'
+import Select from '../../components/Select'
 
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
@@ -245,10 +246,10 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 <div id="settings-profil-form" className="mt-4 grid scroll-mt-24 gap-4 sm:grid-cols-2">
                   <label className="text-label-md text-on-surface">Nom officiel de la boutique<input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={`${field} mt-1`} /></label>
                   <label className="text-label-md text-on-surface">Commune principale de référence
-                    <select value={form.city} onChange={e => set('city', e.target.value)} className={`${field} mt-1`}>
+                    <Select value={form.city} onChange={e => set('city', e.target.value)} className={`${field} mt-1`}>
                       <option value="">—</option>
                       {[...new Set([form.city, ...COMMUNES].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    </Select>
                   </label>
                   <label className="text-label-md text-on-surface sm:col-span-2">Description / Bio publique de la boutique
                     <textarea value={form.bio} maxLength={250} rows={3} onChange={e => set('bio', e.target.value)} className={`${field} mt-1 resize-none`} />
