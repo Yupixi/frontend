@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
 import { formatNumber } from '../../lib/format'
 import { MY_FAVORITE_ENTRIES_QUERY, listingPlace, type FavoriteEntry } from '../../graphql/buyerSpace'
@@ -33,42 +34,49 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
   const drop = dropOf(e)
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
-      <div className="relative aspect-[4/3] bg-surface-container">
+      <div className="relative aspect-square bg-surface-container md:aspect-[4/3]">
         <button onClick={onSelect} className="block h-full w-full cursor-pointer border-none bg-transparent p-0">
-          {l.coverImageUrl ? <img src={l.coverImageUrl} alt="" className={`h-full w-full object-cover ${unavailable ? 'grayscale' : ''}`} /> : <span className="flex h-full items-center justify-center text-on-surface-variant"><Icon name="image" size={36} /></span>}
+          <SafeImg src={l.coverImageUrl} className={`h-full w-full object-cover ${unavailable ? 'grayscale' : ''}`} iconSize={36} />
         </button>
-        <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
+        <div className="absolute left-2 top-2 flex flex-col items-start gap-1 md:left-3 md:top-3">
           {drop > 0 && <span className="flex items-center gap-1 rounded bg-tertiary px-2 py-0.5 text-label-sm text-white"><Icon name="trending_down" size={14} /> -{formatNumber(drop)} F</span>}
           {l.condition && l.condition !== 'N/A' && <span className="rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm uppercase text-on-surface">{l.condition}</span>}
         </div>
-        {unavailable && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-inverse-surface/80 px-4 py-2 text-headline-sm uppercase tracking-widest text-white">{sold ? 'Vendu' : 'Indisponible'}</span>}
-        <button onClick={onUnfav} className="absolute right-3 top-3 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest text-primary shadow" aria-label="Retirer des favoris"><Icon name="favorite" size={20} fill /></button>
+        {unavailable && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-inverse-surface/80 px-3 py-1 text-label-lg uppercase tracking-widest text-white md:px-4 md:py-2 md:text-headline-sm">{sold ? 'Vendu' : 'Indisponible'}</span>}
+        <button onClick={onUnfav} className="absolute right-2 top-2 flex h-9 w-9 md:right-3 md:top-3 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest text-primary shadow" aria-label="Retirer des favoris"><Icon name="favorite" size={20} fill /></button>
       </div>
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3 md:p-4">
         <div className="flex items-center justify-between gap-2 text-label-sm">
           <span className="truncate uppercase text-primary">{l.category.name}</span>
-          <span className="flex shrink-0 items-center gap-0.5 text-on-surface-variant"><Icon name="location_on" size={13} /> {listingPlace(l)}</span>
+          <span className="hidden shrink-0 items-center gap-0.5 text-on-surface-variant md:flex"><Icon name="location_on" size={13} /> {listingPlace(l)}</span>
         </div>
-        <button onClick={onSelect} className={`mt-1 cursor-pointer truncate border-none bg-transparent p-0 text-left text-headline-sm ${unavailable ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{l.title}</button>
-        <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{l.description}</p>
-        <div className="mt-3 flex flex-wrap items-baseline gap-2">
-          <span className={`text-headline-md font-extrabold ${unavailable ? 'text-on-surface-variant' : 'text-on-surface'}`}><Price amount={l.price} currency={l.currency} /></span>
+        <button onClick={onSelect} className={`mt-1 cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg md:text-headline-sm ${unavailable ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{l.title}</button>
+        <p className="m-0 mt-1 line-clamp-2 hidden text-body-sm text-on-surface-variant md:block">{l.description}</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-2 md:mt-3">
+          <span className={`text-headline-sm font-extrabold md:text-headline-md ${unavailable ? 'text-on-surface-variant' : 'text-on-surface'}`}><Price amount={l.price} currency={l.currency} /></span>
           {drop > 0 && <span className="text-body-sm text-on-surface-variant line-through"><Price amount={e.priceAtSave} currency={l.currency} /></span>}
-          <span className="ml-auto text-label-sm text-tertiary">{unavailable ? <span className="rounded bg-surface-container px-1.5 text-on-surface-variant">Transaction clôturée</span> : l.negotiable ? 'Prix négociable' : l.deliveryAvailable ? 'Livraison possible' : 'Remise en main propre'}</span>
+          <span className="ml-auto hidden text-label-sm text-tertiary md:inline">{unavailable ? <span className="rounded bg-surface-container px-1.5 text-on-surface-variant">Transaction clôturée</span> : l.negotiable ? 'Prix négociable' : l.deliveryAvailable ? 'Livraison possible' : 'Remise en main propre'}</span>
         </div>
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-fixed text-label-sm text-primary">{l.seller.avatarUrl ? <img src={l.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : l.seller.fullName.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
+        <div className="mt-3 hidden items-center gap-2 rounded-xl bg-surface-container-low p-2.5 md:flex">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-fixed text-label-sm text-primary">{l.seller.avatarUrl ? <SafeImg src={l.seller.avatarUrl} icon="person" iconSize={16} fallbackClassName="flex h-full w-full items-center justify-center" /> : l.seller.fullName.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
           <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{l.seller.fullName}</div>{l.seller.isVerified && <div className="flex items-center gap-0.5 text-label-sm text-tertiary"><Icon name="verified" size={12} /> Vendeur certifié</div>}</div>
           {!!l.seller.reviewsCount && <span className="text-label-sm text-on-surface"><Icon name="star" size={13} fill className="text-amber-500" /> {l.seller.averageRating.toFixed(1)} ({l.seller.reviewsCount})</span>}
         </div>
         <div className="flex-1" />
         {unavailable ? (
-          <button onClick={onSimilar} className="mt-3 flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="manage_search" size={18} /> Voir articles similaires</button>
+          <button onClick={onSimilar} className="mt-3 flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2 text-label-md text-on-surface md:py-2.5"><Icon name="manage_search" size={18} /> <span className="md:hidden">Similaire</span><span className="max-md:hidden">Voir articles similaires</span></button>
         ) : (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button onClick={onChat} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary py-2.5 text-label-md text-white"><Icon name="chat" size={17} /> Discuter</button>
-            <button onClick={onSelect} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="local_offer" size={17} /> {l.negotiable ? 'Faire une offre' : "Voir l'annonce"}</button>
-          </div>
+          <>
+            {/* Mobile: compact "Message / Acheter" pair of the Stitch mobile favourites */}
+            <div className="mt-3 grid grid-cols-2 gap-1.5 md:hidden">
+              <button onClick={onChat} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-1 py-2 text-label-sm text-on-surface">Message</button>
+              <button onClick={onSelect} className="cursor-pointer rounded-lg border-none bg-primary px-1 py-2 text-label-sm text-white">Acheter</button>
+            </div>
+            <div className="mt-3 hidden grid-cols-2 gap-2 md:grid">
+              <button onClick={onChat} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary py-2.5 text-label-md text-white"><Icon name="chat" size={17} /> Discuter</button>
+              <button onClick={onSelect} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="local_offer" size={17} /> {l.negotiable ? 'Faire une offre' : "Voir l'annonce"}</button>
+            </div>
+          </>
         )}
       </div>
     </article>
@@ -103,10 +111,10 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
   return (
     <AccountLayout active="buyer-favorites" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1180px] pb-8">
-        <section className="flex flex-wrap items-start justify-between gap-4 rounded-3xl bg-surface-container-low p-5 md:p-6">
+        <section className="flex flex-wrap items-start justify-between gap-4 md:rounded-3xl md:bg-surface-container-low md:p-6">
           <div className="max-w-xl">
             <div className="hidden items-center gap-2 text-label-sm uppercase md:flex"><span className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-0.5 text-primary"><Icon name="favorite" size={13} /> Espace acheteur</span><span className="text-on-surface-variant">• Côte d'Ivoire</span></div>
-            <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface md:text-headline-lg">Mes Favoris<span className="hidden md:inline"> &amp; Annonces sauvegardées</span> <span className="rounded-full bg-primary-fixed px-2 align-middle text-label-lg text-primary md:hidden">{all.length}</span></h1>
+            <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface md:text-headline-lg"><span className="max-md:hidden">Mes </span>Favoris<span className="hidden md:inline"> &amp; Annonces sauvegardées</span> <span className="rounded-full bg-primary-fixed px-2 align-middle text-label-lg text-primary md:hidden">{all.length}</span></h1>
             <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Retrouvez vos articles mis de côté et surveillez les baisses de prix en temps réel.</p>
           </div>
           <div className="hidden gap-3 md:flex">
@@ -121,27 +129,35 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
           <button onClick={() => onNavigate('buyer-settings')} className="flex cursor-pointer items-center gap-1.5 rounded-xl border-none bg-white px-4 py-2 text-label-md text-tertiary"><Icon name="tune" size={17} /> Gérer mes alertes</button>
         </section>
 
-        <section className="mt-4 rounded-2xl bg-surface-lowest p-3 shadow-sm">
+        {all.length > 0 && (
+        <section className="mt-3 md:mt-4 md:rounded-2xl md:bg-surface-lowest md:p-3 md:shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-1 gap-2 overflow-x-auto pb-1">
-              <button onClick={() => { setCat(''); setDropsOnly(false) }} className={`shrink-0 cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${!cat && !dropsOnly ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>Toutes ({all.length})</button>
-              {drops.length > 0 && <button onClick={() => setDropsOnly(d => !d)} className={`shrink-0 cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${dropsOnly ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface'}`}><Icon name="local_fire_department" size={15} /> Baisse de prix ({drops.length})</button>}
+            <div className="-mx-4 flex flex-1 gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
+              <button onClick={() => { setCat(''); setDropsOnly(false) }} className={`shrink-0 cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${!cat && !dropsOnly ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface max-md:bg-surface-lowest max-md:shadow-sm'}`}><span className="md:hidden">Tous</span><span className="max-md:hidden">Toutes</span> ({all.length})</button>
+              {drops.length > 0 && <button onClick={() => setDropsOnly(d => !d)} className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-xl border-none px-3 py-2 text-label-md ${dropsOnly ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface max-md:bg-surface-lowest max-md:shadow-sm'}`}><Icon name="local_fire_department" size={15} /> Baisse de prix ({drops.length})</button>}
               {categories.map(([slug, c]) => (
-                <button key={slug} onClick={() => setCat(cat === slug ? '' : slug)} className={`shrink-0 cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${cat === slug ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>{c.name} ({c.count})</button>
+                <button key={slug} onClick={() => setCat(cat === slug ? '' : slug)} className={`shrink-0 cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${cat === slug ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface max-md:bg-surface-lowest max-md:shadow-sm'}`}>{c.name} ({c.count})</button>
               ))}
             </div>
-            <label className="flex items-center gap-2 text-label-sm text-on-surface-variant">Trier par :
+            <label className="hidden items-center gap-2 text-label-sm text-on-surface-variant md:flex">Trier par :
               <Select value={sort} onChange={e => setSort(e.target.value)} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-2 py-1.5 text-label-md text-on-surface">
                 {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
               </Select>
             </label>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-4 px-1 text-label-sm text-on-surface">
+          {/* Mobile: a single switch replaces the desktop checkboxes */}
+          <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-body-sm text-on-surface md:hidden">
+            <span className="flex items-center gap-2"><Icon name="visibility_off" size={18} className="text-on-surface-variant" /> Masquer les articles vendus</span>
+            <input type="checkbox" role="switch" checked={hideSold} onChange={e => setHideSold(e.target.checked)} className="peer sr-only" />
+            <span aria-hidden className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform after:content-[''] peer-checked:bg-tertiary peer-checked:after:translate-x-5" />
+          </label>
+          <div className="mt-2 hidden flex-wrap items-center gap-4 px-1 text-label-sm text-on-surface md:flex">
             <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={dropsOnly} onChange={e => setDropsOnly(e.target.checked)} className="accent-[var(--primary)]" /> Uniquement en baisse de prix</label>
             <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={hideSold} onChange={e => setHideSold(e.target.checked)} className="accent-[var(--primary)]" /> Masquer les annonces vendues</label>
             <span className="ml-auto text-on-surface-variant">Affichage de {shown.length} article{shown.length > 1 ? 's' : ''}</span>
           </div>
         </section>
+        )}
 
         {loading && !data && <p className="mt-4 text-body-md text-on-surface-variant">Chargement…</p>}
         {!loading && all.length === 0 && (
@@ -152,17 +168,19 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
             <button onClick={() => onNavigate('search')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-md text-white">Explorer les annonces</button>
           </div>
         )}
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
           {shown.map(e => (
             <FavoriteCard key={e.listing.id} e={e} onSelect={() => onSelectListing(e.listing.id)} onUnfav={() => unfav(e.listing.id)} onChat={() => onContactSeller(e.listing.seller.id, e.listing.id)} onSimilar={() => onSearchCategory(e.listing.category.slug)} />
           ))}
         </div>
 
-        <section className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-4">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="handshake" size={20} /></span>
-          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Paiement à la remise, protégé par Dilchap</div><div className="text-body-sm text-on-surface-variant">Vous ne payez le vendeur qu'après avoir vérifié l'article, et validez avec votre code de remise.</div></div>
-          <span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="verified_user" size={15} /> Protection acheteur active</span>
-        </section>
+        {all.length > 0 && (
+          <section className="mt-6 flex items-center gap-3 rounded-2xl bg-surface-container-low p-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="handshake" size={20} /></span>
+            <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Paiement à la remise, protégé par Dilchap</div><div className="text-body-sm text-on-surface-variant">Vous ne payez le vendeur qu'après avoir vérifié l'article, et validez avec votre code de remise.</div></div>
+            <span className="hidden shrink-0 items-center gap-1 text-label-sm text-tertiary md:flex"><Icon name="verified_user" size={15} /> Protection acheteur active</span>
+          </section>
+        )}
       </div>
     </AccountLayout>
   )

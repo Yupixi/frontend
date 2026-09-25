@@ -29,6 +29,7 @@ import {
   UserPlus,
   UserCheck,
   Percent,
+  ArrowLeft,
 } from '../components/icons'
 import Price from '../components/Price'
 import BottomSheet from '../components/BottomSheet'
@@ -41,6 +42,7 @@ import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION,
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
+import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { formatRelativeDate } from '../lib/format'
 import { thumbnailUrl } from '../lib/media'
 import Select from '../components/Select'
@@ -89,6 +91,7 @@ function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, s
 
 export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser, onContactSeller }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
+  const [brokenImgs, setBrokenImgs] = useState<number[]>([])
   const [tab, setTab] = useState<typeof TABS[number]['key']>('description')
   const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
@@ -163,7 +166,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     setTimeout(() => setLinkCopied(false), 2000)
   }
 
-  const requireAuth = (fn: () => void) => () => (getAccessToken() ? fn() : onNavigate('auth'))
+  const requireAuth = (fn: () => void, reason: AuthReason) => () => {
+    if (getAccessToken()) return fn()
+    setAuthReason(reason)
+    onNavigate('auth')
+  }
+  const toggleFav = () => { if (!getAccessToken()) setAuthReason('favorite'); onToggleFavorite(listing.id) }
 
 
 
@@ -171,9 +179,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     if (!seller) return
     await (seller.isFollowedByMe ? unfollow : follow)({ variables: { sellerId: seller.id } })
     void refetchSeller()
-  })
+  }, 'follow')
 
   const loggedIn = !!getAccessToken() && !currentUser?.isGuest
+  // "Discuter" always means chat: members go to their inbox, visitors get the
+  // inline guest conversation. Price proposals live behind "Faire une offre".
+  const openChat = () => (loggedIn && onContactSeller ? onContactSeller(listing.seller.id, listing.id) : setChatOpen(true))
   const negotiation = (
     <QuickNegotiation
       listing={listing}
@@ -207,6 +218,20 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   return (
     <div className="pb-24 lg:pb-8">
+      {/* Mobile app bar (Stitch "Détails Article") — replaces the site header here */}
+      <div className="sticky top-0 z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface/95 px-2 backdrop-blur-md lg:hidden">
+        <button onClick={() => (window.history.length > 1 ? window.history.back() : onNavigate('home'))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Retour">
+          <ArrowLeft size={22} />
+        </button>
+        <span className="min-w-0 flex-1 truncate text-headline-sm text-on-surface">Détails article</span>
+        <button onClick={() => void share()} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label={linkCopied ? 'Lien copié' : 'Partager'}>
+          {linkCopied ? <CheckCircle2 size={21} className="text-tertiary" /> : <Share2 size={21} />}
+        </button>
+        <button onClick={toggleFav} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent" aria-label="Favori">
+          <Heart size={21} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
+        </button>
+      </div>
+
       {/* Meta bar: breadcrumb + actions (desktop) */}
       <div className="hidden border-0 border-b border-solid border-outline-variant bg-surface-lowest lg:block">
         <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-12 py-2.5 text-label-md text-on-surface-variant">
@@ -222,7 +247,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             <button onClick={() => void share()} className="relative flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-on-surface">
               <Share2 size={15} /> {linkCopied ? 'Lien copié !' : 'Partager'}
             </button>
-            <button onClick={() => onToggleFavorite(listing.id)} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-on-surface">
+            <button onClick={toggleFav} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-on-surface">
               <Heart size={15} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'currentColor'} /> {isFav ? 'Sauvegardé' : 'Sauvegarder'}
               <span className="rounded-full bg-surface-container px-1.5 text-label-sm">{listing.favoritesCount}</span>
             </button>
@@ -231,14 +256,17 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-6 lg:grid-cols-12 lg:px-12 lg:pt-6">
+      {/* Mobile follows the mockup order (summary → seller → specs → description →
+          meet-up place): both columns become `contents` below lg and the seller
+          card is pulled up between the summary and the specs with `order`. */}
+      <div className="mx-auto grid max-w-[1320px] grid-cols-1 lg:grid-cols-12 lg:gap-6 lg:px-12 lg:pt-6">
         {/* LEFT */}
-        <div className="min-w-0 lg:col-span-7">
+        <div className="min-w-0 max-lg:contents lg:col-span-7">
           {/* Gallery */}
-          <div className="overflow-hidden bg-surface-lowest lg:rounded-2xl lg:border lg:border-outline-variant lg:p-3">
+          <div className="overflow-hidden max-lg:order-1 bg-surface-lowest lg:rounded-2xl lg:border lg:border-outline-variant lg:p-3">
             <div className="relative aspect-square overflow-hidden bg-surface-container-low lg:aspect-[4/3] lg:rounded-xl">
-              {images.length > 0 ? (
-                <img src={images[imgIdx]} alt={listing.title} className="h-full w-full object-cover" />
+              {images.length > 0 && !brokenImgs.includes(imgIdx) ? (
+                <img src={images[imgIdx]} alt={listing.title} onError={() => setBrokenImgs(b => [...b, imgIdx])} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center text-outline"><Tag size={56} /></div>
               )}
@@ -253,9 +281,6 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <span className="rounded-full bg-primary px-2.5 py-1 text-label-sm uppercase text-white">Urgent</span>
                 )}
               </div>
-              <button onClick={() => onToggleFavorite(listing.id)} className="absolute right-3 top-3 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm lg:hidden" aria-label="Favori">
-                <Heart size={19} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
-              </button>
               {images.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)} className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronLeft size={20} /></button>
@@ -279,16 +304,16 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           </div>
 
           {/* Mobile summary (desktop has it in the right column) */}
-          <div className="px-4 pt-4 lg:hidden">
+          <div className="px-4 pt-4 max-lg:order-2 lg:hidden">
             <div className="flex items-center justify-between gap-2 text-label-sm uppercase text-on-surface-variant">
               <span className="truncate">{[listing.brand, listing.subcategory?.name ?? listing.category.name].filter(Boolean).join(' • ')}</span>
               <span className="flex shrink-0 items-center gap-1 normal-case"><Eye size={14} /> {listing.viewsCount} vues</span>
             </div>
-            <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface">{listing.title}</h1>
+            <h1 className="m-0 mt-1 text-headline-md text-on-surface">{listing.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="text-headline-lg font-extrabold text-primary"><Price amount={listing.price} currency={listing.currency} /></span>
               {saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
-              {saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">-{saving}% épargne</span>}
+              {saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">-{saving}% épargné</span>}
             </div>
             <div className="mt-4 flex items-start gap-3 rounded-xl bg-tertiary-soft p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><Percent size={18} /></span>
@@ -301,13 +326,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
           {/* Specs grid (mobile mockup "Spécifications vérifiées") */}
           {specs.length > 0 && (
-            <div className="px-4 pt-6 lg:hidden">
+            <div className="px-4 pt-6 max-lg:order-4 lg:hidden">
               <h2 className="m-0 mb-3 text-headline-sm text-on-surface">Spécifications</h2>
               <div className="grid grid-cols-2 gap-2">
-                {specs.map(s => (
-                  <div key={s.label} className="rounded-xl bg-surface-container-low p-3">
-                    <div className="text-label-sm uppercase text-tertiary">{s.label}</div>
-                    <div className="text-label-lg text-on-surface">{s.value}</div>
+                {specs.map((s, i) => (
+                  <div key={s.label} className={`min-w-0 rounded-xl bg-surface-container-low p-3 ${i === specs.length - 1 && specs.length % 2 === 1 ? 'col-span-2' : ''}`}>
+                    <div className="truncate text-label-sm uppercase text-tertiary">{s.label}</div>
+                    <div className="break-words text-label-lg text-on-surface">{s.value}</div>
                   </div>
                 ))}
               </div>
@@ -315,7 +340,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           )}
 
           {/* Tabs (desktop) / stacked sections (mobile) */}
-          <div className="mt-6 px-4 lg:rounded-2xl lg:border lg:border-outline-variant lg:bg-surface-lowest lg:p-0">
+          <div className="mt-6 px-4 max-lg:order-5 lg:rounded-2xl lg:border lg:border-outline-variant lg:bg-surface-lowest lg:p-0">
             <div className="hidden border-0 border-b border-solid border-outline-variant lg:flex">
               {TABS.map(t => (
                 <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 cursor-pointer border-0 border-b-2 border-solid bg-transparent px-4 py-3.5 text-label-lg ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}>
@@ -342,9 +367,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 )}
               </section>
               <section className={tab === 'safety' ? 'mt-6 lg:mt-0' : 'mt-6 lg:hidden'}>
-                <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface">
+                <h2 className="m-0 mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-headline-sm text-on-surface">
                   Lieu de rencontre suggéré
-                  <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><ShieldCheck size={12} /> Espace public</span>
+                  <span className="flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><ShieldCheck size={12} /> Espace public</span>
                 </h2>
                 <div className="map-placeholder mb-4 h-40 items-end! justify-start! p-3">
                   <div className="relative z-[1] flex w-full items-center gap-3 rounded-xl bg-surface-lowest p-3 shadow-float">
@@ -366,7 +391,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         </div>
 
         {/* RIGHT */}
-        <aside className="flex flex-col gap-4 px-4 lg:col-span-5 lg:px-0">
+        <aside className="flex flex-col gap-4 max-lg:contents lg:col-span-5">
           <div className="hidden rounded-2xl border border-outline-variant bg-surface-lowest p-5 lg:block">
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="truncate rounded bg-surface-container-high px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">
@@ -423,11 +448,11 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <>
                     {offerOpen ? negotiation : (
                     <>
-                    <button onClick={() => (loggedIn ? setOfferOpen(true) : setChatOpen(true))} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark">
+                    <button onClick={openChat} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark">
                       <MessageSquare size={18} /> Discuter en direct
                     </button>
                     {listing.negotiable && (
-                      <button onClick={requireAuth(() => setOfferOpen(true))} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
+                      <button onClick={requireAuth(() => setOfferOpen(true), 'offer')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
                         <Tag size={17} /> Faire une offre
                       </button>
                     )}
@@ -443,7 +468,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           </div>
 
           {/* Seller card */}
-          <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 lg:p-5">
+          <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 max-lg:order-3 max-lg:mx-4 max-lg:mt-5 lg:p-5">
             <div className="flex items-center gap-3">
               <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0">
                 <Avatar url={listing.seller.avatarUrl} name={listing.seller.fullName} size={52} />
@@ -465,11 +490,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 </button>
               )}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 rounded-lg bg-surface-container-low p-2.5">
-                <Zap size={16} className="shrink-0 text-tertiary" />
-                <div className="min-w-0 text-body-sm"><div className="font-semibold text-on-surface">Réactif</div><div className="truncate text-on-surface-variant">{responseTime ? `Répond en ${responseTime}` : 'Nouveau vendeur'}</div></div>
-              </div>
+            <div className={`mt-3 grid gap-2 ${responseTime ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {responseTime && (
+                <div className="flex items-center gap-2 rounded-lg bg-surface-container-low p-2.5">
+                  <Zap size={16} className="shrink-0 text-tertiary" />
+                  <div className="min-w-0 text-body-sm"><div className="font-semibold text-on-surface">Réactif</div><div className="truncate text-on-surface-variant">Répond en {responseTime}</div></div>
+                </div>
+              )}
               <div className="flex items-center gap-2 rounded-lg bg-surface-container-low p-2.5">
                 <MapPin size={16} className="shrink-0 text-primary" />
                 <div className="min-w-0 text-body-sm"><div className="font-semibold text-on-surface">Rencontre</div><div className="truncate text-on-surface-variant">{location}</div></div>
@@ -480,7 +507,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </button>
           </div>
 
-          <div className="text-center">
+          <div className="text-center max-lg:order-6 max-lg:mx-4 max-lg:mt-4">
             {reportDone ? (
               <p className="m-0 text-body-sm text-on-surface-variant">Merci, votre signalement a été transmis.</p>
             ) : reportOpen ? (
@@ -493,7 +520,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 </div>
               </div>
             ) : (
-              <button onClick={requireAuth(() => setReportOpen(true))} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent text-body-sm text-on-surface-variant hover:text-primary"><Flag size={13} /> Signaler cette annonce</button>
+              <button onClick={requireAuth(() => setReportOpen(true), 'report')} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent text-body-sm text-on-surface-variant hover:text-primary"><Flag size={13} /> Signaler cette annonce</button>
             )}
           </div>
         </aside>
@@ -517,11 +544,11 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         {ownerPanel ?? (
           <>
             {listing.negotiable && (
-              <button onClick={requireAuth(() => setOfferOpen(true))} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
+              <button onClick={requireAuth(() => setOfferOpen(true), 'offer')} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
                 <Tag size={17} /> Faire une offre
               </button>
             )}
-            <button onClick={() => (loggedIn ? setOfferOpen(true) : setChatOpen(true))} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
+            <button onClick={openChat} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
               <MessageSquare size={18} /> Discuter en direct
             </button>
           </>

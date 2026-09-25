@@ -63,9 +63,10 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
   const done = o?.stage === 'DONE' || !!o?.meetup?.handedOverAt
 
   return (
-    <AccountLayout active="seller-orders" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+    <AccountLayout active="seller-orders" title="Confirmation de remise" onBack={() => onNavigate('seller-orders')} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-xl pb-10">
-        <div className="mb-3 flex items-center gap-2">
+        {/* Mobile: the account header already carries back + this title */}
+        <div className="mb-3 hidden items-center gap-2 lg:flex">
           <button onClick={() => onNavigate('seller-orders')} className="flex cursor-pointer border-none bg-transparent p-1 text-primary" aria-label="Retour"><Icon name="arrow_back" size={24} /></button>
           <h1 className="m-0 text-headline-md text-on-surface">Confirmation de remise</h1>
         </div>
@@ -75,7 +76,12 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
         </div>
 
         {loading && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
-        {!loading && !o && <p className="text-body-md text-on-surface-variant">Commande introuvable.</p>}
+        {!loading && !o && (
+          <div className="rounded-2xl bg-surface-container-low p-6 text-center">
+            <p className="m-0 text-body-md text-on-surface-variant">Commande introuvable.</p>
+            <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour aux commandes</button>
+          </div>
+        )}
 
         {o && (
           <div className="flex flex-col gap-4">

@@ -44,9 +44,12 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-fixed/50 via-surface-container-low to-tertiary-soft/60 p-5 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary-fixed px-2.5 py-0.5 text-label-sm uppercase text-primary"><Icon name="warning" size={13} /> Répertoire officiel Côte d'Ivoire</span>
-            <h1 className="m-0 mt-2 text-headline-lg-mobile text-on-surface md:text-headline-lg">Explorez tout l'univers Dilchap</h1>
-            <p className="m-0 mt-1 text-body-md text-on-surface-variant">Plus de {formatNumber(total)} trouvailles vérifiées et négociées entre particuliers, à Abidjan et partout en Côte d'Ivoire.</p>
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary-fixed px-2.5 py-0.5 text-label-sm uppercase text-primary"><Icon name="verified" size={13} /> Répertoire officiel Côte d'Ivoire</span>
+            <h1 className="m-0 mt-2 text-headline-md text-on-surface md:text-headline-lg">Explorez tout l'univers Dilchap</h1>
+            <p className="m-0 mt-1 text-body-md text-on-surface-variant">
+              {/* A small count reads as "empty site": only brag once it's meaningful. */}
+              {total >= 100 ? `Plus de ${formatNumber(total)} trouvailles` : 'Des trouvailles'} vérifiées et négociées entre particuliers, à Abidjan et partout en Côte d'Ivoire.
+            </p>
           </div>
           <div className="hidden items-center gap-3 rounded-2xl bg-surface-lowest px-4 py-3 shadow-sm md:flex">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="verified_user" size={22} /></span>
@@ -56,7 +59,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
         <form onSubmit={e => { e.preventDefault(); explore() }} className="mt-5 flex flex-col gap-2 rounded-2xl bg-surface-lowest p-2 shadow-sm md:flex-row md:items-center">
           <label className="flex flex-1 items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2.5">
             <Icon name="search" size={19} className="text-on-surface-variant" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Filtrer par mot-clé (ex : iPhone, Wax, Salon, Moto)…" className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Mot-clé : iPhone, Wax, Moto…" className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
           </label>
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2.5 md:w-60">
             <Icon name="location_on" size={18} className="text-primary" />
@@ -71,12 +74,27 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
 
       {/* Grid */}
       <section className="mt-8">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+        <div className="mb-4">
           <h2 className="m-0 text-headline-md text-on-surface">Grandes Catégories <span className="ml-1 text-label-sm uppercase text-primary">{categories.length} rayons</span></h2>
-          <span className="text-label-sm text-on-surface-variant">Compteurs mis à jour en direct</span>
         </div>
         {loading && <p className="text-on-surface-variant">Chargement…</p>}
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Phones: compact rows. From sm up: the mockup's detailed cards. */}
+        <div className="flex flex-col gap-2 sm:hidden">
+          {categories.map((cat, i) => {
+            const count = cat.listingsCount ?? 0
+            return (
+              <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className={`flex w-full cursor-pointer items-center gap-3 rounded-2xl border-none bg-surface-lowest p-3 text-left shadow-sm ${count === 0 ? 'opacity-60' : ''}`}>
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONES[i % TONES.length]}`}><CategoryIcon icon={cat.icon} size={24} /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-label-lg text-on-surface">{cat.name}</span>
+                  <span className="block truncate text-body-sm text-on-surface-variant">{count > 0 ? `${formatNumber(count)} annonce${count > 1 ? 's' : ''}` : 'Bientôt des annonces'}{cat.subcategories.length > 0 ? ` • ${cat.subcategories.slice(0, 2).map(s => s.name).join(', ')}` : ''}</span>
+                </span>
+                <Icon name="chevron_right" size={20} className="shrink-0 text-on-surface-variant" />
+              </button>
+            )
+          })}
+        </div>
+        <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat, i) => (
             <article key={cat.id} className="flex flex-col rounded-2xl bg-surface-lowest p-5 shadow-sm transition-shadow hover:shadow-card-hover">
               <div className="flex items-start justify-between gap-2">

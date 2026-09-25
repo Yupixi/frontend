@@ -66,7 +66,8 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
 
   const q = query.trim()
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
-  const categories = categoriesData?.categories ?? []
+  // Empty categories would lead to a blank results page.
+  const categories = (categoriesData?.categories ?? []).filter(c => c.listingsCount !== 0)
   const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 8 } })
   const popular = popularData?.popularSearches ?? []
   const { data: suggestData, loading: suggestLoading } = useQuery<{ listings: { items: RemoteListing[] } }>(
@@ -107,8 +108,8 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
             <Icon name="search" size={22} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
             <input
               ref={inputRef}
-              className="h-13 w-full rounded-2xl border border-transparent bg-surface-container-low py-3.5 pl-12 pr-12 text-body-lg text-on-surface outline-none focus:border-primary"
-              placeholder="Rechercher un iPhone, des sneakers, une moto…"
+              className={`h-13 w-full rounded-2xl border border-transparent bg-surface-container-low py-3.5 pl-12 ${query ? 'pr-12' : 'pr-4'} text-body-lg text-on-surface outline-none focus:border-primary`}
+              placeholder="Que cherchez-vous ?"
               value={query}
               onChange={e => { onQueryChange(e.target.value); setSelectedIdx(-1) }}
               onKeyDown={handleKeyDown}
@@ -208,7 +209,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                 {categories.map(cat => (
                   <button key={cat.id} type="button" onClick={() => { onSelectCategory(cat.slug); onClose() }} className="flex cursor-pointer items-center gap-2.5 rounded-xl border-none bg-surface-lowest p-3 text-left hover:bg-surface-container-low">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-fixed text-primary"><CategoryIcon icon={cat.icon} size={20} /></span>
-                    <span className="min-w-0"><span className="block truncate text-label-md text-on-surface">{cat.name}</span>{cat.listingsCount != null && <span className="block text-label-sm text-on-surface-variant">{cat.listingsCount} annonce{cat.listingsCount > 1 ? 's' : ''}</span>}</span>
+                    <span className="min-w-0"><span className="line-clamp-2 text-label-md leading-tight text-on-surface">{cat.name}</span>{cat.listingsCount != null && <span className="block text-label-sm text-on-surface-variant">{cat.listingsCount} annonce{cat.listingsCount > 1 ? 's' : ''}</span>}</span>
                   </button>
                 ))}
               </div>

@@ -11,6 +11,7 @@ import {
 } from '../graphql/listings'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
+import { setAuthReason } from '../lib/authReason'
 
 const PAGE_SIZE = 18
 
@@ -112,6 +113,9 @@ export default function SearchPage({
   const [brands, setBrands] = useState<string[]>([])
   const [sizes, setSizes] = useState<string[]>([])
   const [cities, setCities] = useState<string[]>(selectedCity ? [selectedCity] : [])
+  // The initial city is the visitor's detected location, not a choice they made:
+  // it is labelled "Près de vous" and left out of the active-filter badge.
+  const [nearCity] = useState(selectedCity ?? '')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice ? String(initialMaxPrice) : '')
   const [page, setPage] = useState(1)
@@ -156,7 +160,7 @@ export default function SearchPage({
 
   const [createSavedSearch, { loading: savingAlert }] = useMutation(CREATE_SAVED_SEARCH_MUTATION)
   const createAlert = async () => {
-    if (!isLoggedIn) { onNavigate('auth'); return }
+    if (!isLoggedIn) { setAuthReason('alert'); onNavigate('auth'); return }
     const label = search || category?.name || 'Ma recherche'
     try {
       await createSavedSearch({ variables: { label, filter } })
@@ -174,11 +178,11 @@ export default function SearchPage({
     onSearchTermChange?.('')
   }
 
-  const chips: { key: string, label: string, clear: () => void }[] = [
+  const chips: { key: string, label: string, near?: boolean, clear: () => void }[] = [
     ...(search ? [{ key: 'q', label: `« ${search} »`, clear: () => onSearchTermChange?.('') }] : []),
     ...(category ? [{ key: 'cat', label: category.name, clear: () => onClearCategoryFilter?.() }] : []),
     ...subcategories.map(v => ({ key: `sub-${v}`, label: facets?.subcategories.find(f => f.value === v)?.label ?? v, clear: () => setSubcategories(s => s.filter(x => x !== v)) })),
-    ...cities.map(v => ({ key: `city-${v}`, label: v, clear: () => setCities(s => s.filter(x => x !== v)) })),
+    ...cities.map(v => ({ key: `city-${v}`, label: v === nearCity ? `Près de vous : ${v}` : v, near: v === nearCity, clear: () => setCities(s => s.filter(x => x !== v)) })),
     ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
     ...brands.map(v => ({ key: `brand-${v}`, label: v, clear: () => setBrands(s => s.filter(x => x !== v)) })),
     ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
@@ -188,6 +192,8 @@ export default function SearchPage({
     ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
     ...categorySlugs.map(v => ({ key: `cats-${v}`, label: categories.find(c => c.slug === v)?.name ?? v, clear: () => setCategorySlugs(s => s.filter(x => x !== v)) })),
   ]
+
+  const chosenCount = chips.filter(c => !c.near).length
 
   const contact = (l: RemoteListing) => () =>
     isLoggedIn && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id)
@@ -316,7 +322,27 @@ export default function SearchPage({
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-5 md:px-8 lg:px-12">
       {/* Breadcrumb */}
-      <nav aria-label="Fil d'ariane" className="mb-2 flex flex-wrap items-center gap-1 text-label-md text-on-surface-variant">
+      {/* Mobile: editable query + filters, like the home screen */}
+      <div className="mb-4 flex items-center gap-2 lg:hidden">
+        <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-xl border border-solid border-outline-variant bg-surface-lowest">
+          <SearchIcon size={20} className="pointer-events-none absolute left-3.5 text-primary" />
+          <input
+            type="search"
+            enterKeyHint="search"
+            value={searchTerm ?? ''}
+            onChange={e => onSearchTermChange?.(e.target.value)}
+            placeholder="Rechercher sur Dilchap"
+            aria-label="Rechercher"
+            className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80"
+          />
+        </label>
+        <button onClick={() => setFiltersOpen(true)} aria-label="Filtres" className="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-inverse-surface text-white">
+          <SlidersHorizontal size={20} />
+          {chosenCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] text-white">{chosenCount}</span>}
+        </button>
+      </div>
+
+      <nav aria-label="Fil d'ariane" className="mb-2 hidden flex-wrap items-center gap-1 text-label-md text-on-surface-variant lg:flex">
         <button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary">Accueil</button>
         <ChevronRight size={14} className="text-outline-variant" />
         {category ? (
@@ -340,9 +366,6 @@ export default function SearchPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setFiltersOpen(true)} className="flex cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface lg:hidden">
-            <SlidersHorizontal size={16} /> Filtres{chips.length > 0 && <span className="rounded-full bg-primary px-1.5 text-[11px] text-white">{chips.length}</span>}
-          </button>
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-1.5">
             <span className="hidden text-label-sm uppercase text-on-surface-variant sm:inline">Trier :</span>
             <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="cursor-pointer border-none bg-transparent py-1 text-label-md font-bold text-on-surface outline-none">
@@ -367,8 +390,8 @@ export default function SearchPage({
             <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
               <span className="pl-1 text-label-sm uppercase text-on-surface-variant">Actifs :</span>
               {chips.map(c => (
-                <span key={c.key} className="flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-label-md text-on-surface">
-                  {c.label}
+                <span key={c.key} className={`flex items-center gap-1 rounded-lg px-2 py-1 text-label-md ${c.near ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-lowest text-on-surface'}`}>
+                  {c.near && <MapPin size={13} />}{c.label}
                   <button onClick={c.clear} className="flex cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary" aria-label={`Retirer ${c.label}`}><X size={13} /></button>
                 </span>
               ))}
@@ -420,7 +443,7 @@ export default function SearchPage({
           {/* Pagination */}
           {total > 0 && (
             <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
-              <span className="text-body-sm text-on-surface-variant">Affichage de {from} – {to} sur {total.toLocaleString('fr-FR')} articles</span>
+              <span className="text-body-sm text-on-surface-variant">{totalPages > 1 ? `Affichage de ${from} – ${to} sur ${total.toLocaleString('fr-FR')} articles` : `${total.toLocaleString('fr-FR')} article${total > 1 ? 's' : ''} affiché${total > 1 ? 's' : ''}`}</span>
               {totalPages > 1 && (
                 <div className="flex items-center gap-1">
                   <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-on-surface-variant disabled:opacity-30"><ChevronLeft size={18} /></button>
@@ -457,6 +480,7 @@ export default function SearchPage({
           facets={facets}
           categories={categories}
           total={total}
+          nearCity={nearCity}
         />
     </div>
   )

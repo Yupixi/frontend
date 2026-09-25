@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Search, SlidersHorizontal, ShieldCheck, Handshake, Timer, Flame, Loader2,
+  ArrowLeft, ArrowRight, ChevronRight, Search, SlidersHorizontal, ShieldCheck, Timer, Flame, Loader2,
   Percent, MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
@@ -187,8 +187,8 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
   const contact = (l: RemoteListing) => () =>
     currentUser && !currentUser.isGuest && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id)
-  const card = (l: RemoteListing) => (
-    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} />
+  const card = (l: RemoteListing, featured?: boolean) => (
+    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} featured={featured} />
   )
   const zone = location?.city ?? 'Toute la Côte d’Ivoire'
 
@@ -465,8 +465,21 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
       </div>}
 
       {/* ================= MOBILE ================= */}
-      {!isDesktop && <div className="px-4 pb-4 pt-4 md:px-8 md:pt-6">
+      {!isDesktop && <div className="px-4 pb-4 pt-3 md:px-8 md:pt-6">
         <div className="mb-6 flex flex-col gap-3">
+          {/* "Zone active": scopes the latest-listings feed, like the desktop city chips */}
+          {cities.length > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-label-sm uppercase leading-tight text-on-surface-variant">Zone<br />active</span>
+              <span className="relative flex min-w-0 flex-1 items-center rounded-full bg-surface-container-low">
+                <span className="pointer-events-none absolute left-3 h-2 w-2 rounded-full bg-tertiary" />
+                <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Zone active" className="w-full min-w-0 cursor-pointer truncate border-none bg-transparent py-2 pl-7 pr-8 text-label-md text-on-surface outline-none">
+                  <option value="">{zone}</option>
+                  {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
+                </Select>
+              </span>
+            </div>
+          )}
           <button onClick={() => onNavigate('search')} className="flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest px-4 text-left text-body-md text-on-surface-variant/80">
             <Search size={20} className="text-primary" />
             <span className="flex-1 truncate">Que recherchez-vous aujourd'hui ?</span>
@@ -487,13 +500,13 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               title="Explorer par rayon"
               action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir <ChevronRight size={16} /></button>}
             />
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-8 md:px-8">
               {categories.map(cat => (
                 <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="group flex w-[72px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0">
                   <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container text-primary transition-transform group-hover:-translate-y-0.5">
                     <CategoryIcon icon={cat.icon} size={28} />
                   </span>
-                  <span className="line-clamp-2 text-center text-label-md text-on-surface">{cat.name}</span>
+                  <span title={cat.name} className="w-full truncate text-center text-label-md text-on-surface">{cat.name}</span>
                 </button>
               ))}
             </div>
@@ -523,19 +536,11 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
               action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2.5 py-0.5 text-label-sm text-tertiary">Boostées</span> : undefined}
             />
-            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:px-0">
-              {pepites.map(l => <div key={l.id} className="w-[210px] shrink-0 snap-start">{card(l)}</div>)}
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
+              {pepites.map(l => <div key={l.id} className="w-[210px] shrink-0 snap-start">{card(l, true)}</div>)}
             </div>
           </section>
         )}
-
-        <section className="mb-8 flex items-center gap-4 rounded-2xl border border-outline-variant bg-surface-lowest p-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Handshake size={24} /></span>
-          <div className="min-w-0">
-            <div className="text-label-lg text-on-surface">Remise en main propre conseillée</div>
-            <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Vérifiez l'article ensemble dans un lieu public avant de payer par Wave ou OM.</p>
-          </div>
-        </section>
 
         <section>
           <SectionHeading

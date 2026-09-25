@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import type { HtmlTagDescriptor, Plugin } from 'vite'
 
 // The full Material Symbols variable font is ~2.4 MB and renders with
@@ -53,22 +54,84 @@ export function iconFontCssUrl(names: string[]): string {
 
 const TEXT_FONT_URL = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
 
-// Font stylesheets as <link>s in the document head (they used to be CSS
-// @imports, which the browser only discovers after downloading the app CSS),
-// with early connections to both Google Fonts origins.
+// Full font committed in public/ — used only when the subset can't be
+// fetched at build time (offline build).
+const FULL_FONT_HREF = '/fonts/material-symbols-outlined.woff2'
+const DEV_SUBSET_HREF = '/fonts/material-symbols-subset.woff2'
+
+// Google only returns woff2 to a browser user agent.
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
+
+async function fetchSubsetFont(names: string[]): Promise<Buffer | null> {
+  try {
+    const css = await (await fetch(iconFontCssUrl(names), { headers: { 'user-agent': BROWSER_UA } })).text()
+    const url = css.match(/src:\s*url\(([^)]+)\)\s*format\('woff2'\)/)?.[1]
+    if (!url) return null
+    const res = await fetch(url, { headers: { 'user-agent': BROWSER_UA } })
+    return res.ok ? Buffer.from(await res.arrayBuffer()) : null
+  } catch {
+    return null
+  }
+}
+
+// The icon subset is downloaded once at build (dev: at server start) and
+// served from our own origin — no third-party request on the critical path,
+// ~65 KB instead of the 2.4 MB full font. Offline builds fall back to the
+// committed full font. The text font stays on Google Fonts.
 export function fontLinks(srcDir: string): Plugin {
+  let font: Promise<Buffer | null> | null = null
+  let builtHref: string | null = null
+  const load = () => (font ??= fetchSubsetFont(collectIconNames(srcDir)))
+
+  const fontTags = (href: string, subset: boolean): HtmlTagDescriptor[] => [
+    { tag: 'link', attrs: { rel: 'preload', href, as: 'font', type: 'font/woff2', crossorigin: '' }, injectTo: 'head-prepend' },
+    {
+      tag: 'style',
+      children: `@font-face{font-family:'Material Symbols Outlined';font-style:normal;font-weight:${subset ? '400 600' : '300 700'};font-display:block;src:url('${href}') format('woff2')}`,
+      injectTo: 'head-prepend',
+    },
+  ]
+
   return {
     name: 'yupixi-font-links',
+    configureServer(server) {
+      void load()
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url?.split('?')[0] !== DEV_SUBSET_HREF) return next()
+        const buf = await load()
+        if (!buf) return next()
+        res.setHeader('Content-Type', 'font/woff2')
+        res.end(buf)
+      })
+    },
+    async buildStart() {
+      if (this.meta.watchMode) return
+      const buf = await load()
+      if (!buf) {
+        this.warn('Material Symbols subset unavailable (offline?) — shipping the full icon font')
+        return
+      }
+      const hash = createHash('sha256').update(buf).digest('hex').slice(0, 8)
+      builtHref = `/fonts/material-symbols-${hash}.woff2`
+    },
+    async generateBundle() {
+      const buf = await load()
+      if (buf && builtHref) this.emitFile({ type: 'asset', fileName: builtHref.slice(1), source: buf })
+    },
+    // 'post': after Vite's own HTML asset processing, which would otherwise
+    // try (and fail) to resolve the not-yet-emitted font URL.
     transformIndexHtml: {
-      order: 'pre',
-      handler() {
-        const tags: HtmlTagDescriptor[] = [
+      order: 'post',
+      async handler(_html, ctx) {
+        const dev = !!ctx.server
+        const subsetHref = dev ? ((await load()) ? DEV_SUBSET_HREF : null) : builtHref
+        return [
+          ...fontTags(subsetHref ?? FULL_FONT_HREF, !!subsetHref),
           { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' }, injectTo: 'head' },
           { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }, injectTo: 'head' },
-          { tag: 'link', attrs: { rel: 'stylesheet', href: iconFontCssUrl(collectIconNames(srcDir)) }, injectTo: 'head' },
           { tag: 'link', attrs: { rel: 'stylesheet', href: TEXT_FONT_URL }, injectTo: 'head' },
         ]
-        return tags
       },
     },
   }

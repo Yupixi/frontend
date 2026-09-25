@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
 import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
 import { PAYMENT_LABELS } from '../ListingDetail'
@@ -54,51 +55,70 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
         {!loading && !o && <p className="text-body-md text-on-surface-variant">Commande introuvable.</p>}
 
         {o && (
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-            <div className="flex min-w-0 flex-col gap-4">
-              <section className={`flex items-center gap-3 rounded-2xl p-4 ${confirmed ? 'bg-tertiary-soft' : 'bg-surface-container-low'}`}>
+          // Mobile follows the mockup order — meet-up place, article, seller,
+          // then the code — by flattening both columns (contents) and
+          // pulling the three context cards up with negative order.
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-5">
+            <div className="flex min-w-0 flex-col gap-4 max-lg:contents">
+              {/* The frozen / not-yet-issued states carry their own explanation card below */}
+              {!frozen && (code || done) && <section className={`flex items-center gap-3 rounded-2xl p-4 ${confirmed ? 'bg-tertiary-soft' : 'bg-surface-container-low'}`}>
                 <Icon name={confirmed ? 'verified_user' : 'hourglass_top'} size={26} className={confirmed ? 'text-tertiary' : 'text-on-surface-variant'} />
                 <div className="min-w-0 flex-1">
-                  <div className={`text-headline-sm ${confirmed ? 'text-tertiary' : 'text-on-surface'}`}>{done ? 'Remise effectuée' : confirmed ? 'Rendez-vous confirmé & sécurisé' : 'Rendez-vous à confirmer'}</div>
-                  <div className="text-body-sm text-on-surface-variant">{done ? 'La vente a été clôturée avec votre code.' : confirmed ? "Protection acheteur active jusqu'à la remise." : 'Votre code apparaîtra dès que le rendez-vous sera confirmé dans le chat.'}</div>
+                  <div className={`text-headline-sm ${confirmed ? 'text-tertiary' : 'text-on-surface'}`}>{done ? 'Remise effectuée' : frozen ? 'Commande en médiation' : confirmed ? 'Rendez-vous confirmé & sécurisé' : o.meetup ? 'Rendez-vous à confirmer' : 'Rendez-vous à planifier'}</div>
+                  <div className="text-body-sm text-on-surface-variant">{done ? 'La vente a été clôturée avec votre code.' : frozen ? 'Aucun paiement ni remise avant la décision du médiateur.' : confirmed ? "Protection acheteur active jusqu'à la remise." : 'Proposez un lieu et une heure au vendeur dans le chat.'}</div>
                 </div>
                 {confirmed && !done && <span className="hidden items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm text-tertiary sm:flex"><span className="h-2 w-2 rounded-full bg-tertiary" /> {frozen ? 'Code gelé' : 'Handshake actif'}</span>}
-              </section>
+              </section>}
 
-              {/* Code */}
-              <section className={`rounded-2xl p-5 shadow-sm ${frozen ? 'bg-surface-lowest' : 'bg-primary text-white md:bg-surface-lowest md:text-on-surface'}`}>
+              {/* Code — three unambiguous states: frozen by a dispute, not issued
+                  yet (no confirmed meet-up), or the live code. */}
+              {frozen ? (
+                <section className="rounded-2xl bg-surface-lowest p-5 text-center shadow-sm">
+                  <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed/60 text-primary"><Icon name="lock" size={28} /></span>
+                  <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Code gelé pendant la médiation</h2>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Un litige est ouvert sur cette commande : ne remettez aucun code et ne payez pas tant que le médiateur n'a pas rendu sa décision.</p>
+                  {o.disputeId && <button onClick={() => onOpenDispute(o.disputeId!)} className="mx-auto mt-4 flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white"><Icon name="gavel" size={18} /> Suivre mon litige</button>}
+                </section>
+              ) : !code && !done ? (
+                <section className="rounded-2xl bg-surface-lowest p-5 text-center shadow-sm">
+                  <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant"><Icon name={o.meetup ? 'hourglass_top' : 'event'} size={28} /></span>
+                  <h2 className="m-0 mt-3 text-headline-sm text-on-surface">{o.meetup ? 'RDV à confirmer' : 'RDV à planifier'}</h2>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Votre code de remise à 4 chiffres apparaîtra ici dès que le lieu et l'heure seront confirmés avec le vendeur.</p>
+                  <button onClick={() => onOpenConversation(o.seller.id, o.listing.id)} className="mx-auto mt-4 flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white"><Icon name="forum" size={18} /> {o.meetup ? 'Voir la proposition dans le chat' : 'Fixer le RDV dans le chat'}</button>
+                </section>
+              ) : (
+              <section className={`rounded-2xl p-5 shadow-sm ${done ? 'bg-surface-lowest' : 'bg-primary text-white md:bg-surface-lowest md:text-on-surface'}`}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <div className={`text-label-sm uppercase ${frozen ? 'text-primary' : 'text-white/80 md:text-primary'}`}>Protocole de libération</div>
+                    <div className={`text-label-sm uppercase ${done ? 'text-primary' : 'text-white/80 md:text-primary'}`}>Protocole de libération</div>
                     <h2 className="m-0 text-headline-md">Code Handshake Secret</h2>
-                    <p className={`m-0 text-body-sm ${frozen ? 'text-on-surface-variant' : 'text-white/80 md:text-on-surface-variant'}`}>La remise physique valide la vente.</p>
+                    <p className={`m-0 text-body-sm ${done ? 'text-on-surface-variant' : 'text-white/80 md:text-on-surface-variant'}`}>La remise physique valide la vente.</p>
                   </div>
-                  {o.meetup && <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-label-sm ${frozen ? 'bg-surface-container text-on-surface' : 'bg-white/15 md:bg-surface-container'}`}><Icon name="schedule" size={15} /> RDV {new Date(o.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+                  {o.meetup && <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-label-sm ${done ? 'bg-surface-container text-on-surface' : 'bg-white/15 md:bg-surface-container'}`}><Icon name="schedule" size={15} /> RDV {new Date(o.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
                 </div>
                 <div className="mt-4 flex justify-center gap-3">
                   {[0, 1, 2, 3].map(i => (
                     <span key={i} className="flex h-16 w-14 items-center justify-center rounded-xl bg-surface-lowest text-headline-lg font-extrabold text-on-surface shadow-sm md:bg-surface-container-low">
-                      {frozen ? <span className="h-3 w-3 rounded-full bg-on-surface-variant" /> : code?.[i] ?? '•'}
+                      {code?.[i] ?? '•'}
                     </span>
                   ))}
                 </div>
-                {frozen ? (
-                  <p className="m-0 mt-3 flex items-center justify-center gap-1 text-label-md text-primary"><Icon name="lock" size={16} /> Code temporairement gelé : un litige est en cours</p>
-                ) : code && !done ? (
+                {code && !done && (
                   <button onClick={copy} className="mx-auto mt-3 flex cursor-pointer items-center gap-2 rounded-xl border-none bg-white px-4 py-2 text-label-md text-primary md:bg-surface-container-low md:text-on-surface">
                     <Icon name={copied ? 'check' : 'content_copy'} size={17} /> {copied ? 'Code copié' : 'Copier le code à 4 chiffres'}
                   </button>
-                ) : null}
-                {!frozen && !done && (
-                  <div className={`mt-4 flex gap-3 rounded-xl p-3 ${'bg-white/10 md:bg-primary-fixed/50'}`}>
+                )}
+                {!done && (
+                  <div className="mt-4 flex gap-3 rounded-xl bg-white/10 p-3 md:bg-primary-fixed/50">
                     <Icon name="gpp_maybe" size={22} className="shrink-0 md:text-primary" />
                     <p className="m-0 text-body-sm"><b>Règle d'or de protection Dilchap :</b> ne communiquez ce code <u>qu'après avoir minutieusement inspecté</u> et testé l'article. Une fois le code saisi par le vendeur, la vente est définitivement clôturée.</p>
                   </div>
                 )}
                 {done && <button onClick={() => onOpenOrder(o.id, 'buyer-receipt')} className="mx-auto mt-4 flex cursor-pointer items-center gap-2 rounded-xl border-none bg-inverse-surface px-4 py-2.5 text-label-md text-white"><Icon name="receipt_long" size={18} /> Voir mon reçu</button>}
               </section>
+              )}
 
-              {!done && (
+              {!done && !frozen && (
                 <section className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={22} className="text-tertiary" /> Checklist avant de payer</h2>
@@ -144,11 +164,11 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
             </div>
 
             {/* Aside */}
-            <aside className="flex flex-col gap-4">
-              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+            <aside className="flex flex-col gap-4 max-lg:contents">
+              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:-order-2">
                 <div className="text-label-sm uppercase text-on-surface-variant">Article réservé</div>
                 <div className="mt-2 flex gap-3">
-                  <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container">{o.listing.coverImageUrl && <img src={o.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
+                  <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
                   <div className="min-w-0">
                     {o.listing.condition && o.listing.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 py-0.5 text-label-sm uppercase text-tertiary">{o.listing.condition}</span>}
                     <div className="mt-1 truncate text-headline-sm text-on-surface">{o.listing.title}</div>
@@ -158,7 +178,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
               </section>
 
               {o.meetup && (
-                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:-order-3">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="m-0 text-headline-sm text-on-surface">Lieu du rendez-vous</h3>
                     <span className="flex items-center gap-1 text-label-sm text-primary"><Icon name="schedule" size={14} /> {new Date(o.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -171,10 +191,10 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 </section>
               )}
 
-              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:-order-1">
                 <div className="text-label-sm uppercase text-on-surface-variant">Vendeur</div>
                 <div className="mt-2 flex items-center gap-3">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{o.seller.avatarUrl ? <img src={o.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : o.seller.fullName.charAt(0)}</span>
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{o.seller.avatarUrl ? <SafeImg src={o.seller.avatarUrl} icon="person" fallbackClassName="flex h-full w-full items-center justify-center" /> : o.seller.fullName.charAt(0)}</span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1 text-label-lg text-on-surface">{o.seller.fullName}{o.seller.isVerified && <Icon name="verified" size={16} className="text-tertiary" />}</div>
                     <div className="text-body-sm text-on-surface-variant">{o.seller.reviewsCount ? <>★ {o.seller.averageRating.toFixed(1)} • {o.seller.reviewsCount} avis</> : 'Nouveau vendeur'}{o.seller.isVerified ? ' • Vérifié' : ''}</div>
@@ -184,7 +204,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                   <button onClick={() => onOpenConversation(o.seller.id, o.listing.id)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="chat" size={17} /> Discuter</button>
                   {o.sellerPhone
                     ? <a href={`tel:${o.sellerPhone.replace(/\s/g, '')}`} className="flex items-center justify-center gap-1.5 rounded-xl bg-primary py-2.5 text-label-md text-white no-underline"><Icon name="call" size={17} /> Appeler</a>
-                    : <span className="flex items-center justify-center gap-1.5 rounded-xl bg-surface-container py-2.5 text-label-sm text-on-surface-variant">Numéro après RDV confirmé</span>}
+                    : <span className="flex items-center justify-center gap-1.5 rounded-xl bg-surface-container py-2.5 text-label-sm text-on-surface-variant">Numéro après RDV</span>}
                 </div>
               </section>
 
