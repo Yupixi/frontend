@@ -61,7 +61,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         </div>
         <h1 className="m-0 mt-2 text-headline-sm text-on-surface">Propulsez vos annonces en tête de liste</h1>
         <div className="mt-2 flex items-end justify-between gap-3">
-          <p className="m-0 text-body-sm text-on-surface-variant">Multipliez vos contacts par 5 dès les premières minutes.</p>
+          <p className="m-0 text-body-sm text-on-surface-variant">1 crédit = 1 remontée immédiate en tête du catalogue.</p>
           <button onClick={() => onNavigate('seller-wallet')} className="flex h-10 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container-high px-3 text-label-md text-on-surface">
             <Icon name="add_circle" size={17} /> Recharger
           </button>
@@ -116,29 +116,6 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         </section>
       )}
 
-      {/* Impact simulator */}
-      {listing && (
-        <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex min-w-0 items-center gap-1.5 text-label-md text-on-surface"><Icon name="preview" size={18} className="text-primary" /> Simulateur d'impact</span>
-            <span className="shrink-0 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">+450% d'appels</span>
-          </div>
-          <div className="mt-3 rounded-xl bg-surface-container-low p-2">
-            <div className="flex items-center gap-2 rounded-lg bg-surface-lowest p-2 shadow-sm">
-              <span className="shrink-0 rounded bg-primary px-1.5 py-0.5 text-center text-[10px] font-bold uppercase leading-tight text-white">Top<br />#1</span>
-              <span className="min-w-0 flex-1 truncate text-label-md text-on-surface">{listing.title}</span>
-              <span className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary"><Icon name="local_fire_department" size={13} /> En Vedette</span>
-            </div>
-            {[19, 34].map(n => (
-              <div key={n} className="flex items-center justify-between gap-2 px-2 py-2.5 text-body-sm text-on-surface-variant/50">
-                <span className="truncate">Autre annonce{listing.category ? ` · ${listing.category.name}` : ''}</span>
-                <span className="shrink-0 font-semibold">Position #{n}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Packs */}
       <div className="mt-2 flex items-center justify-between">
         <h2 className="m-0 text-headline-sm text-on-surface">Formules disponibles</h2>
@@ -149,14 +126,10 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         <section className="relative overflow-hidden rounded-2xl border-2 border-solid border-primary bg-surface-lowest p-4 pt-8">
           <span className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-xl bg-primary px-2.5 py-1 text-label-sm uppercase text-white"><Icon name="local_fire_department" size={13} /> Le plus populaire</span>
           <h3 className="m-0 text-headline-sm text-on-surface">{turbo.label}</h3>
-          <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vendez jusqu'à 3x plus vite grâce au pack complet de domination visuelle.</p>
+          {/* What the pack really includes, from the API (no marketing claims) */}
           <ul className="m-0 mt-3 flex list-none flex-col gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface">
-            {[
-              <>7 remontées automatiques aux heures d'affluence</>,
-              <>Épinglage {days(turbo.durationHours)} jours en tête de catégorie{listing?.category ? ` ${listing.category.name}` : ''}</>,
-              <>Badge dynamique lumineux <b>« Prix Choc »</b></>,
-            ].map((t, i) => (
-              <li key={i} className="flex items-start gap-2"><Icon name="check_circle" size={16} className="mt-0.5 shrink-0 text-primary" /> <span>{t}</span></li>
+            {(turbo.description ?? '').replace(/\.$/, '').split(/, | et /).filter(Boolean).map((t, i) => (
+              <li key={i} className="flex items-start gap-2"><Icon name="check_circle" size={16} className="mt-0.5 shrink-0 text-primary" /> <span>{t.charAt(0).toUpperCase() + t.slice(1)}</span></li>
             ))}
           </ul>
           <div className="mt-4 flex items-end justify-between gap-3">
