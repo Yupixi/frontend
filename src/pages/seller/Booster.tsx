@@ -10,6 +10,7 @@ import { AccountLayout } from '../account/AccountLayout'
 import { MY_LISTINGS_QUERY, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
 import { BOOST_PACKS_QUERY, CREATE_BOOST_MUTATION, MY_BOOSTS_QUERY, type BoostPack, type BoostPackInfo, type RemoteBoost } from '../../graphql/promotions'
 import type { AuthUser } from '../../graphql/auth'
+import { MY_WALLET_QUERY, type WalletSummary } from '../../graphql/sellerHub'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -29,6 +30,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const packs = packsData?.boostPacks ?? []
   const { data: boostsData, refetch: refetchBoosts } = useQuery<{ myBoosts: RemoteBoost[] }>(MY_BOOSTS_QUERY)
   const history = boostsData?.myBoosts ?? []
+  const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
+  const credits = walletData?.myWallet.credits ?? 0
 
   const [listingId, setListingId] = useState('')
   useEffect(() => { if (!listingId && live[0]) setListingId(live[0].id) }, [live, listingId])
@@ -48,7 +51,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
     try {
       await createBoost({ variables: { input: { listingId: listing.id, pack: p } } })
       setDone(`${pack(p)?.label ?? 'Formule'} activée sur « ${listing.title} »`)
-      void refetchListings(); void refetchBoosts()
+      void refetchListings(); void refetchBoosts(); void refetchWallet()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible d'activer la formule.")
     }
@@ -59,7 +62,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
     try {
       await bumpListing({ variables: { id: listing.id } })
       setDone('Annonce remontée en tête du catalogue')
-      void refetchListings()
+      void refetchListings(); void refetchWallet()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de remonter l’annonce.')
     }
@@ -104,8 +107,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               <div className="mt-3 flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-fixed text-primary"><ArrowUp size={20} /></span>
                 <div>
-                  <div className="text-label-sm uppercase text-on-surface-variant">Remontées disponibles</div>
-                  <div className="text-headline-sm text-on-surface">{listing?.bumpCredits ?? 0} remontée{(listing?.bumpCredits ?? 0) > 1 ? 's' : ''}</div>
+                  <div className="text-label-sm uppercase text-on-surface-variant">Solde de visibilité</div>
+                  <div className="text-headline-sm text-on-surface">{credits} crédit{credits > 1 ? 's' : ''} restant{credits > 1 ? 's' : ''}</div>
                 </div>
               </div>
               <div className="mt-3 flex items-start gap-2 text-body-sm text-on-surface-variant">
@@ -114,11 +117,12 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                   ? <span>Prochaine remontée planifiée : <b className="text-on-surface">chaque jour à 18h00</b> jusqu'au {formatDate(listing!.autoBumpUntil!)}</span>
                   : <span>Aucune remontée automatique planifiée</span>}
               </div>
-              {!!listing?.bumpCredits && (
+              {!!listing && credits > 0 && (
                 <button disabled={bumping} onClick={() => void spendCredit()} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-2 text-label-md text-white disabled:opacity-60">
-                  <ArrowUp size={16} /> Utiliser une remontée maintenant
+                  <ArrowUp size={16} /> Utiliser 1 crédit sur cette annonce
                 </button>
               )}
+              <button onClick={() => onNavigate('seller-wallet')} className="mt-2 w-full cursor-pointer rounded-lg border-none bg-surface-container-low py-2 text-label-md text-on-surface hover:bg-surface-container">Recharger des crédits</button>
             </div>
           </div>
         </section>

@@ -8,6 +8,9 @@ import { detectLocationFromIP, getStoredLocation, setStoredLocation, type Stored
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
 import Home, { type SearchPreset } from './pages/Home'
+import Orders from './pages/seller/Orders'
+import Wallet from './pages/seller/Wallet'
+import SellerReviews from './pages/seller/Reviews'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
 import SellerProfile from './pages/SellerProfile'
@@ -32,6 +35,7 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -384,6 +388,12 @@ export default function App() {
           return <SellerListings onNavigate={navigate} onSelectListing={selectListing} onEditListing={editListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-stats':
           return <SellerStats onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'seller-orders':
+          return <Orders onNavigate={navigate} onSelectListing={selectListing} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+        case 'seller-wallet':
+          return <Wallet onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+        case 'seller-reviews':
+          return <SellerReviews onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-premium':
           return <SellerPremium onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'buyer-favorites':

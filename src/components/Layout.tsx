@@ -20,6 +20,7 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews'
 
 const NOTIFICATION_STYLE: Record<RemoteNotification['type'], { icon: typeof Bell, bg: string, fg: string }> = {
   MESSAGE: { icon: MessageCircle, bg: 'rgba(59,130,246,0.12)', fg: '#3B82F6' },

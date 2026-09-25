@@ -277,6 +277,12 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                   <span className="text-body-sm text-outline">{formatRelativeDate(r.createdAt)}</span>
                 </div>
                 {r.comment && <p className="m-0 mt-2 text-body-md italic text-on-surface">« {r.comment} »</p>}
+                {r.reply && (
+                  <div className="mt-2 rounded-xl border-l-4 border-solid border-l-outline-variant bg-surface-container-low p-3 text-body-sm">
+                    <div className="font-semibold text-on-surface">Réponse de {seller.fullName}</div>
+                    <p className="m-0 mt-0.5 italic text-on-surface-variant">« {r.reply} »</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

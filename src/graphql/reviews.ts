@@ -31,6 +31,8 @@ export const SELLER_REVIEWS_QUERY = gql`
       rating
       comment
       createdAt
+      reply
+      repliedAt
       author {
         id
         fullName
@@ -80,6 +82,8 @@ export type RemoteReview = {
   id: string
   rating: number
   comment: string | null
+  reply?: string | null
+  repliedAt?: string | null
   createdAt: string
   author: {
     id: string

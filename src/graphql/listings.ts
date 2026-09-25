@@ -346,10 +346,17 @@ export const MY_LISTINGS_QUERY = gql`
         coverImageUrl
         boostExpiresAt
         contactsCount
-        bumpCredits
+        pendingOffersCount
+        views24h
+        activeConversationsCount
+        condition
+        size
+        brand
+        mediaCount: media { id }
+        category { name slug }
+        subcategory { name }
         autoBumpUntil
         urgentUntil
-        category { name }
         city
         locationLabel
       }
@@ -368,7 +375,6 @@ export const BUMP_LISTING_MUTATION = gql`
     bumpListing(id: $id) {
       id
       publishedAt
-      bumpCredits
     }
   }
 `
@@ -386,10 +392,17 @@ export type MyListingRow = {
   coverImageUrl: string | null
   boostExpiresAt: string | null
   contactsCount?: number
-  bumpCredits?: number
+  pendingOffersCount?: number
+  views24h?: number
+  activeConversationsCount?: number
+  condition?: string | null
+  size?: string | null
+  brand?: string | null
+  mediaCount?: { id: string }[]
+  subcategory?: { name: string } | null
   autoBumpUntil?: string | null
   urgentUntil?: string | null
-  category?: { name: string }
+  category?: { name: string; slug: string }
   city?: string
   locationLabel?: string | null
 }

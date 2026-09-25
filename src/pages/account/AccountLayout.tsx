@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
-  LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare,
+  LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare, Truck, Wallet, Star,
   Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store,
 } from '../../components/icons'
 import Logo from '../../components/DilchapLogo'
@@ -18,9 +18,12 @@ const SECTIONS = [
     items: [
       { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
       { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
+      { key: 'seller-orders', icon: Truck, label: 'Commandes & Envois' },
+      { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
+      { key: 'seller-reviews', icon: Star, label: 'Avis & Réputation' },
       { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
-      { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
       { key: 'buyer-messages', icon: MessageSquare, label: 'Messagerie' },
+      { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
     ],
   },
   {
@@ -44,6 +47,9 @@ export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-notifications': 'Notifications',
   'buyer-history': 'Historique',
   'seller-premium': 'Booster & Visibilité',
+  'seller-orders': 'Commandes & Envois',
+  'seller-wallet': 'Porte-monnaie',
+  'seller-reviews': 'Avis & Réputation',
   'buyer-settings': 'Paramètres',
 }
 
@@ -101,7 +107,7 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, isG
         )}
       </div>
       <div className="border-0 border-t border-solid border-outline-variant px-3 py-3">
-        <NavItem icon={Store} label="Retour Marketplace" onClick={() => onNavigate('home')} muted />
+        <NavItem icon={Store} label="Retour à la boutique" onClick={() => onNavigate('home')} muted />
         {!isGuest && <NavItem active={active === 'buyer-settings'} icon={Settings} label="Paramètres" onClick={() => onNavigate('buyer-settings')} muted />}
       </div>
     </div>
@@ -134,7 +140,7 @@ function AccountHeader({ activeLabel, currentUser, onToggleSidebar, onNavigate, 
         <>
           <button onClick={() => onNavigate('buyer-notifications')} className={`${iconBtn} hidden sm:flex`} aria-label="Notifications"><Bell size={22} /></button>
           <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark sm:flex">
-            <PlusCircle size={18} /> Déposer une annonce
+            <PlusCircle size={18} /> Nouvel article
           </button>
         </>
       )}

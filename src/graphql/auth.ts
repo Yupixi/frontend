@@ -60,6 +60,7 @@ export const ME_QUERY = gql`
       isVerified
       bio
       coverUrl
+      boostCredits
     }
   }
 `
@@ -89,6 +90,7 @@ export type AuthUser = {
   notificationPreferences?: Record<string, boolean>
   isGuest?: boolean
   isVerified?: boolean
+  boostCredits?: number
   bio?: string | null
   coverUrl?: string | null
 }

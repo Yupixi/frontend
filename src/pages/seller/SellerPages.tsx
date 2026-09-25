@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Plus,
@@ -6,23 +5,14 @@ import {
   Heart,
   Package,
   X,
-  Edit3,
   Clock,
-  Trash2,
   ChevronRight,
-  ChevronDown,
-  Tag,
-  ArrowUp,
-  TrendingUp,
   Users,
   Check,
 } from '../../components/icons'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import Price from '../../components/Price'
-import BoostMenu from '../../components/BoostMenu'
 import {
-  BUMP_LISTING_MUTATION,
-  DELETE_LISTING_MUTATION,
   MY_LISTINGS_QUERY,
   type MyListingRow,
 } from '../../graphql/listings'
@@ -132,21 +122,11 @@ export function SellerDashboard({ onNavigate, currentUser, onLogout }: { onNavig
 }
 
 // ─── POST LISTING ────────────────────────────────────────────────────────────
-const LISTING_STATUS_META: Record<string, { bg: string, color: string, label: string }> = {
-  DRAFT: { bg: 'var(--surface-container-high)', color: 'var(--fg-muted)', label: 'Brouillon' },
-  PENDING_REVIEW: { bg: 'rgba(245,158,11,0.12)', color: '#B45309', label: 'En attente de validation' },
-  APPROVED: { bg: 'var(--tertiary-soft)', color: 'var(--tertiary)', label: 'En ligne' },
-  REJECTED: { bg: 'var(--primary-fixed)', color: 'var(--primary)', label: 'Rejetée' },
-  EXPIRED: { bg: 'var(--surface-container-high)', color: 'var(--fg-muted)', label: 'Expirée' },
-  SOLD: { bg: 'rgba(59,130,246,0.1)', color: '#2563EB', label: 'Vendue' },
-  PAUSED: { bg: 'rgba(245,158,11,0.12)', color: '#B45309', label: 'En pause' },
-}
-
 export { default as PostListing } from './PostListing'
 
 
 // front — avoids an N+1 burst of queries when the list first renders.
-function ListingOffersPanel({ listingId }: { listingId: string }) {
+export function ListingOffersPanel({ listingId }: { listingId: string }) {
   const { data, loading, refetch } = useQuery<{ listingOffers: RemoteOffer[] }>(LISTING_OFFERS_QUERY, {
     variables: { listingId },
   })
@@ -195,151 +175,8 @@ function ListingOffersPanel({ listingId }: { listingId: string }) {
   )
 }
 
-export function SellerListings({ onNavigate, onSelectListing, onEditListing, currentUser, onLogout }: { onNavigate: (p: any) => void, onSelectListing: (id: string) => void, onEditListing: (id: string) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
-  const [filter, setFilter] = useState('all')
-  const [expandedOffers, setExpandedOffers] = useState<string | null>(null)
-  const [boostMenuFor, setBoostMenuFor] = useState<string | null>(null)
-  const [bumpMessage, setBumpMessage] = useState<{ id: string; text: string } | null>(null)
-  const { data, loading, refetch } = useQuery<{ myListings: { totalCount: number; items: MyListingRow[] } }>(
-    MY_LISTINGS_QUERY,
-    { variables: { page: 1, pageSize: 100 } },
-  )
-  const [deleteListing] = useMutation(DELETE_LISTING_MUTATION)
-  const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
+export { default as SellerListings } from './MyListings'
 
-  const myListings = data?.myListings.items ?? []
-  const filtered = filter === 'all' ? myListings : myListings.filter(l => l.status === filter)
-
-  const handleDelete = (id: string, title: string) => {
-    if (!window.confirm(`Supprimer "${title}" ? Cette action est irréversible.`)) return
-    void deleteListing({ variables: { id } }).then(() => refetch())
-  }
-
-  // A bump on a live listing spends one on-demand credit bought with a
-  // boost pack (see ListingsService.bumpListing).
-  const canBump = (l: MyListingRow) => (l.bumpCredits ?? 0) > 0
-
-  const handleBump = (id: string) => {
-    setBumpMessage(null)
-    void bumpListing({ variables: { id } })
-      .then(() => { setBumpMessage({ id, text: 'Remontée en tête du fil !' }); void refetch() })
-      .catch((err: Error) => setBumpMessage({ id, text: err.message }))
-  }
-
-  const filterTabs = [
-    { key: 'all', label: `Toutes (${myListings.length})` },
-    { key: 'PENDING_REVIEW', label: `En attente (${myListings.filter(l => l.status === 'PENDING_REVIEW').length})` },
-    { key: 'APPROVED', label: `En ligne (${myListings.filter(l => l.status === 'APPROVED').length})` },
-    { key: 'PAUSED', label: `En pause (${myListings.filter(l => l.status === 'PAUSED').length})` },
-    { key: 'REJECTED', label: `Rejetées (${myListings.filter(l => l.status === 'REJECTED').length})` },
-  ]
-
-  return (
-    <DashboardLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div>
-          <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.5rem', margin: 0 }}>Mes annonces ({myListings.length})</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--fg-muted)' }}>Gérez vos annonces</p>
-        </div>
-        <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => onNavigate('seller-post')}>
-          <Plus size={16} /> Nouvelle annonce
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.25rem', background: 'var(--border-subtle)', borderRadius: 10, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
-        {filterTabs.map(t => (
-          <button key={t.key} onClick={() => setFilter(t.key)} style={{ padding: '0.55rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.82rem', background: filter === t.key ? 'var(--bg-card)' : 'transparent', color: filter === t.key ? 'var(--primary)' : 'var(--fg-muted)', boxShadow: filter === t.key ? '0 1px 3px rgba(0,0,0,0.06)' : 'none' }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="card" style={{ overflow: 'visible' }}>
-        {loading && <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--fg-muted)' }}>Chargement...</div>}
-        {!loading && filtered.length === 0 && (
-          <div style={{ padding: '3rem 1rem', textAlign: 'center' }}>
-            <p style={{ color: 'var(--fg-muted)', marginBottom: '1rem' }}>Aucune annonce dans cette catégorie.</p>
-            <button className="btn-primary" onClick={() => onNavigate('seller-post')}>Publier une annonce</button>
-          </div>
-        )}
-        {filtered.map((l, i) => {
-          const s = LISTING_STATUS_META[l.status] ?? LISTING_STATUS_META.DRAFT
-          const offersExpanded = expandedOffers === l.id
-          return (
-            <div key={l.id}>
-            <div className="seller-listing-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.875rem', padding: '1rem', borderBottom: offersExpanded ? 'none' : (i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none'), alignItems: 'center' }}>
-              <div style={{ width: 72, height: 56, borderRadius: 8, overflow: 'hidden', background: 'var(--border-subtle)', flexShrink: 0, cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>
-                {l.coverImageUrl && (
-                  <img src={l.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                )}
-              </div>
-              <div className="seller-listing-content" style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 3, flexWrap: 'wrap' }}>
-                  <p style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => onSelectListing(l.id)}>{l.title}</p>
-                  <span className="badge" style={{ background: s.bg, color: s.color, flexShrink: 0, fontSize: '0.72rem' }}>{s.label}</span>
-                  {l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date() && (
-                    <span className="badge" style={{ background: 'rgba(187, 0, 19,0.08)', color: 'var(--primary)', flexShrink: 0, fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <ArrowUp size={11} /> Boosté jusqu'au {new Date(l.boostExpiresAt).toLocaleDateString('fr-FR')}
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', fontSize: '0.78rem', color: 'var(--fg-muted)' }}>
-                  <span className="price-tag" style={{ fontSize: '0.9rem' }}><Price amount={l.price} /></span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Eye size={12} />{l.viewsCount}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Heart size={12} />{l.favoritesCount}</span>
-                  <span>{new Date(l.createdAt).toLocaleDateString('fr-FR')}</span>
-                </div>
-              </div>
-              <div className="seller-listing-actions" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => onEditListing(l.id)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
-                  <Edit3 size={14} /> Modifier
-                </button>
-                <button onClick={() => handleDelete(l.id, l.title)} style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444' }}>
-                  <Trash2 size={15} />
-                </button>
-                <button onClick={() => setExpandedOffers(offersExpanded ? null : l.id)} style={{ background: offersExpanded ? 'var(--border-subtle)' : 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
-                  <Tag size={14} /> Offres <ChevronDown size={13} style={{ transform: offersExpanded ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
-                </button>
-                {l.status === 'APPROVED' && canBump(l) && (
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => handleBump(l.id)}
-                      disabled={bumping || !canBump(l)}
-                      title="Utiliser une remontée (crédit acheté avec une formule Booster)"
-                      style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: canBump(l) ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: canBump(l) ? 'var(--fg-muted)' : 'var(--fg-subtle)', opacity: canBump(l) ? 1 : 0.6 }}
-                    >
-                      <TrendingUp size={14} /> Remonter ({l.bumpCredits})
-                    </button>
-                    {bumpMessage?.id === l.id && (
-                      <span style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, fontSize: '0.72rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap' }}>{bumpMessage.text}</span>
-                    )}
-                  </div>
-                )}
-                {l.status === 'APPROVED' && (
-                  <div style={{ position: 'relative' }}>
-                    <button onClick={() => setBoostMenuFor(boostMenuFor === l.id ? null : l.id)} style={{ background: 'rgba(187, 0, 19,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--primary)' }}>
-                      <ArrowUp size={14} /> Booster
-                    </button>
-                    {boostMenuFor === l.id && (
-                      <BoostMenu listingId={l.id} onDone={() => { setBoostMenuFor(null); void refetch() }} />
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            {offersExpanded && (
-              <div style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none', background: 'var(--bg)' }}>
-                <ListingOffersPanel listingId={l.id} />
-              </div>
-            )}
-            </div>
-          )
-        })}
-      </div>
-    </DashboardLayout>
-  )
-}
 
 // ─── STATISTICS ────────────────────────────────────────────────────────────
 export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
