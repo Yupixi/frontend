@@ -15,7 +15,6 @@ import {
   Clock,
 } from '../../components/icons'
 import Price from '../../components/Price'
-import BoostRibbon from '../../components/BoostRibbon'
 import { MY_FAVORITES_QUERY } from '../../graphql/favorites'
 import {
   MY_CONVERSATIONS_QUERY,
@@ -68,7 +67,6 @@ export function BuyerDashboard({ onNavigate, onSelectListing, favorites, current
         Bonjour{currentUser?.fullName ? `, ${currentUser.fullName.split(' ')[0]}` : ''} 👋
       </h1>
 
-      <BoostRibbon onNavigate={onNavigate} />
 
       <div className="buyer-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {stats.map(s => (

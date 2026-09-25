@@ -1,14 +1,24 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
-  Plus, Eye, Heart, Package, X,
-  Edit3, Clock,
-  Trash2, ChevronRight, ChevronDown, Tag, ArrowUp, TrendingUp,
-  Users, Check,
+  Plus,
+  Eye,
+  Heart,
+  Package,
+  X,
+  Edit3,
+  Clock,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  Tag,
+  ArrowUp,
+  TrendingUp,
+  Users,
+  Check,
 } from '../../components/icons'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import Price from '../../components/Price'
-import BoostRibbon from '../../components/BoostRibbon'
 import BoostMenu from '../../components/BoostMenu'
 import {
   BUMP_LISTING_MUTATION,
@@ -228,7 +238,6 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
 
   return (
     <DashboardLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <BoostRibbon onNavigate={onNavigate} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>

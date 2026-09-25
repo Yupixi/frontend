@@ -1,100 +1,64 @@
+import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { CategoryIcon } from '../components/Icon'
-import { Search, ChevronRight } from '../components/icons'
+import { Search, ChevronRight, Home } from '../components/icons'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-import { CATEGORY_TOP_BANNER_QUERY, type RemoteBanner } from '../graphql/content'
-import { followBannerCta } from '../lib/bannerCta'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
   onCategorySelect?: (categoryId: string) => void
 }
 
+// Full catalogue of rayons — same tile language as the home category grid.
 export default function Categories({ onNavigate, onCategorySelect }: CategoriesProps) {
   const { data, loading } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
-  const categories = data?.categories ?? []
-  const totalSubcategories = categories.reduce((a, c) => a + c.subcategories.length, 0)
-
-  // BO-authored (CATEGORY_TOP) — absent unless an admin configures one, same
-  // graceful-fallback convention as the other banner slots.
-  const { data: bannerData } = useQuery<{ activeBanners: RemoteBanner[] }>(CATEGORY_TOP_BANNER_QUERY)
-  const topBanner = bannerData?.activeBanners[0]
+  const [q, setQ] = useState('')
+  const categories = (data?.categories ?? []).filter(c =>
+    !q || c.name.toLowerCase().includes(q.toLowerCase()) || c.subcategories.some(s => s.name.toLowerCase().includes(q.toLowerCase())))
+  const total = (data?.categories ?? []).reduce((n, c) => n + (c.listingsCount ?? 0), 0)
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem' }}>
-      {topBanner && (
-        <div
-          className="card"
-          onClick={() => topBanner.ctaUrl && followBannerCta(topBanner.ctaUrl, onNavigate)}
-          style={{
-            marginBottom: '2rem',
-            padding: '1.5rem 2rem',
-            borderRadius: 'var(--radius-xl)',
-            cursor: topBanner.ctaUrl ? 'pointer' : 'default',
-            backgroundColor: topBanner.backgroundColor || undefined,
-            backgroundImage: topBanner.imageUrl
-              ? `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${topBanner.imageUrl})`
-              : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            color: topBanner.imageUrl ? '#FFFFFF' : (topBanner.textColor || 'var(--fg)'),
-          }}
-        >
-          <h2 style={{ margin: 0, fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '1.3rem' }}>{topBanner.title}</h2>
-          {topBanner.subtitle && <p style={{ margin: '6px 0 0', fontSize: '0.9rem', opacity: 0.85 }}>{topBanner.subtitle}</p>}
+    <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-5 md:px-8 lg:px-12">
+      <nav className="mb-2 flex items-center gap-1 text-label-md text-on-surface-variant">
+        <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
+        <ChevronRight size={14} className="text-outline-variant" />
+        <span className="font-semibold text-on-surface">Toutes les catégories</span>
+      </nav>
+      <div className="mb-6 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div>
+          <span className="text-label-sm font-bold uppercase tracking-wider text-primary">Univers d'achats</span>
+          <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface md:text-headline-lg">Parcourez par catégorie</h1>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant"><b className="text-on-surface">{total.toLocaleString('fr-FR')} annonces</b> en ligne dans {data?.categories.length ?? 0} rayons.</p>
         </div>
-      )}
-
-      <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <h1 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>
-          Toutes les catégories
-        </h1>
-        <p style={{ color: 'var(--fg-muted)', fontSize: '1rem', margin: '0 0 1.5rem' }}>
-          {loading ? 'Chargement du catalogue...' : `${categories.length} catégories et ${totalSubcategories} sous-catégories`}
-        </p>
-        <div style={{ position: 'relative', maxWidth: 400, margin: '0 auto' }}>
-          <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-subtle)' }} />
-          <input className="input" placeholder="Rechercher une catégorie..." style={{ paddingLeft: 40, borderRadius: 999 }} />
-        </div>
+        <label className="flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 md:w-80">
+          <Search size={19} className="text-outline" />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Chercher une catégorie…" className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
+        </label>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-        {categories.map(cat => {
-          return (
-            <div key={cat.id} className="card card-hover" style={{ padding: '1.25rem', cursor: 'pointer' }} onClick={() => onCategorySelect?.(cat.slug)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: cat.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.4rem' }}>
-                  <CategoryIcon icon={cat.icon} size={22} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: '1rem', margin: '0 0 2px', color: 'var(--fg)' }}>{cat.name}</h2>
-                  <span style={{ fontSize: '0.8rem', color: cat.color, fontWeight: 700 }}>{cat.subcategories.length} sous-catégories</span>
-                </div>
-                <ChevronRight size={18} style={{ color: 'var(--fg-subtle)' }} />
-              </div>
+      {loading && <p className="text-on-surface-variant">Chargement…</p>}
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {cat.subcategories.map(sub => (
-                  <button
-                    key={sub.id}
-                    onClick={e => { e.stopPropagation(); onCategorySelect?.(cat.slug) }}
-                    style={{
-                      cursor: 'pointer', border: 'none', borderRadius: 999,
-                      padding: '4px 12px', fontSize: '0.78rem', fontWeight: 700,
-                      fontFamily: 'Plus Jakarta Sans, sans-serif',
-                      background: cat.color + '12', color: cat.color,
-                      transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = cat.color + '25' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = cat.color + '12' }}
-                  >
-                    {sub.name}
-                  </button>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {categories.map(cat => (
+          <div key={cat.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-4 transition-shadow hover:shadow-card-hover">
+            <button onClick={() => onCategorySelect?.(cat.slug)} className="flex w-full cursor-pointer items-center gap-3 border-none bg-transparent p-0 text-left">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-container text-primary"><CategoryIcon icon={cat.icon} size={28} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-headline-sm text-on-surface">{cat.name}</span>
+                <span className="text-body-sm text-on-surface-variant">{(cat.listingsCount ?? 0).toLocaleString('fr-FR')} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
+              </span>
+              <ChevronRight size={20} className="text-outline" />
+            </button>
+            {cat.subcategories.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {cat.subcategories.slice(0, 6).map(s => (
+                  <button key={s.id} onClick={() => onCategorySelect?.(cat.slug)} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-2.5 py-1 text-body-sm text-on-surface hover:bg-surface-container">{s.name}</button>
                 ))}
+                {cat.subcategories.length > 6 && <span className="px-1 py-1 text-body-sm text-outline">+{cat.subcategories.length - 6}</span>}
               </div>
-            </div>
-          )
-        })}
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )
