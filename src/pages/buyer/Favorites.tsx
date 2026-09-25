@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import AnimatedIcon from '../../components/AnimatedIcon'
 import { useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
@@ -162,12 +163,7 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
 
         {loading && !data && <p className="mt-4 text-body-md text-on-surface-variant">Chargement…</p>}
         {!loading && all.length === 0 && (
-          <div className="mt-4 rounded-2xl bg-surface-container-low p-8 text-center">
-            <Icon name="favorite" size={36} className="text-primary" />
-            <p className="m-0 mt-2 text-headline-sm text-on-surface">Aucun favori pour le moment</p>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Touchez le cœur d'une annonce pour la sauvegarder et suivre son prix.</p>
-            <button onClick={() => onNavigate('search')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-md text-white">Explorer les annonces</button>
-          </div>
+          <EmptyState className="mt-4" icon="heart" fallback="favorite" title="Aucun favori pour le moment" text="Touchez le cœur d'une annonce pour la sauvegarder et suivre son prix." action={{ label: 'Explorer les annonces', onClick: () => onNavigate('search') }} />
         )}
         <div className="mt-4 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
           {shown.map(e => (

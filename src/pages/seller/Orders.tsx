@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { CheckCircle2, BadgeCheck, MessageSquare, MapPin, Calendar, ShieldCheck, ArrowRight, Wallet, Star, Clock, TrendingUp, CircleX } from '../../components/icons'
@@ -113,10 +114,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
         {/* Orders */}
         <div className="mt-4 flex flex-col gap-4">
           {shown.length === 0 && (
-            <div className="rounded-2xl bg-surface-container-low p-10 text-center">
-              <p className="m-0 text-headline-sm text-on-surface">Aucune commande ici</p>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Une vente apparaît dès qu'une offre est acceptée ou qu'un rendez-vous est proposé dans le chat.</p>
-            </div>
+            <EmptyState icon="empty-box" fallback="inventory_2" title="Aucune commande ici" text="Une vente apparaît dès qu'une offre est acceptée ou qu'un rendez-vous est proposé dans le chat." />
           )}
           {shown.map(o => {
             const m = o.meetup

@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { CheckCircle2, ArrowRight, ShieldCheck, Zap, Star, Flame, ChevronLeft, ChevronRight } from '../../components/icons'
@@ -220,7 +221,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           </div>
           {/* Mobile: one card per operation instead of a 720px table. */}
           <div className="flex flex-col gap-2 px-3 md:hidden">
-            {txs.length === 0 && <p className="m-0 rounded-xl bg-surface-lowest p-5 text-center text-body-sm text-on-surface-variant">Aucune opération pour le moment.</p>}
+            {txs.length === 0 && <EmptyState icon="empty-wallet" fallback="account_balance_wallet" tone="neutral" title="Aucune opération pour le moment" text="Vos recharges de crédits et vos boosts apparaîtront ici." />}
             {txs.map(t => {
               const meta = TX_META[t.type]
               return (

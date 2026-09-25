@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { Star, Share2, BadgeCheck, CheckCircle2, MessageSquare, Edit3, Send, ChevronDown, ShieldCheck, MapPin, Zap, Lightbulb, ArrowRight } from '../../components/icons'
@@ -138,7 +139,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
               </label>
             </div>
 
-            {list.length === 0 && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-on-surface-variant">Aucun avis pour le moment. Les acheteurs peuvent vous évaluer depuis votre profil après avoir échangé avec vous.</p>}
+            {list.length === 0 && <EmptyState icon="empty-star" fallback="star" title="Aucun avis pour le moment" text="Les acheteurs peuvent vous évaluer depuis votre profil après avoir échangé avec vous." />}
             <div className="flex flex-col gap-4">
               {list.slice(0, shown).map(r => (
                 <article key={r.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">

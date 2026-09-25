@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -90,11 +91,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
 
         {loading && !data && <p className="mt-4 text-body-md text-on-surface-variant">Chargement…</p>}
         {!loading && items.length === 0 && (
-          <div className="mt-4 rounded-2xl bg-surface-container-low p-8 text-center">
-            <Icon name="history" size={36} className="text-on-surface-variant" />
-            <p className="m-0 mt-2 text-headline-sm text-on-surface">Aucun article consulté</p>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Les annonces que vous ouvrez apparaîtront ici.</p>
-          </div>
+          <EmptyState className="mt-4" icon="empty-history" fallback="history" tone="neutral" title="Aucun article consulté" text="Les annonces que vous ouvrez apparaîtront ici." action={{ label: 'Explorer les annonces', onClick: () => onNavigate('search') }} />
         )}
 
         {GROUPS.map(g => {

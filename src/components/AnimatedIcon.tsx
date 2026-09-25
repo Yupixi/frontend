@@ -34,6 +34,8 @@ type Props = {
   playOnView?: number
   /** Replay when the surrounding button/link is hovered or pressed. */
   playOnInteract?: boolean
+  /** Idle replay every N ms while on screen (empty states). */
+  replayEvery?: number
 }
 
 // A counter that only moves when `value` goes up (a new notification, not
@@ -48,7 +50,7 @@ export function useIncreaseCounter(value: number) {
   return n
 }
 
-export default function AnimatedIcon({ name, fallback, size = 24, fill, className = '', trigger, loop = false, playOnMount = false, playOnView, playOnInteract = false }: Props) {
+export default function AnimatedIcon({ name, fallback, size = 24, fill, className = '', trigger, loop = false, playOnMount = false, playOnView, playOnInteract = false, replayEvery }: Props) {
   const box = useRef<HTMLSpanElement>(null)
   const anim = useRef<{ goToAndPlay: (v: number, f?: boolean) => void; goToAndStop: (v: number, f?: boolean) => void; destroy: () => void; totalFrames: number } | null>(null)
   const [ready, setReady] = useState(false)
@@ -80,6 +82,17 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
     io.observe(box.current)
     return () => { io.disconnect(); clearTimeout(timer) }
   }, [playOnView, ready])
+
+  // Gentle idle loop, only while visible — drives the Lottie instance
+  // directly, no React state involved.
+  useEffect(() => {
+    if (!replayEvery || !ready || !box.current) return
+    let visible = false
+    const io = new IntersectionObserver(entries => { visible = entries.some(e => e.isIntersecting) })
+    io.observe(box.current)
+    const t = setInterval(() => { if (visible && !document.hidden) anim.current?.goToAndPlay(0, true) }, replayEvery)
+    return () => { io.disconnect(); clearInterval(t) }
+  }, [replayEvery, ready])
 
   // Hover (desktop) or press (touch) on the enclosing control replays it.
   useEffect(() => {

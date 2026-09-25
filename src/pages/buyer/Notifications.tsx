@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -156,10 +157,7 @@ export default function Notifications({ onNavigate, onSelectListing, onOpenPurch
           <div className="flex min-w-0 flex-col gap-3">
             {loading && !data && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
             {!loading && shown.length === 0 && (
-              <div className="rounded-2xl bg-surface-container-low p-8 text-center">
-                <Icon name="notifications_off" size={34} className="text-on-surface-variant" />
-                <p className="m-0 mt-2 text-headline-sm text-on-surface">Rien de neuf ici</p>
-              </div>
+              <EmptyState icon="bell" fallback="notifications" tone="neutral" title="Rien de neuf ici" text="Offres, messages et rendez-vous s'afficheront ici." />
             )}
             {today.map(card)}
             {earlier.length > 0 && (

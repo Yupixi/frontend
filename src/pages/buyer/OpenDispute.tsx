@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -63,12 +64,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
             <p className="m-0 mt-1 text-body-md text-on-surface-variant">Choisissez l'achat concerné :</p>
             <div className="mt-4 flex flex-col gap-2">
               {candidates.length === 0 && (
-                <div className="rounded-xl bg-surface-container-low p-5 text-center">
-                  <Icon name="shopping_bag" size={30} className="text-on-surface-variant" />
-                  <p className="m-0 mt-1 text-label-lg text-on-surface">Aucun achat en cours</p>
-                  <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Un litige s'ouvre depuis un achat avec un vendeur.</p>
-                  <button onClick={() => onNavigate('buyer-purchases')} className="mt-3 cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white">Voir mes achats</button>
-                </div>
+                <EmptyState icon="cart" fallback="shopping_bag" title="Aucun achat en cours" text="Un litige s'ouvre depuis un achat avec un vendeur." action={{ label: 'Voir mes achats', onClick: () => onNavigate('buyer-purchases') }} />
               )}
               {candidates.map(p => (
                 <button key={p.id} onClick={() => onSelectOrder(p.id)} className="flex cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-3 text-left hover:border-primary">

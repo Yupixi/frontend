@@ -1,3 +1,4 @@
+import EmptyState from '../components/EmptyState'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
@@ -258,7 +259,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
               <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(seller.id, l.id), 'contact')} />
             ))}
           </div>
-          {filtered.length === 0 && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-on-surface-variant">Aucune pièce ne correspond.</p>}
+          {filtered.length === 0 && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune pièce ne correspond" />}
           {filtered.length > shown && (
             <button onClick={() => setShown(s => s + PAGE)} className="mx-auto mt-5 flex cursor-pointer items-center gap-1 rounded-full border border-outline-variant bg-surface-lowest px-5 py-2.5 text-label-md text-on-surface">
               Afficher les {filtered.length - shown} autres pièces en vente <ChevronDown size={16} />
@@ -293,7 +294,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
             {reviewSubmitted && <p className="m-0 flex items-center gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} /> Merci pour votre avis !</p>}
           </div>
           <div className="flex flex-col gap-3">
-            {reviews.length === 0 && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-on-surface-variant">Aucun avis pour le moment.</p>}
+            {reviews.length === 0 && <EmptyState icon="empty-star" fallback="star" title="Aucun avis pour le moment" />}
             {reviews.map(r => (
               <div key={r.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
                 <div className="flex items-center gap-3">

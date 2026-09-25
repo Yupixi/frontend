@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import AnimatedIcon from '../../components/AnimatedIcon'
 import { useState } from 'react'
 import Icon from '../../components/Icon'
@@ -112,10 +113,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           )}
         </section>
       ) : (
-        <section className="rounded-2xl bg-surface-container-low p-5 text-center">
-          <p className="m-0 text-body-md text-on-surface-variant">Aucune annonce en ligne à booster pour le moment.</p>
-          <button onClick={() => onNavigate('seller-post')} className="mt-3 h-11 cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white">Déposer une annonce</button>
-        </section>
+        <EmptyState icon="empty-box" fallback="inventory_2" title="Aucune annonce à booster" text="Publiez une annonce pour pouvoir la mettre en avant." action={{ label: 'Déposer une annonce', onClick: () => onNavigate('seller-post') }} />
       )}
 
       {/* Packs */}
