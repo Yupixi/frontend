@@ -5,8 +5,10 @@ import Price from './Price'
 import BoostMenu from './BoostMenu'
 import type { RemoteListing } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
+import { prefetchOnIntent } from '../lib/prefetchListing'
+import { thumbnailUrl } from '../lib/media'
 import { getAccessToken } from '../lib/auth'
-import { setAuthReason } from '../pages/Auth'
+import { setAuthReason } from '../lib/authReason'
 import {
   getArchetype,
   archetypeHighlight,
@@ -58,6 +60,16 @@ export function listingLocation(listing: RemoteListing): string {
 
 export function listingImage(listing: RemoteListing): string {
   return listing.coverImageUrl ?? listing.media[0]?.url ?? ''
+}
+
+// Cards show the 480 px thumbnail; if it's missing, fall back to the full
+// image once before giving up on the picture.
+function useCardImage(listing: RemoteListing) {
+  const [stage, setStage] = useState<'thumb' | 'full' | 'none'>('thumb')
+  const full = listingImage(listing)
+  const src = stage === 'none' || !full ? '' : stage === 'thumb' ? thumbnailUrl(full) : full
+  const onError = () => setStage(s => (s === 'thumb' && thumbnailUrl(full) !== full ? 'full' : 'none'))
+  return { src, onError }
 }
 
 // Sale price computed the same way FlashOffers does: an explicit salePrice
@@ -129,7 +141,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   // "Pépites à la Une" rail: prominent red "Discuter" button on phones.
   featured?: boolean
 }) {
-  const [imgError, setImgError] = useState(false)
+  const image = useCardImage(listing)
   const salePrice = discountedPrice(listing)
   const priceSuffix = archetypePriceSuffix(listing)
   const isRoute = getArchetype(listing) === 'route'
@@ -166,16 +178,18 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
     <div
       className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-xl bg-surface-lowest shadow-sm transition-all duration-300 active:scale-[0.98] hover:shadow-card-hover md:rounded-2xl md:active:scale-100"
       onClick={onSelect}
+      {...prefetchOnIntent(listing.id)}
     >
       <div>
         <div className={`relative w-full overflow-hidden bg-surface-container-low ${featured ? 'aspect-[260/192] md:aspect-square' : 'aspect-square'}`}>
-          {!imgError && listingImage(listing) ? (
+          {image.src ? (
             <img
-              src={listingImage(listing)}
+              src={image.src}
               alt={listing.title}
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={() => setImgError(true)}
+              onError={image.onError}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-outline"><Tag size={40} /></div>
@@ -268,7 +282,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
 export function ListingListCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
 }) {
-  const [imgError, setImgError] = useState(false)
+  const image = useCardImage(listing)
   const salePrice = discountedPrice(listing)
   const priceSuffix = archetypePriceSuffix(listing)
   const highlight = archetypeHighlight(listing)
@@ -277,10 +291,10 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
   const isOwn = !!currentUserId && listing.seller.id === currentUserId
 
   return (
-    <div onClick={onSelect} className="flex cursor-pointer gap-4 overflow-hidden rounded-2xl bg-surface-lowest p-3 shadow-sm transition-shadow hover:shadow-card-hover">
+    <div onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer gap-4 overflow-hidden rounded-2xl bg-surface-lowest p-3 shadow-sm transition-shadow hover:shadow-card-hover">
       <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-32 md:w-40">
-        {!imgError && listingImage(listing)
-          ? <img src={listingImage(listing)} alt={listing.title} onError={() => setImgError(true)} className="h-full w-full object-cover" />
+        {image.src
+          ? <img loading="lazy" decoding="async" src={image.src} alt={listing.title} onError={image.onError} className="h-full w-full object-cover" />
           : <span className="flex h-full items-center justify-center text-on-surface-variant"><Tag size={28} /></span>}
       </div>
 

@@ -1,34 +1,4 @@
-﻿@import 'tailwindcss';
-
-/* Plus Jakarta Sans, self-hosted (variable 200–800, latin + latin-ext): the
-   Google CDN copy sometimes never arrived and the UI fell back to Arial. */
-@font-face {
-  font-family: 'Plus Jakarta Sans';
-  font-style: normal;
-  font-weight: 200 800;
-  font-display: swap;
-  src: url('/fonts/plus-jakarta-sans-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Plus Jakarta Sans';
-  font-style: normal;
-  font-weight: 200 800;
-  font-display: swap;
-  src: url('/fonts/plus-jakarta-sans-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* Material Symbols, self-hosted: the Google CDN copy (display=block) left
-   every icon invisible — or showing its raw ligature name — until a ~900 KB
-   font arrived from a third party, which on a slow mobile link is seconds. */
-@font-face {
-  font-family: 'Material Symbols Outlined';
-  font-style: normal;
-  font-weight: 300 700;
-  font-display: block;
-  src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
-}
+@import 'tailwindcss';
 
 /* "Circulaire Dynamique" design system (Stitch — SecondHand Marketplace).
    Tailwind utilities (bg-surface-container-low, text-on-surface-variant,
@@ -575,4 +545,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   user-select: none;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+.ms-x { visibility: hidden; }
+
+/* Home hero slider progress (duration set inline). */
+.hero-progress { width: 0; animation: hero-progress linear forwards; }
+@keyframes hero-progress { to { width: 100%; } }
 .ms-fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }

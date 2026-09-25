@@ -62,6 +62,22 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
   }
 `
 
+// The site-wide announcement bar only needs the campaign's header — not its
+// full listing showcase (that's ACTIVE_CAMPAIGN_QUERY, Home/Flash Offers).
+export const ACTIVE_CAMPAIGN_BAR_QUERY = gql`
+  query ActiveCampaignBar {
+    activeCampaign {
+      id
+      name
+      description
+      themeColor
+      endsAt
+    }
+  }
+`
+
+export type ActiveCampaignBar = Pick<ActiveCampaign, 'id' | 'name' | 'description' | 'themeColor' | 'endsAt'>
+
 export const FOOTER_SETTINGS_QUERY = gql`
   query FooterSettings {
     footerSettings {

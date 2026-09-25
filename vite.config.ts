@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 import fs from 'node:fs'
+import { collectIconNames, fontLinks, ICON_FONT_AXES } from './scripts/materialSymbolsSubset'
 
 const siteJsonPath = path.resolve(__dirname, './.figma/make/site.json')
 const siteConfiguration = fs.existsSync(siteJsonPath)
@@ -19,10 +20,27 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,
+      rolldownOptions: {
+        output: {
+          // Long-lived vendor chunks: an app deploy only invalidates the
+          // (small) app chunks, returning visitors keep React/Apollo cached.
+          codeSplitting: {
+            groups: [
+              { name: 'react', test: /node_modules[\/](react|react-dom|scheduler)[\/]/, priority: 20 },
+              { name: 'apollo', test: /node_modules[\/](@apollo|graphql|graphql-ws|rxjs|@wry|optimism|tslib|zen-observable)/, priority: 10 },
+            ],
+          },
+        },
+      },
+    },
+    define: {
+      __ICON_NAMES__: JSON.stringify(collectIconNames(path.resolve(__dirname, 'src'))),
+      __ICON_FONT_AXES__: JSON.stringify(ICON_FONT_AXES),
     },
     plugins: [
       react(),
       tailwindcss(),
+      fontLinks(path.resolve(__dirname, 'src')),
       figmaSiteConfiguration(siteConfiguration),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),

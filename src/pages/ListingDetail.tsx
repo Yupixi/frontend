@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import DOMPurify from 'dompurify'
-import { useMutation, useQuery } from '@apollo/client/react'
+import { gql } from '@apollo/client'
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
 import {
   Heart,
   Share2,
@@ -41,10 +42,17 @@ import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION,
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
-import { setAuthReason, type AuthReason } from './Auth'
+import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { formatRelativeDate } from '../lib/format'
+import { thumbnailUrl } from '../lib/media'
 import Select from '../components/Select'
 import Icon from '../components/Icon'
+
+const LISTING_SELLER_ID_FRAGMENT = gql`
+  fragment ListingSellerId on Listing {
+    seller { id }
+  }
+`
 
 type ListingDetailProps = {
   listingId: string
@@ -102,10 +110,16 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
   const listing = data?.listing
-  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4 }, skip: !listing })
+  // Similar listings and the seller card load alongside the listing, not
+  // after it: the seller id is usually already in the cache from the card
+  // that was clicked.
+  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4 } })
   const similar = similarData?.similarListings ?? []
+  const apollo = useApolloClient()
+  const sellerId = listing?.seller.id
+    ?? apollo.readFragment<{ seller: { id: string } }>({ id: apollo.cache.identify({ __typename: 'Listing', id: listingId }), fragment: LISTING_SELLER_ID_FRAGMENT })?.seller.id
   const { data: sellerData, refetch: refetchSeller } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, {
-    variables: { sellerId: listing?.seller.id ?? '' }, skip: !listing,
+    variables: { sellerId: sellerId ?? '' }, skip: !sellerId,
   })
   const seller = sellerData?.sellerProfile
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
@@ -313,7 +327,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <div className="mt-3 hidden gap-2 overflow-x-auto lg:flex">
                 {images.map((img, i) => (
                   <button key={i} onClick={() => setImgIdx(i)} className={`h-20 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 ${i === imgIdx ? 'border-primary' : 'border-transparent'}`}>
-                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <img loading="lazy" decoding="async" src={thumbnailUrl(img)} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
