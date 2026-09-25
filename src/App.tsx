@@ -350,7 +350,7 @@ export default function App() {
       case 'categories':
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} />
       case 'flash-offers':
-        return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       case 'auth':
         return <Auth onNavigate={navigate} onLogin={handleAuthenticated} />
 

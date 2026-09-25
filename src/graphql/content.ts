@@ -100,7 +100,16 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
           seller {
             id
             fullName
+            avatarUrl
+            isVerified
           }
+          brand
+          size
+          originalPrice
+          attributes
+          countryCode
+          boostExpiresAt
+          urgentUntil
         }
       }
     }
