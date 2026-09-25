@@ -7,6 +7,7 @@ import Icon from './Icon'
 // depends on the asset being present.
 const FILES = import.meta.glob('../assets/lottie/*.json', { import: 'default' }) as Record<string, () => Promise<unknown>>
 const fileFor = (name: string) => FILES[`../assets/lottie/${name}.json`]
+export const hasAnimatedIcon = (name: string) => !!fileFor(name)
 
 // The player (~150 KB, SVG-only light build) is fetched the first time an
 // animated icon actually has a file to play.
@@ -29,6 +30,10 @@ type Props = {
   loop?: boolean
   /** Play once as soon as it's loaded (success screens). */
   playOnMount?: boolean
+  /** Play once when first scrolled into view, after this delay in ms (stagger a row). */
+  playOnView?: number
+  /** Replay when the surrounding button/link is hovered or pressed. */
+  playOnInteract?: boolean
 }
 
 // A counter that only moves when `value` goes up (a new notification, not
@@ -43,7 +48,7 @@ export function useIncreaseCounter(value: number) {
   return n
 }
 
-export default function AnimatedIcon({ name, fallback, size = 24, fill, className = '', trigger, loop = false, playOnMount = false }: Props) {
+export default function AnimatedIcon({ name, fallback, size = 24, fill, className = '', trigger, loop = false, playOnMount = false, playOnView, playOnInteract = false }: Props) {
   const box = useRef<HTMLSpanElement>(null)
   const anim = useRef<{ goToAndPlay: (v: number, f?: boolean) => void; goToAndStop: (v: number, f?: boolean) => void; destroy: () => void; totalFrames: number } | null>(null)
   const [ready, setReady] = useState(false)
@@ -62,6 +67,36 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
     })
     return () => { cancelled = true; anim.current?.destroy(); anim.current = null }
   }, [file, loop, playOnMount])
+
+  // First time on screen: play once (optionally staggered).
+  useEffect(() => {
+    if (playOnView === undefined || !ready || !box.current) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const io = new IntersectionObserver(entries => {
+      if (!entries.some(e => e.isIntersecting)) return
+      io.disconnect()
+      timer = setTimeout(() => anim.current?.goToAndPlay(0, true), playOnView)
+    }, { threshold: 0.6 })
+    io.observe(box.current)
+    return () => { io.disconnect(); clearTimeout(timer) }
+  }, [playOnView, ready])
+
+  // Hover (desktop) or press (touch) on the enclosing control replays it.
+  useEffect(() => {
+    if (!playOnInteract || !ready || !box.current) return
+    const host = box.current.closest('button, a, [role="button"]')
+    if (!host) return
+    let last = 0
+    const replay = () => {
+      // Hover then click on desktop would restart it twice in a row.
+      if (Date.now() - last < 400) return
+      last = Date.now()
+      anim.current?.goToAndPlay(0, true)
+    }
+    host.addEventListener('pointerenter', replay)
+    host.addEventListener('pointerdown', replay)
+    return () => { host.removeEventListener('pointerenter', replay); host.removeEventListener('pointerdown', replay) }
+  }, [playOnInteract, ready])
 
   const first = useRef(true)
   useEffect(() => {

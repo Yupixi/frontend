@@ -555,3 +555,17 @@ h1, h2, h3, h4, h5, h6, .font-brand {
    render them in the surrounding text colour like the Material Symbols. */
 .lottie-tint svg [stroke]:not([stroke="none"]) { stroke: currentColor; }
 .lottie-tint svg [fill]:not([fill="none"]) { fill: currentColor; }
+
+/* Category tiles ("Explorer par rayon", Catégories): staggered entrance,
+   press feedback, and a small wiggle for icons without an Iconsax animation
+   (the animated ones replay on hover/press instead, see CategoryIcon). */
+@media (prefers-reduced-motion: no-preference) {
+  .cat-tile { animation: cat-tile-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1.2) both; animation-delay: calc(var(--i, 0) * 60ms); }
+  .cat-tile-icon { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .cat-tile:hover .cat-tile-icon { transform: translateY(-2px); }
+  .cat-tile:active .cat-tile-icon { transform: scale(0.92); }
+  .cat-tile:hover .cat-tile-icon > .ms,
+  .cat-tile:active .cat-tile-icon > .ms { animation: cat-wiggle 0.5s ease; }
+}
+@keyframes cat-tile-in { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { transform: none; } }
+@keyframes cat-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.08); } 60% { transform: rotate(8deg); } }

@@ -1,3 +1,4 @@
+import AnimatedIcon from '../../components/AnimatedIcon'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
@@ -26,10 +27,10 @@ type Upcoming = { id: string; role: 'BUYER' | 'SELLER'; listing: { id: string; t
 
 // `short` is the mobile label (Stitch mobile tiles use one word); `className`
 // lets a tile be desktop-only.
-function Kpi({ label, short, icon, value, sub, onClick, accent, className = 'flex' }: { label: string; short?: string; icon: string; value: React.ReactNode; sub: React.ReactNode; onClick: () => void; accent?: string; className?: string }) {
+function Kpi({ label, short, icon, animated, value, sub, onClick, accent, className = 'flex' }: { label: string; short?: string; icon: string; animated?: string; value: React.ReactNode; sub: React.ReactNode; onClick: () => void; accent?: string; className?: string }) {
   return (
     <button onClick={onClick} className={`${className} min-w-0 cursor-pointer flex-col rounded-2xl border-none bg-surface-lowest p-4 text-left shadow-sm hover:shadow-card-hover`}>
-      <div className="flex items-start justify-between gap-2 max-md:flex-row-reverse"><span className="text-label-sm uppercase text-on-surface-variant max-md:normal-case">{short ? <><span className="md:hidden">{short}</span><span className="max-md:hidden">{label}</span></> : label}</span><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-fixed/60 text-primary"><Icon name={icon} size={18} /></span></div>
+      <div className="flex items-start justify-between gap-2 max-md:flex-row-reverse"><span className="text-label-sm uppercase text-on-surface-variant max-md:normal-case">{short ? <><span className="md:hidden">{short}</span><span className="max-md:hidden">{label}</span></> : label}</span><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-fixed/60 text-primary">{animated ? <AnimatedIcon name={animated} fallback={icon} size={18} playOnView={400} playOnInteract /> : <Icon name={icon} size={18} />}</span></div>
       <div className={`mt-2 text-headline-sm font-extrabold ${accent ?? 'text-on-surface'}`}>{value}</div>
       <div className="truncate text-body-sm text-on-surface-variant">{sub}</div>
     </button>
@@ -134,7 +135,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
         <section className="grid grid-cols-2 gap-3 md:mt-4 md:grid-cols-3 lg:grid-cols-6">
           <Kpi label="Ventes en cours" short="Ventes" icon="storefront" value={`${activeSales.length} active${activeSales.length > 1 ? 's' : ''}`} sub={<><Price amount={activeSales.reduce((n, o) => n + (o.agreedPrice ?? 0), 0)} /> en attente</>} onClick={() => onNavigate('seller-orders')} />
           <Kpi label="RDV du jour" className="hidden md:flex" icon="event_available" accent="text-primary" value={upcoming && upcomingIsToday ? time(upcoming.at) : '—'} sub={upcoming && upcomingIsToday ? upcoming.place : 'Aucun rendez-vous'} onClick={() => (upcoming ? (upcoming.role === 'BUYER' ? onOpenPurchase(upcoming.id) : onOpenHandover(upcoming.id)) : onNavigate('seller-orders'))} />
-          <Kpi label="Achats en cours" short="Achats" icon="shopping_bag" value={`${activePurchases.length} achat${activePurchases.length > 1 ? 's' : ''}`} sub={<span className="text-tertiary">{codePurchase ? 'Code de remise prêt' : 'Voir mes achats'}</span>} onClick={() => onNavigate('buyer-purchases')} />
+          <Kpi label="Achats en cours" short="Achats" icon="shopping_bag" animated="cart" value={`${activePurchases.length} achat${activePurchases.length > 1 ? 's' : ''}`} sub={<span className="text-tertiary">{codePurchase ? 'Code de remise prêt' : 'Voir mes achats'}</span>} onClick={() => onNavigate('buyer-purchases')} />
           <Kpi label="Crédits boost" short="Visibilité" icon="bolt" value={<>{wallet?.credits ?? 0} <span className="text-body-sm font-normal text-on-surface-variant">crédits</span></>} sub={<span className="text-primary">+ Recharger</span>} onClick={() => onNavigate('seller-wallet')} />
           <Kpi label="Discussions" short="Échanges" icon="forum" value={<>{unreadConvs} {unreadConvs > 0 && <span className="inline-block h-2 w-2 rounded-full bg-primary align-middle" />}</>} sub={unreadConvs ? `${unreadConvs} conversation${unreadConvs > 1 ? 's' : ''} en attente` : 'Tout est lu'} onClick={() => onNavigate('buyer-messages')} />
           <Kpi label="Garantie Dilchap" className="hidden md:flex" icon="verified_user" accent={activeDisputes ? 'text-primary' : 'text-tertiary'} value={`${activeDisputes} litige${activeDisputes > 1 ? 's' : ''}`} sub={activeDisputes ? 'Dossier en cours' : 'Aucun incident'} onClick={() => onNavigate(sellerOpenDisputes && !buyerOpenDisputes ? 'seller-disputes' : 'buyer-disputes')} />
