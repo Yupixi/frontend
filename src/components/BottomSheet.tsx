@@ -7,9 +7,11 @@ type BottomSheetProps = {
   title?: string
   children: React.ReactNode
   maxHeight?: string
+  // Pinned under the scrolling content (e.g. "Afficher les N annonces").
+  footer?: React.ReactNode
 }
 
-export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh' }: BottomSheetProps) {
+export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh', footer }: BottomSheetProps) {
   const closedByBackRef = useRef(false)
   const onCloseRef = useRef(onClose)
 
@@ -90,6 +92,7 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
         <div style={{ overflowY: 'auto', padding: '4px 16px 20px', flex: 1 }}>
           {children}
         </div>
+        {footer}
       </div>
     </div>
   )

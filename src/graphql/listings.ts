@@ -522,6 +522,9 @@ export type ListingFilterInput = {
   sizes?: string[]
   cities?: string[]
   verifiedSellersOnly?: boolean
+  categorySlugs?: string[]
+  handoverOnly?: boolean
+  mobileMoneyOnly?: boolean
 }
 
 export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'
@@ -534,12 +537,16 @@ export const LISTING_FACETS_QUERY = gql`
       brands { value label count }
       sizes { value label count }
       cities { value label count }
+      categories { value label count }
+      priceHistogram { min max count }
     }
   }
 `
 
 export type FacetCount = { value: string; label: string; count: number }
-export type ListingFacets = Record<'subcategories' | 'conditions' | 'brands' | 'sizes' | 'cities', FacetCount[]>
+export type ListingFacets = Record<'subcategories' | 'conditions' | 'brands' | 'sizes' | 'cities' | 'categories', FacetCount[]> & {
+  priceHistogram: { min: number; max: number; count: number }[]
+}
 
 export const CREATE_SAVED_SEARCH_MUTATION = gql`
   mutation CreateSavedSearch($label: String!, $filter: ListingFilterInput!) {

@@ -11,6 +11,10 @@ import Home, { type SearchPreset } from './pages/Home'
 import Orders from './pages/seller/Orders'
 import Wallet from './pages/seller/Wallet'
 import SellerReviews from './pages/seller/Reviews'
+import SellerStats from './pages/seller/Stats'
+import Disputes from './pages/seller/Disputes'
+import Handover from './pages/seller/Handover'
+import Settings from './pages/seller/Settings'
 import SearchPage from './pages/Search'
 import ListingDetail from './pages/ListingDetail'
 import SellerProfile from './pages/SellerProfile'
@@ -19,11 +23,10 @@ import Auth from './pages/Auth'
 import FlashOffers from './pages/FlashOffers'
 import {
   BuyerDashboard, BuyerFavorites, BuyerMessages,
-  BuyerNotifications, BuyerHistory, BuyerSettings,
+  BuyerNotifications, BuyerHistory,
 } from './pages/buyer/BuyerPages'
 import {
-  PostListing, SellerListings,
-  SellerStats, SellerPremium,
+  PostListing, SellerListings, SellerPremium,
 } from './pages/seller/SellerPages'
 
 // Admin BO control lives in the dedicated Backoffice app (real, GraphQL-wired)
@@ -35,7 +38,7 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'buyer-purchases'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -48,6 +51,8 @@ type NavState = {
   searchTerm: string
   searchCity: string
   categoryFilter: string
+  selectedOrderId?: string
+  selectedDisputeId?: string
 }
 const NAV_STORAGE_KEY = 'yupixi_nav_state'
 
@@ -93,6 +98,8 @@ export default function App() {
   // right conversation, not part of the session-restored nav state.
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
   const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
+  const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
+  const [selectedDisputeId, setSelectedDisputeId] = useState(savedNav.selectedDisputeId ?? '')
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
@@ -268,10 +275,10 @@ export default function App() {
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId,
     }
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId])
 
   const navigate = (p: Page) => {
     setPage(p)
@@ -291,6 +298,16 @@ export default function App() {
   const selectSeller = (id: string) => {
     setSelectedSellerId(id)
     navigate('seller-profile')
+  }
+
+  const openHandover = (orderId: string) => {
+    setSelectedOrderId(orderId)
+    navigate('seller-handover')
+  }
+
+  const openDispute = (disputeId: string) => {
+    setSelectedDisputeId(disputeId)
+    navigate('seller-disputes')
   }
 
   const contactSellerAbout = (sellerId: string, listingId?: string) => {
@@ -387,9 +404,13 @@ export default function App() {
         case 'seller-listings':
           return <SellerListings onNavigate={navigate} onSelectListing={selectListing} onEditListing={editListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-stats':
-          return <SellerStats onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+          return <SellerStats onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-orders':
-          return <Orders onNavigate={navigate} onSelectListing={selectListing} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+          return <Orders onNavigate={navigate} onSelectListing={selectListing} onOpenConversation={contactSellerAbout} onOpenHandover={openHandover} onOpenDispute={openDispute} currentUser={currentUser} onLogout={logout} />
+        case 'seller-handover':
+          return <Handover orderId={selectedOrderId} onNavigate={navigate} onOpenDispute={openDispute} currentUser={currentUser} onLogout={logout} />
+        case 'seller-disputes':
+          return <Disputes onNavigate={navigate} onSelectListing={selectListing} focusDisputeId={selectedDisputeId} currentUser={currentUser} onLogout={logout} />
         case 'seller-wallet':
           return <Wallet onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-reviews':
@@ -405,7 +426,7 @@ export default function App() {
         case 'buyer-history':
           return <BuyerHistory onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
         case 'buyer-settings':
-          return <BuyerSettings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
+          return <Settings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
         default:
           return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} onLogout={logout} />
       }

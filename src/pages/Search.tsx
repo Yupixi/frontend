@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { CategoryIcon } from '../components/Icon'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from '../components/icons'
-import BottomSheet from '../components/BottomSheet'
+import FilterSheet from '../components/FilterSheet'
 import { ListingCard, ListingListCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import {
@@ -103,6 +103,9 @@ export default function SearchPage({
 
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const [verifiedOnly, setVerifiedOnly] = useState(false)
+  const [handoverOnly, setHandoverOnly] = useState(false)
+  const [mobileMoneyOnly, setMobileMoneyOnly] = useState(false)
+  const [categorySlugs, setCategorySlugs] = useState<string[]>([])
   const [subcategories, setSubcategories] = useState<string[]>([])
   const [conditions, setConditions] = useState<string[]>([])
   const [brands, setBrands] = useState<string[]>([])
@@ -126,9 +129,12 @@ export default function SearchPage({
     ...(sizes.length ? { sizes } : {}),
     ...(cities.length ? { cities } : {}),
     ...(verifiedOnly ? { verifiedSellersOnly: true } : {}),
+    ...(handoverOnly ? { handoverOnly: true } : {}),
+    ...(mobileMoneyOnly ? { mobileMoneyOnly: true } : {}),
+    ...(categorySlugs.length ? { categorySlugs } : {}),
     ...(minPrice ? { minPrice: Number(minPrice) } : {}),
     ...(maxPrice ? { maxPrice: Number(maxPrice) } : {}),
-  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, minPrice, maxPrice])
+  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, handoverOnly, mobileMoneyOnly, categorySlugs, minPrice, maxPrice])
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
@@ -161,6 +167,7 @@ export default function SearchPage({
 
   const resetAll = () => {
     setVerifiedOnly(false); setSubcategories([]); setConditions([]); setBrands([]); setSizes([]); setCities([])
+    setHandoverOnly(false); setMobileMoneyOnly(false); setCategorySlugs([])
     setMinPrice(''); setMaxPrice('')
     onClearCategoryFilter?.()
     onSearchTermChange?.('')
@@ -176,6 +183,9 @@ export default function SearchPage({
     ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
     ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => { setMinPrice(''); setMaxPrice('') } }] : []),
     ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs certifiés', clear: () => setVerifiedOnly(false) }] : []),
+    ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
+    ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
+    ...categorySlugs.map(v => ({ key: `cats-${v}`, label: categories.find(c => c.slug === v)?.name ?? v, clear: () => setCategorySlugs(s => s.filter(x => x !== v)) })),
   ]
 
   const contact = (l: RemoteListing) => () =>
@@ -282,9 +292,14 @@ export default function SearchPage({
       {!!facets?.cities.length && (
         <FilterBlock title="Villes & Quartiers">
           <SearchableFacet facets={facets.cities} selected={cities} onToggle={v => setCities(s => toggle(s, v))} placeholder="Rechercher une ville…" icon={<MapPin size={15} />} />
-          <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> Remise en main propre privilégiée</div>
         </FilterBlock>
       )}
+
+      <FilterBlock title="Confiance & Transactions directes">
+        <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
+        <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" onChange={() => setMobileMoneyOnly(v => !v)} />
+        <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> 0 % de commission, paiement à la remise</div>
+      </FilterBlock>
 
       <button onClick={resetAll} className="cursor-pointer rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest">
         Réinitialiser tous les filtres
@@ -422,12 +437,26 @@ export default function SearchPage({
         </section>
       </div>
 
-      <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtres">
-        <div className="pb-4">{filtersPanel}</div>
-        <button onClick={() => setFiltersOpen(false)} className="sticky bottom-0 w-full cursor-pointer rounded-lg border-none bg-primary py-3 text-label-lg text-white">
-          Voir {total.toLocaleString('fr-FR')} article{total > 1 ? 's' : ''}
-        </button>
-      </BottomSheet>
+      <FilterSheet
+          open={filtersOpen}
+          state={{ sort, cities, minPrice, maxPrice, categorySlugs, conditions, verifiedOnly, handoverOnly, mobileMoneyOnly }}
+          onChange={patch => {
+            if (patch.sort) setSort(patch.sort)
+            if (patch.cities) setCities(patch.cities)
+            if (patch.minPrice !== undefined) setMinPrice(patch.minPrice)
+            if (patch.maxPrice !== undefined) setMaxPrice(patch.maxPrice)
+            if (patch.categorySlugs) setCategorySlugs(patch.categorySlugs)
+            if (patch.conditions) setConditions(patch.conditions)
+            if (patch.verifiedOnly !== undefined) setVerifiedOnly(patch.verifiedOnly)
+            if (patch.handoverOnly !== undefined) setHandoverOnly(patch.handoverOnly)
+            if (patch.mobileMoneyOnly !== undefined) setMobileMoneyOnly(patch.mobileMoneyOnly)
+          }}
+          onReset={resetAll}
+          onClose={() => setFiltersOpen(false)}
+          facets={facets}
+          categories={categories}
+          total={total}
+        />
     </div>
   )
 }

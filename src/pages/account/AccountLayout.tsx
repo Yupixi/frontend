@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare, Truck, Wallet, Star,
-  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store,
+  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store, Gavel,
 } from '../../components/icons'
+import Icon from '../../components/Icon'
+import { MY_DISPUTE_STATS_QUERY } from '../../graphql/sellerTools'
 import Logo from '../../components/DilchapLogo'
 import { MY_LISTINGS_QUERY } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
@@ -19,6 +21,7 @@ const SECTIONS = [
       { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
       { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
       { key: 'seller-orders', icon: Truck, label: 'Commandes & Envois' },
+      { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
       { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
       { key: 'seller-reviews', icon: Star, label: 'Avis & Réputation' },
       { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
@@ -51,13 +54,25 @@ export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'seller-wallet': 'Porte-monnaie',
   'seller-reviews': 'Avis & Réputation',
   'buyer-settings': 'Paramètres',
+  'seller-disputes': 'Sécurité & Litiges',
+  'seller-handover': 'Confirmation de remise',
 }
+
+// Mobile seller bar ("Accueil / Annonces / Messages / Ventes" in the mobile
+// Seller Hub mockups). "Ventes" covers every sales-side page.
+const MOBILE_TABS = [
+  { key: 'buyer-dashboard', icon: 'storefront', label: 'Accueil', match: ['buyer-dashboard', 'seller-dashboard'] },
+  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-post', 'seller-edit', 'seller-premium'] },
+  { key: 'buyer-messages', icon: 'chat_bubble', label: 'Messages', match: ['buyer-messages'] },
+  { key: 'seller-orders', icon: 'account_balance_wallet', label: 'Ventes', match: ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-stats', 'seller-disputes', 'seller-reviews'] },
+]
 
 function useUnreadCounts() {
   const { data: listingsData } = useQuery<{ myListings: { totalCount: number } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 1 } })
   const { data: conversationsData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY, { pollInterval: 30_000 })
   const unreadMessages = (conversationsData?.myConversations ?? []).reduce((sum, c) => sum + c.unreadCount, 0)
-  return { listingsCount: listingsData?.myListings.totalCount, unreadMessages }
+  const { data: disputesData } = useQuery<{ myDisputeStats: { active: number } }>(MY_DISPUTE_STATS_QUERY, { pollInterval: 60_000 })
+  return { listingsCount: listingsData?.myListings.totalCount, unreadMessages, activeDisputes: disputesData?.myDisputeStats.active ?? 0 }
 }
 
 function NavItem({ active, icon: Icon, label, badge, onClick, muted }: {
@@ -75,8 +90,8 @@ function NavItem({ active, icon: Icon, label, badge, onClick, muted }: {
   )
 }
 
-function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, isGuest }: {
-  active: string; onNavigate: (p: any) => void; listingsCount?: number; unreadMessages?: number; isGuest?: boolean
+function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, activeDisputes, isGuest }: {
+  active: string; onNavigate: (p: any) => void; listingsCount?: number; unreadMessages?: number; activeDisputes?: number; isGuest?: boolean
 }) {
   // A guest identity only exists to hold a conversation open — there's no
   // account behind it, so every other area stays hidden.
@@ -94,7 +109,9 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, isG
                 ? <span className={`rounded-full px-2 text-label-sm ${active === item.key ? 'bg-white text-primary' : 'bg-primary-fixed text-primary'}`}>{unreadMessages} non lu{unreadMessages > 1 ? 's' : ''}</span>
                 : item.key === 'seller-listings' && listingsCount
                   ? <span className={`rounded-full px-2 text-label-sm ${active === item.key ? 'bg-white/25 text-white' : 'bg-surface-container text-on-surface-variant'}`}>{listingsCount}</span>
-                  : undefined
+                  : item.key === 'seller-disputes' && activeDisputes
+                    ? <span className={`h-2 w-2 rounded-full ${active === item.key ? 'bg-white' : 'bg-primary'}`} aria-label={`${activeDisputes} litige(s) en cours`} />
+                    : undefined
               return <NavItem key={item.key} active={active === item.key} icon={item.icon} label={item.label} badge={badge} onClick={() => onNavigate(item.key)} />
             })}
           </div>
@@ -173,14 +190,14 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
   active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null, onLogout: () => void
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { listingsCount, unreadMessages } = useUnreadCounts()
+  const { listingsCount, unreadMessages, activeDisputes } = useUnreadCounts()
   const isGuest = !!currentUser?.isGuest
   const go = (p: string) => { setSidebarOpen(false); onNavigate(p) }
 
   return (
     <div className="flex h-screen bg-surface">
       <aside className="hidden w-64 shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest lg:block">
-        <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
+        <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} />
       </aside>
 
       {sidebarOpen && (
@@ -192,7 +209,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
               <button onClick={() => setSidebarOpen(false)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant" aria-label="Fermer"><X size={22} /></button>
             </div>
             <div className="min-h-0 flex-1">
-              <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
+              <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} />
             </div>
           </aside>
         </div>
@@ -200,9 +217,23 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
 
       <div className="flex min-w-0 flex-1 flex-col">
         <AccountHeader activeLabel={ACCOUNT_PAGE_LABELS[active] || active} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} />
-        <main className="dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6">
+        <main className="dashboard-main flex-1 overflow-auto px-4 py-5 pb-24 lg:px-8 lg:py-6">
           {children}
         </main>
+        {!isGuest && (
+          <nav className="fixed inset-x-0 bottom-0 z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest pb-[env(safe-area-inset-bottom)] lg:hidden">
+            {MOBILE_TABS.map(t => {
+              const on = t.match.includes(active)
+              return (
+                <button key={t.key} onClick={() => go(t.key)} className={`relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent py-2 text-label-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>
+                  <Icon name={t.icon} size={22} fill={on} />
+                  {t.label}
+                  {t.key === 'buyer-messages' && !!unreadMessages && <span className="absolute right-[28%] top-1 h-2 w-2 rounded-full bg-primary" />}
+                </button>
+              )
+            })}
+          </nav>
+        )}
       </div>
     </div>
   )

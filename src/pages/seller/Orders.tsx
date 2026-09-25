@@ -13,6 +13,8 @@ type Props = {
   onNavigate: (p: any) => void
   onSelectListing: (id: string) => void
   onOpenConversation: (sellerOrBuyerId: string, listingId?: string) => void
+  onOpenHandover: (orderId: string) => void
+  onOpenDispute: (disputeId: string) => void
   currentUser?: AuthUser | null
   onLogout: () => void
 }
@@ -28,7 +30,7 @@ const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { weekday: '
 
 // "Commandes & Envois" mockup: every direct deal from agreement in chat to
 // hand-over. Stages come from real offers, meet-ups and deal status.
-export default function Orders({ onNavigate, onSelectListing, onOpenConversation, currentUser, onLogout }: Props) {
+export default function Orders({ onNavigate, onSelectListing, onOpenConversation, onOpenHandover, onOpenDispute, currentUser, onLogout }: Props) {
   const { data, refetch } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const { data: statsData, refetch: refetchStats } = useQuery<{ mySalesOrdersStats: SalesStats }>(MY_SALES_ORDERS_STATS_QUERY)
   const orders = data?.mySalesOrders ?? []
@@ -42,12 +44,9 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
   }
   const shown = orders.filter(o => tab === 'OPEN' ? o.stage === 'IN_PROGRESS' || o.stage === 'PENDING' : o.stage === tab)
 
-  const close = (o: SalesOrder, status: 'CONCLUDED' | 'NOT_CONCLUDED') => {
-    const text = status === 'CONCLUDED'
-      ? `Confirmer la remise de « ${o.listing.title} » ? L'annonce sera marquée comme vendue.`
-      : `Annuler la vente de « ${o.listing.title} » à ${o.buyer.fullName} ?`
-    if (!window.confirm(text)) return
-    void setDealStatus({ variables: { conversationId: o.id, status } }).then(() => { void refetch(); void refetchStats() })
+  const cancel = (o: SalesOrder) => {
+    if (!window.confirm(`Annuler la vente de « ${o.listing.title} » à ${o.buyer.fullName} ?`)) return
+    void setDealStatus({ variables: { conversationId: o.id, status: 'NOT_CONCLUDED' } }).then(() => { void refetch(); void refetchStats() })
   }
 
   return (
@@ -140,7 +139,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                           <div className="flex items-center gap-1 text-label-lg text-on-surface"><span className="truncate">{o.buyer.fullName}</span>{o.buyer.isVerified && <BadgeCheck size={15} className="text-tertiary" />}</div>
                           <div className="flex items-center gap-1 text-body-sm text-on-surface-variant">
                             {o.buyer.city && <span className="truncate">{o.buyer.city}</span>}
-                            {!!o.buyer.reviewsCount && <><Star size={12} fill="#F59E0B" color="#F59E0B" /> {o.buyer.averageRating.toFixed(1)}</>}
+                            {!!o.buyer.buyerReviewsCount && <><Star size={12} fill="#F59E0B" color="#F59E0B" /> {o.buyer.buyerRating.toFixed(1)} · {o.buyer.buyerReviewsCount} avis</>}
                           </div>
                         </div>
                       </div>
@@ -186,11 +185,21 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                     ))}
                   </div>
 
+                  {o.disputeId && (
+                    <button onClick={() => onOpenDispute(o.disputeId!)} className="mt-3 flex w-full cursor-pointer items-center gap-2 rounded-xl border-none bg-primary-fixed/60 px-3 py-2 text-left text-label-md text-primary">
+                      <Icon name="gavel" size={17} /> <span className="flex-1">Un litige est associé à cette vente</span> <ArrowRight size={15} />
+                    </button>
+                  )}
                   {!final && (
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <button onClick={() => onOpenConversation(o.buyer.id, o.listing.id)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><Calendar size={15} /> {m ? 'Modifier le RDV' : 'Proposer un RDV'}</button>
-                      <button onClick={() => close(o, 'NOT_CONCLUDED')} disabled={closing} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><CircleX size={15} /> Annuler</button>
-                      <button onClick={() => close(o, 'CONCLUDED')} disabled={closing} className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2 text-label-md text-white hover:bg-primary-dark"><CheckCircle2 size={16} /> Confirmer la remise effectuée</button>
+                      <button onClick={() => cancel(o)} disabled={closing} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><CircleX size={15} /> Annuler</button>
+                      <button
+                        onClick={() => onOpenHandover(o.id)}
+                        disabled={m?.status !== 'CONFIRMED'}
+                        title={m?.status !== 'CONFIRMED' ? "Le code de remise de l'acheteur est disponible une fois le RDV confirmé" : undefined}
+                        className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2 text-label-md text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                      ><Icon name="done_all" size={17} /> Confirmer la remise</button>
                     </div>
                   )}
                 </div>

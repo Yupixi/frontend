@@ -12,3 +12,9 @@ export function formatRelativeDate(iso: string): string {
   const years = Math.floor(months / 12)
   return `Il y a ${years} an${years > 1 ? 's' : ''}`
 }
+
+// fr-FR number grouping uses U+202F, which Plus Jakarta Sans has no glyph
+// for — swap it for a regular no-break space ("1 815", "22,8").
+export function formatNumber(n: number, maximumFractionDigits = 1): string {
+  return n.toLocaleString('fr-FR', { maximumFractionDigits }).replace(/ /g, ' ')
+}

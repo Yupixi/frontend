@@ -30,10 +30,10 @@ export type WalletTx = { id: string; type: WalletTxType; amount: number; credits
 export const MY_SALES_ORDERS_QUERY = gql`
   query MySalesOrders($stage: String) {
     mySalesOrders(stage: $stage) {
-      id reference stage agreedPrice dealStatus dealClosedAt agreedAt
+      id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId
       acceptedOffer { id amount }
       meetup { id place scheduledAt status proposedById }
-      buyer { id fullName avatarUrl city isVerified averageRating reviewsCount }
+      buyer { id fullName avatarUrl city isVerified averageRating reviewsCount buyerRating buyerReviewsCount }
       listing {
         id title price currency condition brand size coverImageUrl paymentMethods meetupSpot city locationLabel deliveryAvailable
         category { name }
@@ -46,10 +46,10 @@ export const MY_SALES_ORDERS_STATS_QUERY = gql`
 `
 export type SalesStage = 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
 export type SalesOrder = {
-  id: string; reference: string; stage: SalesStage; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string
+  id: string; reference: string; stage: SalesStage; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string; disputeId: string | null
   acceptedOffer: { id: string; amount: number } | null
   meetup: { id: string; place: string; scheduledAt: string; status: 'PROPOSED' | 'CONFIRMED' | 'DECLINED'; proposedById: string } | null
-  buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
+  buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; averageRating: number; reviewsCount: number; buyerRating: number; buyerReviewsCount: number }
   listing: {
     id: string; title: string; price: number | null; currency: string; condition: string | null; brand: string | null; size: string | null
     coverImageUrl: string | null; paymentMethods: string[]; meetupSpot: string | null; city: string; locationLabel: string | null; deliveryAvailable: boolean

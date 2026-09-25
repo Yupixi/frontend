@@ -1,17 +1,38 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import {
-  Search, Bell, Heart, MessageCircle, ChevronDown, SlidersHorizontal,
-  Sun, Moon, LogOut, Settings, Package, BarChart2, PlusCircle,
-  Plus, Home, CheckCircle2, Zap, User, AlertTriangle, Info, CheckCheck,
-  BadgeCheck, Handshake, ShieldCheck, Percent, Rocket,
+  Search,
+  Bell,
+  Heart,
+  MessageCircle,
+  ChevronDown,
+  SlidersHorizontal,
+  Sun,
+  Moon,
+  LogOut,
+  Settings,
+  Package,
+  BarChart2,
+  PlusCircle,
+  Plus,
+  Home,
+  CheckCircle2,
+  Zap,
+  User,
+  CheckCheck,
+  BadgeCheck,
+  Handshake,
+  ShieldCheck,
+  Percent,
+  Rocket,
 } from './icons'
 import Logo from './DilchapLogo'
 import SearchOverlay from './SearchOverlay'
 import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_QUERY, type RemoteFooterSettings, type ActiveCampaign } from '../graphql/content'
-import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification } from '../graphql/account'
+import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationTarget } from '../graphql/account'
+import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
@@ -20,14 +41,8 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth' | 'forgot-password'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'buyer-purchases'
 
-const NOTIFICATION_STYLE: Record<RemoteNotification['type'], { icon: typeof Bell, bg: string, fg: string }> = {
-  MESSAGE: { icon: MessageCircle, bg: 'rgba(59,130,246,0.12)', fg: '#3B82F6' },
-  LISTING_APPROVED: { icon: CheckCircle2, bg: 'rgba(16,185,129,0.12)', fg: '#10B981' },
-  LISTING_REJECTED: { icon: AlertTriangle, bg: 'rgba(187, 0, 19,0.1)', fg: 'var(--primary)' },
-  LISTING_STATUS_CHANGED: { icon: Info, bg: 'rgba(148,163,184,0.18)', fg: '#64748B' },
-}
 
 type LayoutProps = {
   currentPage: Page
@@ -150,7 +165,8 @@ export default function Layout({
   const openNotification = (n: RemoteNotification) => {
     if (!n.readAt) void markNotificationRead({ variables: { id: n.id } }).then(() => refetchNotifs())
     setNotifMenuOpen(false)
-    if (n.type === 'MESSAGE') onNavigate('buyer-messages')
+    const target = notificationTarget(n)
+    if (target) onNavigate(target as Page)
     else if (n.listingId) onSelectListing?.(n.listingId)
     else onNavigate('buyer-notifications')
   }
@@ -353,15 +369,15 @@ export default function Layout({
                               <p className="m-0 px-4 py-6 text-center text-body-sm text-on-surface-variant">Aucune notification pour l'instant.</p>
                             )}
                             {notifications.slice(0, 5).map(n => {
-                              const style = NOTIFICATION_STYLE[n.type]
+                              const meta = NOTIFICATION_META[n.type] ?? NOTIFICATION_META.LISTING_STATUS_CHANGED
                               return (
                                 <button
                                   key={n.id}
                                   onClick={() => openNotification(n)}
                                   className={`mb-0.5 flex w-full cursor-pointer items-start gap-2.5 rounded-xl border-none p-2.5 text-left text-on-surface ${n.readAt ? 'bg-transparent hover:bg-surface-container-low' : 'bg-primary-fixed/40 hover:bg-primary-fixed/70'}`}
                                 >
-                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: style.bg, color: style.fg }}>
-                                    <style.icon size={16} />
+                                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${meta.cls}`}>
+                                    <MsIcon name={meta.icon} size={17} />
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <div className="flex justify-between gap-2">
