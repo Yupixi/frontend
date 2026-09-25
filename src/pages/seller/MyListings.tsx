@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
@@ -239,10 +240,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <div className="flex flex-col gap-3">
           {loading && <p className="text-on-surface-variant">Chargement…</p>}
           {!loading && shown.length === 0 && (
-            <div className="rounded-2xl bg-surface-container-low p-10 text-center">
-              <p className="m-0 text-headline-sm text-on-surface">Aucune annonce ici</p>
-              <button onClick={() => onNavigate('seller-post')} className="mt-3 cursor-pointer rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white">Publier une annonce</button>
-            </div>
+            <EmptyState icon="empty-box" fallback="inventory_2" title="Aucune annonce ici" text="Publiez un article en quelques minutes : photos, prix et lieu de remise." action={{ label: 'Publier une annonce', onClick: () => onNavigate('seller-post') }} />
           )}
           {shown.map(l => {
             const boosted = future(l.boostExpiresAt) || future(l.autoBumpUntil) || future(l.urgentUntil)

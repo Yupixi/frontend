@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -140,11 +141,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
         <BuyerTabs active="buyer-disputes" onNavigate={onNavigate} />
         {loading && !data && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
         {!loading && all.length === 0 && (
-          <div className="rounded-2xl bg-surface-container-low p-8 text-center">
-            <Icon name="verified_user" size={36} className="text-tertiary" />
-            <p className="m-0 mt-2 text-headline-sm text-on-surface">Aucun litige</p>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">En cas de problème lors d'une remise, ouvrez un litige depuis votre code de remise.</p>
-          </div>
+          <EmptyState icon="empty-shield" fallback="verified_user" tone="tertiary" title="Aucun litige" text="En cas de problème lors d'une remise, ouvrez un litige depuis votre code de remise." />
         )}
 
         {all.length > 1 && (

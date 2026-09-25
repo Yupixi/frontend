@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import AnimatedIcon from '../../components/AnimatedIcon'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
@@ -317,7 +318,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
               </label>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {shown.length === 0 && <p className="p-5 text-center text-body-sm text-on-surface-variant">Aucune conversation. Contactez un vendeur depuis une annonce pour démarrer.</p>}
+              {shown.length === 0 && <EmptyState className="m-3" icon="empty-messages" fallback="chat" title="Aucune conversation" text="Contactez un vendeur depuis une annonce pour démarrer." action={{ label: 'Explorer les annonces', onClick: () => onNavigate('search') }} />}
               {shown.map(c => {
                 const active = c.id === activeId
                 return (

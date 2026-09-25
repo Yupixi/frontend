@@ -1,3 +1,4 @@
+import EmptyState from '../components/EmptyState'
 import { useState, useEffect, useMemo } from 'react'
 import { CategoryIcon } from '../components/Icon'
 import { useMutation, useQuery } from '@apollo/client/react'
@@ -416,10 +417,7 @@ export default function SearchPage({
               </div>
             )}
             {!loading && items.length === 0 && (
-              <div className="rounded-2xl bg-surface-container-low p-10 text-center">
-                <p className="m-0 text-headline-sm text-on-surface">Aucune annonce ne correspond</p>
-                <p className="m-0 mt-1 text-body-md text-on-surface-variant">Élargissez vos filtres ou créez une alerte ci-dessous.</p>
-              </div>
+              <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce ne correspond" text="Élargissez vos filtres ou créez une alerte ci-dessous." />
             )}
           </div>
 

@@ -1,3 +1,4 @@
+import EmptyState from '../components/EmptyState'
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
@@ -482,7 +483,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               )}
             </div>
             <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div>
-            {latest.length === 0 && !feedLoading && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-body-md text-on-surface-variant">Aucune annonce pour l'instant dans cette zone.</p>}
+            {latest.length === 0 && !feedLoading && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
             <div className="flex justify-center">{loadMore}</div>
           </section>
 
@@ -620,7 +621,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             }
           />
           <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div>
-          {latest.length === 0 && !feedLoading && <p className="rounded-2xl bg-surface-container-low p-8 text-center text-body-md text-on-surface-variant">Aucune annonce pour l'instant dans cette zone.</p>}
+          {latest.length === 0 && !feedLoading && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
           {loadMore}
         </section>
       </div>}

@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -391,10 +392,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
         {/* Mobile: the case needing action comes first, above KPIs and filters. */}
         <div ref={focusRef} className="scroll-mt-4 max-md:order-first">
           {focused ? <FocusedDispute d={focused} onSelectListing={onSelectListing} onDone={refresh} /> : (
-            <div className="flex items-center gap-3 rounded-2xl bg-tertiary-soft p-5 md:mt-5">
-              <Icon name="verified_user" size={26} className="text-tertiary" />
-              <div><div className="text-label-lg text-on-surface">Aucun litige en cours</div><div className="text-body-sm text-on-surface-variant">Vos remises se déroulent sans incident. Continuez à appliquer les règles d'or ci-dessous.</div></div>
-            </div>
+            <EmptyState className="md:mt-5" icon="empty-shield" fallback="verified_user" tone="tertiary" title="Aucun litige en cours" text="Vos remises se déroulent sans incident. Continuez à appliquer les règles d'or ci-dessous." />
           )}
         </div>
         </div>

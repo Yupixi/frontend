@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -90,7 +91,7 @@ export default function ReviewsMobile({ rep, reviews, currentUser, replying, onR
       </div>
 
       <div className="flex flex-col gap-3">
-        {list.length === 0 && <p className="m-0 rounded-2xl bg-surface-container-low p-5 text-center text-body-sm text-on-surface-variant">Aucun avis pour ce filtre.</p>}
+        {list.length === 0 && <EmptyState icon="empty-star" fallback="star" title="Aucun avis pour ce filtre" />}
         {list.map(r => (
           <article key={r.id} className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
             <div className="flex items-start gap-3">

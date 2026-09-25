@@ -1,3 +1,4 @@
+import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -103,12 +104,14 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
         <div className="mt-4 flex flex-col gap-4">
           {loading && !data && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
           {!loading && shown.length === 0 && (
-            <div className="rounded-2xl bg-surface-container-low p-8 text-center">
-              <Icon name={tab === 'done' ? 'receipt_long' : 'handshake'} size={36} className="text-on-surface-variant" />
-              <p className="m-0 mt-2 text-headline-sm text-on-surface">{tab === 'done' ? 'Aucune remise terminée' : tab === 'disputes' ? 'Aucun litige' : 'Aucun achat en cours'}</p>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Un achat apparaît ici dès qu'un vendeur accepte votre offre ou qu'un rendez-vous est proposé dans le chat.</p>
-              <button onClick={() => onNavigate('search')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-md text-white">Explorer les annonces</button>
-            </div>
+            <EmptyState
+              icon={tab === 'disputes' ? 'empty-shield' : 'cart'}
+              fallback={tab === 'disputes' ? 'verified_user' : 'shopping_bag'}
+              tone={tab === 'disputes' ? 'tertiary' : 'primary'}
+              title={tab === 'done' ? 'Aucune remise terminée' : tab === 'disputes' ? 'Aucun litige' : 'Aucun achat en cours'}
+              text="Un achat apparaît ici dès qu'un vendeur accepte votre offre ou qu'un rendez-vous est proposé dans le chat."
+              action={{ label: 'Explorer les annonces', onClick: () => onNavigate('search') }}
+            />
           )}
           {shown.map(o => {
             const m = o.meetup
