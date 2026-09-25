@@ -215,17 +215,15 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
     void deleteListing({ variables: { id } }).then(() => refetch())
   }
 
-  // Mirrors the backend's 24h cooldown (see ListingsService.bumpListing) so
-  // the button can just be disabled instead of round-tripping to find out.
-  const BUMP_COOLDOWN_MS = 24 * 60 * 60 * 1000
-  const nextBumpAt = (l: MyListingRow) => new Date(new Date(l.publishedAt ?? l.createdAt).getTime() + BUMP_COOLDOWN_MS)
-  const canBump = (l: MyListingRow) => nextBumpAt(l) <= new Date()
+  // A bump on a live listing spends one on-demand credit bought with a
+  // boost pack (see ListingsService.bumpListing).
+  const canBump = (l: MyListingRow) => (l.bumpCredits ?? 0) > 0
 
   const handleBump = (id: string) => {
     setBumpMessage(null)
     void bumpListing({ variables: { id } })
       .then(() => { setBumpMessage({ id, text: 'Remontée en tête du fil !' }); void refetch() })
-      .catch(() => setBumpMessage({ id, text: "Réessayez plus tard." }))
+      .catch((err: Error) => setBumpMessage({ id, text: err.message }))
   }
 
   const filterTabs = [
@@ -303,15 +301,15 @@ export function SellerListings({ onNavigate, onSelectListing, onEditListing, cur
                 <button onClick={() => setExpandedOffers(offersExpanded ? null : l.id)} style={{ background: offersExpanded ? 'var(--border-subtle)' : 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--fg-muted)' }}>
                   <Tag size={14} /> Offres <ChevronDown size={13} style={{ transform: offersExpanded ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
                 </button>
-                {l.status === 'APPROVED' && (
+                {l.status === 'APPROVED' && canBump(l) && (
                   <div style={{ position: 'relative' }}>
                     <button
                       onClick={() => handleBump(l.id)}
                       disabled={bumping || !canBump(l)}
-                      title={canBump(l) ? 'Remettre en tête du fil' : `Disponible le ${nextBumpAt(l).toLocaleString('fr-FR')}`}
+                      title="Utiliser une remontée (crédit acheté avec une formule Booster)"
                       style={{ background: 'none', border: '1.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: canBump(l) ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: canBump(l) ? 'var(--fg-muted)' : 'var(--fg-subtle)', opacity: canBump(l) ? 1 : 0.6 }}
                     >
-                      <TrendingUp size={14} /> Remonter
+                      <TrendingUp size={14} /> Remonter ({l.bumpCredits})
                     </button>
                     {bumpMessage?.id === l.id && (
                       <span style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, fontSize: '0.72rem', color: 'var(--fg-muted)', whiteSpace: 'nowrap' }}>{bumpMessage.text}</span>
