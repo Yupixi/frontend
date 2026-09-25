@@ -83,8 +83,8 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
           {categories.map((cat, i) => {
             const count = cat.listingsCount ?? 0
             return (
-              <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className={`flex w-full cursor-pointer items-center gap-3 rounded-2xl border-none bg-surface-lowest p-3 text-left shadow-sm ${count === 0 ? 'opacity-60' : ''}`}>
-                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONES[i % TONES.length]}`}><CategoryIcon icon={cat.icon} size={24} /></span>
+              <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} style={{ '--i': i } as React.CSSProperties} className={`cat-tile flex w-full cursor-pointer items-center gap-3 rounded-2xl border-none bg-surface-lowest p-3 text-left shadow-sm ${count === 0 ? 'opacity-60' : ''}`}>
+                <span className={`cat-tile-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONES[i % TONES.length]}`}><CategoryIcon icon={cat.icon} size={24} delay={150 + i * 80} /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-label-lg text-on-surface">{cat.name}</span>
                   <span className="block truncate text-body-sm text-on-surface-variant">{count > 0 ? `${formatNumber(count)} annonce${count > 1 ? 's' : ''}` : 'Bientôt des annonces'}{cat.subcategories.length > 0 ? ` • ${cat.subcategories.slice(0, 2).map(s => s.name).join(', ')}` : ''}</span>
@@ -96,9 +96,9 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
         </div>
         <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat, i) => (
-            <article key={cat.id} className="flex flex-col rounded-2xl bg-surface-lowest p-5 shadow-sm transition-shadow hover:shadow-card-hover">
+            <article key={cat.id} style={{ '--i': i } as React.CSSProperties} className="cat-tile flex flex-col rounded-2xl bg-surface-lowest p-5 shadow-sm transition-shadow hover:shadow-card-hover">
               <div className="flex items-start justify-between gap-2">
-                <span className={`flex h-12 w-12 items-center justify-center rounded-xl ${TONES[i % TONES.length]}`}><CategoryIcon icon={cat.icon} size={26} /></span>
+                <span className={`cat-tile-icon flex h-12 w-12 items-center justify-center rounded-xl ${TONES[i % TONES.length]}`}><CategoryIcon icon={cat.icon} size={26} delay={150 + i * 80} /></span>
                 <span className="flex items-center gap-1 rounded-full bg-surface-container-low px-2.5 py-1 text-label-sm text-on-surface"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {formatNumber(cat.listingsCount ?? 0)} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
               </div>
               <button onClick={() => onCategorySelect?.(cat.slug)} className="mt-4 cursor-pointer border-none bg-transparent p-0 text-left text-headline-sm text-on-surface hover:text-primary">{cat.name}</button>

@@ -1,3 +1,4 @@
+import AnimatedIcon from '../../components/AnimatedIcon'
 import { useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -70,7 +71,7 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
             {/* Mobile: compact "Message / Acheter" pair of the Stitch mobile favourites */}
             <div className="mt-3 grid grid-cols-2 gap-1.5 md:hidden">
               <button onClick={onChat} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-1 py-2 text-label-sm text-on-surface">Message</button>
-              <button onClick={onSelect} className="cursor-pointer rounded-lg border-none bg-primary px-1 py-2 text-label-sm text-white">Acheter</button>
+              <button onClick={onSelect} className="flex cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-primary px-1 py-2 text-label-sm text-white"><AnimatedIcon name="cart" fallback="shopping_bag" size={15} playOnInteract /> Acheter</button>
             </div>
             <div className="mt-3 hidden grid-cols-2 gap-2 md:grid">
               <button onClick={onChat} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary py-2.5 text-label-md text-white"><Icon name="chat" size={17} /> Discuter</button>

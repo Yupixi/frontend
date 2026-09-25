@@ -401,10 +401,10 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 </button>
               </div>
               <div className="grid grid-cols-7 gap-3">
-                {topCategories.map(cat => (
-                  <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="group flex cursor-pointer flex-col items-center rounded-2xl border-none bg-surface-lowest p-4 text-center shadow-sm transition-all hover:bg-surface-container-low hover:shadow">
-                    <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container text-primary transition-transform group-hover:scale-105">
-                      <CategoryIcon icon={cat.icon} size={28} />
+                {topCategories.map((cat, i) => (
+                  <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex cursor-pointer flex-col items-center rounded-2xl border-none bg-surface-lowest p-4 text-center shadow-sm transition-all hover:bg-surface-container-low hover:shadow" style={{ '--i': i } as React.CSSProperties}>
+                    <span className="cat-tile-icon mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container text-primary">
+                      <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
                     </span>
                     <span className="text-label-md font-bold leading-snug text-on-surface">{cat.name}</span>
                     <span className="mt-1 text-body-sm text-on-surface-variant">{(cat.listingsCount ?? 0).toLocaleString('fr-FR')} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
@@ -565,9 +565,9 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             />
             <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none] md:-mx-8 md:px-8">
               {categories.map((cat, i) => (
-                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="group flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0">
-                  <span className={`flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-transform active:scale-95 group-hover:-translate-y-0.5 ${TILE_TINTS[i % TILE_TINTS.length]}`}>
-                    <CategoryIcon icon={cat.icon} size={28} />
+                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0" style={{ '--i': i } as React.CSSProperties}>
+                  <span className={`cat-tile-icon flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm ${TILE_TINTS[i % TILE_TINTS.length]}`}>
+                    <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
                   </span>
                   <span title={cat.name} className="w-full truncate text-center text-label-sm font-semibold text-on-surface">{cat.name}</span>
                 </button>
