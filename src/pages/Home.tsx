@@ -477,7 +477,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               title="Explorer par rayon"
               action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir <ChevronRight size={16} /></button>}
             />
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-8 md:px-8">
               {categories.map(cat => (
                 <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="group flex w-[72px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0">
                   <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-container text-primary transition-transform group-hover:-translate-y-0.5">
@@ -513,7 +513,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
               action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2.5 py-0.5 text-label-sm text-tertiary">Boostées</span> : undefined}
             />
-            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:px-0">
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {pepites.map(l => <div key={l.id} className="w-[210px] shrink-0 snap-start">{card(l, true)}</div>)}
             </div>
           </section>
