@@ -215,7 +215,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
         </div>
 
         {!form || !me ? <p className="text-body-md text-on-surface-variant">Chargement…</p> : (
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-w-0 flex-col gap-5">
               {/* Profil */}
               <Card id="profil" icon="store" title="Profil Public du Vendeur" sub={`Visible par les acheteurs sur vos ${rep?.activeListings ?? 0} annonce${(rep?.activeListings ?? 0) > 1 ? 's' : ''} en ligne.`}
@@ -446,7 +446,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
             </div>
 
             {/* Aside */}
-            <aside className="flex flex-col gap-4">
+            <aside className="order-first hidden grid-cols-[minmax(0,1fr)] content-start gap-4 md:grid md:grid-cols-3 2xl:sticky 2xl:top-24 2xl:order-none 2xl:flex 2xl:flex-col 2xl:self-start">
               <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                 <div className="flex items-center justify-between text-label-sm uppercase text-on-surface-variant">Aperçu badge acheteur <span className="h-2 w-2 rounded-full bg-tertiary" /></div>
                 <div className="mt-3 rounded-xl bg-surface-container-low p-3">
