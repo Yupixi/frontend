@@ -68,19 +68,23 @@ function shortcutPage(): Page | null {
 // "Partager l'annonce" needs a link that actually opens the listing for
 // whoever receives it — the app otherwise never puts state in the URL, so
 // a shared `window.location.href` would just be the homepage.
+function sharedSellerId(): string | null {
+  return new URLSearchParams(window.location.search).get('seller')
+}
+
 function sharedListingId(): string | null {
   return new URLSearchParams(window.location.search).get('listing')
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(sharedListingId() ? 'listing-detail' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [page, setPage] = useState<Page>(sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? savedNav.selectedListingId ?? 'l1')
   const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
-  const [selectedSellerId, setSelectedSellerId] = useState(savedNav.selectedSellerId ?? 's1')
+  const [selectedSellerId, setSelectedSellerId] = useState(sharedSellerId() ?? savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
   // right conversation, not part of the session-restored nav state.
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
@@ -342,7 +346,7 @@ export default function App() {
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} />
       case 'seller-profile':
-        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn} />
+        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
       case 'categories':
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} />
       case 'flash-offers':

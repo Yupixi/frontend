@@ -1,228 +1,161 @@
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
-  LayoutDashboard, Plus, Package, BarChart2, Award, Heart, MessageCircle,
-  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ArrowLeft,
+  LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare,
+  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store,
 } from '../../components/icons'
 import Logo from '../../components/DilchapLogo'
 import { MY_LISTINGS_QUERY } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
 import type { AuthUser } from '../../graphql/auth'
 
-// Every Yupixi member is both a buyer and a seller — one account, one
-// space. This shell (sidebar + header) is shared by every buyer-* and
-// seller-* page instead of the two separate dashboards/sidebars this app
-// used to have.
-const sidebarItems = [
-  { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-  { key: 'seller-post', icon: Plus, label: 'Publier une annonce' },
-  { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
-  { key: 'buyer-favorites', icon: Heart, label: 'Mes favoris' },
-  { key: 'buyer-messages', icon: MessageCircle, label: 'Messages' },
-  { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
-  { key: 'buyer-notifications', icon: Bell, label: 'Notifications' },
-  { key: 'buyer-history', icon: History, label: 'Historique' },
-  { key: 'seller-premium', icon: Award, label: 'Boost & Premium' },
-  { key: 'buyer-settings', icon: Settings, label: 'Paramètres' },
+// Every member is both a buyer and a seller — one account, one space. This
+// shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
+// annonce): grouped sidebar, compact header with the publish CTA.
+const SECTIONS = [
+  {
+    title: 'Gestion & Ventes',
+    items: [
+      { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
+      { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
+      { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
+      { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
+      { key: 'buyer-messages', icon: MessageSquare, label: 'Messagerie' },
+    ],
+  },
+  {
+    title: 'Acheter & Explorer',
+    items: [
+      { key: 'buyer-favorites', icon: Heart, label: 'Mes favoris' },
+      { key: 'buyer-notifications', icon: Bell, label: 'Notifications' },
+      { key: 'buyer-history', icon: History, label: 'Historique' },
+    ],
+  },
 ]
 
 export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-dashboard': 'Tableau de bord',
-  'seller-post': 'Publier une annonce',
+  'seller-post': 'Déposer une annonce',
   'seller-edit': "Modifier l'annonce",
   'seller-listings': 'Mes annonces',
   'buyer-favorites': 'Mes favoris',
-  'buyer-messages': 'Messages',
+  'buyer-messages': 'Messagerie',
   'seller-stats': 'Statistiques',
   'buyer-notifications': 'Notifications',
   'buyer-history': 'Historique',
-  'seller-premium': 'Boost & Premium',
+  'seller-premium': 'Booster & Visibilité',
   'buyer-settings': 'Paramètres',
 }
 
 function useUnreadCounts() {
-  const { data: listingsData } = useQuery<{ myListings: { totalCount: number } }>(MY_LISTINGS_QUERY, {
-    variables: { page: 1, pageSize: 1 },
-  })
-  const { data: conversationsData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY, {
-    pollInterval: 30_000,
-  })
+  const { data: listingsData } = useQuery<{ myListings: { totalCount: number } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 1 } })
+  const { data: conversationsData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY, { pollInterval: 30_000 })
   const unreadMessages = (conversationsData?.myConversations ?? []).reduce((sum, c) => sum + c.unreadCount, 0)
   return { listingsCount: listingsData?.myListings.totalCount, unreadMessages }
 }
 
-function SidebarNav({ active, onNavigate, onClose, listingsCount, unreadMessages, isGuest }: {
-  active: string; onNavigate: (p: any) => void; onClose?: () => void; listingsCount?: number; unreadMessages?: number; isGuest?: boolean
+function NavItem({ active, icon: Icon, label, badge, onClick, muted }: {
+  active?: boolean, icon: typeof Home, label: string, badge?: React.ReactNode, onClick: () => void, muted?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`mb-0.5 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none px-3 py-2.5 text-left ${active ? 'bg-primary text-white' : `bg-transparent hover:bg-surface-container-low ${muted ? 'text-on-surface-variant' : 'text-on-surface'}`} ${muted ? 'text-body-sm' : 'text-label-md'}`}
+    >
+      <Icon size={20} className={active ? 'text-white' : 'text-on-surface-variant'} />
+      <span className="flex-1">{label}</span>
+      {badge}
+    </button>
+  )
+}
+
+function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, isGuest }: {
+  active: string; onNavigate: (p: any) => void; listingsCount?: number; unreadMessages?: number; isGuest?: boolean
 }) {
   // A guest identity only exists to hold a conversation open — there's no
-  // account behind it, so every other area of the account shell stays
-  // hidden rather than just visually disabled.
-  const items = isGuest ? sidebarItems.filter(item => item.key === 'buyer-messages') : sidebarItems
+  // account behind it, so every other area stays hidden.
+  const sections = isGuest
+    ? [{ title: 'Messagerie', items: SECTIONS[0].items.filter(i => i.key === 'buyer-messages') }]
+    : SECTIONS
   return (
-    <>
-      {items.map(item => {
-        const badge = item.key === 'seller-listings' ? listingsCount : item.key === 'buyer-messages' ? unreadMessages : undefined
-        return (
-          <button
-            key={item.key}
-            onClick={() => { onNavigate(item.key); onClose?.() }}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10,
-              cursor: 'pointer', marginBottom: 2,
-              background: active === item.key ? 'rgba(187, 0, 19,0.07)' : 'transparent',
-              color: active === item.key ? '#BB0013' : 'var(--fg-muted)',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontWeight: active === item.key ? 800 : 600,
-              fontSize: '0.85rem',
-              transition: 'all 0.12s',
-            }}
-            onMouseEnter={e => { if (active !== item.key) e.currentTarget.style.background = 'var(--border-subtle)' }}
-            onMouseLeave={e => { if (active !== item.key) e.currentTarget.style.background = 'transparent' }}
-          >
-            <item.icon size={18} strokeWidth={active === item.key ? 2.5 : 1.8} />
-            <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-            {!!badge && (
-              <span style={{
-                background: active === item.key ? '#BB0013' : 'var(--border)', color: active === item.key ? '#fff' : 'var(--fg-muted)',
-                borderRadius: 8, padding: '1px 8px', fontSize: '0.7rem', fontWeight: 800,
-              }}>{badge}</span>
-            )}
-          </button>
-        )
-      })}
-    </>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        {sections.map(section => (
+          <div key={section.title} className="mb-5">
+            <div className="mb-2 px-3 text-label-sm uppercase text-on-surface-variant">{section.title}</div>
+            {section.items.map(item => {
+              const badge = item.key === 'buyer-messages' && unreadMessages
+                ? <span className={`rounded-full px-2 text-label-sm ${active === item.key ? 'bg-white text-primary' : 'bg-primary-fixed text-primary'}`}>{unreadMessages} non lu{unreadMessages > 1 ? 's' : ''}</span>
+                : item.key === 'seller-listings' && listingsCount
+                  ? <span className={`rounded-full px-2 text-label-sm ${active === item.key ? 'bg-white/25 text-white' : 'bg-surface-container text-on-surface-variant'}`}>{listingsCount}</span>
+                  : undefined
+              return <NavItem key={item.key} active={active === item.key} icon={item.icon} label={item.label} badge={badge} onClick={() => onNavigate(item.key)} />
+            })}
+          </div>
+        ))}
+        {!isGuest && (
+          <div className="mx-1 mt-2 rounded-xl bg-tertiary-soft p-3">
+            <div className="mb-1 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={15} /> Sécurité Dilchap</div>
+            <p className="m-0 text-body-sm text-on-surface-variant">Vos ventes se règlent de la main à la main, après vérification de l'article. 0 F de commission.</p>
+          </div>
+        )}
+      </div>
+      <div className="border-0 border-t border-solid border-outline-variant px-3 py-3">
+        <NavItem icon={Store} label="Retour Marketplace" onClick={() => onNavigate('home')} muted />
+        {!isGuest && <NavItem active={active === 'buyer-settings'} icon={Settings} label="Paramètres" onClick={() => onNavigate('buyer-settings')} muted />}
+      </div>
+    </div>
   )
 }
 
-function AccountSidebar({ active, onNavigate, sidebarOpen, onClose, listingsCount, unreadMessages, isGuest }: {
-  active: string; onNavigate: (p: any) => void; sidebarOpen?: boolean; onClose?: () => void; listingsCount?: number; unreadMessages?: number; isGuest?: boolean
+function AccountHeader({ activeLabel, currentUser, onToggleSidebar, onNavigate, onLogout, unreadMessages }: {
+  activeLabel: string; currentUser?: AuthUser | null; onToggleSidebar: () => void; onNavigate: (p: any) => void; onLogout: () => void; unreadMessages?: number
 }) {
-  return (
-    <>
-      <aside className="dashboard-sidebar-desktop" style={{
-        width: 230, background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden',
-      }}>
-        <div style={{ padding: '1.25rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'center' }}>
-          <Logo size="md" colorMode="red" />
-        </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-          <SidebarNav active={active} onNavigate={onNavigate} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
-        </div>
-        <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-          <button onClick={() => onNavigate('home')} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.12s' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            <LogOut size={16} />
-            <span>Retour au site</span>
-          </button>
-        </div>
-      </aside>
-
-      {sidebarOpen && (
-        <div className="dashboard-sidebar-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, animation: 'fadeIn 0.15s ease-out' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => onClose?.()} />
-          <aside style={{ position: 'relative', width: 280, height: '100%', background: 'var(--bg-card)', display: 'flex', flexDirection: 'column', animation: 'slideIn 0.2s ease-out' }}>
-            <div style={{ padding: '1.1rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
-              <Logo size="sm" colorMode="red" />
-              <button onClick={() => onClose?.()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', padding: 4 }}><X size={20} /></button>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
-              <SidebarNav active={active} onNavigate={onNavigate} onClose={onClose} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
-            </div>
-            <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
-              <button onClick={() => { onNavigate('home'); onClose?.() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '0.6rem 0.75rem', border: 'none', borderRadius: 10, cursor: 'pointer', background: 'transparent', color: 'var(--fg-muted)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: '0.82rem' }}>
-                <LogOut size={16} />
-                <span>Retour au site</span>
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-    </>
-  )
-}
-
-function AccountHeader({ activeLabel, currentUser, onBack, onToggleSidebar, onNavigate, onLogout }: {
-  activeLabel: string; currentUser?: AuthUser | null; onBack: () => void; onToggleSidebar?: () => void; onNavigate: (p: any) => void; onLogout: () => void
-}) {
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const isGuest = !!currentUser?.isGuest
   const displayName = currentUser?.fullName || 'Mon compte'
-  const displayInitial = displayName.charAt(0).toUpperCase()
+  const iconBtn = 'relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container-low'
   return (
-    <header className="dashboard-header" style={{
-      height: 60, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
-      display: 'flex', alignItems: 'center', padding: '0 1.25rem', gap: '0.75rem',
-      flexShrink: 0,
-    }}>
-      <button className="dashboard-sidebar-mobile-btn" onClick={onToggleSidebar} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)' }}>
-        <Menu size={20} />
-      </button>
-      <button onClick={onBack} title="Retour au site" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', borderRadius: 8, transition: 'all 0.12s' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        <ArrowLeft size={18} />
-      </button>
-      <h1 className="desktop-only" style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.95rem', color: 'var(--fg)' }}>{activeLabel}</h1>
-      <div style={{ flex: 1 }} />
+    <header className="flex h-16 shrink-0 items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-4 lg:px-6">
+      <button onClick={onToggleSidebar} className={`${iconBtn} lg:hidden`} aria-label="Menu"><Menu size={22} /></button>
+      <button onClick={() => onNavigate('home')} className="hidden cursor-pointer border-none bg-transparent p-0 lg:block" aria-label="Accueil"><Logo size="sm" /></button>
       {!isGuest && (
-        <button onClick={() => onNavigate('buyer-notifications')} style={{ background: 'none', border: 'none', cursor: 'pointer', width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', transition: 'all 0.12s' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <Bell size={18} />
-        </button>
+        <span className={`hidden items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase md:flex ${currentUser?.isVerified ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
+          {currentUser?.isVerified ? <><BadgeCheck size={14} /> Vendeur certifié</> : 'Espace vendeur'}
+        </span>
       )}
-      <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
-      <div style={{ position: 'relative' }}>
-        <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 10, cursor: 'pointer', background: 'none', border: 'none', transition: 'all 0.12s' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <div style={{ width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, #BB0013, #FF6B35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.8rem', fontFamily: "'Plus Jakarta Sans', sans-serif", overflow: 'hidden' }}>
-            {currentUser?.avatarUrl
-              ? <img src={currentUser.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : displayInitial}
-          </div>
-          <div className="desktop-only" style={{ textAlign: 'left' }}>
-            <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.2 }}>{displayName}</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--fg-subtle)' }}>{currentUser?.email ?? ''}</div>
-          </div>
-          <ChevronDown size={14} style={{ color: 'var(--fg-subtle)' }} />
+      <h1 className="m-0 truncate text-label-lg text-on-surface lg:hidden">{activeLabel}</h1>
+      <div className="flex-1" />
+      <button onClick={() => onNavigate('buyer-messages')} className={iconBtn} aria-label="Messagerie">
+        <MessageSquare size={22} />
+        {!!unreadMessages && <span className="notif-dot">{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
+      </button>
+      {!isGuest && (
+        <>
+          <button onClick={() => onNavigate('buyer-notifications')} className={`${iconBtn} hidden sm:flex`} aria-label="Notifications"><Bell size={22} /></button>
+          <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark sm:flex">
+            <PlusCircle size={18} /> Déposer une annonce
+          </button>
+        </>
+      )}
+      <div className="relative">
+        <button onClick={() => setMenuOpen(o => !o)} className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent p-1 hover:bg-surface-container-low">
+          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">
+            {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : displayName.charAt(0).toUpperCase()}
+          </span>
+          <span className="hidden max-w-[140px] truncate text-label-md text-on-surface md:block">{displayName}</span>
+          <ChevronDown size={16} className="hidden text-on-surface-variant md:block" />
         </button>
-
-        {userMenuOpen && (
-          <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 10, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', width: 220, zIndex: 200, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-            {(isGuest ? [] : [
-              { icon: Home, label: 'Tableau de bord', page: 'buyer-dashboard' as const },
-              { icon: Settings, label: 'Paramètres du compte', page: 'buyer-settings' as const },
-            ]).map(item => (
-              <button
-                key={item.page}
-                onClick={() => { onNavigate(item.page); setUserMenuOpen(false) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <item.icon size={16} />
-                {item.label}
-              </button>
-            ))}
-            <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6 }}>
-              <button
-                onClick={() => { setUserMenuOpen(false); onLogout() }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '0.85rem', borderRadius: 8, textAlign: 'left' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <LogOut size={16} />
-                Se déconnecter
-              </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-full z-[200] mt-2 w-56 rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float">
+            <div className="mb-1 border-0 border-b border-solid border-outline-variant px-3 py-2">
+              <div className="truncate text-label-md text-on-surface">{displayName}</div>
+              <div className="truncate text-body-sm text-on-surface-variant">{currentUser?.email ?? ''}</div>
             </div>
+            {!isGuest && <NavItem icon={Settings} label="Paramètres du compte" onClick={() => { setMenuOpen(false); onNavigate('buyer-settings') }} />}
+            <button onClick={() => { setMenuOpen(false); onLogout() }} className="flex w-full cursor-pointer items-center gap-3 rounded-lg border-none bg-transparent px-3 py-2.5 text-label-md text-primary hover:bg-primary-fixed/50">
+              <LogOut size={20} /> Se déconnecter
+            </button>
           </div>
         )}
       </div>
@@ -236,13 +169,32 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { listingsCount, unreadMessages } = useUnreadCounts()
   const isGuest = !!currentUser?.isGuest
+  const go = (p: string) => { setSidebarOpen(false); onNavigate(p) }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)' }}>
-      <AccountSidebar active={active} onNavigate={(p: string) => { setSidebarOpen(false); onNavigate(p) }} sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <AccountHeader activeLabel={ACCOUNT_PAGE_LABELS[active] || active} currentUser={currentUser} onBack={() => onNavigate('home')} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} onNavigate={onNavigate} onLogout={onLogout} />
-        <main className="dashboard-main" style={{ flex: 1, overflow: 'auto', padding: '1.5rem 2rem' }}>
+    <div className="flex h-screen bg-surface">
+      <aside className="hidden w-64 shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest lg:block">
+        <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
+      </aside>
+
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-[9999] lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
+          <aside className="relative flex h-full w-72 flex-col bg-surface-lowest">
+            <div className="flex items-center justify-between border-0 border-b border-solid border-outline-variant px-4 py-3">
+              <Logo size="sm" />
+              <button onClick={() => setSidebarOpen(false)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant" aria-label="Fermer"><X size={22} /></button>
+            </div>
+            <div className="min-h-0 flex-1">
+              <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} isGuest={isGuest} />
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AccountHeader activeLabel={ACCOUNT_PAGE_LABELS[active] || active} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} />
+        <main className="dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6">
           {children}
         </main>
       </div>

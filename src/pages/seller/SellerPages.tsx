@@ -31,7 +31,6 @@ import {
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
 import { LISTING_OFFERS_QUERY, RESPOND_TO_OFFER_MUTATION, type RemoteOffer } from '../../graphql/offers'
-import { MY_SUBSCRIPTION_QUERY, SUBSCRIBE_TO_PLAN_MUTATION, BOOST_TIERS, type RemoteMySubscription, type SubscriptionTier } from '../../graphql/promotions'
 import type { AuthUser } from '../../graphql/auth'
 import { AccountLayout as DashboardLayout } from '../account/AccountLayout'
 
@@ -239,7 +238,7 @@ export function PostListing({ onNavigate, currentUser, onLogout, listingId }: { 
                     <h3 style={{ margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1rem' }}>Boostez votre annonce</h3>
                   </div>
                   <p style={{ margin: '0 0 1rem', color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
-                    Passez devant les autres annonces dès votre approbation — jusqu'à {BOOST_TIERS[BOOST_TIERS.length - 1].days} jours de visibilité prioritaire.
+                    Remontées, mise en vedette ou badge Urgent : choisissez une formule, activée dès l'approbation.
                   </p>
                   <BoostMenu variant="inline" listingId={publishedListingId} onDone={() => setBoosted(true)} />
                 </>
@@ -959,99 +958,4 @@ export function SellerStats({ onNavigate, currentUser, onLogout }: { onNavigate:
   )
 }
 
-// ─── PREMIUM ─────────────────────────────────────────────────────────────────
-const PLANS: { tier: SubscriptionTier, name: string, price: number, color: string, features: string[], highlight?: boolean }[] = [
-  {
-    tier: 'FREE',
-    name: 'Gratuit',
-    price: 0,
-    color: '#6B7280',
-    features: ['5 annonces actives', '3 photos par annonce', 'Statistiques de base', 'Support email'],
-  },
-  {
-    tier: 'PRO',
-    name: 'Pro',
-    price: 25000,
-    color: '#BB0013',
-    features: ['Annonces illimitées', '10 photos par annonce', 'Statistiques avancées', '3 boosts par mois', 'Badge Vendeur Pro', 'Support prioritaire', 'Mise en avant dans la recherche'],
-    highlight: true,
-  },
-  {
-    tier: 'BUSINESS',
-    name: 'Business',
-    price: 75000,
-    color: '#8B5CF6',
-    features: ['Tout ce qui est dans Pro', 'Annonces sponsorisées', '20 boosts par mois', 'Page boutique dédiée', 'API access', 'Manager dédié', 'Rapports personnalisés'],
-  },
-]
-
-export function SellerPremium({ onNavigate, currentUser, onLogout }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }) {
-  const { data, loading, refetch } = useQuery<{ mySubscription: RemoteMySubscription }>(MY_SUBSCRIPTION_QUERY)
-  const [subscribeToPlan, { loading: subscribing }] = useMutation(SUBSCRIBE_TO_PLAN_MUTATION)
-  const [subscribeError, setSubscribeError] = useState<string | null>(null)
-  const currentTier = data?.mySubscription.tier ?? 'FREE'
-  const expiresAt = data?.mySubscription.expiresAt
-
-  const choose = async (tier: SubscriptionTier) => {
-    setSubscribeError(null)
-    try {
-      await subscribeToPlan({ variables: { tier } })
-      void refetch()
-    } catch (err) {
-      setSubscribeError(err instanceof Error ? err.message : 'Impossible de changer de plan.')
-    }
-  }
-
-  return (
-    <DashboardLayout active="seller-premium" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <div className="badge badge-orange" style={{ display: 'inline-flex', marginBottom: '0.75rem' }}>⭐ Plans Premium</div>
-        <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '2rem', margin: '0 0 0.75rem' }}>Boostez vos ventes</h1>
-        <p style={{ color: 'var(--fg-muted)', fontSize: '1rem' }}>Choisissez le plan qui correspond à vos besoins</p>
-        {expiresAt && currentTier !== 'FREE' && (
-          <p style={{ color: 'var(--fg-subtle)', fontSize: '0.8rem', marginTop: 4 }}>Actif jusqu'au {new Date(expiresAt).toLocaleDateString('fr-FR')}</p>
-        )}
-        {subscribeError && <p style={{ color: 'var(--primary)', fontSize: '0.85rem', marginTop: 8 }}>{subscribeError}</p>}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-        {PLANS.map(plan => {
-          const isCurrent = plan.tier === currentTier
-          return (
-          <div key={plan.name} className="card" style={{ padding: '1.75rem', border: plan.highlight ? `2px solid var(--primary)` : '1px solid var(--border)', position: 'relative', transform: plan.highlight ? 'scale(1.02)' : 'none' }}>
-            {plan.highlight && !isCurrent && (
-              <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>⭐ Le plus populaire</div>
-            )}
-            {isCurrent && (
-              <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#6B7280', color: '#fff', padding: '4px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 800 }}>Plan actuel</div>
-            )}
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: '1.2rem', color: plan.color, margin: '0 0 0.75rem' }}>{plan.name}</h2>
-            <div style={{ marginBottom: '1.25rem' }}>
-              <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 900, fontSize: plan.price === 0 ? '1.5rem' : '2rem' }}>
-                {plan.price === 0 ? 'Gratuit' : <Price amount={plan.price} />}
-              </span>
-              {plan.price > 0 && <span style={{ color: 'var(--fg-muted)', fontSize: '0.875rem' }}> / mois</span>}
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {plan.features.map(f => (
-                <li key={f} style={{ display: 'flex', gap: 8, fontSize: '0.875rem', color: 'var(--fg-muted)' }}>
-                  <CheckCircle size={16} color={plan.color} style={{ flexShrink: 0, marginTop: 1 }} />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button
-              className={isCurrent ? 'btn-outline' : 'btn-primary'}
-              style={{ width: '100%', padding: '0.75rem', background: isCurrent ? undefined : plan.color, borderColor: plan.color, color: isCurrent ? plan.color : '#fff' }}
-              disabled={isCurrent || loading || subscribing || plan.tier === 'FREE'}
-              onClick={() => void choose(plan.tier)}
-            >
-              {isCurrent ? 'Plan actuel' : subscribing ? 'Un instant...' : `Choisir ${plan.name}`}
-            </button>
-          </div>
-          )
-        })}
-      </div>
-    </DashboardLayout>
-  )
-}
+export { default as SellerPremium } from './Booster'

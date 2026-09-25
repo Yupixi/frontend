@@ -1,36 +1,29 @@
-import { useMutation } from '@apollo/client/react'
+import { useMutation, useQuery } from '@apollo/client/react'
 import Price from './Price'
-import { CREATE_BOOST_MUTATION, BOOST_TIERS } from '../graphql/promotions'
+import { BOOST_PACKS_QUERY, CREATE_BOOST_MUTATION, type BoostPackInfo } from '../graphql/promotions'
 
 type BoostMenuProps = {
   listingId: string
   onDone: () => void
-  // 'dropdown' floats under a trigger button (SellerListings, ListingDetail).
-  // 'inline' sits directly in the page flow (the post-publish upsell, where
-  // it IS the content rather than something popping out from a button).
+  // 'dropdown' floats under a trigger button; 'inline' sits in the flow.
   variant?: 'dropdown' | 'inline'
 }
 
-// No payment step yet (see BoostsService — Mobile Money is deferred), so
-// choosing a tier activates the boost immediately.
+// Quick picker over the backend's boost packs. No payment step yet (Mobile
+// Money deferred) — choosing a pack activates it immediately.
 export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: BoostMenuProps) {
+  const { data } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY)
   const [createBoost, { loading }] = useMutation(CREATE_BOOST_MUTATION)
-
-  const pick = (tier: string) =>
-    void createBoost({ variables: { input: { listingId, tier } } }).then(() => onDone())
+  const pick = (pack: string) => void createBoost({ variables: { input: { listingId, pack } } }).then(() => onDone())
 
   return (
-    <div style={variant === 'dropdown'
-      ? { position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 6, zIndex: 20, width: 200 }
-      : { border: '1px solid var(--border)', borderRadius: 10, padding: 6 }
-    }>
-      {BOOST_TIERS.map(t => (
-        <button key={t.tier} disabled={loading} onClick={() => pick(t.tier)} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'var(--fg)' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--border-subtle)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <span>{t.label}</span>
-          <span style={{ color: 'var(--primary)' }}><Price amount={t.price} /></span>
+    <div className={variant === 'dropdown'
+      ? 'absolute right-0 top-full z-20 mt-1 w-64 rounded-xl border border-outline-variant bg-surface-lowest p-1.5 shadow-float'
+      : 'rounded-xl border border-outline-variant p-1.5'}>
+      {(data?.boostPacks ?? []).map(p => (
+        <button key={p.pack} disabled={loading} onClick={() => pick(p.pack)} className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-none bg-transparent px-2.5 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low disabled:opacity-60">
+          <span className="truncate">{p.label}</span>
+          <span className="shrink-0 text-primary"><Price amount={p.price} /></span>
         </button>
       ))}
     </div>
