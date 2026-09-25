@@ -80,8 +80,8 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
           <>
             <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Commande #${o.reference}`, page: 'buyer-handover' }, { label: 'Ouverture de litige' }]} />
             <section className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="gavel" size={21} /></span>
-              <div className="min-w-0 flex-1"><div className="text-headline-sm text-on-surface">Garantie Tierce-Partie Dilchap</div><div className="text-body-sm text-on-surface-variant">Tant que le litige est ouvert, votre code de remise est gelé : aucun paiement n'est dû.</div></div>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="gavel" size={21} /></span>
+              <div className="min-w-[12rem] flex-1"><div className="text-headline-sm text-on-surface">Garantie Tierce-Partie Dilchap</div><div className="text-body-sm text-on-surface-variant">Tant que le litige est ouvert, votre code de remise est gelé : aucun paiement n'est dû.</div></div>
               <span className="flex items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm uppercase text-on-surface"><span className="h-2 w-2 rounded-full bg-primary" /> Procédure sécurisée</span>
             </section>
 

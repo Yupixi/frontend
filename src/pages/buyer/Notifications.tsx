@@ -58,9 +58,9 @@ export default function Notifications({ onNavigate, onSelectListing, onOpenPurch
 
   // Next confirmed hand-over (as buyer or seller).
   const upcoming = [
-    ...(purchasesData?.myPurchaseOrders ?? []).map(o => ({ id: o.id, role: 'BUYER' as const, title: o.listing.title, other: o.seller.fullName, meetup: o.meetup })),
-    ...(salesData?.mySalesOrders ?? []).map(o => ({ id: o.id, role: 'SELLER' as const, title: o.listing.title, other: o.buyer.fullName, meetup: o.meetup })),
-  ].filter(o => o.meetup?.status === 'CONFIRMED' && new Date(o.meetup.scheduledAt).getTime() > Date.now() - 3 * 3600_000)
+    ...(purchasesData?.myPurchaseOrders ?? []).map(o => ({ id: o.id, role: 'BUYER' as const, title: o.listing.title, other: o.seller.fullName, meetup: o.meetup, open: o.stage === 'PENDING' || o.stage === 'IN_PROGRESS' })),
+    ...(salesData?.mySalesOrders ?? []).map(o => ({ id: o.id, role: 'SELLER' as const, title: o.listing.title, other: o.buyer.fullName, meetup: o.meetup, open: o.stage === 'PENDING' || o.stage === 'IN_PROGRESS' })),
+  ].filter(o => o.open && o.meetup?.status === 'CONFIRMED' && new Date(o.meetup.scheduledAt).getTime() > Date.now() - 3 * 3600_000)
     .sort((a, b) => new Date(a.meetup!.scheduledAt).getTime() - new Date(b.meetup!.scheduledAt).getTime())[0]
 
   // This week's activity (Mon → Sun).

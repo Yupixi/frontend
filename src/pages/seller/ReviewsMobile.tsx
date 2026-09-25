@@ -8,11 +8,16 @@ import { MY_DISPUTE_STATS_QUERY, type DisputeStats } from '../../graphql/sellerT
 import type { FullReview, Reputation } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
 
-type Props = { rep?: Reputation; reviews: FullReview[]; currentUser?: AuthUser | null }
+type Props = { rep?: Reputation; reviews: FullReview[]; currentUser?: AuthUser | null; replying?: boolean; onReply: (reviewId: string, text: string) => Promise<unknown> }
 
 // "Avis & Réputation" (Stitch mobile): rating card, trust badges, filtered
 // reviews and the WhatsApp share of the public profile.
-export default function ReviewsMobile({ rep, reviews, currentUser }: Props) {
+export default function ReviewsMobile({ rep, reviews, currentUser, replying, onReply }: Props) {
+  // Reply editor, as on desktop: one open review at a time.
+  const [replyTo, setReplyTo] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const openReply = (r: FullReview) => { setReplyTo(r.id); setDraft(r.reply ?? '') }
+  const sendReply = (id: string) => { const text = draft.trim(); if (text) void onReply(id, text).then(() => setReplyTo(null)) }
   const { data: disputesData } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)
   const [filter, setFilter] = useState<'all' | 'five' | 'comment'>('all')
   const total = rep?.reviewsCount ?? 0
@@ -101,7 +106,22 @@ export default function ReviewsMobile({ rep, reviews, currentUser }: Props) {
                 <span className="shrink-0 text-on-surface"><Price amount={r.listing.price} currency={r.listing.currency} /></span>
               </div>
             )}
-            {r.reply && <p className="m-0 mt-2 rounded-lg border-0 border-l-2 border-solid border-l-primary bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant"><b className="text-on-surface">Votre réponse :</b> {r.reply}</p>}
+            {replyTo === r.id ? (
+              <div className="mt-2 rounded-xl bg-surface-container-low p-3">
+                <textarea className="input" rows={3} autoFocus value={draft} onChange={e => setDraft(e.target.value)} placeholder={`Remerciez ${r.author.fullName.split(' ')[0]} et renforcez votre image de sérieux…`} />
+                <div className="mt-2 flex gap-2">
+                  <button onClick={() => setReplyTo(null)} className="h-11 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-md text-on-surface">Annuler</button>
+                  <button disabled={replying || !draft.trim()} onClick={() => sendReply(r.id)} className="flex h-11 flex-[1.4] cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary text-label-md text-white disabled:opacity-50"><Icon name="send" size={17} /> Publier</button>
+                </div>
+              </div>
+            ) : r.reply ? (
+              <div className="mt-2 rounded-lg border-0 border-l-2 border-solid border-l-primary bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">
+                <b className="text-on-surface">Votre réponse :</b> {r.reply}
+                <button onClick={() => openReply(r)} className="ml-2 cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary">Modifier</button>
+              </div>
+            ) : (
+              <button onClick={() => openReply(r)} className="mt-2 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-solid border-primary/40 bg-transparent text-label-md text-primary"><Icon name="reply" size={17} /> Répondre</button>
+            )}
           </article>
         ))}
       </div>

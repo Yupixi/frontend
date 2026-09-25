@@ -59,7 +59,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
 
   return (
     <AccountLayout active="seller-reviews" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <div className="md:hidden"><ReviewsMobile rep={rep} reviews={reviews} currentUser={currentUser} /></div>
+      <div className="md:hidden"><ReviewsMobile rep={rep} reviews={reviews} currentUser={currentUser} replying={replying} onReply={(id, text) => reply({ variables: { reviewId: id, reply: text } }).then(() => { void refetch() })} /></div>
       <div className="mx-auto hidden max-w-[1160px] pb-6 md:block">
         <div className="mb-1 flex items-center gap-2 text-label-sm uppercase"><span className="rounded bg-surface-container-high px-1.5 text-on-surface-variant">Confiance & réputation</span><span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Actualisé en temps réel</span></div>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">

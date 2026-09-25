@@ -213,10 +213,27 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     setStep(i)
     document.querySelector('.dashboard-main')?.scrollTo({ top: 0 })
   }
+  // Each step is a history entry, so the phone's back button goes to the
+  // previous step instead of leaving the wizard (and dropping the photos).
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const s = (e.state as { wizardStep?: number } | null)?.wizardStep
+      goStep(typeof s === 'number' ? s : 0)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const pushStep = (i: number) => {
+    window.history.pushState({ ...(window.history.state ?? {}), wizardStep: i }, '')
+    goStep(i)
+  }
+  // Going back a step pops the entries pushed on the way forward.
+  const backTo = (i: number) => { if (i < step) window.history.go(i - step) }
   const next = () => {
     const m = stepMissing(step)
     if (m.length) { setError(`Complétez ${m.join(', ')}.`); return }
-    goStep(step + 1)
+    pushStep(step + 1)
   }
   const only = (i: number) => (step === i ? '' : 'max-lg:hidden')
 
@@ -348,7 +365,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           </div>
           <div className="flex gap-1.5">
             {MOBILE_STEPS.map((label, i) => (
-              <button key={label} type="button" aria-label={label} onClick={() => i < step && goStep(i)} className={`h-1.5 flex-1 rounded-full border-none p-0 ${i <= step ? 'bg-primary' : 'bg-surface-container-high'} ${i < step ? 'cursor-pointer' : 'cursor-default'}`} />
+              <button key={label} type="button" aria-label={label} onClick={() => backTo(i)} className={`h-1.5 flex-1 rounded-full border-none p-0 ${i <= step ? 'bg-primary' : 'bg-surface-container-high'} ${i < step ? 'cursor-pointer' : 'cursor-default'}`} />
             ))}
           </div>
         </div>
@@ -644,7 +661,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
           <div className="flex items-center gap-2">
             {step > 0 ? (
-              <button type="button" onClick={() => goStep(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label="Étape précédente">
+              <button type="button" onClick={() => backTo(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label="Étape précédente">
                 <Icon name="arrow_back" size={20} />
               </button>
             ) : !isEditing && (

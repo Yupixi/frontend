@@ -6,6 +6,7 @@ import {
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { MY_LISTINGS_QUERY, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
 import { BOOST_PACKS_QUERY, CREATE_BOOST_MUTATION, MY_BOOSTS_QUERY, type BoostPack, type BoostPackInfo, type RemoteBoost } from '../../graphql/promotions'
@@ -46,7 +47,12 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
 
   const pack = (p: BoostPack) => packs.find(x => x.pack === p)
-  const activate = async (p: BoostPack) => {
+  // A paid pack is never activated on a single tap: the buttons open a
+  // confirmation sheet recapping pack, listing and price first.
+  const [confirmPack, setConfirmPack] = useState<BoostPack | null>(null)
+  const activate = (p: BoostPack) => { if (listing) setConfirmPack(p) }
+  const confirmActivate = async (p: BoostPack) => {
+    setConfirmPack(null)
     if (!listing) return
     setError(null); setDone(null)
     try {
@@ -205,7 +211,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 {radio('BUMP_PACK_3', bumpChoice, setBumpChoice, 'À la demande')}
                 {radio('BUMP_DAILY_7', bumpChoice, setBumpChoice, 'À 18h00 pile')}
               </div>
-              <button disabled={!listing || activating} onClick={() => void activate(bumpChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
+              <button disabled={!listing || activating} onClick={() => activate(bumpChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                 Activer maintenant <ArrowRight size={16} />
               </button>
             </div>
@@ -219,7 +225,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 {radio('FEATURED_48H', featuredChoice, setFeaturedChoice)}
                 {radio('FEATURED_7D', featuredChoice, setFeaturedChoice, '1 semaine complète')}
               </div>
-              <button disabled={!listing || activating} onClick={() => void activate(featuredChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
+              <button disabled={!listing || activating} onClick={() => activate(featuredChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                 Choisir En Vedette <ArrowRight size={16} />
               </button>
             </div>
@@ -242,7 +248,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                     <span className="text-label-sm text-tertiary">pour 7 jours</span>
                   </div>
                 </div>
-                <button disabled={!listing || activating} onClick={() => void activate('TURBO_7D')} className="mt-4 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-50">
+                <button disabled={!listing || activating} onClick={() => activate('TURBO_7D')} className="mt-4 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-50">
                   {activating ? <Loader2 size={18} className="animate-spin" /> : <Rocket size={18} />} Activer le Pack Turbo
                 </button>
               </div>
@@ -258,7 +264,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                   <span className="text-on-surface-variant">Validité continue</span><span className="text-right font-semibold text-on-surface">{urgent.durationHours} heures</span>
                   <span className="text-on-surface-variant">Tarif unique</span><span className="text-right font-extrabold text-primary"><Price amount={urgent.price} /></span>
                 </div>
-                <button disabled={!listing || activating} onClick={() => void activate('URGENT_72H')} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
+                <button disabled={!listing || activating} onClick={() => activate('URGENT_72H')} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                   Prendre le badge (<Price amount={urgent.price} />) <ArrowRight size={16} />
                 </button>
               </div>
@@ -271,8 +277,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           <section className="mt-8 rounded-3xl bg-surface-container-low p-5 md:p-6">
             <div className="text-label-sm uppercase text-primary">Simulateur en direct</div>
             <h2 className="m-0 mb-4 text-headline-sm text-on-surface">Aperçu de votre annonce dans le fil d'actualité</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
+              <div className="min-w-0">
                 <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-outline" /> Sans boost (affichage standard)</div>
                 <div className="flex items-center gap-3 rounded-xl bg-surface-lowest p-3 opacity-70">
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container">{listing.coverImageUrl && <img src={listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</div>
@@ -280,7 +286,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 </div>
                 <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Descend dans le fil au fil des nouvelles publications.</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="mb-2 flex items-center gap-1.5 text-label-md text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> Avec boost (en tête de liste)</div>
                 <div className="relative flex items-center gap-3 rounded-xl border-2 border-solid border-primary bg-surface-lowest p-3">
                   <span className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Star size={11} /> En vedette Dilchap</span>
@@ -352,6 +358,21 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           ))}
         </section>
       </div>
+      <ConfirmSheet
+        open={!!confirmPack}
+        title="Confirmer le boost"
+        confirmLabel={`Activer · ${(pack(confirmPack ?? 'BUMP_FLASH')?.price ?? 0).toLocaleString('fr-FR')} F`}
+        loading={activating}
+        onClose={() => setConfirmPack(null)}
+        onConfirm={() => confirmPack && void confirmActivate(confirmPack)}
+      >
+        {confirmPack && listing && (
+          <>
+            <p className="m-0"><b className="text-on-surface">{pack(confirmPack)?.label ?? 'Formule'}</b> sur « {listing.title} ».</p>
+            <p className="m-0 mt-2">Montant : <b className="text-primary"><Price amount={pack(confirmPack)?.price ?? 0} /></b>. La mise en avant démarre dès la confirmation.</p>
+          </>
+        )}
+      </ConfirmSheet>
     </AccountLayout>
   )
 }

@@ -267,10 +267,22 @@ export default function App() {
     const onPop = () => {
       const st = window.history.state
       if (st && typeof st.__yupixiPage === 'string') {
+        // Restore the selection the entry was pushed with too — otherwise
+        // "back" to an order or listing shows whatever was selected last.
+        if (st.listingId) setSelectedListingId(st.listingId)
+        if (st.sellerId) setSelectedSellerId(st.sellerId)
+        if (st.orderId !== undefined) setSelectedOrderId(st.orderId)
+        if (st.disputeId !== undefined) setSelectedDisputeId(st.disputeId)
         setPage(st.__yupixiPage)
       } else {
         setPage('home')
       }
+    }
+    // The entry the app was loaded on (session restore, shared link) may
+    // carry no state, or a stale one: tag it with the page actually shown,
+    // so coming back to it restores that page rather than home.
+    if (window.history.state?.__yupixiPage !== page) {
+      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId }, '')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -289,13 +301,22 @@ export default function App() {
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
   }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId])
 
+  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string }
+  const historyEntry = (p: Page, sel: Selection = {}) => ({
+    __yupixiPage: p,
+    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId,
+    ...sel,
+  })
+
   // Where to land after signing in: the page the visitor was on (or tried to
   // open) when they were sent to the auth screen, instead of always home.
   const [authReturn, setAuthReturn] = useState<Page | null>(null)
 
   const isAccountPage = (p: Page) => (p.startsWith('seller-') && p !== 'seller-profile') || p.startsWith('buyer-')
 
-  const navigate = (p: Page) => {
+  // `sel` = the selection that goes with this page, recorded in the history
+  // entry so back/forward restores it (the state setters haven't applied yet).
+  const navigate = (p: Page, sel?: Selection) => {
     // Account pages need a session: go straight to auth rather than mounting
     // the page and bouncing from an effect, which left the account page in
     // the history and trapped the back button in a redirect loop.
@@ -306,12 +327,12 @@ export default function App() {
       setAuthReturn(page)
     }
     setPage(p)
-    window.history.pushState({ __yupixiPage: p }, '')
+    window.history.pushState(historyEntry(p, sel), '')
   }
 
   const replacePage = (p: Page) => {
     setPage(p)
-    window.history.replaceState({ __yupixiPage: p }, '')
+    window.history.replaceState(historyEntry(p), '')
   }
 
   // Same guard for pages reached without navigate(): session restore after a
@@ -326,37 +347,37 @@ export default function App() {
 
   const selectListing = (id: string) => {
     setSelectedListingId(id)
-    navigate('listing-detail')
+    navigate('listing-detail', { listingId: id })
   }
 
   const editListing = (id: string) => {
     setSelectedListingId(id)
-    navigate('seller-edit')
+    navigate('seller-edit', { listingId: id })
   }
 
   const selectSeller = (id: string) => {
     setSelectedSellerId(id)
-    navigate('seller-profile')
+    navigate('seller-profile', { sellerId: id })
   }
 
   const openHandover = (orderId: string) => {
     setSelectedOrderId(orderId)
-    navigate('seller-handover')
+    navigate('seller-handover', { orderId })
   }
 
   const openDispute = (disputeId: string) => {
     setSelectedDisputeId(disputeId)
-    navigate('seller-disputes')
+    navigate('seller-disputes', { disputeId })
   }
 
   const openPurchase = (orderId: string, target: Page) => {
     setSelectedOrderId(orderId)
-    navigate(target)
+    navigate(target, { orderId })
   }
 
   const openBuyerDispute = (disputeId: string) => {
     setSelectedDisputeId(disputeId)
-    navigate('buyer-disputes')
+    navigate('buyer-disputes', { disputeId })
   }
 
   const contactSellerAbout = (sellerId: string, listingId?: string) => {
@@ -404,7 +425,7 @@ export default function App() {
     clearTokens()
     setIsLoggedIn(false)
     setCurrentUser(null)
-    setPage('home')
+    replacePage('home')
   }
 
   const renderPage = () => {

@@ -58,8 +58,10 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
   const support = footerData?.footerSettings?.supportPhone
 
   const upcoming: Upcoming | undefined = [
-    ...purchases.map(o => ({ id: o.id, role: 'BUYER' as const, listing: o.listing, otherId: o.seller.id, other: o.seller.fullName, m: o.meetup, amount: o.agreedPrice, reference: o.reference })),
-    ...sales.map(o => ({ id: o.id, role: 'SELLER' as const, listing: o.listing, otherId: o.buyer.id, other: o.buyer.fullName, m: o.meetup, amount: o.agreedPrice, reference: o.reference })),
+    // Only deals still to hand over — a finished or disputed sale must not be
+    // pushed as "today's meet-up" with a code that no longer applies.
+    ...activePurchases.map(o => ({ id: o.id, role: 'BUYER' as const, listing: o.listing, otherId: o.seller.id, other: o.seller.fullName, m: o.meetup, amount: o.agreedPrice, reference: o.reference })),
+    ...activeSales.map(o => ({ id: o.id, role: 'SELLER' as const, listing: o.listing, otherId: o.buyer.id, other: o.buyer.fullName, m: o.meetup, amount: o.agreedPrice, reference: o.reference })),
   ].filter(o => o.m?.status === 'CONFIRMED' && o.m && new Date(o.m.scheduledAt).getTime() > Date.now() - 3 * 3600_000)
     .sort((a, b) => new Date(a.m!.scheduledAt).getTime() - new Date(b.m!.scheduledAt).getTime())
     .map(o => ({ id: o.id, role: o.role, listing: o.listing, otherId: o.otherId, other: o.other, place: o.m!.place, at: o.m!.scheduledAt, amount: o.amount, reference: o.reference }))[0]
@@ -93,7 +95,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
               {currentUser?.isVerified && <span className="flex items-center gap-1 text-tertiary"><Icon name="verified_user" size={14} /> Identité certifiée</span>}
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-xl bg-surface-container-low px-4 py-2.5">
+          <div className="flex basis-full items-center gap-3 rounded-xl bg-surface-container-low px-4 py-2.5 sm:basis-auto">
             <Icon name="payments" size={22} className="text-tertiary" />
             <div><div className="text-label-sm uppercase text-on-surface-variant">Ventes encaissées</div><div className="text-headline-sm font-extrabold text-tertiary"><Price amount={wallet?.totalSales ?? 0} /></div></div>
           </div>

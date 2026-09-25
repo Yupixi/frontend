@@ -54,8 +54,11 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
         {!loading && !o && <p className="text-body-md text-on-surface-variant">Commande introuvable.</p>}
 
         {o && (
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-            <div className="flex min-w-0 flex-col gap-4">
+          // Mobile follows the mockup order — meet-up place, article, seller,
+          // then the code — by flattening both columns (contents) and
+          // pulling the three context cards up with negative order.
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-5">
+            <div className="flex min-w-0 flex-col gap-4 max-lg:contents">
               <section className={`flex items-center gap-3 rounded-2xl p-4 ${confirmed ? 'bg-tertiary-soft' : 'bg-surface-container-low'}`}>
                 <Icon name={confirmed ? 'verified_user' : 'hourglass_top'} size={26} className={confirmed ? 'text-tertiary' : 'text-on-surface-variant'} />
                 <div className="min-w-0 flex-1">
@@ -144,8 +147,8 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
             </div>
 
             {/* Aside */}
-            <aside className="flex flex-col gap-4">
-              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+            <aside className="flex flex-col gap-4 max-lg:contents">
+              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:-order-2">
                 <div className="text-label-sm uppercase text-on-surface-variant">Article réservé</div>
                 <div className="mt-2 flex gap-3">
                   <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container">{o.listing.coverImageUrl && <img src={o.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
@@ -158,7 +161,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
               </section>
 
               {o.meetup && (
-                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+                <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:-order-3">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="m-0 text-headline-sm text-on-surface">Lieu du rendez-vous</h3>
                     <span className="flex items-center gap-1 text-label-sm text-primary"><Icon name="schedule" size={14} /> {new Date(o.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -171,7 +174,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 </section>
               )}
 
-              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+              <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:-order-1">
                 <div className="text-label-sm uppercase text-on-surface-variant">Vendeur</div>
                 <div className="mt-2 flex items-center gap-3">
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{o.seller.avatarUrl ? <img src={o.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : o.seller.fullName.charAt(0)}</span>

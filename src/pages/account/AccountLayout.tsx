@@ -9,6 +9,7 @@ import { MY_DISPUTE_STATS_QUERY } from '../../graphql/sellerTools'
 import Logo from '../../components/DilchapLogo'
 import { MY_LISTINGS_QUERY } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
+import { MY_NOTIFICATIONS_QUERY, type RemoteNotification } from '../../graphql/account'
 import type { AuthUser } from '../../graphql/auth'
 
 // Every member is both a buyer and a seller — one account, one space. This
@@ -66,30 +67,51 @@ export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-disputes': 'Suivi des litiges',
 }
 
-// Buyer hand-over pages get their own bar ("Vendeur / Handshake / Reçus /
-// Litiges" in the mobile buyer mockups).
-const BUYER_MOBILE_TABS = [
-  { key: 'buyer-dashboard', icon: 'storefront', label: 'Vendeur', match: [] as string[] },
-  { key: 'buyer-purchases', icon: 'qr_code_scanner', label: 'Handshake', match: ['buyer-purchases', 'buyer-handover'] },
-  { key: 'buyer-receipts', icon: 'receipt_long', label: 'Reçus', match: ['buyer-receipts', 'buyer-receipt'] },
-  { key: 'buyer-disputes', icon: 'gavel', label: 'Litiges', match: ['buyer-disputes', 'buyer-dispute-new'] },
+// Mobile bottom bars — three variants, as in the Stitch mobile mockups:
+// the member bar (dashboard, favourites, messages, history, settings…), the
+// Seller Hub bar (listings, sales, wallet, boosts) and the hand-over bar
+// (code de remise, reçu, litiges). Every bar keeps a way back to the account.
+type MobileTab = { key: string; icon: string; label: string; match: string[]; primary?: boolean }
+
+const MEMBER_TABS: MobileTab[] = [
+  { key: 'home', icon: 'home', label: 'Accueil', match: [] },
+  { key: 'buyer-favorites', icon: 'favorite', label: 'Favoris', match: ['buyer-favorites'] },
+  { key: 'seller-post', icon: 'add', label: 'Déposer', match: [], primary: true },
+  { key: 'buyer-messages', icon: 'chat', label: 'Messages', match: ['buyer-messages'] },
+  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews'] },
 ]
 
-// Mobile seller bar ("Accueil / Annonces / Messages / Ventes" in the mobile
-// Seller Hub mockups). "Ventes" covers every sales-side page.
-const MOBILE_TABS = [
-  { key: 'buyer-dashboard', icon: 'storefront', label: 'Accueil', match: ['buyer-dashboard', 'seller-dashboard'] },
-  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-post', 'seller-edit', 'seller-premium'] },
-  { key: 'buyer-messages', icon: 'chat_bubble', label: 'Messages', match: ['buyer-messages'] },
-  { key: 'seller-orders', icon: 'account_balance_wallet', label: 'Ventes', match: ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-stats', 'seller-disputes', 'seller-reviews'] },
+const SELLER_TABS: MobileTab[] = [
+  { key: 'home', icon: 'storefront', label: 'Accueil', match: [] },
+  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-premium'] },
+  { key: 'buyer-messages', icon: 'chat_bubble', label: 'Messages', match: [] },
+  { key: 'seller-orders', icon: 'account_balance_wallet', label: 'Ventes', match: ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-disputes'] },
+  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: [] },
 ]
+
+const HANDOVER_TABS: MobileTab[] = [
+  { key: 'buyer-dashboard', icon: 'storefront', label: 'Compte', match: [] },
+  { key: 'buyer-purchases', icon: 'qr_code_scanner', label: 'Remises', match: ['buyer-handover'] },
+  { key: 'buyer-receipts', icon: 'receipt_long', label: 'Reçus', match: ['buyer-receipts', 'buyer-receipt'] },
+  { key: 'buyer-disputes', icon: 'gavel', label: 'Litiges', match: ['buyer-disputes'] },
+]
+
+function mobileTabsFor(active: string): MobileTab[] | null {
+  // Full-screen tasks: the wizard and the dispute form have their own footer.
+  if (['seller-post', 'seller-edit', 'buyer-dispute-new'].includes(active)) return null
+  if (SELLER_TABS.some(t => t.match.includes(active))) return SELLER_TABS
+  if (HANDOVER_TABS.some(t => t.match.includes(active))) return HANDOVER_TABS
+  return MEMBER_TABS
+}
 
 function useUnreadCounts() {
   const { data: listingsData } = useQuery<{ myListings: { totalCount: number } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 1 } })
   const { data: conversationsData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY, { pollInterval: 30_000 })
   const unreadMessages = (conversationsData?.myConversations ?? []).reduce((sum, c) => sum + c.unreadCount, 0)
   const { data: disputesData } = useQuery<{ myDisputeStats: { active: number } }>(MY_DISPUTE_STATS_QUERY, { pollInterval: 60_000 })
-  return { listingsCount: listingsData?.myListings.totalCount, unreadMessages, activeDisputes: disputesData?.myDisputeStats.active ?? 0 }
+  const { data: notifData } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY, { pollInterval: 30_000 })
+  const unreadNotifications = (notifData?.myNotifications ?? []).filter(n => !n.readAt).length
+  return { listingsCount: listingsData?.myListings.totalCount, unreadMessages, unreadNotifications, activeDisputes: disputesData?.myDisputeStats.active ?? 0 }
 }
 
 function NavItem({ active, icon: Icon, label, badge, onClick, muted }: {
@@ -148,8 +170,8 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
   )
 }
 
-function AccountHeader({ activeLabel, currentUser, onToggleSidebar, onNavigate, onLogout, unreadMessages }: {
-  activeLabel: string; currentUser?: AuthUser | null; onToggleSidebar: () => void; onNavigate: (p: any) => void; onLogout: () => void; unreadMessages?: number
+function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBack, onNavigate, onLogout, unreadMessages, unreadNotifications }: {
+  activeLabel: string; isHome: boolean; currentUser?: AuthUser | null; onToggleSidebar: () => void; onBack: () => void; onNavigate: (p: any) => void; onLogout: () => void; unreadMessages?: number; unreadNotifications?: number
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const isGuest = !!currentUser?.isGuest
@@ -157,22 +179,29 @@ function AccountHeader({ activeLabel, currentUser, onToggleSidebar, onNavigate, 
   const iconBtn = 'relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container-low'
   return (
     <header className="flex h-16 shrink-0 items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-4 lg:px-6">
-      <button onClick={onToggleSidebar} className={`${iconBtn} lg:hidden`} aria-label="Menu"><Menu size={22} /></button>
-      <button onClick={() => onNavigate('home')} className="hidden cursor-pointer border-none bg-transparent p-0 lg:block" aria-label="Accueil"><Logo size="sm" /></button>
+      {/* Mobile: the account home opens the menu ("Dilchap · Mon compte"),
+          every other page gets a back arrow + its title, as in the mockups. */}
+      {isHome
+        ? <button onClick={onToggleSidebar} className={`${iconBtn} -ml-2 lg:hidden`} aria-label="Menu"><Menu size={22} /></button>
+        : <button onClick={onBack} className={`${iconBtn} -ml-2 text-on-surface lg:hidden`} aria-label="Retour"><Icon name="arrow_back" size={24} /></button>}
+      <button onClick={() => onNavigate('home')} className={`${isHome ? 'block' : 'hidden'} cursor-pointer border-none bg-transparent p-0 lg:block`} aria-label="Accueil"><Logo size="sm" /></button>
       {!isGuest && (
         <span className={`hidden items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase md:flex ${currentUser?.isVerified ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
           {currentUser?.isVerified ? <><BadgeCheck size={14} /> Vendeur certifié</> : 'Espace vendeur'}
         </span>
       )}
-      <h1 className="m-0 truncate text-label-lg text-on-surface lg:hidden">{activeLabel}</h1>
+      <h1 className={`m-0 min-w-0 truncate lg:hidden ${isHome ? 'text-label-md text-on-surface-variant' : 'text-headline-sm text-on-surface'}`}>{isHome ? 'Mon compte' : activeLabel}</h1>
       <div className="flex-1" />
-      <button onClick={() => onNavigate('buyer-messages')} className={iconBtn} aria-label="Messagerie">
+      <button onClick={() => onNavigate('buyer-messages')} className={`${iconBtn} hidden lg:flex`} aria-label="Messagerie">
         <MessageSquare size={22} />
         {!!unreadMessages && <span className="notif-dot">{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
       </button>
       {!isGuest && (
         <>
-          <button onClick={() => onNavigate('buyer-notifications')} className={`${iconBtn} hidden sm:flex`} aria-label="Notifications"><Bell size={22} /></button>
+          <button onClick={() => onNavigate('buyer-notifications')} className={iconBtn} aria-label="Notifications">
+            <Bell size={22} />
+            {!!unreadNotifications && <span className="notif-dot">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
+          </button>
           <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark sm:flex">
             <PlusCircle size={18} /> Nouvel article
           </button>
@@ -184,7 +213,7 @@ function AccountHeader({ activeLabel, currentUser, onToggleSidebar, onNavigate, 
             {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : displayName.charAt(0).toUpperCase()}
           </span>
           <span className="hidden max-w-[140px] truncate text-label-md text-on-surface md:block">{displayName}</span>
-          <ChevronDown size={16} className="hidden text-on-surface-variant md:block" />
+          <span className="hidden md:block"><ChevronDown size={16} className="text-on-surface-variant" /></span>
         </button>
         {menuOpen && (
           <div className="absolute right-0 top-full z-[200] mt-2 w-56 rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float">
@@ -203,11 +232,19 @@ function AccountHeader({ activeLabel, currentUser, onToggleSidebar, onNavigate, 
   )
 }
 
-export function AccountLayout({ active, onNavigate, children, currentUser, onLogout }: {
-  active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null, onLogout: () => void
+export function AccountLayout({ active, onNavigate, children, currentUser, onLogout, title, onBack, hideBottomNav }: {
+  active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null, onLogout: () => void,
+  /** Mobile header title, when the page isn't the one `active` names (e.g. a sub-step). */
+  title?: string
+  /** Mobile back arrow override (e.g. conversation → conversation list). */
+  onBack?: () => void
+  /** Full-screen mobile moments (an open chat thread) where the bar would cover the input. */
+  hideBottomNav?: boolean
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { listingsCount, unreadMessages, activeDisputes } = useUnreadCounts()
+  const { listingsCount, unreadMessages, unreadNotifications, activeDisputes } = useUnreadCounts()
+  const tabs = hideBottomNav ? null : mobileTabsFor(active)
+  const back = onBack ?? (() => (window.history.length > 1 ? window.history.back() : onNavigate('buyer-dashboard')))
   const isGuest = !!currentUser?.isGuest
   const go = (p: string) => { setSidebarOpen(false); onNavigate(p) }
 
@@ -233,19 +270,29 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <AccountHeader activeLabel={ACCOUNT_PAGE_LABELS[active] || active} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} />
-        <main className="dashboard-main flex-1 overflow-auto px-4 py-5 pb-24 lg:px-8 lg:py-6">
+        <AccountHeader activeLabel={title || ACCOUNT_PAGE_LABELS[active] || active} isHome={active === 'buyer-dashboard' || active === 'seller-dashboard'} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onBack={back} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} />
+        <main className={`dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6 ${tabs && !isGuest ? 'pb-24 lg:pb-6' : ''}`}>
           {children}
         </main>
-        {!isGuest && (
-          <nav className="fixed inset-x-0 bottom-0 z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest pb-[env(safe-area-inset-bottom)] lg:hidden">
-            {(BUYER_MOBILE_TABS.some(t => t.match.includes(active)) ? BUYER_MOBILE_TABS : MOBILE_TABS).map(t => {
+        {!isGuest && tabs && (
+          <nav aria-label="Navigation du compte" className="fixed inset-x-0 bottom-0 z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+            {tabs.map(t => {
               const on = t.match.includes(active)
+              if (t.primary) {
+                return (
+                  <button key={t.key} onClick={() => go(t.key)} className="flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 text-label-sm text-primary">
+                    <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary text-white shadow-[0_4px_14px_rgba(254,0,0,0.35)]">
+                      <Icon name={t.icon} size={28} />
+                    </span>
+                    {t.label}
+                  </button>
+                )
+              }
               return (
-                <button key={t.key} onClick={() => go(t.key)} className={`relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent py-2 text-label-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>
+                <button key={t.key} onClick={() => go(t.key)} className={`relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-label-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>
                   <Icon name={t.icon} size={22} fill={on} />
                   {t.label}
-                  {t.key === 'buyer-messages' && !!unreadMessages && <span className="absolute right-[28%] top-1 h-2 w-2 rounded-full bg-primary" />}
+                  {t.key === 'buyer-messages' && !!unreadMessages && <span className="notif-dot" style={{ top: 2, right: 'calc(50% - 22px)' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
                 </button>
               )
             })}

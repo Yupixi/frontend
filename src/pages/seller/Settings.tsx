@@ -73,7 +73,9 @@ function Card({ id, icon, iconCls = 'bg-primary-fixed text-primary', title, sub,
     <section id={`settings-${id}`} className="scroll-mt-28 rounded-2xl bg-surface-lowest p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start gap-3">
         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconCls}`}><Icon name={icon} size={21} /></span>
-        <div className="min-w-0 flex-1">
+        {/* min width: on a phone the aside wraps to its own line instead of
+            squeezing the title into a one-word column */}
+        <div className="min-w-[12rem] flex-1">
           <h2 className="m-0 text-headline-sm text-on-surface">{title}</h2>
           <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">{sub}</p>
         </div>
@@ -322,7 +324,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Les alertes push sont actives aujourd'hui ; les envois WhatsApp/SMS et e-mail suivront vos préférences dès l'ouverture de ces canaux.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="bedtime" size={22} className="text-on-surface-variant" />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Plage horaire silencieuse (Ne pas déranger)</div>
                     <div className="text-body-sm text-on-surface-variant">Suspendre les notifications push entre {form.quiet.start.replace(':', 'h')} et {form.quiet.end.replace(':', 'h')} (heure d'Abidjan).</div>
                   </div>
@@ -378,14 +380,14 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 aside={<span className="flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface"><Icon name="lock" size={14} /> {me.isVerified ? 'Identité vérifiée' : 'Identité non vérifiée'}</span>}>
                 <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="badge" size={22} className={me.isVerified ? 'text-tertiary' : 'text-on-surface-variant'} />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Vérification d'identité (CNI)</div>
                     <div className="text-body-sm text-on-surface-variant">{me.isVerified ? `Validée le ${new Date(me.verifiedAt ?? rep?.verifiedAt ?? me.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} par l'équipe Dilchap.` : "Le badge « Vendeur certifié » est attribué par l'équipe Dilchap après vérification de votre pièce d'identité."}</div>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="password" size={22} className="text-on-surface-variant" />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Mot de passe</div>
                     <div className="text-body-sm text-on-surface-variant">Utilisez au moins 8 caractères, différents de vos autres comptes.</div>
                   </div>
@@ -423,7 +425,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
               {/* Compte */}
               <Card id="compte" icon="warning" title="Gestion du Compte & Zone Sensible" sub="Mettez en pause vos ventes ou gérez la fermeture de votre profil Dilchap.">
                 <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Mode Vacances / Pause de la boutique</div>
                     <div className="text-body-sm text-on-surface-variant">Masque instantanément vos {rep?.activeListings ?? 0} annonce{(rep?.activeListings ?? 0) > 1 ? 's' : ''} des résultats de recherche sans perdre vos favoris ni vos avis.</div>
                   </div>
@@ -432,11 +434,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name={dark ? 'dark_mode' : 'light_mode'} size={22} className="text-on-surface-variant" />
-                  <div className="min-w-0 flex-1"><div className="text-label-md text-on-surface">Apparence</div><div className="text-body-sm text-on-surface-variant">{dark ? 'Mode sombre activé' : 'Mode clair activé'}</div></div>
+                  <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">Apparence</div><div className="text-body-sm text-on-surface-variant">{dark ? 'Mode sombre activé' : 'Mode clair activé'}</div></div>
                   <Toggle label="Mode sombre" on={dark} onChange={onToggleDark} />
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary-fixed/30 p-3">
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-primary">Supprimer définitivement la boutique</div>
                     <div className="text-body-sm text-on-surface-variant">Vos annonces sont retirées, vos données personnelles effacées et toutes vos sessions fermées.</div>
                   </div>

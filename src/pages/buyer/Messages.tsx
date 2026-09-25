@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
-  ArrowLeft, Search, CheckCheck, Send, Tag, X, MapPin, ShieldCheck, BadgeCheck, Star, Handshake, CircleX, Flag,
+  Search, CheckCheck, Send, Tag, X, MapPin, ShieldCheck, BadgeCheck, Star, Handshake, CircleX, Flag,
   Calendar, CheckCircle2, Wallet, ExternalLink, Info, Lock, Zap,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
@@ -247,7 +247,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const otherResponse = formatResponseTime(otherProfile?.responseTimeMinutes)
 
   return (
-    <AccountLayout active="buyer-messages" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+    <AccountLayout active="buyer-messages" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} hideBottomNav={!showList} onBack={showList ? undefined : () => setShowList(true)} title={showList ? undefined : 'Conversation'}>
       <div className="-mx-4 -my-5 flex h-[calc(100vh-4rem)] flex-col lg:-mx-8 lg:-my-6">
         {/* Golden rule banner */}
         <div className="hidden items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-6 py-3 md:flex">
@@ -315,7 +315,6 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
               <>
                 {/* Header */}
                 <div className="flex items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-3 py-2.5 md:px-4">
-                  <button onClick={() => setShowList(true)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant md:hidden" aria-label="Retour"><ArrowLeft size={22} /></button>
                   <Avatar url={other!.avatarUrl} name={other!.fullName} verified={other!.isVerified} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 text-headline-sm text-on-surface"><span className="truncate">{other!.fullName}</span>{other!.isVerified && <BadgeCheck size={18} className="text-tertiary" />}</div>
