@@ -96,7 +96,7 @@ export function PhotoPicker({ urls, onChange, label, max = 4 }: { urls: string[]
         <button type="button" onClick={() => input.current?.click()} disabled={busy} className="mt-2 flex w-full cursor-pointer items-center gap-3 rounded-xl border border-dashed border-outline-variant bg-surface-lowest px-3 py-3 text-left hover:bg-surface-container-low">
           <Icon name={busy ? 'progress_activity' : 'add_photo_alternate'} size={22} className={`text-primary ${busy ? 'animate-spin' : ''}`} />
           <span className="flex-1 text-label-md text-on-surface">{label}</span>
-          <span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">JPG, PNG</span>
+          <span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant max-sm:hidden">JPG, PNG</span>
         </button>
       )}
       {error && <p className="m-0 mt-1 text-body-sm text-primary">{error}</p>}
@@ -116,11 +116,10 @@ export function MediationCard({ whatsapp, compact }: { whatsapp: string | null; 
         <>
           <div className="mt-4 flex items-center gap-3 rounded-xl bg-white/10 p-3">
             <Icon name="chat" size={22} className="text-[#6ee7b7]" />
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="text-label-sm text-white/60">WhatsApp Modération Dilchap</div>
               <div className="text-headline-sm text-white">{whatsapp}</div>
             </div>
-            <span className="rounded bg-tertiary px-1.5 py-0.5 text-label-sm text-white">Actif</span>
           </div>
           <a href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-tertiary px-4 py-3 text-label-md text-white no-underline hover:opacity-90">
             <Icon name="call" size={18} /> Joindre un médiateur d'astreinte
@@ -157,7 +156,7 @@ export function OpenDisputeModal({ conversationId, perspective, onClose, onOpene
         <div className="mt-2 flex flex-col gap-2">
           {reasons.map(r => (
             <label key={r} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${reason === r ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant'}`}>
-              <input type="radio" checked={reason === r} onChange={() => setReason(r)} className="accent-[var(--primary)]" />
+              <input type="radio" checked={reason === r} onChange={() => setReason(r)} className="m-0 h-5 w-5 shrink-0 accent-[var(--primary)]" />
               <Icon name={DISPUTE_REASON_ICONS[r]} size={18} className="text-primary" />
               <span className="text-label-md text-on-surface">{DISPUTE_REASON_LABELS[r]}</span>
             </label>

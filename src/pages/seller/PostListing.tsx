@@ -7,6 +7,7 @@ import Icon, { CategoryIcon } from '../../components/Icon'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import BoostMenu from '../../components/BoostMenu'
+import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { MARKETS, marketForCountry } from '../../data/markets'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
@@ -104,7 +105,26 @@ function Field({ label, required, hint, children, right }: { label: string, requ
   )
 }
 
-const inputCls = 'w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2.5 text-body-md text-on-surface outline-none focus:border-on-surface focus:bg-surface-lowest'
+const inputBase = 'w-full rounded-lg border bg-surface-container-low px-3 py-2.5 text-body-md text-on-surface outline-none focus:border-on-surface focus:bg-surface-lowest'
+const inputCls = `${inputBase} border-outline-variant`
+// Missing required field after a failed "Suivant" / "Publier".
+const inputBad = `${inputBase} border-primary border-[1.5px]`
+
+function FieldError({ show, children }: { show: boolean, children: React.ReactNode }) {
+  if (!show) return null
+  return <span className="mt-1 flex items-center gap-1 text-body-sm text-primary"><Icon name="error" size={15} /> {children}</span>
+}
+
+type FieldKey = 'title' | 'category' | 'condition' | 'description' | 'price' | 'city'
+const FIELD_LABELS: Record<FieldKey, string> = {
+  title: 'le titre', category: 'la catégorie', condition: 'l’état de l’objet', description: 'la description', price: 'le prix', city: 'la ville',
+}
+// Mobile wizard step -> required fields it holds, in on-screen order.
+const STEP_FIELDS: Record<number, FieldKey[]> = { 1: ['title', 'category', 'condition', 'description'], 2: ['price'], 3: ['city'] }
+
+// Abidjan quick picks for the mockup's "Zone de remise" chips.
+const ABIDJAN_ZONES = ['Cocody', 'Marcory', 'Plateau', 'Yopougon', 'Treichville', 'Koumassi']
+const ABIDJAN_SPOTS = ['Playce Marcory', 'Cap Sud', 'Sococé Deux-Plateaux']
 
 // "Déposer une annonce" mockup: one guided form (photos → infos → prix →
 // modalités d'échange) with a sticky earnings/preview column.
@@ -121,6 +141,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingMedia, setExistingMedia] = useState<{ id: string; url: string }[]>([])
   const [prefilled, setPrefilled] = useState(false)
+  const initialForm = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ id: string, submitted: boolean } | null>(null)
   const [boosted, setBoosted] = useState(false)
@@ -132,6 +153,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const category = categories.find(c => c.id === form.categoryId)
   const subcategory = category?.subcategories.find(s => s.id === form.subcategoryId)
   const requiresPrice = category?.requiresPrice ?? true
+  const isAbidjan = form.countryCode === 'CI' && /abidjan/i.test(form.city)
 
   const { data: existingData, loading: loadingExisting } = useQuery<{ myListing: MyListingDetail }>(MY_LISTING_QUERY, { variables: { id: listingId }, skip: !isEditing })
   const { data: rangeData } = useQuery<{ priceRange: PriceRange | null }>(PRICE_RANGE_QUERY, {
@@ -151,14 +173,16 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     if (prefilled || !isEditing) return
     const l = existingData?.myListing
     if (!l) return
-    setForm({
+    const loaded: Form = {
       categoryId: l.category.id, subcategoryId: l.subcategory?.id ?? '', title: l.title, condition: l.condition ?? '',
       brand: l.brand ?? '', modelName: l.modelName ?? '', size: l.size ?? '', description: l.description,
       price: l.price != null ? String(l.price) : '', originalPrice: l.originalPrice != null ? String(l.originalPrice) : '',
       negotiable: l.negotiable, minOfferPrice: l.minOfferPrice != null ? String(l.minOfferPrice) : '',
       countryCode: l.countryCode, currency: l.currency, city: l.city, locationLabel: l.locationLabel ?? '', meetupSpot: l.meetupSpot ?? '',
       paymentMethods: l.paymentMethods ?? [], deliveryAvailable: l.deliveryAvailable, attributes: (l.attributes ?? {}) as Record<string, string>,
-    })
+    }
+    setForm(loaded)
+    initialForm.current = JSON.stringify(loaded)
     setExistingMedia(l.media)
     setPrefilled(true)
   }, [existingData, isEditing, prefilled])
@@ -203,15 +227,38 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   // a sticky Précédent / Suivant bar. Desktop keeps the single long page.
   const [step, setStep] = useState(0)
   const MOBILE_STEPS = ['Photos', 'Détails', 'Prix', 'Rencontre', 'Aperçu']
-  const stepMissing = (i: number) => [
-    ...(i === 1 ? [!form.categoryId && 'la catégorie', !form.title.trim() && 'le titre', wordCount < 1 && 'la description'] : []),
-    ...(i === 2 ? [requiresPrice && !priceNum && 'le prix'] : []),
-    ...(i === 3 ? [!form.city.trim() && 'la ville'] : []),
-  ].filter(Boolean) as string[]
+  // A job offer (no price) has no "état" either.
+  const needsCondition = requiresPrice
+  const isMissing: Record<FieldKey, boolean> = {
+    title: !form.title.trim(),
+    category: !form.categoryId,
+    condition: needsCondition && !form.condition,
+    description: wordCount < 1,
+    price: requiresPrice && !priceNum,
+    city: !form.city.trim(),
+  }
+  // Field-level errors only show after a failed attempt, then clear live as
+  // the seller fills each field.
+  const [showErrors, setShowErrors] = useState(false)
+  const bad = (k: FieldKey) => showErrors && isMissing[k]
+  const flagMissing = (keys: FieldKey[]) => {
+    setShowErrors(true)
+    requestAnimationFrame(() => document.querySelector(`[data-field="${keys[0]}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+  }
+  const stepMissing = (i: number) => (STEP_FIELDS[i] ?? []).filter(k => isMissing[k])
+  // Set when "Publier" sends the seller back to an earlier step: keep the
+  // errors visible there and scroll to the field instead of the top.
+  const pendingField = useRef<FieldKey | null>(null)
   const goStep = (i: number) => {
     setError(null)
     setStep(i)
-    document.querySelector('.dashboard-main')?.scrollTo({ top: 0 })
+    const f = pendingField.current
+    pendingField.current = null
+    if (f) requestAnimationFrame(() => document.querySelector(`[data-field="${f}"]`)?.scrollIntoView({ block: 'center' }))
+    else {
+      setShowErrors(false)
+      document.querySelector('.dashboard-main')?.scrollTo({ top: 0 })
+    }
   }
   // Each step is a history entry, so the phone's back button goes to the
   // previous step instead of leaving the wizard (and dropping the photos).
@@ -232,22 +279,23 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const backTo = (i: number) => { if (i < step) window.history.go(i - step) }
   const next = () => {
     const m = stepMissing(step)
-    if (m.length) { setError(`Complétez ${m.join(', ')}.`); return }
+    if (m.length) { flagMissing(m); return }
     pushStep(step + 1)
   }
   const only = (i: number) => (step === i ? '' : 'max-lg:hidden')
 
-  const missing = [
-    !form.categoryId && 'la catégorie',
-    !form.title.trim() && 'le titre',
-    wordCount < 1 && 'la description',
-    requiresPrice && !priceNum && 'le prix',
-    !form.city.trim() && 'la ville',
-  ].filter(Boolean) as string[]
+  const missing = (['title', 'category', 'condition', 'description', 'price', 'city'] as FieldKey[]).filter(k => isMissing[k])
 
   const save = async (submit: boolean) => {
     setError(null)
-    if (submit && missing.length) { setError(`Complétez ${missing.join(', ')}.`); return }
+    if (submit && missing.length) {
+      setError(`Complétez ${missing.map(k => FIELD_LABELS[k]).join(', ')}.`)
+      flagMissing(missing)
+      // Mobile: jump back to the first step holding a missing field.
+      const at = Number(Object.keys(STEP_FIELDS).find(i => STEP_FIELDS[Number(i)].includes(missing[0])))
+      if (at < step) { pendingField.current = missing[0]; window.history.go(at - step) }
+      return
+    }
     if (!category) { setError('Choisissez une catégorie.'); return }
     try {
       const input = {
@@ -294,12 +342,29 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     }
   }
 
+  // New listings keep their text in the local draft; only picked photos (and
+  // an edit's changes) are lost when leaving.
+  const unsaved = imageFiles.length > 0 || (isEditing && initialForm.current != null && JSON.stringify(form) !== initialForm.current)
+  const [quitOpen, setQuitOpen] = useState(false)
+  // Shell back arrow (mobile). Past step 0, history.back() already walks the
+  // wizard steps; on step 0 it would leave the page.
+  const shellBack = () => {
+    if (step === 0 && unsaved) { setQuitOpen(true); return }
+    if (window.history.length > 1) window.history.back()
+    else onNavigate('buyer-dashboard')
+  }
+  const leave = () => {
+    // -2: the sheet's own history marker, then the page before the wizard.
+    if (window.history.length > 2) window.history.go(-2)
+    else { setQuitOpen(false); onNavigate('buyer-dashboard') }
+  }
+
   const reset = () => {
     setForm(EMPTY); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false)
   }
 
   const cover = allPhotos[0]?.url
-  const hhmm = savedAt ? new Date(savedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null
+  const hhmm = savedAt ? new Date(savedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h') : null
   const active = isEditing ? 'seller-listings' : 'seller-post'
 
   if (isEditing && loadingExisting && !prefilled) {
@@ -340,7 +405,12 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   }
 
   return (
-    <AccountLayout active={active} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+    <AccountLayout active={active} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} onBack={shellBack}>
+      <ConfirmSheet open={quitOpen} title="Quitter le dépôt ?" confirmLabel="Quitter" tone="danger" onConfirm={leave} onClose={() => setQuitOpen(false)}>
+        {imageFiles.length > 0
+          ? <>{imageFiles.length > 1 ? `Vos ${imageFiles.length} photos ne seront pas conservées.` : 'Votre photo ne sera pas conservée.'}{!isEditing && ' Le texte reste enregistré en brouillon sur cet appareil.'}</>
+          : 'Vos modifications non enregistrées seront perdues.'}
+      </ConfirmSheet>
       <div className="mx-auto max-w-[1160px] pb-6">
         {/* Heading */}
         <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
@@ -361,11 +431,14 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="mb-4 lg:hidden">
           <div className="mb-2 flex items-center justify-between text-label-md">
             <span className="text-on-surface">Étape {step + 1} / {MOBILE_STEPS.length} · <span className="text-primary">{MOBILE_STEPS[step]}</span></span>
-            {hhmm && !isEditing && <span className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="bookmark" size={14} /> {hhmm}</span>}
+            {hhmm && !isEditing && <span className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="bookmark" size={14} /> Brouillon enregistré à {hhmm}</span>}
           </div>
+          {/* 24px-high hit area around each 6px bar, so past steps are tappable. */}
           <div className="flex gap-1.5">
             {MOBILE_STEPS.map((label, i) => (
-              <button key={label} type="button" aria-label={label} onClick={() => backTo(i)} className={`h-1.5 flex-1 rounded-full border-none p-0 ${i <= step ? 'bg-primary' : 'bg-surface-container-high'} ${i < step ? 'cursor-pointer' : 'cursor-default'}`} />
+              <button key={label} type="button" aria-label={`Étape ${i + 1} : ${label}`} onClick={() => backTo(i)} disabled={i >= step} className={`flex h-6 flex-1 items-center border-none bg-transparent p-0 ${i < step ? 'cursor-pointer' : 'cursor-default'}`}>
+                <span className={`h-1.5 w-full rounded-full ${i <= step ? 'bg-primary' : 'bg-surface-container-high'}`} />
+              </button>
             ))}
           </div>
         </div>
@@ -382,7 +455,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="flex min-w-0 flex-col gap-5">
+          <div className={`flex min-w-0 flex-col gap-5 ${step === 4 ? 'max-lg:hidden' : ''}`}>
             {/* Photos */}
             <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${MAX_PHOTOS} photos gratuites. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
               aside={<span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface-variant">{photoCount} / {MAX_PHOTOS} ajoutées</span>}>
@@ -402,8 +475,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-2 text-center text-body-sm text-on-surface-variant hover:border-primary"
                   >
                     <Upload size={24} className="text-primary" />
-                    <span className="font-semibold text-on-surface">Glisser ou Parcourir</span>
-                    <span className="text-[11px]">JPG, PNG, WEBP</span>
+                    <span className="font-semibold text-on-surface lg:hidden">Ajouter</span>
+                    <span className="font-semibold text-on-surface max-lg:hidden">Glisser ou Parcourir</span>
+                    <span className="text-[11px] max-lg:hidden">JPG, PNG, WEBP</span>
                   </button>
                 )}
               </div>
@@ -413,45 +487,65 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             {/* Infos */}
             <Card className={only(1)} icon="edit_note" title="Informations sur l'article" subtitle="Donnez un maximum de précisions pour remonter dans les résultats de recherche.">
               <div className="flex flex-col gap-4">
-                <Field label="Titre de l'annonce" required right={<span className="text-body-sm text-on-surface-variant">{form.title.length} / {TITLE_MAX} car.</span>} hint="Mentionnez la marque, le modèle précis et la particularité majeure.">
-                  <input className={inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ex : Appareil photo argentique Olympus OM-1 + Zuiko 50mm" />
+                <Field label="Titre de l'annonce" required right={<span className="text-body-sm text-on-surface-variant">{form.title.length} / {TITLE_MAX} car.</span>} hint={bad('title') ? undefined : 'Mentionnez la marque, le modèle précis et la particularité majeure.'}>
+                  <input data-field="title" aria-invalid={bad('title')} className={bad('title') ? inputBad : inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ex : Appareil photo argentique Olympus OM-1 + Zuiko 50mm" />
+                  <FieldError show={bad('title')}>Indiquez un titre.</FieldError>
                 </Field>
 
+                <div data-field="category">
                 <Field label="Catégorie" required>
+                  {/* Mobile: category cards, as in the mockup; desktop keeps the select. */}
+                  <div className="mb-2 grid grid-cols-2 gap-2 lg:hidden" role="radiogroup" aria-label="Catégorie">
+                    {categories.map(c => {
+                      const on = c.id === form.categoryId
+                      return (
+                        <button key={c.id} type="button" role="radio" aria-checked={on} onClick={() => setForm(f => (f.categoryId === c.id ? f : { ...f, categoryId: c.id, subcategoryId: '', attributes: {} }))}
+                          className={`flex min-h-14 cursor-pointer items-center gap-2 rounded-xl border-[1.5px] border-solid p-2.5 text-left ${on ? 'border-on-surface bg-on-surface text-surface-lowest' : bad('category') ? 'border-primary bg-surface-lowest text-on-surface' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
+                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-white/15' : 'bg-surface-container-low text-primary'}`}><CategoryIcon icon={c.icon} size={20} /></span>
+                          <span className="min-w-0 truncate text-label-md" title={c.name}>{c.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="relative">
+                    <div className="relative max-lg:hidden">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-primary">{category ? <CategoryIcon icon={category.icon} size={20} /> : <Tag size={18} />}</span>
-                      <Select className={`${inputCls} pl-10`} value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategoryId: '', attributes: {} }))}>
+                      <Select className={`${bad('category') ? inputBad : inputCls} pl-10`} value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategoryId: '', attributes: {} }))}>
                         <option value="">Choisir une catégorie…</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </Select>
                     </div>
-                    <Select className={inputCls} value={form.subcategoryId} disabled={!category} onChange={e => set('subcategoryId', e.target.value)}>
-                      <option value="">{category ? 'Sous-catégorie…' : '—'}</option>
-                      {category?.subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </Select>
+                    <div className={category ? '' : 'max-lg:hidden'}>
+                      <Select className={inputCls} value={form.subcategoryId} disabled={!category} onChange={e => set('subcategoryId', e.target.value)}>
+                        <option value="">{category ? 'Sous-catégorie…' : '—'}</option>
+                        {category?.subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </Select>
+                    </div>
                   </div>
                   {category && (
                     <span className="mt-2 flex items-center gap-1 text-body-sm text-on-surface-variant">
                       <CategoryIcon icon={category.icon} size={15} /> {category.name}{subcategory && <> › <b className="text-primary">{subcategory.name}</b></>}
                     </span>
                   )}
+                  <FieldError show={bad('category')}>Choisissez une catégorie.</FieldError>
                 </Field>
+                </div>
 
-                <div>
+                {needsCondition && <div data-field="condition">
                   <span className="mb-1.5 block text-label-md text-on-surface">État de l'objet <span className="text-primary">*</span></span>
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4" role="radiogroup" aria-label="État de l'objet">
                     {CONDITIONS.map(c => {
                       const on = form.condition === c.value
                       return (
-                        <button key={c.value} type="button" onClick={() => set('condition', c.value)} className={`cursor-pointer rounded-xl border-[1.5px] border-solid p-3 text-left ${on ? 'border-primary bg-primary-fixed/40' : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'}`}>
+                        <button key={c.value} type="button" role="radio" aria-checked={on} onClick={() => set('condition', c.value)} className={`cursor-pointer rounded-xl border-[1.5px] border-solid p-3 text-left ${on ? 'border-primary bg-primary-fixed/40' : bad('condition') ? 'border-primary bg-surface-container-low' : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'}`}>
                           <span className="flex items-center justify-between text-label-md text-on-surface">{c.value} <Icon name={c.icon} size={17} className={on ? 'text-primary' : 'text-on-surface-variant'} /></span>
                           <span className="mt-1 block text-body-sm text-on-surface-variant">{c.hint}</span>
                         </button>
                       )
                     })}
                   </div>
-                </div>
+                  <FieldError show={bad('condition')}>Précisez l’état de l’objet.</FieldError>
+                </div>}
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Marque"><input className={inputCls} value={form.brand} onChange={e => set('brand', e.target.value)} placeholder="Ex : Olympus" /></Field>
@@ -473,12 +567,15 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   ))}
                 </div>
 
-                <div>
+                <div data-field="description">
                   <span className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-label-md text-on-surface">
                     <span>Description complète <span className="text-primary">*</span></span>
                     <span className="flex items-center gap-1 text-body-sm text-tertiary"><Lightbulb size={14} /> Conseil : une description détaillée (20 mots et plus) rassure les acheteurs</span>
                   </span>
-                  <RichTextEditor content={form.description} onChange={v => set('description', v)} placeholder="État esthétique, fonctionnement, accessoires fournis, raison de la vente…" />
+                  <div className={bad('description') ? 'rounded-xl outline outline-[1.5px] outline-primary' : ''}>
+                    <RichTextEditor content={form.description} onChange={v => set('description', v)} placeholder="État esthétique, fonctionnement, accessoires fournis, raison de la vente…" />
+                  </div>
+                  <FieldError show={bad('description')}>Décrivez votre article.</FieldError>
                 </div>
               </div>
             </Card>
@@ -488,10 +585,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Field label={`Votre prix de vente (${form.currency === 'XOF' || form.currency === 'XAF' ? 'F' : form.currency})`} required={requiresPrice}>
-                    <div className="flex items-center rounded-xl border border-outline-variant bg-surface-container-low px-4">
-                      <input type="number" min={0} disabled={!requiresPrice} className="w-full min-w-0 border-none bg-transparent py-3 text-[40px] font-extrabold leading-none text-primary outline-none" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0" />
+                    <div data-field="price" className={`flex items-center rounded-xl border bg-surface-container-low px-4 ${bad('price') ? 'border-[1.5px] border-primary' : 'border-outline-variant'}`}>
+                      <input type="number" min={0} disabled={!requiresPrice} aria-invalid={bad('price')} className="w-full min-w-0 border-none bg-transparent py-3 text-[40px] font-extrabold leading-none text-primary outline-none" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0" />
                       <span className="text-headline-sm text-on-surface-variant">F</span>
                     </div>
+                    <FieldError show={bad('price')}>Indiquez un prix.</FieldError>
                   </Field>
                   <p className="m-0 mt-2 flex items-center gap-1 text-body-sm font-semibold text-tertiary"><CheckCircle2 size={14} /> 0 F de commission : 100% du montant vous revient.</p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -545,15 +643,36 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             <Card className={only(3)} icon="handshake" title="Modalités d'échange et de rencontre" subtitle="Aucun transporteur obligatoire : convenez directement du lieu de remise et du mode de règlement avec l'acheteur.">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Ville & Commune" required>
-                  <div className="relative"><Icon name="location_city" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Abidjan" /></div>
+                  <div className="relative"><Icon name="location_city" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input data-field="city" aria-invalid={bad('city')} className={`${bad('city') ? inputBad : inputCls} pl-10`} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Abidjan" /></div>
+                  <FieldError show={bad('city')}>Indiquez la ville.</FieldError>
                 </Field>
                 <Field label="Quartier">
                   <div className="relative"><MapPin size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.locationLabel} onChange={e => set('locationLabel', e.target.value)} placeholder="Cocody (Angré 8e Tranche)" /></div>
+                  {isAbidjan && (
+                    <span className="mt-2 flex flex-wrap gap-1.5">
+                      {ABIDJAN_ZONES.map(z => {
+                        const on = form.locationLabel.trim() === z
+                        return <button key={z} type="button" aria-pressed={on} onClick={() => set('locationLabel', on ? '' : z)} className={`h-9 cursor-pointer rounded-lg border border-solid px-3 text-label-md ${on ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>{z}</button>
+                      })}
+                    </span>
+                  )}
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="Lieu de rendez-vous suggéré" hint="Un lieu public et fréquenté : centre commercial, station-service…">
                     <div className="relative"><Icon name="storefront" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.meetupSpot} onChange={e => set('meetupSpot', e.target.value)} placeholder="Ex : Playce Marcory / Cap Sud" /></div>
                   </Field>
+                  {isAbidjan && (
+                    <div className="mt-2 rounded-xl bg-tertiary-soft/60 p-3">
+                      <span className="mb-2 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={14} /> Lieux publics et fréquentés</span>
+                      <span className="flex flex-wrap gap-1.5">
+                        {ABIDJAN_SPOTS.map(p => (
+                          <button key={p} type="button" aria-pressed={form.meetupSpot === p} onClick={() => set('meetupSpot', form.meetupSpot === p ? '' : p)} className={`flex h-9 cursor-pointer items-center gap-1 rounded-lg border border-solid px-2.5 text-label-md ${form.meetupSpot === p ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
+                            <Icon name="storefront" size={15} /> {p}
+                          </button>
+                        ))}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -600,7 +719,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
           {/* Sticky column */}
           <aside className={`flex flex-col gap-4 lg:sticky lg:top-2 ${only(4)}`}>
-            <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
+            {/* Nothing to earn on a priceless category (job offers). */}
+            {requiresPrice && <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <div className="flex items-center justify-between">
                 <span className="text-label-sm uppercase text-on-surface-variant">Vos gains réels</span>
                 <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">100% pour vous</span>
@@ -618,7 +738,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <div className="flex justify-between"><dt className="text-on-surface-variant">Frais de mise en relation</dt><dd className="m-0 font-semibold text-on-surface">0 F</dd></div>
               </dl>
               <p className="m-0 mt-3 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Handshake size={15} className="mt-0.5 shrink-0 text-primary" /> Paiement direct de la main à la main ou par mobile money entre particuliers.</p>
-            </div>
+            </div>}
 
             <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <div className="mb-2 flex items-center justify-between text-label-sm uppercase">
@@ -633,7 +753,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <div className="p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-label-sm uppercase text-on-surface-variant">{form.brand || category?.name || 'Marque'}</span>
-                    <span className="shrink-0 text-headline-sm font-extrabold text-primary"><Price amount={priceNum} currency={form.currency} /></span>
+                    {requiresPrice && <span className="shrink-0 text-headline-sm font-extrabold text-primary"><Price amount={priceNum} currency={form.currency} /></span>}
                   </div>
                   <div className="truncate text-label-md text-on-surface">{form.title || 'Titre de votre annonce'}</div>
                   <div className="mt-1 flex items-center gap-1 text-body-sm text-on-surface-variant"><ShieldCheck size={13} className="text-tertiary" /> {currentUser?.fullName ?? 'Vous'} • Particulier</div>
@@ -664,7 +784,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <button type="button" onClick={() => backTo(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label="Étape précédente">
                 <Icon name="arrow_back" size={20} />
               </button>
-            ) : !isEditing && (
+            ) : !isEditing && form.categoryId && (
+              // A server draft needs a category; until then the local auto-save covers it.
               <button type="button" disabled={busy} onClick={() => void save(false)} className="flex h-12 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container-high px-4 text-label-md text-on-surface disabled:opacity-60">
                 <Icon name="save" size={19} /> Brouillon
               </button>

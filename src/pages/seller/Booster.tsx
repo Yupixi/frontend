@@ -63,7 +63,9 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
       setError(err instanceof Error ? err.message : "Impossible d'activer la formule.")
     }
   }
+  const [confirmBump, setConfirmBump] = useState(false)
   const spendCredit = async () => {
+    setConfirmBump(false)
     if (!listing) return
     setError(null); setDone(null)
     try {
@@ -84,7 +86,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
     const active = current === p
     return (
       <label key={p} className={`flex cursor-pointer items-center gap-2.5 rounded-xl border-[1.5px] border-solid p-3 ${active ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-lowest'}`}>
-        <input type="radio" checked={active} onChange={() => set(p)} className="accent-[var(--primary)]" />
+        <input type="radio" checked={active} onChange={() => set(p)} className="m-0 h-5 w-5 shrink-0 accent-[var(--primary)]" />
         <span className="flex-1 text-body-sm">
           <span className="block font-semibold text-on-surface">{info.label}</span>
           {sub && <span className="text-[11px] text-on-surface-variant">{sub}</span>}
@@ -124,12 +126,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                   ? <span>Prochaine remontée planifiée : <b className="text-on-surface">chaque jour à 18h00</b> jusqu'au {formatDate(listing!.autoBumpUntil!)}</span>
                   : <span>Aucune remontée automatique planifiée</span>}
               </div>
-              {!!listing && credits > 0 && (
-                <button disabled={bumping} onClick={() => void spendCredit()} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-2 text-label-md text-white disabled:opacity-60">
-                  <ArrowUp size={16} /> Utiliser 1 crédit sur cette annonce
-                </button>
-              )}
-              <button onClick={() => onNavigate('seller-wallet')} className="mt-2 w-full cursor-pointer rounded-lg border-none bg-surface-container-low py-2 text-label-md text-on-surface hover:bg-surface-container">Recharger des crédits</button>
+              <button onClick={() => onNavigate('seller-wallet')} className="mt-3 h-11 w-full cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container-low text-label-md text-on-surface hover:bg-surface-container">Recharger des crédits</button>
             </div>
           </div>
         </section>
@@ -183,7 +180,14 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 ))}
               </div>
             </div>
-          ) : (
+          ) : null}
+          {/* Spending a credit acts on the listing picked just above, so it lives in step 1. */}
+          {!!listing && credits > 0 && (
+            <button disabled={bumping} onClick={() => setConfirmBump(true)} className="mt-3 flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-60 md:w-auto">
+              <ArrowUp size={16} /> Remonter cette annonce · 1 crédit
+            </button>
+          )}
+          {!listing && (
             <div className="rounded-2xl bg-surface-container-low p-6 text-center">
               <p className="m-0 text-body-md text-on-surface-variant">Aucune annonce en ligne à booster pour le moment.</p>
               <button onClick={() => onNavigate('seller-post')} className="mt-3 cursor-pointer rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white">Déposer une annonce</button>
@@ -265,7 +269,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                   <span className="text-on-surface-variant">Tarif unique</span><span className="text-right font-extrabold text-primary"><Price amount={urgent.price} /></span>
                 </div>
                 <button disabled={!listing || activating} onClick={() => activate('URGENT_72H')} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
-                  Prendre le badge (<Price amount={urgent.price} />) <ArrowRight size={16} />
+                  {/* One text node: flex gap would otherwise space out "(", amount, "F" and ")". */}
+                  <span>Prendre le badge (<Price amount={urgent.price} />)</span> <ArrowRight size={16} />
                 </button>
               </div>
             )}
@@ -311,7 +316,32 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
             </div>
             <span className="flex items-center gap-1.5 text-label-sm text-tertiary"><span className="h-2 w-2 rounded-full bg-tertiary" /> Mise à jour en temps réel</span>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-lowest">
+          {/* Mobile: one card per boost instead of a sideways-scrolling table. */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {history.length === 0 && <p className="m-0 rounded-2xl bg-surface-container-low p-5 text-center text-body-sm text-on-surface-variant">Aucun boost pour le moment.</p>}
+            {history.map(b => {
+              const active = isFuture(b.expiresAt) && new Date(b.expiresAt).getTime() - new Date(b.startsAt).getTime() > 0
+              const img = b.listing?.coverImageUrl ?? b.listing?.media[0]?.url
+              return (
+                <div key={b.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-container text-outline">{img ? <img src={img} alt="" className="h-full w-full object-cover" /> : <Tag size={18} />}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-label-md text-on-surface">{b.listing?.title ?? '—'}</div>
+                      <div className="text-body-sm text-on-surface-variant">{formatDate(b.createdAt)}</div>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{active ? 'Actif' : 'Terminé'}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span>
+                    <span className="text-label-md font-bold text-on-surface"><Price amount={b.price} /></span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1 text-body-sm text-tertiary"><TrendingUp size={14} /> +{b.viewsGained ?? 0} vues • +{b.contactsGained ?? 0} contacts</div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="hidden overflow-x-auto rounded-2xl border border-outline-variant bg-surface-lowest md:block">
             <table className="w-full min-w-[640px] border-collapse text-left text-body-sm">
               <thead>
                 <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
@@ -358,6 +388,16 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           ))}
         </section>
       </div>
+      <ConfirmSheet
+        open={confirmBump}
+        title="Remonter l'annonce"
+        confirmLabel="Utiliser 1 crédit"
+        loading={bumping}
+        onClose={() => setConfirmBump(false)}
+        onConfirm={() => void spendCredit()}
+      >
+        {listing && <p className="m-0">« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">1 crédit</b> sera utilisé.</p>}
+      </ConfirmSheet>
       <ConfirmSheet
         open={!!confirmPack}
         title="Confirmer le boost"

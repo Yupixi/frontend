@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react'
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import { formatNumber } from '../../lib/format'
@@ -83,16 +83,21 @@ export default function StatsMobile({ s, period, periods, onPeriod, verified, on
           <div><h2 className="m-0 text-headline-sm text-on-surface">Évolution de l'attractivité</h2><p className="m-0 text-body-sm text-on-surface-variant">Fréquentation &amp; négociations sur la période</p></div>
           <div className="flex flex-col gap-0.5 text-label-sm"><span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> Vues</span><span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-tertiary" /> Contacts</span></div>
         </div>
-        <div className="mt-3 h-48">
+        <div className="mt-3 h-52">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chart} margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
-              <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--color-on-surface-variant)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={30} />
+            <AreaChart data={chart} margin={{ top: 6, right: 8, left: 8, bottom: 0 }}>
+              {/* ~4 evenly spaced dates so the axis stays readable at 390px. */}
+              <XAxis dataKey="day" height={24} tick={{ fontSize: 11, fill: 'var(--color-on-surface-variant)' }} axisLine={{ stroke: 'var(--color-outline-variant)' }} tickLine={false} tickMargin={6} interval={Math.max(0, Math.ceil(chart.length / 4) - 1)} />
+              {/* Contacts are ~10x fewer than views: own (hidden) scale so the curve isn't flattened on the baseline. */}
+              <YAxis yAxisId="views" hide domain={[0, 'auto']} />
+              <YAxis yAxisId="contacts" hide orientation="right" domain={[0, (max: number) => Math.max(1, Math.ceil(max * 1.15))]} />
               <Tooltip contentStyle={{ background: 'var(--color-surface-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 12, fontSize: 12 }} />
-              <Area type="monotone" dataKey="Vues" stroke="#FE0000" strokeWidth={2.5} fill="#FE0000" fillOpacity={0.12} />
-              <Area type="monotone" dataKey="Contacts" stroke="#006947" strokeWidth={2.5} fill="#006947" fillOpacity={0.08} />
+              <Area yAxisId="views" type="monotone" dataKey="Vues" stroke="#FE0000" strokeWidth={2.5} fill="#FE0000" fillOpacity={0.1} />
+              <Area yAxisId="contacts" type="monotone" dataKey="Contacts" stroke="#006947" strokeWidth={3} fill="#006947" fillOpacity={0.18} dot={chart.length <= 14 ? { r: 2.5, fill: '#006947', strokeWidth: 0 } : false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        <p className="m-0 mt-1 text-[11px] text-on-surface-variant">Échelles distinctes pour les vues et les contacts.</p>
       </section>
 
       <section>

@@ -13,6 +13,8 @@ import { CREATE_BOOST_MUTATION } from '../../graphql/promotions'
 import { MY_REPUTATION_QUERY, MY_WALLET_QUERY, type Reputation, type WalletSummary } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import BottomSheet from '../../components/BottomSheet'
+import ConfirmSheet from '../../components/ConfirmSheet'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -61,7 +63,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
   const credits = walletData?.myWallet.credits ?? 0
   const [deleteListing] = useMutation(DELETE_LISTING_MUTATION)
-  const [bumpListing] = useMutation(BUMP_LISTING_MUTATION)
+  const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
   const [createBoost, { loading: boosting }] = useMutation(CREATE_BOOST_MUTATION)
 
   const [tab, setTab] = useState<typeof TABS[number]['key']>('live')
@@ -73,6 +75,10 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const [offersFor, setOffersFor] = useState<string | null>(null)
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
+  const [confirm, setConfirm] = useState<{ kind: 'delete' | 'boost' | 'bump', l: MyListingRow } | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  // Tabs overflow on phones: fade the right edge until scrolled to the end.
+  const [tabsAtEnd, setTabsAtEnd] = useState(false)
 
   const categories = useMemo(() => [...new Map(all.filter(l => l.category).map(l => [l.category!.slug, l.category!.name])).entries()], [all])
   const cities = useMemo(() => [...new Set(all.map(l => l.city).filter(Boolean) as string[])], [all])
@@ -100,17 +106,30 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
     const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a'); a.href = url; a.download = 'mes-annonces-dilchap.csv'; a.click(); URL.revokeObjectURL(url)
   }
-  const boostFlash = (l: MyListingRow) => {
-    if (!window.confirm(`Remonter « ${l.title} » en tête du catalogue (Remontée flash, 500 F) ?`)) return
-    void createBoost({ variables: { input: { listingId: l.id, pack: 'BUMP_FLASH' } } })
-      .then(() => { setFlash(`« ${l.title} » est remontée en tête.`); void refetch() })
-      .catch((e: Error) => setFlash(e.message))
-  }
+  const boostFlash = (l: MyListingRow) => void createBoost({ variables: { input: { listingId: l.id, pack: 'BUMP_FLASH' } } })
+    .then(() => { setConfirm(null); setFlash(`« ${l.title} » est remontée en tête.`); void refetch() })
+    .catch((e: Error) => { setConfirm(null); setFlash(e.message) })
+  const [deleting, setDeleting] = useState(false)
   const remove = (l: MyListingRow) => {
-    setMenuFor(null)
-    if (!window.confirm(`Supprimer « ${l.title} » ? Cette action est irréversible.`)) return
-    void deleteListing({ variables: { id: l.id } }).then(() => refetch())
+    setDeleting(true)
+    void deleteListing({ variables: { id: l.id } })
+      .then(() => refetch())
+      .catch((e: Error) => setFlash(e.message))
+      .finally(() => { setDeleting(false); setConfirm(null) })
   }
+  const activeFilters = (cat ? 1 : 0) + (city ? 1 : 0) + (sort !== 'recent' ? 1 : 0)
+  const filterSelects = (cls: string) => (
+    <>
+      <Select value={cat} onChange={e => { setCat(e.target.value); setPage(1) }} className={cls}>
+        <option value="">Toutes catégories</option>
+        {categories.map(([slug, name]) => <option key={slug} value={slug}>{name}</option>)}
+      </Select>
+      <Select value={city} onChange={e => { setCity(e.target.value); setPage(1) }} className={cls}>
+        <option value="">Toutes communes</option>
+        {cities.map(c => <option key={c}>{c}</option>)}
+      </Select>
+    </>
+  )
   const spendCredit = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } })
     .then(() => { setFlash(`« ${l.title} » est remontée en tête (1 crédit utilisé).`); void refetch(); void refetchWallet() })
     .catch((e: Error) => setFlash(e.message))
@@ -119,8 +138,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   return (
     <AccountLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1160px] pb-6">
-        <div className="mb-1 text-label-sm uppercase text-on-surface-variant">Dilchap Seller › Vente directe</div>
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        {/* Breadcrumb, heading and CSV export are desktop-only: the mobile shell already titles the page. */}
+        <div className="mb-1 hidden text-label-sm uppercase text-on-surface-variant lg:block">Dilchap Seller › Vente directe</div>
+        <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
             <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Mes annonces</h1>
             <p className="m-0 mt-1 text-body-md text-on-surface-variant">Gérez votre catalogue de vente, suivez vos vues et boostez vos pépites auprès des acheteurs.</p>
@@ -131,57 +151,78 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           </div>
         </div>
 
-        {/* Boost banner */}
-        <section className="mb-5 flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-primary to-primary-container p-5 text-white md:flex-row md:items-center">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15"><Rocket size={24} /></span>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-headline-sm">Besoin de vendre plus vite ? <span className="rounded bg-white/20 px-1.5 text-label-sm">Flash 48h</span></div>
-            <p className="m-0 text-body-sm text-white/90">Les annonces boostées passent en tête des résultats et dans les pépites de l'accueil. Remontées dès <b className="underline">500 F CFA</b>.</p>
+        {/* Tabs */}
+        <div className="relative mb-3 lg:mb-4">
+          <div onScroll={e => { const t = e.currentTarget; setTabsAtEnd(t.scrollLeft + t.clientWidth >= t.scrollWidth - 4) }} className="flex gap-1 overflow-x-auto rounded-xl bg-surface-container-low p-1 [scrollbar-width:none]">
+            {TABS.map(t => {
+              const n = all.filter(t.match).length
+              if (t.key === 'review' && n === 0) return null
+              const active = tab === t.key
+              return (
+                <button key={t.key} onClick={e => { setTab(t.key); setPage(1); e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none px-3 py-2 text-label-md ${active ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
+                  {t.label} <span className={`rounded-full px-1.5 text-label-sm ${active ? 'bg-primary-fixed text-primary' : 'bg-surface-container-high'}`}>{n}</span>
+                </button>
+              )
+            })}
           </div>
-          <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-white px-4 py-2.5 text-label-md text-primary"><Rocket size={16} /> Booster une annonce</button>
+          {!tabsAtEnd && <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-r-xl bg-gradient-to-l from-surface-container-low to-transparent lg:hidden" />}
+        </div>
+
+        {/* Filters: search + sheet on mobile, inline selects on desktop */}
+        <div className="mb-3 flex items-center gap-2 rounded-xl lg:mb-4 lg:flex-wrap lg:bg-surface-lowest lg:p-2">
+          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2.5 lg:min-w-[200px] lg:py-2">
+            <Search size={17} className="shrink-0 text-outline" />
+            <input value={q} onChange={e => { setQ(e.target.value); setPage(1) }} placeholder="Rechercher par titre, marque…" className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" />
+          </label>
+          <button onClick={() => setFiltersOpen(true)} aria-label="Filtrer et trier" className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-low text-on-surface lg:hidden">
+            <Icon name="tune" size={20} />
+            {activeFilters > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">{activeFilters}</span>}
+          </button>
+          <div className="hidden items-center gap-2 lg:flex">
+            {filterSelects('cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none')}
+            <label className="flex items-center gap-1 text-label-md text-on-surface-variant">
+              Trier :
+              <Select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-transparent py-2 text-label-md text-on-surface outline-none">
+                <option value="recent">Plus récentes</option>
+                <option value="views">Plus vues</option>
+                <option value="price-desc">Prix décroissant</option>
+                <option value="price-asc">Prix croissant</option>
+              </Select>
+            </label>
+          </div>
+        </div>
+        <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtrer et trier"
+          footer={
+            <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
+              <button onClick={() => { setCat(''); setCity(''); setSort('recent'); setPage(1) }} className="h-12 flex-1 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Réinitialiser</button>
+              <button onClick={() => setFiltersOpen(false)} className="h-12 flex-[1.4] cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary text-label-lg text-white">Voir {rows.length} annonce{rows.length > 1 ? 's' : ''}</button>
+            </div>
+          }>
+          <div className="flex flex-col gap-3">
+            <span className="text-label-md text-on-surface">Catégorie et commune</span>
+            {filterSelects('w-full cursor-pointer rounded-lg border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface outline-none')}
+            <span className="mt-1 text-label-md text-on-surface">Trier par</span>
+            <div className="grid grid-cols-2 gap-2">
+              {([['recent', 'Plus récentes'], ['views', 'Plus vues'], ['price-desc', 'Prix décroissant'], ['price-asc', 'Prix croissant']] as const).map(([v, label]) => (
+                <button key={v} onClick={() => setSort(v)} aria-pressed={sort === v} className={`h-11 cursor-pointer whitespace-nowrap rounded-xl border-[1.5px] border-solid text-label-md ${sort === v ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>{label}</button>
+              ))}
+            </div>
+          </div>
+        </BottomSheet>
+
+        {/* Boost banner — compact strip on mobile */}
+        <section className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary-container p-3 text-white lg:mb-5 lg:gap-4 lg:p-5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:h-12 lg:w-12"><Rocket size={22} /></span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Vendez plus vite</span><span className="hidden lg:inline">Besoin de vendre plus vite ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Flash 48h</span></div>
+            <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant dès 500 F</p>
+            <p className="m-0 hidden text-body-sm text-white/90 lg:block">Les annonces boostées passent en tête des résultats et dans les pépites de l'accueil. Remontées dès <b className="underline">500 F CFA</b>.</p>
+          </div>
+          <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-white px-3 py-2 text-label-md text-primary lg:px-4 lg:py-2.5"><Rocket size={16} /> <span className="lg:hidden">Booster</span><span className="hidden lg:inline">Booster une annonce</span></button>
         </section>
 
-        {/* Tabs */}
-        <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl bg-surface-container-low p-1">
-          {TABS.map(t => {
-            const n = all.filter(t.match).length
-            if (t.key === 'review' && n === 0) return null
-            const active = tab === t.key
-            return (
-              <button key={t.key} onClick={() => { setTab(t.key); setPage(1) }} className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-3 py-2 text-label-md ${active ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
-                {t.label} <span className={`rounded-full px-1.5 text-label-sm ${active ? 'bg-primary-fixed text-primary' : 'bg-surface-container-high'}`}>{n}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Filters */}
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface-lowest p-2">
-          <label className="flex min-w-[200px] flex-1 items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2">
-            <Search size={17} className="text-outline" />
-            <input value={q} onChange={e => { setQ(e.target.value); setPage(1) }} placeholder="Rechercher par titre, marque ou référence…" className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
-          </label>
-          <Select value={cat} onChange={e => { setCat(e.target.value); setPage(1) }} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
-            <option value="">Toutes catégories</option>
-            {categories.map(([slug, name]) => <option key={slug} value={slug}>{name}</option>)}
-          </Select>
-          <Select value={city} onChange={e => { setCity(e.target.value); setPage(1) }} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
-            <option value="">Toutes communes</option>
-            {cities.map(c => <option key={c}>{c}</option>)}
-          </Select>
-          <label className="flex items-center gap-1 text-label-md text-on-surface-variant">
-            Trier :
-            <Select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-transparent py-2 text-label-md text-on-surface outline-none">
-              <option value="recent">Plus récentes</option>
-              <option value="views">Plus vues</option>
-              <option value="price-desc">Prix décroissant</option>
-              <option value="price-asc">Prix croissant</option>
-            </Select>
-          </label>
-        </div>
-
-        {/* KPIs */}
-        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* KPIs (desktop) */}
+        <div className="mb-5 hidden grid-cols-4 gap-3 lg:grid">
           {[
             { label: 'Valeur du stock actif', value: <><Price amount={stock} /></>, sub: <span className="flex items-center gap-1 text-tertiary"><CheckCircle2 size={13} /> 0 F de frais cachés</span> },
             { label: 'Vues totales', value: views.toLocaleString('fr-FR'), sub: <span className="text-tertiary">+{views24} sur 24h</span> },
@@ -196,7 +237,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           ))}
         </div>
 
-        {flash && <p className="mb-3 flex items-center gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} /> {flash}</p>}
+        {flash && <p className="mb-3 flex items-center gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} className="shrink-0" /> {flash}</p>}
 
         {/* Rows */}
         <div className="flex flex-col gap-3">
@@ -212,29 +253,35 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             const offers = l.pendingOffersCount ?? 0
             const accent = boosted ? 'border-l-primary' : offers ? 'border-l-tertiary' : 'border-l-transparent'
             const photos = l.mediaCount?.length ?? (l.coverImageUrl ? 1 : 0)
+            const mainBtn = 'flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none px-3 text-label-md max-lg:flex-1 lg:h-9'
             return (
               <div key={l.id} className={`rounded-2xl border border-l-4 border-solid border-outline-variant bg-surface-lowest ${accent}`}>
-                <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
-                  <button onClick={() => onSelectListing(l.id)} className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-low p-0">
-                    {l.coverImageUrl ? <img src={l.coverImageUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="image" size={30} className="text-outline" />}
-                    {photos > 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 text-[10px] text-white">{photos} photo{photos > 1 ? 's' : ''}</span>}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                      <span className={`rounded-full px-2 py-0.5 text-label-sm ${STATUS[l.status]?.cls ?? ''}`}>● {STATUS[l.status]?.label ?? l.status}</span>
-                      {boosted && <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary"><Rocket size={12} /> Boost actif</span>}
-                      {offers > 0 && <span className="flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-label-sm text-white"><Tag size={12} /> {offers} offre{offers > 1 ? 's' : ''} reçue{offers > 1 ? 's' : ''}</span>}
-                      <span className="text-label-sm text-on-surface-variant">{[l.category?.name, l.subcategory?.name].filter(Boolean).join(' • ')}</span>
-                    </div>
-                    <button onClick={() => onSelectListing(l.id)} className="block max-w-full cursor-pointer truncate border-none bg-transparent p-0 text-left text-headline-sm text-on-surface hover:text-primary">{l.title}</button>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-body-sm text-on-surface-variant">
-                      <span className="flex items-center gap-1"><MapPin size={13} /> {l.locationLabel ? `${l.locationLabel}, ` : ''}{l.city}</span>
-                      <span>Publiée le {new Date(l.publishedAt ?? l.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                      {(l.condition && l.condition !== 'N/A') && <span>{l.condition}</span>}
-                      {l.size && <span>Taille {l.size}</span>}
+                <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:gap-4 lg:p-4">
+                  <div className="flex min-w-0 flex-1 gap-3 lg:items-center lg:gap-4">
+                    <button onClick={() => onSelectListing(l.id)} aria-label={`Voir « ${l.title} »`} className="relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-none bg-surface-container-low p-0">
+                      {/* Placeholder stays underneath; a broken cover image hides itself. */}
+                      <Icon name="image" size={30} className="text-outline" />
+                      {l.coverImageUrl && <img src={l.coverImageUrl} alt="" onError={e => { e.currentTarget.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />}
+                      {photos > 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 text-[10px] text-white">{photos} photo{photos > 1 ? 's' : ''}</span>}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full px-2 py-0.5 text-label-sm ${STATUS[l.status]?.cls ?? ''}`}>● {STATUS[l.status]?.label ?? l.status}</span>
+                        {boosted && <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary"><Rocket size={12} /> Boost actif</span>}
+                        {offers > 0 && <span className="flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-label-sm text-white"><Tag size={12} /> {offers} offre{offers > 1 ? 's' : ''}<span className="max-lg:hidden"> reçue{offers > 1 ? 's' : ''}</span></span>}
+                        <span className="hidden text-label-sm text-on-surface-variant lg:inline">{[l.category?.name, l.subcategory?.name].filter(Boolean).join(' • ')}</span>
+                      </div>
+                      <button onClick={() => onSelectListing(l.id)} className="block max-w-full cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg text-on-surface hover:text-primary lg:text-headline-sm">{l.title}</button>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-body-sm text-on-surface-variant">
+                        <span className="flex min-w-0 items-center gap-1"><MapPin size={13} className="shrink-0" /> <span className="truncate">{l.locationLabel ? `${l.locationLabel}, ` : ''}{l.city}</span></span>
+                        <span className="hidden lg:inline">Publiée le {new Date(l.publishedAt ?? l.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        {(l.condition && l.condition !== 'N/A') && <span className="hidden lg:inline">{l.condition}</span>}
+                        {l.size && <span className="hidden lg:inline">Taille {l.size}</span>}
+                      </div>
+                      <div className="mt-1 text-headline-sm font-extrabold text-on-surface lg:hidden"><Price amount={l.price} currency={l.currency} /></div>
                     </div>
                   </div>
-                  <div className="shrink-0 lg:w-36 lg:text-right">
+                  <div className="hidden shrink-0 lg:block lg:w-36 lg:text-right">
                     <div className="text-headline-sm font-extrabold text-on-surface"><Price amount={l.price} currency={l.currency} /></div>
                     <div className="flex items-center gap-1 text-[11px] text-tertiary lg:justify-end"><CheckCircle2 size={12} /> 0 F commission pour vous</div>
                   </div>
@@ -246,26 +293,26 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                       { v: l.favoritesCount, label: 'Favoris' },
                     ].map(s => <div key={s.label}><div className={`text-label-lg ${s.cls ?? 'text-on-surface'}`}>{s.v}</div><div className="text-[10px] text-on-surface-variant">{s.label}</div></div>)}
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center justify-end gap-2">
                     {l.status === 'APPROVED' && (offers > 0 ? (
-                      <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-tertiary px-3 py-2 text-label-md text-white"><MessageSquare size={15} /> Voir l'offre</button>
+                      <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className={`${mainBtn} bg-tertiary text-white`}><MessageSquare size={16} /> Voir l'offre (Chat)</button>
                     ) : boosted ? (
-                      <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary-fixed px-3 py-2 text-label-md text-primary"><Rocket size={15} /> Prolonger le boost</button>
+                      <button onClick={() => onNavigate('seller-premium')} className={`${mainBtn} bg-primary text-white lg:bg-primary-fixed lg:text-primary`}><Rocket size={16} /> Prolonger le boost</button>
                     ) : credits > 0 ? (
-                      <button onClick={() => spendCredit(l)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white"><Rocket size={15} /> Remonter (1 crédit)</button>
+                      <button onClick={() => setConfirm({ kind: 'bump', l })} className={`${mainBtn} bg-primary text-white`}><Rocket size={16} /> Remonter (1 crédit)</button>
                     ) : (
-                      <button disabled={boosting} onClick={() => boostFlash(l)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white disabled:opacity-60"><Rocket size={15} /> Booster (500 F)</button>
+                      <button disabled={boosting} onClick={() => setConfirm({ kind: 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Booster (500 F)</button>
                     ))}
-                    {l.status === 'EXPIRED' && <button onClick={() => republish(l)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white"><Archive size={15} /> Remettre en ligne</button>}
-                    {l.status === 'DRAFT' && <button onClick={() => onEditListing(l.id)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white"><Edit3 size={15} /> Compléter</button>}
-                    <button onClick={() => onEditListing(l.id)} title="Modifier" className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-high text-on-surface"><Edit3 size={16} /></button>
+                    {l.status === 'EXPIRED' && <button onClick={() => republish(l)} className={`${mainBtn} bg-primary text-white`}><Archive size={16} /> Remettre en ligne</button>}
+                    {l.status === 'DRAFT' && <button onClick={() => onEditListing(l.id)} className={`${mainBtn} bg-primary text-white`}><Edit3 size={16} /> Compléter</button>}
+                    <button onClick={() => onEditListing(l.id)} title="Modifier" aria-label="Modifier" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-high text-on-surface lg:h-9 lg:w-9"><Edit3 size={17} /></button>
                     <div className="relative">
-                      <button onClick={() => setMenuFor(menuFor === l.id ? null : l.id)} title="Plus" className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-high text-on-surface"><Icon name="more_vert" size={18} /></button>
+                      <button onClick={() => setMenuFor(menuFor === l.id ? null : l.id)} title="Plus" aria-label="Plus d'actions" className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-high text-on-surface lg:h-9 lg:w-9"><Icon name="more_vert" size={18} /></button>
                       {menuFor === l.id && (
-                        <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-float">
-                          <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Eye size={16} /> Voir l'annonce</button>
-                          <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Tag size={16} /> Offres reçues</button>
-                          <button onClick={() => remove(l)} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2 text-left text-label-md text-primary hover:bg-primary-fixed/40"><Trash2 size={16} /> Supprimer</button>
+                        <div className="absolute bottom-full right-0 z-20 mb-1 w-48 rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-float lg:bottom-auto lg:top-full lg:mb-0 lg:mt-1">
+                          <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Eye size={16} /> Voir l'annonce</button>
+                          <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Tag size={16} /> Offres reçues</button>
+                          <button onClick={() => { setMenuFor(null); setConfirm({ kind: 'delete', l }) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-primary hover:bg-primary-fixed/40"><Trash2 size={16} /> Supprimer</button>
                         </div>
                       )}
                     </div>
@@ -277,16 +324,49 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           })}
         </div>
 
+        <ConfirmSheet
+          open={confirm?.kind === 'delete'}
+          title="Supprimer l'annonce ?"
+          confirmLabel="Supprimer"
+          tone="danger"
+          loading={deleting}
+          onConfirm={() => confirm && remove(confirm.l)}
+          onClose={() => setConfirm(null)}
+        >
+          « {confirm?.l.title} » sera définitivement supprimée. Cette action est irréversible.
+        </ConfirmSheet>
+        <ConfirmSheet
+          open={confirm?.kind === 'boost'}
+          title="Remontée flash"
+          confirmLabel="Booster pour 500 F"
+          loading={boosting}
+          onConfirm={() => confirm && boostFlash(confirm.l)}
+          onClose={() => setConfirm(null)}
+        >
+          « {confirm?.l.title} » repasse en tête du catalogue. <b className="text-on-surface">500 F</b> seront débités de votre solde publicitaire.
+        </ConfirmSheet>
+
+        <ConfirmSheet
+          open={confirm?.kind === 'bump'}
+          title="Remonter l'annonce"
+          confirmLabel="Utiliser 1 crédit"
+          loading={bumping}
+          onConfirm={() => { if (confirm) { spendCredit(confirm.l); setConfirm(null) } }}
+          onClose={() => setConfirm(null)}
+        >
+          « {confirm?.l.title} » repasse en tête du catalogue. <b className="text-on-surface">1 crédit</b> sera utilisé.
+        </ConfirmSheet>
+
         {rows.length > 0 && (
-          <div className="mt-5 flex items-center justify-between">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
             <span className="text-body-sm text-on-surface-variant">Affichage de {(page - 1) * PAGE + 1}–{Math.min(page * PAGE, rows.length)} sur {rows.length} annonce{rows.length > 1 ? 's' : ''}</span>
             {pages > 1 && (
               <div className="flex items-center gap-1">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronLeft size={17} /></button>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} aria-label="Page précédente" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronLeft size={17} /></button>
                 {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => setPage(p)} className={`h-8 min-w-8 cursor-pointer rounded-lg border-none px-2 text-label-md ${p === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface'}`}>{p}</button>
+                  <button key={p} onClick={() => setPage(p)} className={`h-10 min-w-10 cursor-pointer rounded-lg border-none px-2 text-label-md ${p === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface'}`}>{p}</button>
                 ))}
-                <button disabled={page === pages} onClick={() => setPage(p => p + 1)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronRight size={17} /></button>
+                <button disabled={page === pages} onClick={() => setPage(p => p + 1)} aria-label="Page suivante" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronRight size={17} /></button>
               </div>
             )}
           </div>

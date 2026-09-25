@@ -207,7 +207,8 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
           </button>
         </>
       )}
-      <div className="relative">
+      {/* Sub-pages on a phone: back + title + bell only, so titles fit */}
+      <div className={`relative ${isHome ? '' : 'max-lg:hidden'}`}>
         <button onClick={() => setMenuOpen(o => !o)} className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent p-1 hover:bg-surface-container-low">
           <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">
             {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : displayName.charAt(0).toUpperCase()}

@@ -6,7 +6,7 @@ import { AccountLayout } from '../account/AccountLayout'
 import { OpenDisputeModal } from '../../components/DisputeParts'
 import { PAYMENT_LABELS } from '../ListingDetail'
 import {
-  CONFIRM_HANDOVER_MUTATION, SALES_ORDER_QUERY, VERIFY_HANDOVER_CODE_MUTATION, type HandoverOrder,
+  CONFIRM_HANDOVER_MUTATION, SALES_ORDER_QUERY, VERIFY_HANDOVER_CODE_MUTATION, disputeIsOpen, type HandoverOrder,
 } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 
@@ -17,6 +17,20 @@ const CHECKS = [
   "État esthétique strictement conforme aux photos de l'annonce",
   "Accessoires et éléments d'origine annoncés remis",
 ]
+// Full-row tappable check (the native box stays for a11y, drawn at 24px).
+function CheckRow({ checked, onChange, tone = 'tertiary', children, className = '' }: { checked: boolean, onChange: (v: boolean) => void, tone?: 'tertiary' | 'primary', children: React.ReactNode, className?: string }) {
+  const on = tone === 'tertiary' ? 'border-tertiary bg-tertiary' : 'border-primary bg-primary'
+  return (
+    <label className={`flex min-h-12 cursor-pointer items-start gap-3 rounded-xl p-3 ${className}`}>
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="peer sr-only" />
+      <span aria-hidden className={`mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-solid peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary ${checked ? `${on} text-white` : 'border-outline bg-surface-lowest text-transparent'}`}>
+        <Icon name="check" size={18} />
+      </span>
+      <span className="text-body-md text-on-surface">{children}</span>
+    </label>
+  )
+}
+
 const BUYER_TAGS = ['Ponctuel au rendez-vous', 'Paiement immédiat', 'Très respectueux', 'Négociation courtoise']
 const METHOD_BADGE: Record<string, { letter: string; cls: string }> = {
   WAVE: { letter: 'W', cls: 'bg-sky-100 text-sky-600' },
@@ -61,6 +75,9 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
   }).then(() => refetch())
 
   const done = o?.stage === 'DONE' || !!o?.meetup?.handedOverAt
+  // An open dispute freezes the hand-over code server-side: say so upfront
+  // instead of letting the seller type a code that will be refused.
+  const frozen = !!o?.disputeStatus && disputeIsOpen(o.disputeStatus)
 
   return (
     <AccountLayout active="seller-orders" title="Confirmation de remise" onBack={() => onNavigate('seller-orders')} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
@@ -134,9 +151,16 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                   <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="pin" size={22} className="text-primary" /> Code Handshake Secret</h2>
                   <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Demandez à {buyerFirst} de vous dicter son code à 4 chiffres affiché dans son application Dilchap.</p>
+                  {frozen && (
+                    <div role="status" className="mt-3 flex items-start gap-2 rounded-xl bg-primary-fixed/60 p-3 text-body-sm text-on-surface">
+                      <Icon name="lock" size={20} className="shrink-0 text-primary" />
+                      <span><b className="text-primary">Code gelé</b> : un litige est en cours sur cette vente. La remise pourra être validée une fois le litige résolu.</span>
+                    </div>
+                  )}
                   {/* One real input (paste / autofill / fast typing safe) drawn as 4 boxes. */}
-                  <label className="relative mx-auto mt-4 flex w-fit cursor-text justify-center gap-3">
+                  <label className={`relative mx-auto mt-4 flex w-fit justify-center gap-3 ${frozen ? 'cursor-not-allowed opacity-50' : 'cursor-text'}`}>
                     <input
+                      disabled={frozen}
                       value={code}
                       inputMode="numeric"
                       autoComplete="one-time-code"
@@ -145,7 +169,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                       onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
                       onFocus={() => setCodeFocused(true)}
                       onBlur={() => setCodeFocused(false)}
-                      className="absolute inset-0 h-full w-full cursor-text opacity-0"
+                      className="absolute inset-0 h-full w-full cursor-text opacity-0 disabled:cursor-not-allowed"
                     />
                     {[0, 1, 2, 3].map(i => {
                       const active = codeFocused && (i === code.length || (i === 3 && code.length === 4))
@@ -165,10 +189,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                   <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Cochez les points vérifiés ensemble pour sceller la vente :</p>
                   <div className="mt-3 flex flex-col gap-2">
                     {CHECKS.map((c, i) => (
-                      <label key={c} className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3">
-                        <input type="checkbox" checked={checks[i]} onChange={e => setChecks(prev => prev.map((x, j) => (j === i ? e.target.checked : x)))} className="mt-0.5 h-5 w-5 accent-[#006947]" />
-                        <span className="text-body-md text-on-surface">{c}</span>
-                      </label>
+                      <CheckRow key={c} checked={checks[i]} onChange={v => setChecks(prev => prev.map((x, j) => (j === i ? v : x)))} className="bg-surface-container-low">{c}</CheckRow>
                     ))}
                   </div>
                 </section>
@@ -194,10 +215,9 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                       <p className="m-0 text-body-sm text-on-surface"><b className="text-primary">Alerte sécurité Dilchap</b><br />Ne validez <b className="text-primary">JAMAIS</b> sur la foi d'un simple SMS reçu. Ouvrez votre application {PAYMENT_LABELS[method] ?? ''} et vérifiez que votre solde affiche le versement effectif de <Price amount={amount} currency={o.listing.currency} />.</p>
                     </div>
                   )}
-                  <label className="mt-3 flex cursor-pointer items-start gap-3">
-                    <input type="checkbox" checked={attested} onChange={e => setAttested(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
-                    <span className="text-body-md text-on-surface">J'atteste sur l'honneur avoir {method === 'CASH' ? 'reçu' : 'visualisé et encaissé'} <Price amount={amount} currency={o.listing.currency} /> nets {method === 'CASH' ? 'en espèces' : `sur mon compte ${PAYMENT_LABELS[method] ?? ''}`}.</span>
-                  </label>
+                  <CheckRow checked={attested} onChange={setAttested} tone="primary" className="-mx-3 mt-1">
+                    J'atteste sur l'honneur avoir {method === 'CASH' ? 'reçu' : 'visualisé et encaissé'} <Price amount={amount} currency={o.listing.currency} /> nets {method === 'CASH' ? 'en espèces' : `sur mon compte ${PAYMENT_LABELS[method] ?? ''}`}.
+                  </CheckRow>
                 </section>
 
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
@@ -227,8 +247,8 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
 
             {!done && (
               o.disputeId
-                ? <button onClick={() => onOpenDispute(o.disputeId!)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="gavel" size={18} /> Un litige est ouvert sur cette vente — le consulter</button>
-                : <button onClick={() => setDisputeOpen(true)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="report_problem" size={18} /> Un imprévu sur place ? Signaler un litige</button>
+                ? <button onClick={() => onOpenDispute(o.disputeId!)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="gavel" size={18} /> Litige en cours — le consulter</button>
+                : <button onClick={() => setDisputeOpen(true)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="report_problem" size={18} /> Un imprévu ? Signaler un litige</button>
             )}
           </div>
         )}
