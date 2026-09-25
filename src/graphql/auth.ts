@@ -87,7 +87,7 @@ export type AuthUser = {
   phone?: string | null
   city?: string | null
   avatarUrl?: string | null
-  notificationPreferences?: Record<string, boolean>
+  notificationPreferences?: Record<string, unknown>
   isGuest?: boolean
   isVerified?: boolean
   boostCredits?: number
