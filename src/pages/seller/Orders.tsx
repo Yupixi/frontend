@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import { CheckCircle2, BadgeCheck, MessageSquare, MapPin, Calendar, ShieldCheck, ArrowRight, Wallet, Star, Clock, TrendingUp, CircleX } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { PAYMENT_LABELS } from '../ListingDetail'
 import { SET_CONVERSATION_DEAL_STATUS_MUTATION } from '../../graphql/messaging'
@@ -19,12 +20,14 @@ type Props = {
   onLogout: () => void
 }
 
-const TABS: { stage: SalesStage | 'OPEN', label: string }[] = [
-  { stage: 'OPEN', label: 'En cours / RDV planifiés' },
-  { stage: 'PENDING', label: 'En attente de confirmation' },
-  { stage: 'DONE', label: 'Terminées & remises' },
-  { stage: 'CANCELLED', label: 'Annulées' },
+// `short` labels keep every tab readable on a phone (mockup wording).
+const TABS: { stage: SalesStage | 'OPEN', label: string, short: string }[] = [
+  { stage: 'OPEN', label: 'En cours / RDV planifiés', short: 'Planifiés' },
+  { stage: 'PENDING', label: 'En attente de confirmation', short: 'À confirmer' },
+  { stage: 'DONE', label: 'Terminées & remises', short: 'Terminés' },
+  { stage: 'CANCELLED', label: 'Annulées', short: 'Annulés' },
 ]
+const compact = (n: number) => n >= 1e6 ? `${(n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : n.toLocaleString('fr-FR').replace(/\s/g, ' ')
 
 const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 
@@ -44,16 +47,18 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
   }
   const shown = orders.filter(o => tab === 'OPEN' ? o.stage === 'IN_PROGRESS' || o.stage === 'PENDING' : o.stage === tab)
 
+  const [cancelFor, setCancelFor] = useState<SalesOrder | null>(null)
   const cancel = (o: SalesOrder) => {
-    if (!window.confirm(`Annuler la vente de « ${o.listing.title} » à ${o.buyer.fullName} ?`)) return
-    void setDealStatus({ variables: { conversationId: o.id, status: 'NOT_CONCLUDED' } }).then(() => { void refetch(); void refetchStats() })
+    void setDealStatus({ variables: { conversationId: o.id, status: 'NOT_CONCLUDED' } })
+      .then(() => { void refetch(); void refetchStats() })
+      .finally(() => setCancelFor(null))
   }
 
   return (
-    <AccountLayout active="seller-orders" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+    <AccountLayout active="seller-orders" title="Remises directes" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1120px] pb-6">
-        <div className="mb-1 flex items-center gap-1 text-label-sm uppercase text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Espace vendeur direct • Zéro commission</div>
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className="mb-1 hidden items-center gap-1 text-label-sm uppercase text-primary lg:flex"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Espace vendeur direct • Zéro commission</div>
+        <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
             <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Commandes &amp; Envois</h1>
             <p className="m-0 mt-1 text-body-md text-on-surface-variant">Suivi de vos transactions directes, remises en main propre et livraisons convenues.</p>
@@ -61,8 +66,24 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
           <span className="flex items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><CheckCircle2 size={16} className="text-tertiary" /> Transactions 100% P2P</span>
         </div>
 
+        {/* Mobile: three mini KPIs in one row */}
+        <section className="grid grid-cols-3 gap-2 md:hidden">
+          <div className="min-w-0 rounded-xl border border-outline-variant bg-surface-lowest p-2.5">
+            <div className="truncate text-label-sm text-on-surface-variant">RDV actifs</div>
+            <div className="mt-0.5 text-headline-sm font-extrabold text-on-surface">{stats?.activeMeetups ?? 0}</div>
+          </div>
+          <div className="min-w-0 rounded-xl border border-outline-variant bg-surface-lowest p-2.5">
+            <div className="truncate text-label-sm text-on-surface-variant">En cours</div>
+            <div className="mt-0.5 whitespace-nowrap text-headline-sm font-extrabold text-on-surface">{compact(stats?.volumeInProgress ?? 0)}<span className="price-unit">F</span></div>
+          </div>
+          <div className="min-w-0 rounded-xl bg-tertiary-soft p-2.5">
+            <div className="truncate text-label-sm text-tertiary">Commission</div>
+            <div className="mt-0.5 whitespace-nowrap text-headline-sm font-extrabold text-tertiary">0 F</div>
+          </div>
+        </section>
+
         {/* KPIs */}
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <section className="hidden grid-cols-2 gap-3 md:grid lg:grid-cols-4">
           {[
             { label: 'RDV actifs', value: stats?.activeMeetups ?? 0, sub: 'Rendez-vous confirmés', icon: 'handshake', box: 'bg-primary-fixed text-primary' },
             { label: 'Volume en cours', value: <Price amount={stats?.volumeInProgress ?? 0} />, sub: 'Paiements directs à la remise', icon: 'account_balance_wallet', box: 'bg-tertiary-soft text-tertiary' },
@@ -81,10 +102,10 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
         </section>
 
         {/* Tabs */}
-        <div className="mt-5 flex gap-2 overflow-x-auto rounded-xl bg-surface-lowest p-2">
+        <div className="mt-4 flex gap-2 overflow-x-auto rounded-xl bg-surface-lowest p-2 [scrollbar-width:none] md:mt-5">
           {TABS.map(t => (
-            <button key={t.stage} onClick={() => setTab(t.stage)} className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-none px-3 py-2 text-label-md ${tab === t.stage ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
-              {t.label} <span className={`rounded-full px-1.5 text-label-sm ${tab === t.stage ? 'bg-white/20' : 'bg-surface-container-high'}`}>{counts[t.stage]}</span>
+            <button key={t.stage} onClick={() => setTab(t.stage)} className={`flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border-none px-3 py-2 text-label-md ${tab === t.stage ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
+              <span className="md:hidden">{t.short}</span><span className="hidden md:inline">{t.label}</span> <span className={`rounded-full px-1.5 text-label-sm ${tab === t.stage ? 'bg-white/20' : 'bg-surface-container-high'}`}>{counts[t.stage]}</span>
             </button>
           ))}
         </div>
@@ -112,7 +133,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                     <span className="text-headline-sm font-extrabold text-on-surface">#{o.reference}</span>
                     <span className="rounded bg-surface-container-high px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">{o.acceptedOffer ? 'Accord finalisé' : 'Prix affiché'}</span>
                     <span className={`rounded-full px-2 py-0.5 text-label-sm ${statusChip.c}`}>● {statusChip.t}</span>
-                    <span className="ml-auto flex items-center gap-1 text-body-sm text-on-surface-variant"><Calendar size={14} /> Accord le {new Date(o.agreedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="flex items-center gap-1 text-body-sm text-on-surface-variant md:ml-auto"><Calendar size={14} /> Accord le {new Date(o.agreedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr_1.1fr]">
@@ -167,19 +188,21 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                   </div>
 
                   {/* Stepper */}
-                  <div className="mt-4 grid gap-3 rounded-xl bg-surface-container-low p-3 md:grid-cols-3">
+                  {/* Mobile: compact 3-column frieze (short labels); desktop adds the detail line. */}
+                  <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-surface-container-low p-3 md:gap-3">
                     {[
-                      { title: '1. Accord & Chat', sub: o.acceptedOffer ? 'Offre acceptée • Validé' : 'Prix fixé • Validé', state: 'done' },
-                      { title: '2. Rendez-vous convenu', sub: m ? `${m.place} — ${new Date(m.scheduledAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'À proposer dans le chat', state: final ? 'done' : step2 },
-                      { title: '3. Remise & Règlement', sub: o.stage === 'DONE' ? 'Objet remis et payé' : o.stage === 'CANCELLED' ? 'Vente annulée' : 'Objet testé puis payé', state: o.stage === 'DONE' ? 'done' : o.stage === 'CANCELLED' ? 'cancel' : 'todo' },
+                      { title: '1. Accord & Chat', short: 'Accord validé', sub: o.acceptedOffer ? 'Offre acceptée • Validé' : 'Prix fixé • Validé', state: 'done' },
+                      { title: '2. Rendez-vous convenu', short: m?.status === 'CONFIRMED' ? 'RDV convenu' : 'RDV', sub: m ? `${m.place} — ${new Date(m.scheduledAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'À proposer dans le chat', state: final ? 'done' : step2 },
+                      { title: '3. Remise & Règlement', short: o.stage === 'CANCELLED' ? 'Annulée' : 'Règlement', sub: o.stage === 'DONE' ? 'Objet remis et payé' : o.stage === 'CANCELLED' ? 'Vente annulée' : 'Objet testé puis payé', state: o.stage === 'DONE' ? 'done' : o.stage === 'CANCELLED' ? 'cancel' : 'todo' },
                     ].map((s, i) => (
-                      <div key={s.title} className="flex items-center gap-2">
+                      <div key={s.title} className="flex min-w-0 flex-col items-center gap-1 text-center md:flex-row md:gap-2 md:text-left">
                         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-label-md ${s.state === 'done' ? 'bg-tertiary text-white' : s.state === 'current' ? 'bg-primary text-white' : s.state === 'cancel' ? 'bg-surface-container-high text-on-surface-variant' : 'bg-surface-container-high text-on-surface-variant'}`}>
                           {s.state === 'done' ? <CheckCircle2 size={16} /> : s.state === 'current' ? <Clock size={16} /> : s.state === 'cancel' ? <CircleX size={16} /> : i + 1}
                         </span>
-                        <div className="min-w-0 text-body-sm">
-                          <div className={`font-semibold ${s.state === 'current' ? 'text-primary' : 'text-on-surface'}`}>{s.title}</div>
-                          <div className="truncate text-on-surface-variant">{s.sub}</div>
+                        <div className="min-w-0 max-w-full text-body-sm">
+                          <div className={`whitespace-nowrap text-label-sm md:hidden ${s.state === 'current' ? 'text-primary' : 'text-on-surface'}`}>{s.short}</div>
+                          <div className={`hidden font-semibold md:block ${s.state === 'current' ? 'text-primary' : 'text-on-surface'}`}>{s.title}</div>
+                          <div className="hidden truncate text-on-surface-variant md:block">{s.sub}</div>
                         </div>
                       </div>
                     ))}
@@ -192,13 +215,13 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                   )}
                   {!final && (
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <button onClick={() => onOpenConversation(o.buyer.id, o.listing.id)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><Calendar size={15} /> {m ? 'Modifier le RDV' : 'Proposer un RDV'}</button>
-                      <button onClick={() => cancel(o)} disabled={closing} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><CircleX size={15} /> Annuler</button>
+                      <button onClick={() => onOpenConversation(o.buyer.id, o.listing.id)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-container-high px-3 text-label-md text-on-surface max-md:flex-1 md:h-auto md:py-2"><Calendar size={15} /> {m ? 'Modifier le RDV' : 'Proposer un RDV'}</button>
+                      <button onClick={() => setCancelFor(o)} disabled={closing} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-container-high px-3 text-label-md text-on-surface max-md:flex-1 md:h-auto md:py-2"><CircleX size={15} /> Annuler</button>
                       <button
                         onClick={() => onOpenHandover(o.id)}
                         disabled={m?.status !== 'CONFIRMED'}
                         title={m?.status !== 'CONFIRMED' ? "Le code de remise de l'acheteur est disponible une fois le RDV confirmé" : undefined}
-                        className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2 text-label-md text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 text-label-md text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50 max-md:order-first max-md:w-full md:ml-auto md:h-auto md:py-2"
                       ><Icon name="done_all" size={17} /> Confirmer la remise</button>
                     </div>
                   )}
@@ -214,8 +237,18 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
             <div className="flex items-center gap-2 text-headline-sm text-on-surface">Règles d'or pour vos remises en main propre <span className="rounded bg-tertiary-soft px-1.5 text-label-sm text-tertiary">Sécurité Dilchap</span></div>
             <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Ne donnez jamais l'objet avant d'avoir vérifié la réception des fonds sur votre compte Wave ou Orange Money (ne vous fiez jamais à un SMS transféré). Privilégiez les espaces publics et lumineux.</p>
           </div>
-          <button onClick={() => onNavigate('seller-listings')} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Mes annonces <ArrowRight size={15} /></button>
         </section>
+        <ConfirmSheet
+          open={!!cancelFor}
+          title="Annuler cette vente ?"
+          confirmLabel="Annuler la vente"
+          tone="danger"
+          loading={closing}
+          onConfirm={() => cancelFor && cancel(cancelFor)}
+          onClose={() => setCancelFor(null)}
+        >
+          {cancelFor && <>La vente de « {cancelFor.listing.title} » à {cancelFor.buyer.fullName} passera dans « Annulés ».</>}
+        </ConfirmSheet>
       </div>
     </AccountLayout>
   )

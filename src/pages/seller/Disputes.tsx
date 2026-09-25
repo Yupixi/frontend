@@ -14,15 +14,17 @@ import { CREATE_REPORT_MUTATION } from '../../graphql/reports'
 import { PAYMENT_LABELS } from '../ListingDetail'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import BottomSheet from '../../components/BottomSheet'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; focusDisputeId?: string; currentUser?: AuthUser | null; onLogout: () => void }
 
-const TABS: { key: string; label: string; statuses?: DisputeStatus[]; dot?: string }[] = [
-  { key: 'all', label: 'Tous les dossiers' },
-  { key: 'mediation', label: 'En cours de médiation', statuses: ['AWAITING_SELLER', 'IN_MEDIATION'], dot: 'bg-primary' },
-  { key: 'buyer', label: "En attente de l'acheteur", statuses: ['AWAITING_BUYER'], dot: 'bg-on-surface-variant' },
-  { key: 'amicable', label: 'Clôturés en accord direct', statuses: ['RESOLVED_AMICABLY', 'CANCELLED'], dot: 'bg-tertiary' },
-  { key: 'rejected', label: 'Rejetés / Faux signalements', statuses: ['REJECTED'] },
+// `short` labels for phones, where the tab row scrolls sideways.
+const TABS: { key: string; label: string; short: string; statuses?: DisputeStatus[]; dot?: string }[] = [
+  { key: 'all', label: 'Tous les dossiers', short: 'Tous' },
+  { key: 'mediation', label: 'En cours de médiation', short: 'En médiation', statuses: ['AWAITING_SELLER', 'IN_MEDIATION'], dot: 'bg-primary' },
+  { key: 'buyer', label: "En attente de l'acheteur", short: 'Attente acheteur', statuses: ['AWAITING_BUYER'], dot: 'bg-on-surface-variant' },
+  { key: 'amicable', label: 'Clôturés en accord direct', short: 'Clôturés', statuses: ['RESOLVED_AMICABLY', 'CANCELLED'], dot: 'bg-tertiary' },
+  { key: 'rejected', label: 'Rejetés / Faux signalements', short: 'Rejetés', statuses: ['REJECTED'] },
 ]
 const PAGE = 5
 const commune = (d: Dispute) => d.meetupPlace ?? d.listing?.city ?? '—'
@@ -80,8 +82,8 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
       <div className="mt-4 text-label-sm uppercase text-on-surface-variant">Choisir une proposition rapide</div>
       <div className="mt-2 flex flex-col gap-2">
         {options.map(o => (
-          <label key={o.key} className={`flex cursor-pointer gap-3 rounded-xl border bg-surface-lowest p-3 ${proposal === o.key ? 'border-primary' : 'border-outline-variant'}`}>
-            <input type="radio" name={`proposal-${d.id}`} checked={proposal === o.key} onChange={() => setProposal(o.key)} className="mt-1 accent-[var(--primary)]" />
+          <label key={o.key} className={`flex min-h-12 cursor-pointer gap-3 rounded-xl border bg-surface-lowest p-3 ${proposal === o.key ? 'border-primary' : 'border-outline-variant'}`}>
+            <input type="radio" name={`proposal-${d.id}`} checked={proposal === o.key} onChange={() => setProposal(o.key)} className="m-0 mt-0.5 h-5 w-5 shrink-0 accent-[var(--primary)]" />
             <span>
               <span className="block text-label-md text-on-surface">{o.title}</span>
               <span className="block text-body-sm text-on-surface-variant">{o.sub}</span>
@@ -97,10 +99,10 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
       </div>
       <div className="mt-4 text-label-sm uppercase text-on-surface-variant">Message explicatif à l'acheteur</div>
       <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder={`Bonjour ${d.buyer.fullName.split(' ')[0]}, ...`} className="mt-2 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
-      <div className="mt-3"><PhotoPicker urls={photos} onChange={setPhotos} label="Ajouter des photos témoins avant remise" /></div>
+      <div className="mt-3"><PhotoPicker urls={photos} onChange={setPhotos} label="Ajouter des photos témoins" /></div>
       {error && <p className="m-0 mt-2 text-body-sm text-primary">{error.message}</p>}
       <button onClick={send} disabled={loading || (proposal === 'COURTESY_DISCOUNT' && discount <= 0)} className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white hover:bg-primary-dark disabled:opacity-60">
-        <Icon name="send" size={18} /> Envoyer ma réponse &amp; mes justificatifs
+        <Icon name="send" size={18} /> <span className="sm:hidden">Envoyer ma réponse</span><span className="hidden sm:inline">Envoyer ma réponse &amp; mes justificatifs</span>
       </button>
       <p className="m-0 mt-2 text-center text-label-sm text-on-surface-variant">Garantie Dilchap : aucune pénalité tant que vous répondez dans les délais</p>
     </div>
@@ -111,7 +113,7 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
   const left = hoursLeft(d.deadlineAt)
   const open = disputeIsOpen(d.status)
   return (
-    <section className="mt-5 overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
+    <section className="overflow-hidden rounded-2xl bg-surface-lowest shadow-sm md:mt-5">
       <div className={`flex flex-wrap items-center justify-between gap-2 px-5 py-3 ${open ? 'bg-primary-fixed/60' : 'bg-surface-container-low'}`}>
         <div className="flex items-center gap-3">
           <span className={`flex h-8 w-8 items-center justify-center rounded-full text-white ${open ? 'bg-primary' : 'bg-tertiary'}`}><Icon name={open ? 'priority_high' : 'task_alt'} size={18} /></span>
@@ -236,6 +238,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
   const [page, setPage] = useState(1)
   const [focusId, setFocusId] = useState<string | null>(focusDisputeId || null)
   const [reporting, setReporting] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const rulesRef = useRef<HTMLDivElement>(null)
   const focusRef = useRef<HTMLDivElement>(null)
 
@@ -264,7 +267,8 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
   return (
     <AccountLayout active="seller-disputes" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1180px] pb-8">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        {/* Breadcrumb + heading are desktop-only: the mobile shell titles the page. */}
+        <div className="mb-2 hidden flex-wrap items-center justify-between gap-2 lg:flex">
           <nav className="hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
             <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />
             <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">Tableau de bord</button>
@@ -273,7 +277,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
           {currentUser?.isVerified && <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="shield_with_heart" size={15} /> Protocole P2P Dilchap vérifié</span>}
         </div>
 
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div className="max-w-xl">
             <h1 className="m-0 flex flex-wrap items-center gap-2 text-headline-lg-mobile text-on-surface md:text-headline-lg">
               Gestion des Litiges &amp; Signalements
@@ -287,8 +291,27 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
           </div>
         </div>
 
+        <div className="flex flex-col">
+        {/* Mobile: compact KPI row */}
+        <section className="mt-4 grid grid-cols-3 gap-2 md:hidden">
+          <div className="min-w-0 rounded-xl bg-surface-lowest p-2.5 shadow-sm">
+            <div className="truncate text-label-sm text-on-surface-variant">Amiable</div>
+            <div className="text-headline-sm font-extrabold text-tertiary">{stats?.amicableRate != null ? `${formatNumber(stats.amicableRate)}%` : '—'}</div>
+          </div>
+          <div className={`min-w-0 rounded-xl p-2.5 shadow-sm ${stats?.active ? 'bg-primary-fixed/60' : 'bg-surface-lowest'}`}>
+            <div className="truncate text-label-sm text-primary">Dossiers actifs</div>
+            <div className="text-headline-sm font-extrabold text-primary">{stats?.active ?? 0}</div>
+            {stats?.nextDeadline && <div className="truncate text-[11px] text-primary">Reste {hoursLeft(stats.nextDeadline)}h</div>}
+          </div>
+          <div className="min-w-0 rounded-xl bg-surface-lowest p-2.5 shadow-sm">
+            <div className="truncate text-label-sm text-on-surface-variant">Clôturés</div>
+            <div className="text-headline-sm font-extrabold text-on-surface">{stats?.resolved ?? 0}</div>
+            <div className="truncate text-[11px] text-on-surface-variant">{stats?.penalties ?? 0} pénalité{(stats?.penalties ?? 0) > 1 ? 's' : ''}</div>
+          </div>
+        </section>
+
         {/* KPIs */}
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <section className="hidden grid-cols-2 gap-3 md:grid lg:grid-cols-4">
           <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
             <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">Résolution amiable</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><Icon name="handshake" size={18} /></span></div>
             <div className="mt-2 text-headline-lg font-extrabold text-on-surface">{stats?.amicableRate != null ? `${formatNumber(stats.amicableRate)}%` : '—'}</div>
@@ -311,17 +334,27 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
           </div>
         </section>
 
-        {/* Filters */}
-        <section className="mt-5 rounded-2xl bg-surface-lowest p-3 shadow-sm">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* Filters: one line (search + sheet) on mobile, full bar on desktop */}
+        <section className="mt-4 rounded-2xl bg-surface-lowest p-2 shadow-sm md:mt-5 md:p-3">
+          <div className="flex items-center gap-2 md:hidden">
+            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2.5">
+              <Icon name="search" size={18} className="shrink-0 text-on-surface-variant" />
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Réf., acheteur, article…" className="w-full min-w-0 border-none bg-transparent text-body-md text-on-surface outline-none" />
+            </label>
+            <button onClick={() => setFiltersOpen(true)} aria-label="Filtrer par motif ou lieu" className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-low text-on-surface">
+              <Icon name="tune" size={20} />
+              {!!(reason || place) && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />}
+            </button>
+          </div>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] md:mt-0">
             {TABS.map(t => (
-              <button key={t.key} onClick={() => { setTab(t.key); setPage(1) }} className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-none px-3 py-2 text-label-md ${tab === t.key ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
-                {t.dot && <span className={`h-2 w-2 rounded-full ${t.dot}`} />}{t.label}
+              <button key={t.key} onClick={() => { setTab(t.key); setPage(1) }} className={`flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border-none px-3 py-2 text-label-md ${tab === t.key ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
+                {t.dot && <span className={`h-2 w-2 rounded-full ${t.dot}`} />}<span className="md:hidden">{t.short}</span><span className="hidden md:inline">{t.label}</span>
                 <span className={`rounded-full px-1.5 text-label-sm ${tab === t.key ? 'bg-white/20' : 'bg-surface-container-high'}`}>{counts[t.key] ?? 0}</span>
               </button>
             ))}
           </div>
-          <div className="mt-2 grid gap-2 md:grid-cols-[1.4fr_1fr_1fr]">
+          <div className="mt-2 hidden gap-2 md:grid md:grid-cols-[1.4fr_1fr_1fr]">
             <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2">
               <Icon name="search" size={18} className="text-on-surface-variant" />
               <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Rechercher par référence (#LIT-xxxx), nom de l'acheteur..." className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
@@ -336,24 +369,44 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
             </Select>
           </div>
         </section>
+        <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtrer les dossiers"
+          footer={
+            <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
+              <button onClick={() => { setReason(''); setPlace(''); setPage(1) }} className="h-12 flex-1 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Réinitialiser</button>
+              <button onClick={() => setFiltersOpen(false)} className="h-12 flex-[1.4] cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary text-label-lg text-white">Voir {history.length} dossier{history.length > 1 ? 's' : ''}</button>
+            </div>
+          }>
+          <div className="flex flex-col gap-3">
+            <Select value={reason} onChange={e => { setReason(e.target.value); setPage(1) }} className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface">
+              <option value="">Tous les motifs de litige</option>
+              {(Object.keys(DISPUTE_REASON_LABELS) as DisputeReason[]).map(r => <option key={r} value={r}>{DISPUTE_REASON_LABELS[r]}</option>)}
+            </Select>
+            <Select value={place} onChange={e => { setPlace(e.target.value); setPage(1) }} className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface">
+              <option value="">Tous les lieux de remise</option>
+              {places.map(p => <option key={p} value={p}>{p}</option>)}
+            </Select>
+          </div>
+        </BottomSheet>
 
-        <div ref={focusRef} className="scroll-mt-4">
+        {/* Mobile: the case needing action comes first, above KPIs and filters. */}
+        <div ref={focusRef} className="scroll-mt-4 max-md:order-first">
           {focused ? <FocusedDispute d={focused} onSelectListing={onSelectListing} onDone={refresh} /> : (
-            <div className="mt-5 flex items-center gap-3 rounded-2xl bg-tertiary-soft p-5">
+            <div className="flex items-center gap-3 rounded-2xl bg-tertiary-soft p-5 md:mt-5">
               <Icon name="verified_user" size={26} className="text-tertiary" />
               <div><div className="text-label-lg text-on-surface">Aucun litige en cours</div><div className="text-body-sm text-on-surface-variant">Vos remises se déroulent sans incident. Continuez à appliquer les règles d'or ci-dessous.</div></div>
             </div>
           )}
+        </div>
         </div>
 
         {/* History */}
         <section className="mt-6">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 className="m-0 text-headline-md text-on-surface">Historique des litiges &amp; signalements</h2>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Historique consolidé de vos contestations traitées avec l'équipe de modération Dilchap.</p>
+              <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Historique<span className="hidden md:inline"> des litiges &amp; signalements</span></h2>
+              <p className="m-0 mt-1 hidden text-body-sm text-on-surface-variant md:block">Historique consolidé de vos contestations traitées avec l'équipe de modération Dilchap.</p>
             </div>
-            <button onClick={() => exportCsv(filtered)} disabled={!filtered.length} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface hover:text-primary"><Icon name="download" size={17} /> Exporter le registre de conformité (.CSV)</button>
+            <button onClick={() => exportCsv(filtered)} disabled={!filtered.length} className="hidden cursor-pointer md:flex items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface hover:text-primary"><Icon name="download" size={17} /> Exporter le registre de conformité (.CSV)</button>
           </div>
           <div className="overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
             <div className="hidden overflow-x-auto md:block">
@@ -399,18 +452,21 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
               ))}
             </div>
             {shown.length === 0 && <p className="m-0 p-5 text-body-sm text-on-surface-variant">Aucun dossier ne correspond à ces filtres.</p>}
-            <div className="flex items-center justify-between gap-2 px-4 py-3 text-label-sm text-on-surface-variant">
-              <span>Affichage de {shown.length} sur {history.length} dossier{history.length > 1 ? 's' : ''}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-label-sm text-on-surface-variant">
+              <span>{shown.length} sur {history.length} dossier{history.length > 1 ? 's' : ''}</span>
               <div className="flex items-center gap-1">
-                <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="cursor-pointer rounded-md border-none bg-transparent px-2 py-1 text-label-sm text-on-surface disabled:opacity-40">Précédent</button>
+                <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} aria-label="Page précédente" className="flex h-10 cursor-pointer items-center rounded-md border-none bg-transparent px-2 text-label-sm text-on-surface disabled:opacity-40 md:h-7"><Icon name="chevron_left" size={18} /><span className="hidden md:inline">Précédent</span></button>
                 {Array.from({ length: pages }, (_, i) => i + 1).map(n => (
-                  <button key={n} onClick={() => setPage(n)} className={`h-7 w-7 cursor-pointer rounded-md border-none text-label-sm ${n === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface'}`}>{n}</button>
+                  <button key={n} onClick={() => setPage(n)} className={`h-10 w-10 cursor-pointer rounded-md border-none text-label-sm md:h-7 md:w-7 ${n === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface'}`}>{n}</button>
                 ))}
-                <button disabled={page >= pages} onClick={() => setPage(p => p + 1)} className="cursor-pointer rounded-md border-none bg-transparent px-2 py-1 text-label-sm text-on-surface disabled:opacity-40">Suivant</button>
+                <button disabled={page >= pages} onClick={() => setPage(p => p + 1)} aria-label="Page suivante" className="flex h-10 cursor-pointer items-center rounded-md border-none bg-transparent px-2 text-label-sm text-on-surface disabled:opacity-40 md:h-7"><span className="hidden md:inline">Suivant</span><Icon name="chevron_right" size={18} /></button>
               </div>
             </div>
           </div>
         </section>
+
+        {/* Mobile: the header actions live here (the desktop heading is hidden). */}
+        <button onClick={() => setReporting(true)} className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white lg:hidden"><Icon name="flag" size={18} /> Signaler un comportement suspect</button>
 
         {/* Rules + mediation */}
         <section ref={rulesRef} className="mt-6 grid scroll-mt-4 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">

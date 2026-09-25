@@ -80,9 +80,10 @@ export default function ReviewsMobile({ rep, reviews, currentUser, replying, onR
         </div>
       </section>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {([['all', 'Tous', total, null], ['five', '5 étoiles', reviews.filter(r => r.rating === 5).length, 'star'], ['comment', 'Avec commentaire', reviews.filter(r => r.comment?.trim()).length, 'chat']] as const).map(([k, label, n, icon]) => (
-          <button key={k} onClick={() => setFilter(k)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border-none px-3 py-2 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm'}`}>
+      {/* Three equal chips that always fit at 360px+ (no hidden, clipped tab). */}
+      <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Filtrer les avis">
+        {([['all', 'Tous', total, null], ['five', '5 étoiles', reviews.filter(r => r.rating === 5).length, 'star'], ['comment', 'Commentés', reviews.filter(r => r.comment?.trim()).length, 'chat']] as const).map(([k, label, n, icon]) => (
+          <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className={`flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none px-1.5 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm'}`}>
             {icon && <Icon name={icon} size={15} className={filter === k ? '' : 'text-amber-500'} />}{label}<span className={`rounded-full px-1.5 text-label-sm ${filter === k ? 'bg-white/20' : 'bg-surface-container'}`}>{n}</span>
           </button>
         ))}
