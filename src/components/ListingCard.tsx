@@ -1,5 +1,6 @@
+import AnimatedIcon from './AnimatedIcon'
 import { useState } from 'react'
-import { Heart, MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type AppIcon } from './icons'
+import { MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type AppIcon } from './icons'
 import Icon from './Icon'
 import Price from './Price'
 import BoostMenu from './BoostMenu'
@@ -224,7 +225,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             className={`absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 backdrop-blur-sm transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
             aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
-            <Icon name="favorite" size={17} fill={isFav} />
+            <AnimatedIcon name="heart" fallback="favorite" size={17} fill={isFav} trigger={isFav} />
           </button>
         </div>
 
@@ -340,7 +341,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
             aria-label="Ajouter aux favoris"
             className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-low ${isFav ? 'text-primary' : 'text-on-surface-variant'}`}
           >
-            <Heart size={18} fill={isFav ? 'var(--primary)' : 'none'} />
+            <AnimatedIcon name="heart" fallback="favorite" size={18} fill={isFav} trigger={isFav} />
           </button>
         </div>
 

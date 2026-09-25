@@ -1,3 +1,4 @@
+import AnimatedIcon from '../components/AnimatedIcon'
 import { useState } from 'react'
 import DOMPurify from 'dompurify'
 import { gql } from '@apollo/client'
@@ -307,7 +308,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               </div>
               {/* Mobile: the favourite sits on the photo (mockup); desktop has it in the meta bar. */}
               <button onClick={toggleFav} className="absolute right-3 top-3 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 shadow-sm backdrop-blur-sm lg:hidden" aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
-                <Heart size={20} fill={isFav ? 'var(--primary)' : 'none'} color={isFav ? 'var(--primary)' : 'var(--fg)'} />
+                <AnimatedIcon name="heart" fallback="favorite" size={20} fill={isFav} trigger={isFav} className={isFav ? 'text-primary' : 'text-on-surface'} />
               </button>
               {images.length === 1 && (
                 <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-0.5 text-label-sm text-white lg:hidden"><Icon name="photo_library" size={14} /> 1 / 1</span>

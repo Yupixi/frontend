@@ -1,8 +1,9 @@
+import AnimatedIcon, { useIncreaseCounter } from './AnimatedIcon'
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import {
   Search,
-  Bell,
+  
   Heart,
   MessageCircle,
   ChevronDown,
@@ -152,6 +153,7 @@ export default function Layout({
   })
   const notifications = notifData?.myNotifications ?? []
   const unreadNotifCount = notifications.filter(n => !n.readAt).length
+  const bellRings = useIncreaseCounter(unreadNotifCount)
   const [markNotificationRead] = useMutation(MARK_NOTIFICATION_READ_MUTATION)
   const [markAllNotificationsRead] = useMutation(MARK_ALL_NOTIFICATIONS_READ_MUTATION)
   const markAllRead = () => void markAllNotificationsRead().then(() => refetchNotifs())
@@ -352,7 +354,7 @@ export default function Layout({
                   {!currentUser?.isGuest && (
                     <div ref={notifMenuRef} className="relative">
                       <button onClick={() => { setNotifMenuOpen(o => !o); setMsgMenuOpen(false); setUserMenuOpen(false) }} className={iconBtn} title="Notifications">
-                        <Bell size={22} />
+                        <AnimatedIcon name="bell" fallback="notifications" size={22} trigger={bellRings} />
                         {unreadNotifCount > 0 && <span className="notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
                       </button>
                       {notifMenuOpen && (
@@ -407,7 +409,7 @@ export default function Layout({
                 {/* Mobile bell — straight to the page, no dropdown */}
                 {!currentUser?.isGuest && (
                   <button onClick={() => onNavigate('buyer-notifications')} className={`${iconBtn} lg:hidden`} title="Notifications">
-                    <Bell size={21} />
+                    <AnimatedIcon name="bell" fallback="notifications" size={21} trigger={bellRings} />
                     {unreadNotifCount > 0 && <span className="notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
                   </button>
                 )}
