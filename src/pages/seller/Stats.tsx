@@ -9,6 +9,7 @@ import StatsMobile from './StatsMobile'
 import { SELLER_STATS_QUERY, type ListingPerformance, type SellerStats } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import { PaymentLogos } from '../../components/PaymentLogo'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -347,7 +348,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">Paiement direct sécurisé Wave, Orange Money ou Porte-monnaie</p>
+              <p className="m-0 flex max-w-xs flex-wrap items-center gap-1.5 text-body-sm text-on-surface-variant">Paiement direct sécurisé <PaymentLogos size={18} /> ou Porte-monnaie</p>
               <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white hover:bg-primary-dark"><Icon name="bolt" size={18} /> Booster une nouvelle annonce</button>
             </div>
           </div>

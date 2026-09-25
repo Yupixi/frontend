@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Rocket, Eye, Heart, MessageSquare, ArrowUp, ArrowRight, Star, CheckCircle2, ShieldCheck, Percent, Handshake,
-  Wallet, Flame, Clock, TrendingUp, Tag, MapPin,
+  Flame, Clock, TrendingUp, Tag, MapPin,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
@@ -16,6 +16,7 @@ import type { AuthUser } from '../../graphql/auth'
 import { MY_WALLET_QUERY, type WalletSummary } from '../../graphql/sellerHub'
 import Select from '../../components/Select'
 import BoosterMobile from './BoosterMobile'
+import PaymentLogo from '../../components/PaymentLogo'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -389,11 +390,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           {[
             { icon: <Percent size={19} />, title: '0% Commission', text: 'Vendez gratuitement sans frais cachés' },
             { icon: <Handshake size={19} />, title: 'Remise en main propre', text: 'Vérification directe de l’article' },
-            { icon: <Wallet size={19} />, title: 'Paiement direct Wave / OM', text: 'Transactions entre particuliers' },
+            { icon: <span className="flex -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={26} className="ring-2 ring-surface-lowest" />)}</span>, title: 'Paiement direct Wave / OM', text: 'Transactions entre particuliers', bare: true },
             { icon: <ShieldCheck size={19} />, title: 'Mise en relation sécurisée', text: 'Profils vérifiés et signalement' },
           ].map(t => (
             <div key={t.title} className="flex items-start gap-3 rounded-xl bg-surface-container-low p-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary">{t.icon}</span>
+              {'bare' in t ? <span className="shrink-0">{t.icon}</span> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary">{t.icon}</span>}
               <div><div className="text-label-md text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
             </div>
           ))}

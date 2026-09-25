@@ -12,6 +12,7 @@ import {
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
 import { setAuthReason } from '../lib/authReason'
+import { PaymentLogos } from '../components/PaymentLogo'
 
 const PAGE_SIZE = 18
 
@@ -62,12 +63,13 @@ function FilterBlock({ title, children, defaultOpen = true }: { title: string, c
   )
 }
 
-function CheckRow({ checked, label, count, onChange, highlight }: { checked: boolean, label: string, count?: number, onChange: () => void, highlight?: boolean }) {
+function CheckRow({ checked, label, count, onChange, highlight, logos }: { checked: boolean, label: string, count?: number, onChange: () => void, highlight?: boolean, logos?: string[] }) {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-2 py-1 text-body-sm text-on-surface-variant hover:text-on-surface">
       <span className="flex min-w-0 items-center gap-2">
         <input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 shrink-0 accent-[var(--primary)]" />
         <span className={`truncate ${checked ? 'font-bold text-on-surface' : 'text-on-surface'}`}>{label}</span>
+        {logos && <PaymentLogos methods={logos} size={16} className="shrink-0" />}
       </span>
       {count != null && (
         <span className={`shrink-0 rounded-full px-2 text-label-sm ${checked && highlight ? 'bg-tertiary-soft text-tertiary' : 'text-outline'}`}>{count.toLocaleString('fr-FR')}</span>
@@ -304,7 +306,7 @@ export default function SearchPage({
 
       <FilterBlock title="Confiance & Transactions directes">
         <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
-        <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" onChange={() => setMobileMoneyOnly(v => !v)} />
+        <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" logos={['WAVE', 'ORANGE_MONEY']} onChange={() => setMobileMoneyOnly(v => !v)} />
         <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> 0 % de commission, paiement à la remise</div>
       </FilterBlock>
 
