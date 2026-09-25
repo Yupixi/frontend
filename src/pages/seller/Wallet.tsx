@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@apollo/client/react'
+import { useQuery } from '@apollo/client/react'
 import { CheckCircle2, ArrowRight, ShieldCheck, Zap, Star, Flame, ChevronLeft, ChevronRight } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import ConfirmSheet from '../../components/ConfirmSheet'
+import PaymentSheet from '../../components/PaymentSheet'
+import PaymentLogo, { PAYMENT_BRANDS, PaymentLogos } from '../../components/PaymentLogo'
 import { AccountLayout } from '../account/AccountLayout'
 import {
-  CREDIT_PACKS_QUERY, MY_WALLET_QUERY, MY_WALLET_TRANSACTIONS_QUERY, BUY_CREDITS_MUTATION,
+  CREDIT_PACKS_QUERY, MY_WALLET_QUERY, MY_WALLET_TRANSACTIONS_QUERY,
   type CreditPack, type WalletSummary, type WalletTx, type WalletTxType,
 } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
@@ -20,12 +21,6 @@ const FILTERS: { key: string, label: string, types?: WalletTxType[] }[] = [
   { key: 'sales', label: 'Ventes déclarées', types: ['SALE'] },
   { key: 'topup', label: 'Recharges', types: ['CREDIT_PURCHASE'] },
 ]
-const METHODS = [
-  { code: 'WAVE', label: 'Wave', dot: 'bg-sky-400' },
-  { code: 'ORANGE_MONEY', label: 'Orange Money', dot: 'bg-orange-500' },
-  { code: 'MTN_MOMO', label: 'MTN MoMo', dot: 'bg-yellow-400' },
-  { code: 'MOOV_MONEY', label: 'Moov Money', dot: 'bg-blue-600' },
-]
 const METHOD_LABEL: Record<string, string> = { WAVE: 'Wave', ORANGE_MONEY: 'Orange Money', MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', CASH: 'Espèces en main propre', CREDITS: 'Crédit déduit', DIRECT: 'Remise directe' }
 const TX_META: Record<WalletTxType, { icon: string, box: string, status: string, statusCls: string }> = {
   BOOST_PURCHASE: { icon: 'rocket_launch', box: 'bg-primary-fixed text-primary', status: 'Actif', statusCls: 'bg-tertiary-soft text-tertiary' },
@@ -36,7 +31,7 @@ const TX_META: Record<WalletTxType, { icon: string, box: string, status: string,
 
 // "Porte-monnaie & Solde publicitaire" mockup. Dilchap never holds sale
 // funds: sales are declarative (deals concluded in chat); credits buy
-// visibility. No payment gateway yet — the chosen method is recorded.
+// visibility, paid by Mobile Money through Paytic (PaymentSheet).
 export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
   const wallet = walletData?.myWallet
@@ -51,18 +46,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const [checkout, setCheckout] = useState<CreditPack | null>(null)
-  const [method, setMethod] = useState('WAVE')
   const [done, setDone] = useState<string | null>(null)
-  const [buyCredits, { loading: buying }] = useMutation(BUY_CREDITS_MUTATION)
-  const [buyError, setBuyError] = useState<string | null>(null)
-  const buy = () => {
-    if (!checkout) return
-    setBuyError(null)
-    void buyCredits({ variables: { pack: checkout.pack, method } }).then(() => {
-      setDone(`${checkout.credits + checkout.bonusCredits} crédits ajoutés à votre porte-monnaie.`)
-      setCheckout(null); void refetchWallet(); void refetchTx()
-    }).catch((e: Error) => setBuyError(e.message))
-  }
   const recommended = packs[1]?.pack
   const toRecharge = () => document.getElementById('recharge')?.scrollIntoView({ behavior: 'smooth' })
   const credits = wallet?.credits ?? 0
@@ -165,7 +149,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
             </div>
             <div className="hidden items-center gap-2 text-label-sm text-on-surface-variant md:flex">
               Paiement mobile :
-              {METHODS.slice(0, 2).map(m => <span key={m.code} className="flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-on-surface"><span className={`h-2 w-2 rounded-full ${m.dot}`} /> {m.label}</span>)}
+              <PaymentLogos size={26} />
             </div>
           </div>
           {/* Mobile: compact pack rows, as in the mockup */}
@@ -276,7 +260,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
                       <td className="px-5 py-4 text-on-surface-variant">{new Date(t.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                       <td className="px-5 py-4"><span className="flex items-center gap-2 text-on-surface"><span className={`flex h-7 w-7 items-center justify-center rounded-lg ${meta.box}`}><Icon name={meta.icon} size={16} /></span>{t.label}</span></td>
                       <td className="px-5 py-4 text-on-surface">{t.listing?.title ?? '—'}{t.type === 'SALE' && <div className="text-[11px] text-tertiary">0 F commission prélevée</div>}</td>
-                      <td className="px-5 py-4 text-on-surface-variant">{t.method ? METHOD_LABEL[t.method] ?? t.method : '—'}</td>
+                      <td className="px-5 py-4 text-on-surface-variant">{t.method ? <span className="flex items-center gap-2">{PAYMENT_BRANDS[t.method] && <PaymentLogo method={t.method} size={22} />}{METHOD_LABEL[t.method] ?? t.method}</span> : '—'}</td>
                       <td className={`px-5 py-4 text-label-lg ${t.amount > 0 ? 'text-tertiary' : 'text-on-surface'}`}>
                         {t.amount !== 0 ? <>{t.amount > 0 ? '+' : '−'}<Price amount={Math.abs(t.amount)} /></> : `${t.credits > 0 ? '+' : ''}${t.credits} crédit`}
                       </td>
@@ -298,34 +282,25 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
         </section>
       </div>
 
-      {/* Checkout: recap + payment method + explicit confirmation (credits are added right away). */}
-      <ConfirmSheet
+      {/* Checkout: Mobile Money payment (Paytic); credits are added once the operator confirms. */}
+      <PaymentSheet
         open={!!checkout}
         title={checkout ? `Recharge · ${checkout.label}` : 'Recharge'}
-        confirmLabel={checkout ? `Confirmer · ${checkout.price.toLocaleString('fr-FR').replace(/\s/g, ' ')} F` : 'Confirmer'}
-        loading={buying}
-        onClose={() => { setCheckout(null); setBuyError(null) }}
-        onConfirm={buy}
+        amount={checkout?.price ?? 0}
+        request={checkout ? { kind: 'CREDIT_PACK', product: checkout.pack } : null}
+        onClose={() => setCheckout(null)}
+        onPaid={() => {
+          if (checkout) setDone(`${checkout.credits + checkout.bonusCredits} crédits ajoutés à votre porte-monnaie.`)
+          void refetchWallet(); void refetchTx()
+        }}
       >
         {checkout && (
-          <>
-            <div className="flex items-center justify-between rounded-xl bg-surface-container-low p-4">
-              <span className="text-body-md text-on-surface">{checkout.credits + checkout.bonusCredits} crédits de remontée</span>
-              <span className="whitespace-nowrap text-headline-sm font-extrabold text-primary"><Price amount={checkout.price} /></span>
-            </div>
-            <div className="mb-2 mt-4 text-label-md text-on-surface">Moyen de paiement</div>
-            <div className="grid grid-cols-2 gap-2">
-              {METHODS.map(m => (
-                <button key={m.code} onClick={() => setMethod(m.code)} aria-pressed={method === m.code} className={`flex h-12 cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl border-[1.5px] border-solid px-3 text-label-md text-on-surface ${method === m.code ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-lowest'}`}>
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${m.dot}`} /> {m.label}
-                </button>
-              ))}
-            </div>
-            <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Les crédits sont ajoutés immédiatement à votre porte-monnaie après confirmation.</p>
-            {buyError && <p className="m-0 mt-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{buyError}</p>}
-          </>
+          <div className="flex items-center justify-between rounded-xl bg-surface-container-low p-4">
+            <span className="text-body-md text-on-surface">{checkout.credits + checkout.bonusCredits} crédits de remontée</span>
+            <span className="whitespace-nowrap text-headline-sm font-extrabold text-primary"><Price amount={checkout.price} /></span>
+          </div>
         )}
-      </ConfirmSheet>
+      </PaymentSheet>
     </AccountLayout>
   )
 }

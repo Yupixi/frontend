@@ -10,6 +10,7 @@ import { MY_REPUTATION_QUERY, MY_SALES_ORDERS_QUERY, MY_WALLET_QUERY, type Sales
 import { MY_BUYER_DISPUTES_QUERY, MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, SELLER_STATS_QUERY, disputeIsOpen, type Dispute, type DisputeStats, type PurchaseOrder, type SellerStats } from '../../graphql/sellerTools'
 import { FOOTER_SETTINGS_QUERY } from '../../graphql/content'
 import type { AuthUser } from '../../graphql/auth'
+import PaymentLogo, { paymentLabel } from '../../components/PaymentLogo'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -276,7 +277,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
             <section className="hidden rounded-2xl bg-tertiary-soft p-4 md:block">
               <div className="flex items-center gap-2 text-label-lg text-tertiary"><Icon name="verified_user" size={20} /> Sécurité anti-arnaque Dilchap</div>
               <p className="m-0 mt-1 text-body-sm text-on-surface">Ne payez jamais avant d'avoir inspecté l'article, et ne donnez votre code de remise qu'une fois l'article vérifié.</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">{['Wave', 'Orange Money', 'MTN MoMo', 'Espèces'].map(m => <span key={m} className="rounded-lg bg-surface-lowest px-2 py-1 text-label-sm text-on-surface">{m}</span>)}</div>
+              <div className="mt-2 flex flex-wrap gap-1.5">{['WAVE', 'ORANGE_MONEY', 'MTN_MOMO', 'CASH'].map(c => <span key={c} className="flex items-center gap-1.5 rounded-lg bg-surface-lowest py-1 pl-1 pr-2 text-label-sm text-on-surface"><PaymentLogo method={c} size={20} /> {paymentLabel(c)}</span>)}</div>
             </section>
             {upcoming && upcomingIsToday && (
               <section className="hidden rounded-2xl bg-surface-lowest p-4 shadow-sm md:block">

@@ -9,6 +9,7 @@ import {
   CONFIRM_HANDOVER_MUTATION, SALES_ORDER_QUERY, VERIFY_HANDOVER_CODE_MUTATION, disputeIsOpen, type HandoverOrder,
 } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
+import PaymentLogo from '../../components/PaymentLogo'
 
 type Props = { orderId: string; onNavigate: (p: any) => void; onOpenDispute: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -32,13 +33,6 @@ function CheckRow({ checked, onChange, tone = 'tertiary', children, className = 
 }
 
 const BUYER_TAGS = ['Ponctuel au rendez-vous', 'Paiement immédiat', 'Très respectueux', 'Négociation courtoise']
-const METHOD_BADGE: Record<string, { letter: string; cls: string }> = {
-  WAVE: { letter: 'W', cls: 'bg-sky-100 text-sky-600' },
-  ORANGE_MONEY: { letter: 'OM', cls: 'bg-orange-100 text-orange-600' },
-  MTN_MOMO: { letter: 'M', cls: 'bg-yellow-100 text-yellow-700' },
-  MOOV_MONEY: { letter: 'M', cls: 'bg-blue-100 text-blue-700' },
-  CASH: { letter: 'F', cls: 'bg-tertiary-soft text-tertiary' },
-}
 
 // "Confirmation De Remise" (mobile mockup, centred on desktop): the seller
 // types the buyer's 4-digit code, checks the item together with the buyer,
@@ -203,7 +197,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                     {methods.map(m => (
                       <label key={m} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${method === m ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant'}`}>
                         <input type="radio" checked={method === m} onChange={() => setMethod(m)} className="hidden" />
-                        <span className={`flex h-9 w-9 items-center justify-center rounded-lg text-label-md font-extrabold ${METHOD_BADGE[m]?.cls ?? 'bg-surface-container'}`}>{METHOD_BADGE[m]?.letter ?? '•'}</span>
+                        <PaymentLogo method={m} size={36} />
                         <span className="flex-1 text-label-md text-on-surface">{PAYMENT_LABELS[m] ?? m}</span>
                         <span className="text-label-md font-extrabold text-on-surface"><Price amount={amount} currency={o.listing.currency} /></span>
                       </label>

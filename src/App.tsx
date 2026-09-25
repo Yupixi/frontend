@@ -2,6 +2,7 @@ import { useState, useEffect, Suspense, startTransition } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
+import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
@@ -40,6 +41,7 @@ const History = lazyPage(() => import('./pages/buyer/History'))
 const PostListing = lazyPage(() => import('./pages/seller/PostListing'))
 const SellerListings = lazyPage(() => import('./pages/seller/MyListings'))
 const SellerPremium = lazyPage(() => import('./pages/seller/Booster'))
+const Legal = lazyPage(() => import('./pages/Legal'))
 
 // Admin BO control lives in the dedicated Backoffice app (real, GraphQL-wired)
 // — this Frontend app never had a real admin surface, just a mock
@@ -52,6 +54,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
+  | 'legal'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -66,6 +69,7 @@ type NavState = {
   categoryFilter: string
   selectedOrderId?: string
   selectedDisputeId?: string
+  legalSlug?: string
 }
 const NAV_STORAGE_KEY = 'yupixi_nav_state'
 
@@ -94,12 +98,18 @@ function sharedSellerId(): string | null {
   return new URLSearchParams(window.location.search).get('seller')
 }
 
+// "?legal=cgu" opens a legal page (shareable, linked from sign-up).
+function sharedLegalSlug(): string | null {
+  return new URLSearchParams(window.location.search).get('legal')
+}
+
 function sharedListingId(): string | null {
   return new URLSearchParams(window.location.search).get('listing')
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [page, setPage] = useState<Page>(sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -281,6 +291,7 @@ export default function App() {
           if (st.sellerId) setSelectedSellerId(st.sellerId)
           if (st.orderId !== undefined) setSelectedOrderId(st.orderId)
           if (st.disputeId !== undefined) setSelectedDisputeId(st.disputeId)
+          if (st.legalSlug) setLegalSlug(st.legalSlug)
           setPage(st.__yupixiPage)
         } else {
           setPage('home')
@@ -310,15 +321,15 @@ export default function App() {
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug,
     }
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug])
 
-  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string }
+  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string }
   const historyEntry = (p: Page, sel: Selection = {}) => ({
     __yupixiPage: p,
-    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId,
+    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug,
     ...sel,
   })
 
@@ -360,6 +371,11 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, isLoggedIn])
+
+  const openLegal = (slug: string) => {
+    setLegalSlug(slug)
+    navigate('legal', { legalSlug: slug })
+  }
 
   const selectListing = (id: string) => {
     setSelectedListingId(id)
@@ -456,6 +472,8 @@ export default function App() {
         return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
       case 'categories':
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} onSearch={searchFromHome} />
+      case 'legal':
+        return <Legal slug={legalSlug} onOpenLegal={openLegal} onNavigate={navigate} />
       case 'flash-offers':
         return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:
@@ -548,6 +566,7 @@ export default function App() {
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
+        <PaymentReturn isLoggedIn={isLoggedIn} />
         <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
@@ -570,6 +589,7 @@ export default function App() {
         onClearCategoryFilter={() => setCategoryFilter('')}
         location={location}
         onLocationChange={changeLocation}
+        onOpenLegal={openLegal}
       >
         <Suspense fallback={<PageFallback />}>{renderPage()}</Suspense>
       </Layout>
@@ -579,6 +599,7 @@ export default function App() {
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
+      <PaymentReturn isLoggedIn={isLoggedIn} />
     </div>
   )
 }

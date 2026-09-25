@@ -123,3 +123,15 @@ export type ActiveCampaign = {
   endsAt: string
   listings: ActiveCampaignListing[]
 }
+
+// Legal & help pages edited in the Backoffice (CMS & Pages légales).
+export const CONTENT_PAGE_QUERY = gql`
+  query ContentPage($slug: String!) { contentPage(slug: $slug) }
+`
+export type ContentPage = { slug: string; title: string; body: string; updatedAt: string }
+export const LEGAL_PAGES = [
+  { slug: 'cgu', label: "Conditions d'utilisation", icon: 'gavel' },
+  { slug: 'remise-en-main-propre', label: 'Remise en main propre', icon: 'handshake' },
+  { slug: 'faq', label: 'FAQ & support', icon: 'help' },
+  { slug: 'confidentialite', label: 'Confidentialité', icon: 'lock' },
+]

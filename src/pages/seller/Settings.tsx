@@ -12,6 +12,7 @@ import { uploadImages } from '../../lib/upload'
 import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } from '../../lib/pushNotifications'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import PaymentLogo from '../../components/PaymentLogo'
 
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
@@ -57,7 +58,8 @@ const SUGGESTED_SPOTS = [
 const PAYMENTS = [
   { code: 'WAVE', icon: 'qr_code_2', title: "Wave Côte d'Ivoire", sub: 'QR code ou transfert direct' },
   { code: 'ORANGE_MONEY', icon: 'smartphone', title: 'Orange Money CI', sub: 'Transfert direct au numéro du vendeur' },
-  { code: 'MTN_MOMO', icon: 'account_balance_wallet', title: 'MTN / Moov Money', sub: 'Réception instantanée sur compte mobile' },
+  { code: 'MTN_MOMO', icon: 'account_balance_wallet', title: 'MTN MoMo', sub: 'Réception instantanée sur compte mobile' },
+  { code: 'MOOV_MONEY', icon: 'account_balance_wallet', title: 'Moov Money', sub: 'Réception instantanée sur compte mobile' },
   { code: 'CASH', icon: 'payments', title: 'Espèces en main', sub: 'Appoint exact recommandé lors de la remise' },
 ]
 
@@ -373,12 +375,12 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </div>
                 </div>
                 <div className="mt-5 text-label-md text-on-surface">Modes de règlement acceptés à la remise</div>
-                <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                   {PAYMENTS.map(p => {
                     const on = form.paymentMethods.includes(p.code)
                     return (
                       <label key={p.code} className={`relative flex cursor-pointer flex-col gap-1 rounded-xl border p-3 ${on ? 'border-primary/40 bg-surface-lowest' : 'border-outline-variant bg-surface-container-low'}`}>
-                        <span className="flex items-start justify-between"><Icon name={p.icon} size={22} className="text-primary" /><input type="checkbox" checked={on} onChange={e => set('paymentMethods', e.target.checked ? [...form.paymentMethods, p.code] : form.paymentMethods.filter(x => x !== p.code))} className="h-4 w-4 accent-[var(--primary)]" /></span>
+                        <span className="flex items-start justify-between"><PaymentLogo method={p.code} size={30} /><input type="checkbox" checked={on} onChange={e => set('paymentMethods', e.target.checked ? [...form.paymentMethods, p.code] : form.paymentMethods.filter(x => x !== p.code))} className="h-4 w-4 accent-[var(--primary)]" /></span>
                         <span className="text-label-md text-on-surface">{p.title}</span>
                         <span className="text-body-sm text-on-surface-variant max-md:hidden">{p.sub}</span>
                       </label>

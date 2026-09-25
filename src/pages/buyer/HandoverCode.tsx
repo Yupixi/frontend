@@ -8,6 +8,7 @@ import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
 import { PAYMENT_LABELS } from '../ListingDetail'
 import { SALES_ORDER_QUERY, disputeIsOpen, type HandoverOrder } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
+import PaymentLogo from '../../components/PaymentLogo'
 
 type Props = {
   orderId: string
@@ -147,7 +148,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
                   {(o.listing.paymentMethods.length ? o.listing.paymentMethods : ['CASH']).map(m => (
                     <div key={m} className="flex items-center gap-2 rounded-xl bg-surface-container-low p-3 md:flex-col md:text-center">
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-label-md font-extrabold ${METHOD_BADGE[m]?.cls ?? 'bg-surface-container'}`}>{METHOD_BADGE[m]?.letter ?? '•'}</span>
+                      <PaymentLogo method={m} size={36} />
                       <span><span className="block text-label-md text-on-surface">{PAYMENT_LABELS[m] ?? m}</span><span className="block text-label-sm text-tertiary">{METHOD_BADGE[m]?.sub}</span></span>
                     </div>
                   ))}

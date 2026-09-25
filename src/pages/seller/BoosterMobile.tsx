@@ -5,6 +5,7 @@ import SafeImg from '../../components/SafeImg'
 import BottomSheet from '../../components/BottomSheet'
 import type { MyListingRow } from '../../graphql/listings'
 import type { BoostPack, BoostPackInfo } from '../../graphql/promotions'
+import PaymentLogo from '../../components/PaymentLogo'
 
 type Props = {
   live: MyListingRow[]
@@ -204,7 +205,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         </section>
       )}
 
-      {/* Payment info (Mobile Money checkout is not wired yet: informative only) */}
+      {/* Mobile Money operators accepted by the Paytic checkout */}
       <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
         <div className="flex items-start justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5 text-label-md text-on-surface"><Icon name="security" size={18} className="text-tertiary" /> Paiement Mobile Instantané</span>
@@ -213,11 +214,13 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Activez votre visibilité directement sans carte bancaire via votre portefeuille mobile favori.</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {[
-            { mark: 'W', color: 'bg-[#1dc3f0]', name: 'Wave', sub: '1-Clic direct' },
-            { mark: 'OM', color: 'bg-[#ff7900]', name: 'Orange Money', sub: 'Code USSD / App' },
+            { code: 'WAVE', name: 'Wave', sub: 'Confirmation dans l’app' },
+            { code: 'ORANGE_MONEY', name: 'Orange Money', sub: 'Code #144*82#' },
+            { code: 'MTN_MOMO', name: 'MTN MoMo', sub: 'Validation mobile' },
+            { code: 'MOOV_MONEY', name: 'Moov Money', sub: 'Validation mobile' },
           ].map(m => (
             <div key={m.name} className="flex min-w-0 items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
-              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-label-sm font-bold text-white ${m.color}`}>{m.mark}</span>
+              <PaymentLogo method={m.code} size={32} />
               <span className="min-w-0">
                 <span className="block truncate text-label-md text-on-surface">{m.name}</span>
                 <span className="block truncate text-[11px] text-on-surface-variant">{m.sub}</span>

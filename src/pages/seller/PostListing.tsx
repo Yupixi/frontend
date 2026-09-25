@@ -19,6 +19,7 @@ import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import PaymentLogo from '../../components/PaymentLogo'
 
 const MAX_PHOTOS = 8
 const TITLE_MAX = 80
@@ -703,7 +704,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     const on = g.codes.every(c => form.paymentMethods.includes(c))
                     return (
                       <label key={g.label} className={`flex cursor-pointer items-center gap-2 rounded-xl border-[1.5px] border-solid p-3 ${on ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-container-low'}`}>
-                        <Icon name={g.icon} size={19} className="text-primary" />
+                        <span className="flex -space-x-1.5">{g.codes.map(c => <PaymentLogo key={c} method={c} size={26} />)}</span>
                         <span className="flex-1 text-label-md text-on-surface">{g.label}</span>
                         <input type="checkbox" checked={on} onChange={() => togglePayment(g.codes)} className="h-4 w-4 accent-[var(--primary)]" />
                       </label>
