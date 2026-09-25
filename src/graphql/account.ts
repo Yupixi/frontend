@@ -11,10 +11,15 @@ export const MY_NOTIFICATIONS_QUERY = gql`
       body
       listingId
       conversationId
+      offerId
       readAt
       createdAt
     }
   }
+`
+
+export const DELETE_NOTIFICATION_MUTATION = gql`
+  mutation DeleteNotification($id: String!) { deleteNotification(id: $id) }
 `
 
 export const MARK_NOTIFICATION_READ_MUTATION = gql`
@@ -32,6 +37,7 @@ export const MARK_ALL_NOTIFICATIONS_READ_MUTATION = gql`
 export type NotificationKind =
   | 'MESSAGE' | 'LISTING_APPROVED' | 'LISTING_REJECTED' | 'LISTING_STATUS_CHANGED'
   | 'OFFER_RECEIVED' | 'OFFER_ACCEPTED' | 'OFFER_REJECTED' | 'ANNOUNCEMENT' | 'SAVED_SEARCH_MATCH' | 'DISPUTE'
+  | 'MEETUP' | 'PRICE_DROP'
 
 // Material Symbols icon + tone per notification kind (bell menu and
 // notifications page).
@@ -46,12 +52,14 @@ export const NOTIFICATION_META: Record<NotificationKind, { icon: string; cls: st
   ANNOUNCEMENT: { icon: 'campaign', cls: 'bg-primary-fixed text-primary' },
   SAVED_SEARCH_MATCH: { icon: 'notifications_active', cls: 'bg-tertiary-soft text-tertiary' },
   DISPUTE: { icon: 'gavel', cls: 'bg-primary-fixed text-primary' },
+  MEETUP: { icon: 'handshake', cls: 'bg-tertiary-soft text-tertiary' },
+  PRICE_DROP: { icon: 'trending_down', cls: 'bg-primary-fixed text-primary' },
 }
 
 // Dispute notifications go to the seller's "Litiges" page or the buyer's
 // purchases, told apart by their (server-side) wording.
 export const notificationTarget = (n: { type: NotificationKind; title: string }) =>
-  n.type === 'MESSAGE' ? 'buyer-messages'
+  n.type === 'MESSAGE' || n.type === 'MEETUP' ? 'buyer-messages'
     : n.type === 'DISPUTE' ? (/vente|L'acheteur/.test(n.title) ? 'seller-disputes' : 'buyer-disputes')
       : null
 
@@ -62,6 +70,7 @@ export type RemoteNotification = {
   body: string
   listingId: string | null
   conversationId: string | null
+  offerId?: string | null
   readAt: string | null
   createdAt: string
 }
@@ -82,6 +91,10 @@ export const MY_VIEW_HISTORY_QUERY = gql`
       }
     }
   }
+`
+
+export const REMOVE_VIEW_HISTORY_ITEM_MUTATION = gql`
+  mutation RemoveViewHistoryItem($listingId: String!) { removeViewHistoryItem(listingId: $listingId) }
 `
 
 export const CLEAR_VIEW_HISTORY_MUTATION = gql`

@@ -26,10 +26,11 @@ import SellerProfile from './pages/SellerProfile'
 import Categories from './pages/Categories'
 import Auth from './pages/Auth'
 import FlashOffers from './pages/FlashOffers'
-import {
-  BuyerDashboard, BuyerFavorites, BuyerMessages,
-  BuyerNotifications, BuyerHistory,
-} from './pages/buyer/BuyerPages'
+import BuyerMessages from './pages/buyer/Messages'
+import Dashboard from './pages/account/Dashboard'
+import Favorites from './pages/buyer/Favorites'
+import Notifications from './pages/buyer/Notifications'
+import History from './pages/buyer/History'
 import {
   PostListing, SellerListings, SellerPremium,
 } from './pages/seller/SellerPages'
@@ -402,7 +403,7 @@ export default function App() {
   // seller-profile, which despite the name is a public page (someone
   // else's profile, viewed through the normal site Layout below), not
   // part of the account shell. It was silently falling into this block's
-  // default case (BuyerDashboard) and was never actually reachable.
+  // default case (the dashboard) and was never actually reachable.
   if ((page.startsWith('seller-') && page !== 'seller-profile') || page.startsWith('buyer-')) {
     // A guest identity only exists to hold a conversation open (see
     // AuthService.guestLogin) — there's no real seller/buyer account behind
@@ -412,7 +413,7 @@ export default function App() {
       switch (accountPage) {
         case 'seller-dashboard':
         case 'buyer-dashboard':
-          return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} onLogout={logout} />
+          return <Dashboard onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} onOpenConversation={contactSellerAbout} onOpenHandover={openHandover} currentUser={currentUser} onLogout={logout} />
         case 'seller-post':
           return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-edit':
@@ -445,17 +446,17 @@ export default function App() {
         case 'buyer-disputes':
           return <DisputeFollow focusDisputeId={selectedDisputeId} onNavigate={navigate} onSelectDispute={id => setSelectedDisputeId(id)} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
         case 'buyer-favorites':
-          return <BuyerFavorites onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onLogout={logout} />
+          return <Favorites onNavigate={navigate} onSelectListing={selectListing} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} onSearchCategory={navigateToCategory} currentUser={currentUser} onLogout={logout} />
         case 'buyer-messages':
           return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} onOpenHandover={(id, as) => as === 'SELLER' ? openHandover(id) : openPurchase(id, 'buyer-handover')} />
         case 'buyer-notifications':
-          return <BuyerNotifications onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
+          return <Notifications onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} currentUser={currentUser} onLogout={logout} />
         case 'buyer-history':
-          return <BuyerHistory onNavigate={navigate} onSelectListing={selectListing} onLogout={logout} />
+          return <History onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} onSearch={term => searchFromHome(term)} onSearchCategory={navigateToCategory} currentUser={currentUser} onProfileUpdated={setCurrentUser} onLogout={logout} />
         case 'buyer-settings':
           return <Settings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
         default:
-          return <BuyerDashboard onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} currentUser={currentUser} onLogout={logout} />
+          return <Dashboard onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} onOpenConversation={contactSellerAbout} onOpenHandover={openHandover} currentUser={currentUser} onLogout={logout} />
       }
     })()
     return (

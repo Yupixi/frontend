@@ -4,7 +4,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import { PhotoPicker } from '../../components/DisputeParts'
-import { BuyerTabs, Breadcrumb, TrustFooter } from './Purchases'
+import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
 import {
   MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, OPEN_DISPUTE_MUTATION, SALES_ORDER_QUERY,
   type Dispute, type DisputeReason, type DisputeStats, type HandoverOrder, type PurchaseOrder,

@@ -4,7 +4,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import { DisputeStatusChip, DisputeTimeline, MediationCard, hoursLeft } from '../../components/DisputeParts'
-import { BuyerTabs, Breadcrumb, TrustFooter } from './Purchases'
+import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
 import {
   ANSWER_DISPUTE_PROPOSAL_MUTATION, DISPUTE_REASON_LABELS, MY_BUYER_DISPUTES_QUERY, MY_DISPUTE_STATS_QUERY, disputeIsOpen,
   type Dispute, type DisputeStats,
