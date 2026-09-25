@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Search, SlidersHorizontal, ShieldCheck, Handshake, Timer, Flame, Loader2,
+  ArrowLeft, ArrowRight, ChevronRight, Search, SlidersHorizontal, ShieldCheck, Timer, Flame, Loader2,
   Percent, MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
@@ -518,14 +518,6 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </div>
           </section>
         )}
-
-        <section className="mb-8 flex items-center gap-4 rounded-2xl border border-outline-variant bg-surface-lowest p-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Handshake size={24} /></span>
-          <div className="min-w-0">
-            <div className="text-label-lg text-on-surface">Remise en main propre conseillée</div>
-            <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Vérifiez l'article ensemble dans un lieu public avant de payer par Wave ou OM.</p>
-          </div>
-        </section>
 
         <section>
           <SectionHeading
