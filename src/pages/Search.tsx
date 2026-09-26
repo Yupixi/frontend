@@ -1,6 +1,6 @@
 import EmptyState from '../components/EmptyState'
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { CategoryIcon } from '../components/Icon'
+import Icon, { CategoryIcon } from '../components/Icon'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from '../components/icons'
 import FilterSheet from '../components/FilterSheet'
@@ -136,6 +136,7 @@ export default function SearchPage({
 
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const [verifiedOnly, setVerifiedOnly] = useState(false)
+  const [shopsOnly, setShopsOnly] = useState(false)
   const [handoverOnly, setHandoverOnly] = useState(false)
   const [mobileMoneyOnly, setMobileMoneyOnly] = useState(false)
   const [categorySlugs, setCategorySlugs] = useState<string[]>([])
@@ -175,12 +176,13 @@ export default function SearchPage({
     ...(sizes.length ? { sizes } : {}),
     ...(cities.length ? { cities } : {}),
     ...(verifiedOnly ? { verifiedSellersOnly: true } : {}),
+    ...(shopsOnly ? { officialShopsOnly: true } : {}),
     ...(handoverOnly ? { handoverOnly: true } : {}),
     ...(mobileMoneyOnly ? { mobileMoneyOnly: true } : {}),
     ...(categorySlugs.length ? { categorySlugs } : {}),
     ...(appliedPrice.min ? { minPrice: Number(appliedPrice.min) } : {}),
     ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
-  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, handoverOnly, mobileMoneyOnly, categorySlugs, appliedPrice])
+  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, categorySlugs, appliedPrice])
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
@@ -212,7 +214,7 @@ export default function SearchPage({
   }
 
   const resetAll = () => {
-    setVerifiedOnly(false); setSubcategories([]); setConditions([]); setBrands([]); setSizes([]); setCities([])
+    setVerifiedOnly(false); setShopsOnly(false); setSubcategories([]); setConditions([]); setBrands([]); setSizes([]); setCities([])
     setHandoverOnly(false); setMobileMoneyOnly(false); setCategorySlugs([])
     applyPrice('', '')
     onClearCategoryFilter?.()
@@ -229,6 +231,7 @@ export default function SearchPage({
     ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
     ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => applyPrice('', '') }] : []),
     ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs certifiés', clear: () => setVerifiedOnly(false) }] : []),
+    ...(shopsOnly ? [{ key: 'shops', label: 'Boutiques officielles', clear: () => setShopsOnly(false) }] : []),
     ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
     ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
     ...categorySlugs.map(v => ({ key: `cats-${v}`, label: categories.find(c => c.slug === v)?.name ?? v, clear: () => setCategorySlugs(s => s.filter(x => x !== v)) })),
@@ -255,6 +258,18 @@ export default function SearchPage({
           </span>
         </span>
         <input type="checkbox" className="peer sr-only" checked={verifiedOnly} onChange={() => setVerifiedOnly(v => !v)} />
+        <span className="relative h-5 w-9 shrink-0 rounded-full bg-surface-container-highest transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-tertiary peer-checked:after:translate-x-4" />
+      </label>
+
+      <label className="relative -mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-surface-container-low p-3">
+        <span className="flex items-center gap-2">
+          <Icon name="storefront" size={19} className="text-tertiary" />
+          <span className="flex flex-col">
+            <span className="text-label-md text-on-surface">Boutiques officielles</span>
+            <span className="text-label-sm text-on-surface-variant">Entreprises vérifiées (RCCM / NCC)</span>
+          </span>
+        </span>
+        <input type="checkbox" className="peer sr-only" checked={shopsOnly} onChange={() => setShopsOnly(v => !v)} />
         <span className="relative h-5 w-9 shrink-0 rounded-full bg-surface-container-highest transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-tertiary peer-checked:after:translate-x-4" />
       </label>
 
@@ -493,7 +508,7 @@ export default function SearchPage({
 
       <FilterSheet
           open={filtersOpen}
-          state={{ sort, cities, minPrice, maxPrice, categorySlugs, conditions, verifiedOnly, handoverOnly, mobileMoneyOnly }}
+          state={{ sort, cities, minPrice, maxPrice, categorySlugs, conditions, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly }}
           onChange={patch => {
             if (patch.sort) setSort(patch.sort)
             if (patch.cities) setCities(patch.cities)
@@ -502,6 +517,7 @@ export default function SearchPage({
             if (patch.categorySlugs) setCategorySlugs(patch.categorySlugs)
             if (patch.conditions) setConditions(patch.conditions)
             if (patch.verifiedOnly !== undefined) setVerifiedOnly(patch.verifiedOnly)
+            if (patch.shopsOnly !== undefined) setShopsOnly(patch.shopsOnly)
             if (patch.handoverOnly !== undefined) setHandoverOnly(patch.handoverOnly)
             if (patch.mobileMoneyOnly !== undefined) setMobileMoneyOnly(patch.mobileMoneyOnly)
           }}

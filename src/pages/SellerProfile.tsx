@@ -17,6 +17,8 @@ import Select from '../components/Select'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
+import { SHOP_QUERY, type Shop } from '../graphql/shops'
+import ShopPage from './ShopPage'
 
 const REPORT_REASONS = ['Tentative d’arnaque', 'Faux profil', 'Comportement inapproprié', 'Article non conforme', 'Autre']
 
@@ -59,6 +61,8 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
 
+  // A seller with an official shop is shown through the shop page.
+  const { data: shopData, loading: shopLoading } = useQuery<{ shop: Shop }>(SHOP_QUERY, { variables: { key: sellerId }, errorPolicy: 'all' })
   const { data: profileData, loading, refetch: refetchProfile } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, { variables: { sellerId } })
   const seller = profileData?.sellerProfile
   const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
@@ -82,7 +86,10 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   const meetupSpots = useMemo(() => [...new Set(all.map(l => l.meetupSpot).filter(Boolean) as string[])], [all])
   const filtered = all.filter(l => (!cat || l.category.slug === cat) && (!q || l.title.toLowerCase().includes(q.toLowerCase())))
 
-  if (loading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
+  if (shopData?.shop?.isOfficial) {
+    return <ShopPage shopKey={shopData.shop.slug} preloaded={shopData.shop} onNavigate={onNavigate} onSelectListing={onSelectListing} onContactSeller={onContactSeller} isLoggedIn={isLoggedIn} favorites={favorites} onToggleFavorite={onToggleFavorite} currentUserId={currentUserId} />
+  }
+  if (loading || shopLoading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
   if (!seller) {
     return (
       <div className="p-12 text-center">

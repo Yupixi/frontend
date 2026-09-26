@@ -15,11 +15,14 @@ import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 import Select from '../components/Select'
 import { PaymentLogos } from '../components/PaymentLogo'
+import { ShopCard } from '../components/ShopCard'
+import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 
 export type SearchPreset = { city?: string, maxPrice?: number }
 
 type HomeProps = {
   onNavigate: (page: any) => void
+  onOpenShop?: (slug: string) => void
   onSelectListing: (id: string) => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
@@ -156,7 +159,7 @@ type FeedState = { key: string, pages: RemoteListing[][], totalCount: number }
 // see App), instead of dropping the visitor at the top of page 1.
 const feedMemory: { city: string | null, page: { key: string, page: number } | null, feed: FeedState | null } = { city: null, page: null, feed: null }
 
-export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, locationPending, onContactSeller, onSearch }: HomeProps) {
+export default function Home({ onOpenShop, onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, locationPending, onContactSeller, onSearch }: HomeProps) {
   const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
@@ -180,6 +183,9 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // the first "pépite" reads as broken), boosted ones first.
   const recommended = recommendedData?.recommendedListings ?? []
   const withPhoto = recommended.filter(l => !!listingImage(l))
+  // "Boutiques officielles" rail (most followed first).
+  const { data: shopsData } = useQuery<{ shops: { items: Shop[] } }>(SHOPS_QUERY, { variables: { sort: 'POPULAR', pageSize: 8 } })
+  const shops = shopsData?.shops.items ?? []
   const pepites = [...(withPhoto.length ? withPhoto : recommended)].sort((a, b) => Number(isBoosted(b)) - Number(isBoosted(a)))
   const hasBoosted = pepites.some(isBoosted)
 
@@ -450,6 +456,17 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             </section>
           )}
 
+          {/* Official shops */}
+          {shops.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Boutiques officielles</h3>
+                <button onClick={() => onNavigate('shops')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Voir toutes les boutiques <Icon name="arrow_forward" size={18} /></button>
+              </div>
+              <div className="grid grid-cols-4 gap-6">{shops.slice(0, 4).map(s => <ShopCard key={s.id} shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />)}</div>
+            </section>
+          )}
+
           {/* 5. Seller incentive */}
           <section className="relative mt-10 overflow-hidden rounded-3xl bg-surface-container-low p-10 shadow-sm">
             <div className="relative z-10 max-w-2xl">
@@ -623,6 +640,18 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {pepites.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
+            </div>
+          </section>
+        )}
+
+        {shops.length > 0 && (
+          <section className="mb-8">
+            <SectionHeading
+              title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Boutiques officielles</>}
+              action={<button onClick={() => onNavigate('shops')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">Tout voir</button>}
+            />
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
+              {shops.map(s => <div key={s.id} className="flex w-[250px] shrink-0 snap-start">{<ShopCard shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />}</div>)}
             </div>
           </section>
         )}

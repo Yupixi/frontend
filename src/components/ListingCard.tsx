@@ -159,9 +159,15 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
     </>
   )
   const verified = !!listing.seller.isVerified
+  const shop = listing.seller.shop
   const place = isRoute
     ? <ArchetypeLine listing={listing} />
-    : (
+    : shop ? (
+      <p className="m-0 flex min-w-0 items-center gap-0.5 text-[11px] font-semibold text-tertiary md:mt-1 md:gap-1 md:text-body-sm">
+        <span className="flex shrink-0"><Icon name="storefront" size={14} /></span>
+        <span className="truncate">{shop.name}</span>
+      </p>
+    ) : (
       <p className="m-0 flex min-w-0 items-center gap-0.5 text-[11px] text-on-surface-variant md:mt-1 md:gap-1 md:text-body-sm">
         {/* Phones: a verified seller swaps the pin for the check (mockup). */}
         {verified && <span className="flex shrink-0 md:hidden"><Icon name="verified" size={14} className="text-tertiary" /></span>}
@@ -208,7 +214,9 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface md:inline">{condition}</span>}
           </div>
 
-          {featured && verified && (
+          <StockTag listing={listing} />
+
+          {featured && verified && !shop && (
             <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-tertiary px-1.5 py-0.5 text-[10px] font-bold text-white md:hidden">
               <Icon name="verified_user" size={12} /> Vendeur vérifié
             </span>
@@ -237,7 +245,9 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
         <div className="hidden p-4 md:block">
           <div className="mb-1 flex items-center justify-between gap-2 text-body-sm text-on-surface-variant">
             <span className="truncate">{category}{listing.size && ` • T. ${listing.size}`}</span>
-            {listing.seller.isVerified ? (
+            {shop ? (
+              <span className="flex shrink-0 items-center text-tertiary" title="Boutique officielle"><Icon name="verified" size={16} fill /></span>
+            ) : listing.seller.isVerified ? (
               <span className="flex shrink-0 items-center gap-1 text-label-sm font-semibold text-tertiary"><Icon name="verified" size={14} /> Vérifié</span>
             ) : rating != null && (
               <span className="flex shrink-0 items-center gap-1 text-label-sm font-semibold text-primary">★ {rating.toFixed(1)} ({listing.seller.reviewsCount})</span>
@@ -290,6 +300,15 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       )}
     </div>
   )
+}
+
+// Stock of official shops ("3 en stock", "Dernier exemplaire"). Members sell
+// single items: nothing to show for them.
+export function StockTag({ listing, className = 'absolute bottom-2 left-2 md:bottom-3 md:left-3' }: { listing: RemoteListing, className?: string }) {
+  const q = listing.quantity ?? 1
+  if (q > 1) return <span className={`${className} whitespace-nowrap rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold text-on-surface md:rounded-md md:px-2 md:text-label-sm`}>{q} en stock</span>
+  if (listing.seller.shop && listing.status !== 'SOLD') return <span className={`${className} whitespace-nowrap rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white md:rounded-md md:px-2 md:text-label-sm`}>Dernier exemplaire</span>
+  return null
 }
 
 export function ListingListCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {

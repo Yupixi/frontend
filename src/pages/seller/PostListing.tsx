@@ -55,6 +55,7 @@ type Form = {
   originalPrice: string
   negotiable: boolean
   minOfferPrice: string
+  quantity: string
   countryCode: string
   currency: string
   city: string
@@ -67,7 +68,7 @@ type Form = {
 
 const EMPTY: Form = {
   categoryId: '', subcategoryId: '', title: '', condition: '', brand: '', modelName: '', size: '', description: '',
-  price: '', originalPrice: '', negotiable: true, minOfferPrice: '', countryCode: 'CI', currency: 'XOF',
+  price: '', originalPrice: '', negotiable: true, minOfferPrice: '', quantity: '1', countryCode: 'CI', currency: 'XOF',
   city: 'Abidjan', locationLabel: '', meetupSpot: '', paymentMethods: ['CASH', 'WAVE', 'ORANGE_MONEY'], deliveryAvailable: false, attributes: {},
 }
 
@@ -178,7 +179,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       categoryId: l.category.id, subcategoryId: l.subcategory?.id ?? '', title: l.title, condition: l.condition ?? '',
       brand: l.brand ?? '', modelName: l.modelName ?? '', size: l.size ?? '', description: l.description,
       price: l.price != null ? String(l.price) : '', originalPrice: l.originalPrice != null ? String(l.originalPrice) : '',
-      negotiable: l.negotiable, minOfferPrice: l.minOfferPrice != null ? String(l.minOfferPrice) : '',
+      negotiable: l.negotiable, minOfferPrice: l.minOfferPrice != null ? String(l.minOfferPrice) : '', quantity: String(l.quantity ?? 1),
       countryCode: l.countryCode, currency: l.currency, city: l.city, locationLabel: l.locationLabel ?? '', meetupSpot: l.meetupSpot ?? '',
       paymentMethods: l.paymentMethods ?? [], deliveryAvailable: l.deliveryAvailable, attributes: (l.attributes ?? {}) as Record<string, string>,
     }
@@ -335,6 +336,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         size: form.size.trim() || undefined,
         negotiable: form.negotiable,
         minOfferPrice: form.negotiable && form.minOfferPrice ? Number(form.minOfferPrice) : undefined,
+        quantity: Math.min(999, Math.max(1, Math.floor(Number(form.quantity)) || 1)),
         paymentMethods: form.paymentMethods,
         deliveryAvailable: form.deliveryAvailable,
         attributes: form.attributes,
@@ -660,6 +662,18 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   </span>
                 )}
               </label>
+
+              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-4">
+                <span className="min-w-[12rem] flex-1">
+                  <span className="block text-label-md text-on-surface">Exemplaires disponibles</span>
+                  <span className="text-body-sm text-on-surface-variant">Plusieurs articles identiques ? Chaque vente conclue en retire du stock.</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <button type="button" aria-label="Retirer un exemplaire" disabled={Number(form.quantity) <= 1} onClick={() => set('quantity', String(Math.max(1, (Number(form.quantity) || 1) - 1)))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={18} /></button>
+                  <input type="number" min={1} max={999} value={form.quantity} onChange={e => set('quantity', e.target.value)} aria-label="Exemplaires disponibles" className="h-10 w-16 rounded-lg border border-outline-variant bg-surface-lowest text-center text-label-lg text-on-surface outline-none [appearance:textfield]" />
+                  <button type="button" aria-label="Ajouter un exemplaire" onClick={() => set('quantity', String(Math.min(999, (Number(form.quantity) || 1) + 1)))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface"><Icon name="add" size={18} /></button>
+                </span>
+              </div>
             </Card>
 
             {/* Exchange */}

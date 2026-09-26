@@ -30,6 +30,10 @@ const Disputes = lazyPage(() => import('./pages/seller/Disputes'))
 const Handover = lazyPage(() => import('./pages/seller/Handover'))
 const Settings = lazyPage(() => import('./pages/seller/Settings'))
 const Kyc = lazyPage(() => import('./pages/account/Kyc'))
+const MyShop = lazyPage(() => import('./pages/account/MyShop'))
+const ShopStats = lazyPage(() => import('./pages/account/ShopStats'))
+const ShopPage = lazyPage(() => import('./pages/ShopPage'))
+const ShopsDirectory = lazyPage(() => import('./pages/ShopsDirectory'))
 const Purchases = lazyPage(() => import('./pages/buyer/Purchases'))
 const HandoverCode = lazyPage(() => import('./pages/buyer/HandoverCode'))
 const Receipt = lazyPage(() => import('./pages/buyer/Receipt'))
@@ -54,9 +58,9 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal'
+  | 'legal' | 'shop' | 'shops'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -72,6 +76,7 @@ type NavState = {
   selectedOrderId?: string
   selectedDisputeId?: string
   legalSlug?: string
+  shopKey?: string
 }
 const LOCATION_WAIT_MS = 700
 
@@ -91,7 +96,7 @@ const savedNav = loadNavState()
 
 // PWA manifest shortcuts (long-press the home screen icon) launch with
 // `?shortcut=<page>` — a real page, not session-restore, takes priority.
-const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc']
+const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'shops']
 function shortcutPage(): Page | null {
   const requested = new URLSearchParams(window.location.search).get('shortcut')
   return SHORTCUT_PAGES.includes(requested as Page) ? (requested as Page) : null
@@ -109,17 +114,23 @@ function sharedLegalSlug(): string | null {
   return new URLSearchParams(window.location.search).get('legal')
 }
 
+// "?shop=<slug>" opens an official shop (shared link).
+function sharedShopKey(): string | null {
+  return new URLSearchParams(window.location.search).get('shop')
+}
+
 function sharedListingId(): string | null {
   return new URLSearchParams(window.location.search).get('listing')
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration
   // would fight it (it runs before the restored page has rendered).
   const pendingScroll = useRef(0)
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
+  const [shopKey, setShopKey] = useState(sharedShopKey() ?? savedNav.shopKey ?? '')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -313,6 +324,7 @@ export default function App() {
           if (st.orderId !== undefined) setSelectedOrderId(st.orderId)
           if (st.disputeId !== undefined) setSelectedDisputeId(st.disputeId)
           if (st.legalSlug) setLegalSlug(st.legalSlug)
+          if (st.shopKey) setShopKey(st.shopKey)
           setPage(st.__yupixiPage)
         } else {
           setPage('home')
@@ -323,7 +335,7 @@ export default function App() {
     // carry no state, or a stale one: tag it with the page actually shown,
     // so coming back to it restores that page rather than home.
     if (window.history.state?.__yupixiPage !== page) {
-      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId }, '')
+      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, shopKey }, '')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -350,15 +362,15 @@ export default function App() {
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey,
     }
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey])
 
-  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string }
+  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string }
   const historyEntry = (p: Page, sel: Selection = {}) => ({
     __yupixiPage: p,
-    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug,
+    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey,
     ...sel,
   })
 
@@ -452,6 +464,11 @@ export default function App() {
     navigate('seller-edit', { listingId: id })
   }
 
+  const openShop = (key: string) => {
+    setShopKey(key)
+    navigate('shop', { shopKey: key })
+  }
+
   const selectSeller = (id: string) => {
     setSelectedSellerId(id)
     navigate('seller-profile', { sellerId: id })
@@ -540,13 +557,17 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} locationPending={locationPending} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
+        return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} locationPending={locationPending} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? location?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} onContactSeller={contactSellerAbout} />
       case 'seller-profile':
         return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
+      case 'shop':
+        return <ShopPage key={shopKey} shopKey={shopKey} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
+      case 'shops':
+        return <ShopsDirectory onNavigate={navigate} onOpenShop={openShop} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       case 'categories':
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} onSearch={searchFromHome} />
       case 'legal':
@@ -636,6 +657,10 @@ export default function App() {
           return <History onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} onSearch={term => searchFromHome(term)} onSearchCategory={navigateToCategory} currentUser={currentUser} onProfileUpdated={setCurrentUser} onLogout={logout} />
         case 'seller-kyc':
           return <Kyc onNavigate={navigate} currentUser={currentUser} onLogout={logout} onViewShop={selectSeller} />
+        case 'seller-shop':
+          return <MyShop onNavigate={navigate} currentUser={currentUser} onLogout={logout} onOpenShop={openShop} />
+        case 'seller-shop-stats':
+          return <ShopStats onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
         case 'buyer-settings':
           return <Settings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} onViewShop={selectSeller} />
         default:

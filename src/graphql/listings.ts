@@ -26,6 +26,9 @@ export const LISTINGS_QUERY = gql`
         minOfferPrice
         urgentUntil
         negotiable
+        quantity
+        aisleId
+        featuredAt
         deliveryAvailable
         tags
         attributes
@@ -61,6 +64,7 @@ export const LISTINGS_QUERY = gql`
           isVerified
           averageRating
           reviewsCount
+          shop { id slug name logoUrl }
         }
       }
     }
@@ -88,6 +92,9 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       minOfferPrice
       urgentUntil
       negotiable
+      quantity
+      aisleId
+      featuredAt
       deliveryAvailable
       tags
       attributes
@@ -123,6 +130,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
         isVerified
         averageRating
         reviewsCount
+        shop { id slug name logoUrl }
       }
     }
   }
@@ -149,6 +157,9 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       minOfferPrice
       urgentUntil
       negotiable
+      quantity
+      aisleId
+      featuredAt
       deliveryAvailable
       tags
       attributes
@@ -183,6 +194,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
         isVerified
         averageRating
         reviewsCount
+        shop { id slug name logoUrl }
       }
     }
   }
@@ -209,6 +221,9 @@ export const LISTING_QUERY = gql`
       minOfferPrice
       urgentUntil
       negotiable
+      quantity
+      aisleId
+      featuredAt
       deliveryAvailable
       status
       tags
@@ -244,6 +259,7 @@ export const LISTING_QUERY = gql`
         avatarUrl
         city
         createdAt
+        shop { id slug name logoUrl }
       }
     }
   }
@@ -270,6 +286,9 @@ export const MY_LISTING_QUERY = gql`
       minOfferPrice
       deliveryAvailable
       negotiable
+      quantity
+      aisleId
+      featuredAt
       status
       attributes
       media {
@@ -409,6 +428,7 @@ export type MyListingRow = {
 
 export type MyListingDetail = {
   id: string
+  quantity?: number
   title: string
   description: string
   price: number | null
@@ -457,6 +477,7 @@ export type RemoteListingDetail = RemoteListing & {
     avatarUrl: string | null
     city: string | null
     createdAt: string
+    shop?: ShopBadge | null
   }
 }
 
@@ -502,8 +523,14 @@ export type RemoteListing = {
   media: { url: string }[]
   category: { slug: string; name: string }
   subcategory: { slug: string; name: string } | null
-  seller: { id: string; fullName: string; avatarUrl?: string | null; isVerified?: boolean; averageRating?: number; reviewsCount?: number }
+  seller: { id: string; fullName: string; avatarUrl?: string | null; isVerified?: boolean; averageRating?: number; reviewsCount?: number; shop?: ShopBadge | null }
+  quantity?: number
+  aisleId?: string | null
+  featuredAt?: string | null
 }
+
+// Official shop of the seller (null for members).
+export type ShopBadge = { id: string; slug: string; name: string; logoUrl: string | null }
 
 export type ListingFilterInput = {
   search?: string
@@ -525,6 +552,9 @@ export type ListingFilterInput = {
   categorySlugs?: string[]
   handoverOnly?: boolean
   mobileMoneyOnly?: boolean
+  officialShopsOnly?: boolean
+  aisleId?: string
+  featuredOnly?: boolean
 }
 
 export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'

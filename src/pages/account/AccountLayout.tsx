@@ -22,6 +22,7 @@ const SECTIONS = [
     items: [
       { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
       { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
+      { key: 'seller-shop', icon: Store, label: 'Ma Boutique officielle' },
       { key: 'seller-orders', icon: Truck, label: 'Commandes & Envois' },
       { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
       { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
@@ -46,6 +47,8 @@ const SECTIONS = [
 export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-dashboard': 'Tableau de bord',
   'seller-kyc': 'Vérification d’identité',
+  'seller-shop': 'Ma Boutique officielle',
+  'seller-shop-stats': 'Statistiques boutique',
   'seller-post': 'Déposer une annonce',
   'seller-edit': "Modifier l'annonce",
   'seller-listings': 'Mes annonces',
@@ -85,7 +88,7 @@ const MEMBER_TABS: MobileTab[] = [
 
 const SELLER_TABS: MobileTab[] = [
   { key: 'home', icon: 'storefront', label: 'Accueil', match: [] },
-  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-premium'] },
+  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-premium', 'seller-shop', 'seller-shop-stats'] },
   { key: 'buyer-messages', icon: 'chat_bubble', label: 'Messages', match: [] },
   { key: 'seller-orders', icon: 'account_balance_wallet', label: 'Ventes', match: ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-disputes'] },
   { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: [] },

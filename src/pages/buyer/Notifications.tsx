@@ -26,7 +26,7 @@ type Props = {
 const LABELS: Record<NotificationKind, string> = {
   MESSAGE: 'Message', OFFER_RECEIVED: 'Négociation directe', OFFER_ACCEPTED: 'Offre acceptée', OFFER_REJECTED: 'Offre refusée',
   LISTING_APPROVED: 'Annonce en ligne', LISTING_REJECTED: 'Annonce refusée', LISTING_STATUS_CHANGED: 'Annonce',
-  ANNOUNCEMENT: 'Sécurité Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité',
+  ANNOUNCEMENT: 'Sécurité Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité', SHOP: 'Boutique officielle',
 }
 // `short` labels keep the chips on one line on a phone.
 const FILTERS: { key: string; label: string; short?: string; icon?: string; types?: NotificationKind[] }[] = [
