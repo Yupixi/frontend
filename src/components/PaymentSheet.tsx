@@ -130,11 +130,11 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   )
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} footer={footer} maxHeight="90vh">
+    <BottomSheet open={open} onClose={onClose} title={title} footer={footer} maxHeight="90vh" maxWidth="480px">
       {!intent && (
         <>
           {/* Order recap */}
-          <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-3.5 py-2.5">
             <div className="min-w-0 text-body-sm text-on-surface-variant">{children}</div>
             <div className="shrink-0 text-right">
               <div className="text-label-sm uppercase text-on-surface-variant">Total</div>
@@ -146,7 +146,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           <div className="mb-2 flex items-center gap-2 text-label-md text-on-surface">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">1</span> Moyen de paiement
           </div>
-          <div role="radiogroup" className="grid grid-cols-2 gap-3">
+          <div role="radiogroup" className="grid grid-cols-4 gap-2">
             {PROVIDERS.map((p) => {
               const on = provider === p.key
               return (
@@ -156,14 +156,13 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
                   role="radio"
                   aria-checked={on}
                   onClick={() => { if (!on) { setProvider(p.key); setPhone(savedPhone(p.key)); setOtp(''); setTouched(false); setError(null) } }}
-                  className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-3xl border-2 border-solid px-2 pb-3 pt-4 text-center transition-all duration-200 ${on ? 'scale-[1.02] border-primary bg-primary-fixed/25 shadow-card-hover' : 'border-outline-variant/70 bg-surface-lowest hover:border-outline active:scale-[0.98]'}`}
+                  className={`relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-solid p-1 transition-all duration-200 ${on ? 'border-primary bg-primary-fixed/25' : 'border-outline-variant/70 bg-surface-lowest hover:border-outline active:scale-95'}`}
                 >
-                  <span className={`absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 ${on ? 'scale-100 bg-primary text-white opacity-100' : 'scale-50 opacity-0'}`}>
-                    <Icon name="check" size={14} />
+                  <span className={`absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full transition-all duration-200 ${on ? 'scale-100 bg-primary text-white opacity-100' : 'scale-50 opacity-0'}`}>
+                    <Icon name="check" size={12} />
                   </span>
-                  <PaymentLogo method={p.method} size={48} />
-                  <span className="text-label-lg text-on-surface">{p.label}</span>
-                  <span className="text-[11px] leading-tight text-on-surface-variant">{p.hint}</span>
+                  <PaymentLogo method={p.method} size={34} />
+                  <span className="text-label-md text-on-surface">{p.label}</span>
                 </button>
               )
             })}
@@ -172,10 +171,10 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           {provider && selected && (
           <div key={provider} className="animate-[slideDown_0.35s_cubic-bezier(0.16,1,0.3,1)]">
           {/* 2. Number */}
-          <div className="mb-2 mt-5 flex items-center gap-2 text-label-md text-on-surface">
+          <div className="mb-2 mt-4 flex items-center gap-2 text-label-md text-on-surface">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">2</span> Numéro {selected.label}
           </div>
-          <label className={`flex h-14 items-center gap-2 rounded-2xl border-[1.5px] border-solid bg-surface-lowest pl-2 pr-3 transition-colors focus-within:border-primary ${showPhoneError ? 'border-primary' : 'border-outline-variant'}`}>
+          <label className={`flex h-13 items-center gap-2 rounded-2xl border-[1.5px] border-solid bg-surface-lowest pl-2 pr-3 transition-colors focus-within:border-primary ${showPhoneError ? 'border-primary' : 'border-outline-variant'}`}>
             <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-surface-container-low px-2 text-label-md text-on-surface">
               <PaymentLogo method={selected.method} size={22} /> +225
             </span>
