@@ -97,6 +97,14 @@ const HANDOVER_TABS: MobileTab[] = [
   { key: 'buyer-disputes', icon: 'gavel', label: 'Litiges', match: ['buyer-disputes'] },
 ]
 
+// Iconsax animation per tab icon (src/assets/lottie); the Material name
+// stays as the fallback.
+const TAB_ANIM: Record<string, string> = {
+  home: 'nav-home', favorite: 'heart', add: 'nav-add', chat: 'empty-messages', chat_bubble: 'empty-messages', person: 'nav-profile',
+  storefront: 'nav-shop', sell: 'nav-tag', account_balance_wallet: 'empty-wallet',
+  qr_code_scanner: 'nav-scan', receipt_long: 'nav-receipt', gavel: 'empty-shield',
+}
+
 function mobileTabsFor(active: string): MobileTab[] | null {
   // Full-screen tasks: the wizard and the dispute form have their own footer.
   if (['seller-post', 'seller-edit', 'buyer-dispute-new'].includes(active)) return null
@@ -289,7 +297,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
                 return (
                   <button key={t.key} onClick={() => go(t.key)} className="flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 text-label-sm text-primary">
                     <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary text-white shadow-[0_4px_14px_rgba(254,0,0,0.35)]">
-                      <Icon name={t.icon} size={28} />
+                      <AnimatedIcon name={TAB_ANIM[t.icon] ?? t.icon} fallback={t.icon} size={30} playOnInteract />
                     </span>
                     {t.label}
                   </button>
@@ -297,7 +305,8 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
               }
               return (
                 <button key={t.key} onClick={() => go(t.key)} className={`relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-label-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>
-                  <Icon name={t.icon} size={22} fill={on} />
+                  {/* Active tab plays when its page opens; any tab plays on press. */}
+                  <AnimatedIcon name={TAB_ANIM[t.icon] ?? t.icon} fallback={t.icon} size={24} fill={on} playOnMount={on} playOnInteract />
                   {t.label}
                   {t.key === 'buyer-messages' && !!unreadMessages && <span className="notif-dot" style={{ top: 2, right: 'calc(50% - 22px)' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
                 </button>

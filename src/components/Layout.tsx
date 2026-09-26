@@ -15,11 +15,9 @@ import {
   Package,
   BarChart2,
   PlusCircle,
-  Plus,
   Home,
   CheckCircle2,
   Zap,
-  User,
   CheckCheck,
   BadgeCheck,
   Handshake,
@@ -653,20 +651,21 @@ export default function Layout({
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           {[
-            { label: 'Accueil', icon: Home, page: 'home' as Page },
-            { label: 'Recherche', icon: Search, page: 'search' as Page },
-            { label: 'Vendre', icon: Plus, page: 'seller-post' as Page, primary: true },
-            { label: 'Messages', icon: MessageCircle, page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount },
-            { label: 'Compte', icon: User, page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
+            // anim: Iconsax Lottie (src/assets/lottie) — plays when the tab
+            // becomes active and on press; ms: Material fallback.
+            { label: 'Accueil', anim: 'nav-home', ms: 'home', page: 'home' as Page },
+            { label: 'Recherche', anim: 'empty-search', ms: 'search', page: 'search' as Page },
+            { label: 'Vendre', anim: 'nav-add', ms: 'add', page: 'seller-post' as Page, primary: true },
+            { label: 'Messages', anim: 'empty-messages', ms: 'chat', page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount },
+            { label: 'Compte', anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
           ].map(item => {
-            const IconComp = item.icon
             const isActive = currentPage === item.page
 
             if (item.primary) {
               return (
                 <button key={item.label} onClick={() => onNavigate(item.page)} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
                   <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]">
-                    <IconComp size={26} strokeWidth={2.6} color="#fff" />
+                    <AnimatedIcon name={item.anim} fallback={item.ms} size={28} className="text-white" playOnInteract />
                   </span>
                   {item.label}
                 </button>
@@ -680,7 +679,7 @@ export default function Layout({
                 className={`relative flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}
               >
                 <span className="relative">
-                  <IconComp size={22} strokeWidth={isActive ? 2.4 : 2} />
+                  <AnimatedIcon name={item.anim} fallback={item.ms} size={24} fill={isActive} trigger={isActive} playOnInteract />
                   {!!item.badge && <span className="notif-dot" style={{ top: -6, right: -10 }}>{item.badge > 9 ? '9+' : item.badge}</span>}
                 </span>
                 {item.label}
