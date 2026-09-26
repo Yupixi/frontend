@@ -1,5 +1,5 @@
 import AnimatedIcon, { useIncreaseCounter } from '../../components/AnimatedIcon'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare, Truck, Wallet, Star,
@@ -12,6 +12,7 @@ import { MY_LISTINGS_QUERY } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
 import { MY_NOTIFICATIONS_QUERY, type RemoteNotification } from '../../graphql/account'
 import type { AuthUser } from '../../graphql/auth'
+import { syncAppBadge } from '../../lib/pushNotifications'
 
 // Every member is both a buyer and a seller — one account, one space. This
 // shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
@@ -126,6 +127,7 @@ function useUnreadCounts() {
   const { data: disputesData } = useQuery<{ myDisputeStats: { active: number } }>(MY_DISPUTE_STATS_QUERY, { pollInterval: 60_000 })
   const { data: notifData } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY, { pollInterval: 30_000 })
   const unreadNotifications = (notifData?.myNotifications ?? []).filter(n => !n.readAt).length
+  useEffect(() => { if (notifData) syncAppBadge(unreadNotifications) }, [notifData, unreadNotifications])
   return { listingsCount: listingsData?.myListings.totalCount, unreadMessages, unreadNotifications, activeDisputes: disputesData?.myDisputeStats.active ?? 0 }
 }
 

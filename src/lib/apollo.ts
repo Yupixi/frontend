@@ -14,7 +14,7 @@ import { clearTokens, getAccessToken, getRefreshToken, storeTokens, SESSION_EXPI
 const defaultGraphqlUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
   ? 'http://localhost:3000/graphql'
   : `${window.location.origin}/graphql`
-const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || defaultGraphqlUrl
+export const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || defaultGraphqlUrl
 const GRAPHQL_WS_URL = GRAPHQL_URL.replace(/^http/, 'ws')
 
 const httpLink = new HttpLink({ uri: GRAPHQL_URL })

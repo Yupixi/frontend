@@ -38,6 +38,7 @@ import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
+import { syncAppBadge } from '../lib/pushNotifications'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
@@ -158,6 +159,7 @@ export default function Layout({
   const notifications = notifData?.myNotifications ?? []
   const unreadNotifCount = notifications.filter(n => !n.readAt).length
   const bellRings = useIncreaseCounter(unreadNotifCount)
+  useEffect(() => { if (notifData) syncAppBadge(unreadNotifCount) }, [notifData, unreadNotifCount])
   const [markNotificationRead] = useMutation(MARK_NOTIFICATION_READ_MUTATION)
   const [markAllNotificationsRead] = useMutation(MARK_ALL_NOTIFICATIONS_READ_MUTATION)
   const markAllRead = () => void markAllNotificationsRead().then(() => refetchNotifs())
