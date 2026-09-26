@@ -1,3 +1,4 @@
+import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 export const REGISTER_MUTATION = gql`
@@ -57,7 +58,7 @@ export const ME_QUERY = gql`
       avatarUrl
       notificationPreferences
       isGuest
-      isVerified
+      isVerified badge
       bio
       coverUrl
       boostCredits
@@ -89,7 +90,7 @@ export type AuthUser = {
   avatarUrl?: string | null
   notificationPreferences?: Record<string, unknown>
   isGuest?: boolean
-  isVerified?: boolean
+  isVerified?: boolean; badge?: BadgeTier | null
   boostCredits?: number
   bio?: string | null
   coverUrl?: string | null

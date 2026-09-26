@@ -1,3 +1,4 @@
+import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 // Listing fields shown on the "Mes favoris" and "Historique" cards.
@@ -5,7 +6,7 @@ const CARD_LISTING = `
   id title description price originalPrice currency status condition city locationLabel negotiable deliveryAvailable
   coverImageUrl publishedAt
   category { name slug }
-  seller { id fullName avatarUrl isVerified averageRating reviewsCount }
+  seller { id fullName avatarUrl isVerified badge averageRating reviewsCount }
 `
 
 export const MY_FAVORITE_ENTRIES_QUERY = gql`
@@ -20,7 +21,7 @@ export type CardListing = {
   status: string; condition: string | null; city: string; locationLabel: string | null; negotiable: boolean; deliveryAvailable: boolean
   coverImageUrl: string | null; publishedAt: string | null
   category: { name: string; slug: string }
-  seller: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
+  seller: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; badge?: BadgeTier | null; averageRating: number; reviewsCount: number }
 }
 export type FavoriteEntry = { savedAt: string; priceAtSave: number | null; listing: CardListing }
 export type HistoryEntry = { viewedAt: string; listing: CardListing }

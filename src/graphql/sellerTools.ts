@@ -1,3 +1,4 @@
+import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 // ─── Statistiques & Performances ────────────────────────────────────────────
@@ -45,8 +46,8 @@ const DISPUTE_FIELDS = `
   id reference orderReference conversationId openedBy reason description photos amount status deadlineAt
   proposal discountAmount verdict resolvedAt meetupPlace paymentMethod createdAt
   listing { id title price currency condition coverImageUrl city category { name } }
-  buyer { id fullName avatarUrl city isVerified buyerRating buyerReviewsCount }
-  seller { id fullName avatarUrl city isVerified averageRating reviewsCount }
+  buyer { id fullName avatarUrl city isVerified badge buyerRating buyerReviewsCount }
+  seller { id fullName avatarUrl city isVerified badge averageRating reviewsCount }
   events { id actor title body photos createdAt }
 `
 export const MY_SELLER_DISPUTES_QUERY = gql`
@@ -82,8 +83,8 @@ export type Dispute = {
   proposal: DisputeProposal | null; discountAmount: number | null; verdict: string | null; resolvedAt: string | null
   meetupPlace: string | null; paymentMethod: string | null; createdAt: string
   listing: { id: string; title: string; price: number | null; currency: string; condition: string | null; coverImageUrl: string | null; city: string; category: { name: string } } | null
-  buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; buyerRating: number; buyerReviewsCount: number }
-  seller: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
+  buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; badge?: BadgeTier | null; buyerRating: number; buyerReviewsCount: number }
+  seller: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; badge?: BadgeTier | null; averageRating: number; reviewsCount: number }
   events: { id: string; actor: 'BUYER' | 'SELLER' | 'SYSTEM' | 'ADMIN'; title: string; body: string | null; photos: string[]; createdAt: string }[]
 }
 export type DisputeStats = {
@@ -118,8 +119,8 @@ export const SALES_ORDER_QUERY = gql`
       id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus sellerPhone paymentMethod
       acceptedOffer { id amount }
       meetup { id place scheduledAt status proposedById handoverCode handedOverAt handoverMethod }
-      buyer { id fullName avatarUrl city isVerified buyerRating buyerReviewsCount }
-      seller { id fullName avatarUrl city isVerified averageRating reviewsCount }
+      buyer { id fullName avatarUrl city isVerified badge buyerRating buyerReviewsCount }
+      seller { id fullName avatarUrl city isVerified badge averageRating reviewsCount }
       listing {
         id title price currency condition brand size coverImageUrl paymentMethods meetupSpot city locationLabel
         category { name }
@@ -132,7 +133,7 @@ export const MY_PURCHASE_ORDERS_QUERY = gql`
     myPurchaseOrders {
       id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus paymentMethod
       meetup { id place scheduledAt status proposedById handoverCode handedOverAt handoverMethod }
-      seller { id fullName avatarUrl isVerified averageRating reviewsCount }
+      seller { id fullName avatarUrl isVerified badge averageRating reviewsCount }
       listing { id title price currency condition size coverImageUrl paymentMethods meetupSpot city category { name } }
     }
   }
@@ -148,8 +149,8 @@ export type HandoverOrder = {
   disputeId: string | null; disputeStatus: DisputeStatus | null; sellerPhone?: string | null; paymentMethod?: string | null
   acceptedOffer: { id: string; amount: number } | null
   meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null; handoverMethod?: 'CODE' | 'SELLER_DECLARED' | null } | null
-  buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; buyerRating: number; buyerReviewsCount: number }
-  seller: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
+  buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; badge?: BadgeTier | null; buyerRating: number; buyerReviewsCount: number }
+  seller: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; badge?: BadgeTier | null; averageRating: number; reviewsCount: number }
   listing: {
     id: string; title: string; price: number | null; currency: string; condition: string | null; brand: string | null; size: string | null
     coverImageUrl: string | null; paymentMethods: string[]; meetupSpot: string | null; city: string; locationLabel: string | null; category: { name: string }
@@ -160,7 +161,7 @@ export type HandoverOrder = {
 export const SELLER_SETTINGS_QUERY = gql`
   query SellerSettings {
     me {
-      id email phone fullName avatarUrl city bio isVerified verifiedAt meetupSpots paymentMethods vacationMode notificationPreferences createdAt
+      id email phone fullName avatarUrl city bio isVerified badge verifiedAt meetupSpots paymentMethods vacationMode notificationPreferences createdAt
     }
     myReputation {
       averageRating reviewsCount satisfactionRate salesCount responseTimeMinutes trustScore reactivity reactivityPrev activeListings isVerified hasPhone verifiedAt
@@ -170,7 +171,7 @@ export const SELLER_SETTINGS_QUERY = gql`
 export const UPDATE_SELLER_PROFILE_MUTATION = gql`
   mutation UpdateSellerProfile($input: UpdateProfileInput!) {
     updateProfile(input: $input) {
-      id email phone fullName avatarUrl city bio isVerified boostCredits coverUrl meetupSpots paymentMethods vacationMode notificationPreferences
+      id email phone fullName avatarUrl city bio isVerified badge boostCredits coverUrl meetupSpots paymentMethods vacationMode notificationPreferences
     }
   }
 `
@@ -197,6 +198,6 @@ export type PurchaseOrder = {
   id: string; reference: string; stage: string; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string
   disputeId: string | null; disputeStatus: DisputeStatus | null; paymentMethod: string | null
   meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null; handoverMethod?: 'CODE' | 'SELLER_DECLARED' | null } | null
-  seller: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
+  seller: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; badge?: BadgeTier | null; averageRating: number; reviewsCount: number }
   listing: { id: string; title: string; price: number | null; currency: string; condition: string | null; size?: string | null; coverImageUrl: string | null; paymentMethods: string[]; meetupSpot?: string | null; city?: string; category: { name: string } }
 }
