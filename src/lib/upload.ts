@@ -59,3 +59,21 @@ export async function uploadKycPhoto(file: Blob, filename = 'photo.jpg'): Promis
   }
   return ((await res.json()) as { key: string }).key
 }
+
+// Company registration of an official shop (PDF or photo): private storage,
+// answers a storage key.
+export async function uploadShopDocument(file: File): Promise<string> {
+  const token = getAccessToken()
+  const formData = new FormData()
+  formData.append('file', file, file.name)
+  const res = await fetch(GRAPHQL_URL.replace(/\/graphql\/?$/, '/shops/uploads'), {
+    method: 'POST',
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.message || "Échec de l'envoi du document")
+  }
+  return ((await res.json()) as { key: string }).key
+}

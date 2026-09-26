@@ -1,4 +1,5 @@
 import AnimatedIcon, { useIncreaseCounter } from './AnimatedIcon'
+import Icon from './Icon'
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import {
@@ -42,9 +43,9 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal'
+  | 'legal' | 'shop' | 'shops'
 
 
 type LayoutProps = {
@@ -506,13 +507,14 @@ export default function Layout({
               key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
             })),
             { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => onNavigate('flash-offers') },
-          ].map(item => (
+            { key: 'shops', label: 'Boutiques officielles', icon: true, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
+          ].map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: boolean }) => (
             <button
               key={item.key}
               onClick={item.onClick}
-              className={`cursor-pointer border-0 border-b-2 border-solid bg-transparent px-0 pb-2 pt-1 text-label-md transition-colors ${item.active ? 'border-primary font-bold text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
+              className={`flex cursor-pointer items-center gap-1 border-0 border-b-2 border-solid bg-transparent px-0 pb-2 pt-1 text-label-md transition-colors ${item.active ? 'border-primary font-bold text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
             >
-              {item.label}
+              {item.icon && <Icon name="verified" size={16} />}{item.label}
             </button>
           ))}
         </nav>

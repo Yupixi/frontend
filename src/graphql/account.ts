@@ -37,7 +37,7 @@ export const MARK_ALL_NOTIFICATIONS_READ_MUTATION = gql`
 export type NotificationKind =
   | 'MESSAGE' | 'LISTING_APPROVED' | 'LISTING_REJECTED' | 'LISTING_STATUS_CHANGED'
   | 'OFFER_RECEIVED' | 'OFFER_ACCEPTED' | 'OFFER_REJECTED' | 'ANNOUNCEMENT' | 'SAVED_SEARCH_MATCH' | 'DISPUTE'
-  | 'MEETUP' | 'PRICE_DROP' | 'KYC'
+  | 'MEETUP' | 'PRICE_DROP' | 'KYC' | 'SHOP'
 
 // Material Symbols icon + tone per notification kind (bell menu and
 // notifications page).
@@ -55,6 +55,7 @@ export const NOTIFICATION_META: Record<NotificationKind, { icon: string; cls: st
   MEETUP: { icon: 'handshake', cls: 'bg-tertiary-soft text-tertiary' },
   PRICE_DROP: { icon: 'trending_down', cls: 'bg-primary-fixed text-primary' },
   KYC: { icon: 'verified_user', cls: 'bg-tertiary-soft text-tertiary' },
+  SHOP: { icon: 'storefront', cls: 'bg-tertiary-soft text-tertiary' },
 }
 
 // Dispute notifications go to the seller's "Litiges" page or the buyer's
@@ -66,6 +67,7 @@ export const notificationConversation = (n: { type: NotificationKind; conversati
 export const notificationTarget = (n: { type: NotificationKind; title: string }) =>
   n.type === 'MESSAGE' || n.type === 'MEETUP' ? 'buyer-messages'
     : n.type === 'KYC' ? 'seller-kyc'
+    : n.type === 'SHOP' ? 'seller-shop'
     : n.type === 'DISPUTE' ? (/vente|L'acheteur/.test(n.title) ? 'seller-disputes' : 'buyer-disputes')
       : null
 

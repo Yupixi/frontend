@@ -52,6 +52,7 @@ const CONVERSATION_FIELDS = `
     currency
     status
     negotiable
+    quantity
     condition
     originalPrice
     paymentMethods
@@ -116,8 +117,8 @@ export const MARK_CONVERSATION_READ_MUTATION = gql`
 `
 
 export const SET_CONVERSATION_DEAL_STATUS_MUTATION = gql`
-  mutation SetConversationDealStatus($conversationId: String!, $status: ConversationDealStatus!) {
-    setConversationDealStatus(conversationId: $conversationId, status: $status) {
+  mutation SetConversationDealStatus($conversationId: String!, $status: ConversationDealStatus!, $quantity: Int) {
+    setConversationDealStatus(conversationId: $conversationId, status: $status, quantity: $quantity) {
       ${CONVERSATION_FIELDS}
     }
   }
@@ -234,7 +235,7 @@ export type RemoteConversation = {
   canManageDeal: boolean
   createdAt: string
   listing: {
-    id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string; negotiable: boolean
+    id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string; negotiable: boolean; quantity?: number
     condition?: string | null; originalPrice?: number | null; paymentMethods?: string[]; meetupSpot?: string | null; city?: string; locationLabel?: string | null
   } | null
   otherParticipant: RemoteUserRef

@@ -131,6 +131,8 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const [reported, setReported] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirming, setConfirming] = useState<'CONCLUDED' | 'NOT_CONCLUDED' | 'REPORT' | null>(null)
+  // Units sold, when the listing has stock.
+  const [soldQty, setSoldQty] = useState(1)
   const inputRef = useRef<ComposerHandle>(null)
   const [replyTo, setReplyTo] = useState<ComposerReply | null>(null)
   const [viewer, setViewer] = useState<{ photos: string[]; index: number } | null>(null)
@@ -236,7 +238,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   }
   const closeDeal = (status: 'CONCLUDED' | 'NOT_CONCLUDED') => {
     if (!activeId) return
-    void setDealStatus({ variables: { conversationId: activeId, status } }).then(refresh).finally(() => setConfirming(null))
+    void setDealStatus({ variables: { conversationId: activeId, status, ...(status === 'CONCLUDED' ? { quantity: soldQty } : {}) } }).then(refresh).finally(() => { setConfirming(null); setSoldQty(1) })
   }
   // Quick replies fill the input (as in the mockup) rather than sending blind.
   const suggest = (text: string) => { setMsg(text); inputRef.current?.focus() }
@@ -642,7 +644,19 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
         onConfirm={() => confirming === 'REPORT' ? reportScam() : confirming && closeDeal(confirming)}
       >
         {confirming === 'REPORT' ? `Signaler ${other?.fullName ?? 'ce membre'} à l’équipe Dilchap ? La conversation sera jointe au signalement.`
-          : confirming === 'CONCLUDED' ? 'La remise est enregistrée maintenant : l’annonce passe en vendue et la discussion sera fermée. Si vous êtes avec l’acheteur, préférez son code de remise.' : 'Cette discussion sera marquée comme n’ayant pas abouti.'}
+          : confirming === 'CONCLUDED' ? ((conv?.listing?.quantity ?? 1) > 1
+            ? <>
+              La remise est enregistrée maintenant et la discussion sera fermée. Les exemplaires vendus sont retirés du stock ({conv!.listing!.quantity} disponibles).
+              <span className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-surface-container-low p-3">
+                <span className="text-label-md text-on-surface">Exemplaires vendus</span>
+                <span className="flex items-center gap-1">
+                  <button type="button" aria-label="Un de moins" disabled={soldQty <= 1} onClick={() => setSoldQty(q => Math.max(1, q - 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={17} /></button>
+                  <span className="w-8 text-center text-label-lg text-on-surface">{soldQty}</span>
+                  <button type="button" aria-label="Un de plus" disabled={soldQty >= conv!.listing!.quantity!} onClick={() => setSoldQty(q => Math.min(conv!.listing!.quantity!, q + 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="add" size={17} /></button>
+                </span>
+              </span>
+            </>
+            : 'La remise est enregistrée maintenant : l’annonce passe en vendue et la discussion sera fermée. Si vous êtes avec l’acheteur, préférez son code de remise.') : 'Cette discussion sera marquée comme n’ayant pas abouti.'}
       </ConfirmSheet>
     </AccountLayout>
   )

@@ -167,6 +167,14 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const saving = listing.originalPrice && listing.price != null && listing.originalPrice > listing.price
     ? Math.round((1 - listing.price / listing.originalPrice) * 100) : 0
   const location = listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+  // Official shop: shown under its trade name and logo, with the stock.
+  const shop = listing.seller.shop
+  const sellerName = shop?.name ?? listing.seller.fullName
+  const sellerAvatar = shop?.logoUrl ?? listing.seller.avatarUrl
+  const qty = listing.quantity ?? 1
+  const stock = qty > 1
+    ? <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="inventory_2" size={14} /> {qty} en stock</span>
+    : shop ? <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary"><Icon name="inventory_2" size={14} /> Dernier exemplaire</span> : null
   const category = categoriesData?.categories.find(c => c.slug === listing.category.slug)
   const specs: { label: string, value: string, icon?: string }[] = [
     ...(listing.brand ? [{ label: 'Marque', value: listing.brand }] : []),
@@ -324,7 +332,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 <div className="flex h-full items-center justify-center text-outline"><Tag size={56} /></div>
               )}
               <div className="pointer-events-none absolute left-3 right-16 top-3 flex flex-wrap gap-1.5 lg:right-3">
-                {(listing.seller.isVerified || seller?.isVerified) && (
+                {shop ? (
+                  <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><Icon name="storefront" size={14} /> Boutique officielle</span>
+                ) : (listing.seller.isVerified || seller?.isVerified) && (
                   <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><BadgeCheck size={13} /> <span className="lg:hidden">Authentique certifié</span><span className="hidden lg:inline">Vendeur certifié</span></span>
                 )}
                 {listing.condition && listing.condition !== 'N/A' && (
@@ -374,6 +384,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <span className="text-headline-lg font-extrabold text-primary"><Price amount={listing.price} currency={listing.currency} /></span>
               {saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
               {saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">-{saving}% épargné</span>}
+              {stock}
             </div>
             <div className="mt-4 flex items-start gap-3 rounded-xl bg-tertiary-soft p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><Percent size={18} /></span>
@@ -473,6 +484,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               </div>
               {saving > 0 && <span className="mt-2 inline-block rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">-{saving}% par rapport au prix neuf</span>}
               {listing.negotiable && <span className="ml-2 mt-2 inline-block rounded-md bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">Prix négociable</span>}
+              {stock && <span className="ml-2 mt-2 inline-block">{stock}</span>}
             </div>
 
             <dl className="m-0 mt-4 flex flex-col gap-2 text-body-sm">
@@ -533,14 +545,14 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           {/* Seller card — mobile: the mockup's compact card (Suivre lives on the profile) */}
           <div className="order-3 mx-4 mt-5 rounded-2xl bg-surface-container-low p-4 lg:hidden">
             <div className="flex items-center gap-3">
-              <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0" aria-label={`Profil de ${listing.seller.fullName}`}>
-                <Avatar url={listing.seller.avatarUrl} name={listing.seller.fullName} size={44} />
-                {seller?.isVerified && <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-solid border-surface-container-low bg-tertiary text-white"><Icon name="check" size={10} /></span>}
+              <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0" aria-label={`Profil de ${sellerName}`}>
+                <Avatar url={sellerAvatar} name={sellerName} size={44} />
+                {(shop || seller?.isVerified) && <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-solid border-surface-container-low bg-tertiary text-white"><Icon name="check" size={10} /></span>}
               </button>
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1 text-label-lg text-on-surface">
-                  <span className="truncate">{listing.seller.fullName}</span>
-                  {seller?.isVerified && <Icon name="verified" size={16} className="shrink-0 text-tertiary" title="Vendeur vérifié" />}
+                  <span className="truncate">{sellerName}</span>
+                  {(shop || seller?.isVerified) && <Icon name="verified" size={16} className="shrink-0 text-tertiary" title={shop ? 'Boutique officielle' : 'Vendeur vérifié'} />}
                 </div>
                 {seller && seller.reviewsCount > 0 ? (
                   <div className="truncate text-label-sm text-primary">{seller.averageRating.toFixed(1)} ★ <span className="text-on-surface-variant">({seller.reviewsCount} avis vérifié{seller.reviewsCount > 1 ? 's' : ''})</span></div>
@@ -548,7 +560,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <div className="truncate text-label-sm text-on-surface-variant">{seller.salesCount > 0 ? `${seller.salesCount} vente${seller.salesCount > 1 ? 's' : ''}` : 'Nouveau vendeur'}</div>
                 )}
               </div>
-              <button onClick={() => onSelectSeller(listing.seller.id)} className="shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none bg-surface-container-high px-3.5 py-1.5 text-label-md text-on-surface">Profil</button>
+              <button onClick={() => onSelectSeller(listing.seller.id)} className="shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none bg-surface-container-high px-3.5 py-1.5 text-label-md text-on-surface">{shop ? 'Boutique' : 'Profil'}</button>
             </div>
             <div className="mt-3 flex gap-2">
               {responseTime && (
@@ -565,13 +577,14 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           <div className="hidden rounded-2xl border border-outline-variant bg-surface-lowest p-5 lg:block">
             <div className="flex items-center gap-3">
               <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0">
-                <Avatar url={listing.seller.avatarUrl} name={listing.seller.fullName} size={52} />
-                {seller?.isVerified && <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={11} /></span>}
+                <Avatar url={sellerAvatar} name={sellerName} size={52} />
+                {(shop || seller?.isVerified) && <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={11} /></span>}
               </button>
               <div className="min-w-0 flex-1">
                 <button onClick={() => onSelectSeller(listing.seller.id)} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-left text-headline-sm text-on-surface">
-                  <span className="truncate">{listing.seller.fullName}</span>
-                  {seller?.isVerified && <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><BadgeCheck size={12} /> Certifié</span>}
+                  <span className="truncate">{sellerName}</span>
+                  {shop ? <span className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><Icon name="storefront" size={13} /> Boutique officielle</span>
+                    : seller?.isVerified && <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><BadgeCheck size={12} /> Certifié</span>}
                 </button>
                 <div className="flex items-center gap-1 text-body-sm text-on-surface-variant">
                   {seller && seller.reviewsCount > 0 && <><Star size={13} fill="#F59E0B" color="#F59E0B" /> <b className="text-on-surface">{seller.averageRating.toFixed(1)}</b> ({seller.reviewsCount} avis) •</>}
@@ -597,7 +610,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               </div>
             </div>
             <button onClick={() => onSelectSeller(listing.seller.id)} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-2.5 text-label-md text-on-surface hover:bg-surface-container">
-              Voir {seller && seller.listingsCount > 1 ? `ses ${seller.listingsCount - 1} autres articles` : 'le profil'} <ArrowRight size={15} />
+              {shop ? 'Voir la boutique' : <>Voir {seller && seller.listingsCount > 1 ? `ses ${seller.listingsCount - 1} autres articles` : 'le profil'}</>} <ArrowRight size={15} />
             </button>
           </div>
 

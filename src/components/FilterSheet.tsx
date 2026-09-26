@@ -35,6 +35,7 @@ export type SheetState = {
   categorySlugs: string[]
   conditions: string[]
   verifiedOnly: boolean
+  shopsOnly: boolean
   handoverOnly: boolean
   mobileMoneyOnly: boolean
 }
@@ -190,6 +191,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
           <Section icon="shield" title="Confiance & Transactions directes">
             {([
               ['verifiedOnly', 'verified_user', 'Vendeurs certifiés uniquement', 'Identité vérifiée par Dilchap'],
+              ['shopsOnly', 'storefront', 'Boutiques officielles uniquement', 'Entreprises vérifiées (RCCM / NCC)'],
               ['handoverOnly', 'storefront', 'Remise en main propre privilégiée', 'Point de rendez-vous public indiqué'],
               ['mobileMoneyOnly', 'account_balance_wallet', 'Wave & Orange Money acceptés', 'Paiement mobile direct à la remise'],
             ] as const).map(([key, icon, title, sub]) => (

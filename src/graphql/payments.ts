@@ -15,7 +15,7 @@ export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'F
 export type PaymentIntent = {
   id: string
   reference: string
-  kind: 'CREDIT_PACK' | 'BOOST_PACK'
+  kind: 'CREDIT_PACK' | 'BOOST_PACK' | 'SHOP_SUBSCRIPTION'
   product: string
   listingId: string | null
   amount: number
@@ -28,7 +28,7 @@ export type PaymentIntent = {
   createdAt: string
   fulfilledAt: string | null
 }
-export type PaymentRequest = { kind: 'CREDIT_PACK' | 'BOOST_PACK'; product: string; listingId?: string }
+export type PaymentRequest = { kind: 'CREDIT_PACK' | 'BOOST_PACK' | 'SHOP_SUBSCRIPTION'; product: string; listingId?: string }
 
 export const PROVIDERS: { key: PaymentProvider; method: string; label: string }[] = [
   { key: 'wave', method: 'WAVE', label: 'Wave' },
