@@ -22,7 +22,7 @@ const CHECKS = [
 function CheckRow({ checked, onChange, tone = 'tertiary', children, className = '' }: { checked: boolean, onChange: (v: boolean) => void, tone?: 'tertiary' | 'primary', children: React.ReactNode, className?: string }) {
   const on = tone === 'tertiary' ? 'border-tertiary bg-tertiary' : 'border-primary bg-primary'
   return (
-    <label className={`flex min-h-12 cursor-pointer items-start gap-3 rounded-xl p-3 ${className}`}>
+    <label className={`relative flex min-h-12 cursor-pointer items-start gap-3 rounded-xl p-3 ${className}`}>
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="peer sr-only" />
       <span aria-hidden className={`mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-solid peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary ${checked ? `${on} text-white` : 'border-outline bg-surface-lowest text-transparent'}`}>
         <Icon name="check" size={18} />

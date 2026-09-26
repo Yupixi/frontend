@@ -246,7 +246,7 @@ export default function SearchPage({
         <button onClick={resetAll} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary hover:underline">Réinitialiser</button>
       </div>
 
-      <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-tertiary-soft p-3">
+      <label className="relative flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-tertiary-soft p-3">
         <span className="flex items-center gap-2">
           <BadgeCheck size={19} className="text-tertiary" />
           <span className="flex flex-col">

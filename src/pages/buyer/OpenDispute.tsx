@@ -112,7 +112,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
                   {REASONS.map(r => {
                     const on = reason === r.value
                     return (
-                      <label key={r.value} className={`flex cursor-pointer gap-3 rounded-xl p-3 ${on ? 'bg-primary-fixed/70' : 'bg-surface-container-low'}`}>
+                      <label key={r.value} className={`relative flex cursor-pointer gap-3 rounded-xl p-3 ${on ? 'bg-primary-fixed/70' : 'bg-surface-container-low'}`}>
                         <input type="radio" name="reason" checked={on} onChange={() => setReason(r.value)} className="sr-only" />
                         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-primary text-white' : 'bg-surface-lowest text-on-surface-variant'}`}><Icon name={r.icon} size={19} /></span>
                         <span className="min-w-0 flex-1"><span className="block text-label-lg text-on-surface md:text-label-md">{r.title}</span><span className="block text-body-sm text-on-surface-variant">{r.text}</span></span>
