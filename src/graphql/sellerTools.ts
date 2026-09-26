@@ -117,7 +117,7 @@ export const SALES_ORDER_QUERY = gql`
     salesOrder(id: $id) {
       id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus sellerPhone paymentMethod
       acceptedOffer { id amount }
-      meetup { id place scheduledAt status proposedById handoverCode handedOverAt }
+      meetup { id place scheduledAt status proposedById handoverCode handedOverAt handoverMethod }
       buyer { id fullName avatarUrl city isVerified buyerRating buyerReviewsCount }
       seller { id fullName avatarUrl city isVerified averageRating reviewsCount }
       listing {
@@ -131,7 +131,7 @@ export const MY_PURCHASE_ORDERS_QUERY = gql`
   query MyPurchaseOrders {
     myPurchaseOrders {
       id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus paymentMethod
-      meetup { id place scheduledAt status proposedById handoverCode handedOverAt }
+      meetup { id place scheduledAt status proposedById handoverCode handedOverAt handoverMethod }
       seller { id fullName avatarUrl isVerified averageRating reviewsCount }
       listing { id title price currency condition size coverImageUrl paymentMethods meetupSpot city category { name } }
     }
@@ -147,7 +147,7 @@ export type HandoverOrder = {
   id: string; reference: string; stage: string; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string
   disputeId: string | null; disputeStatus: DisputeStatus | null; sellerPhone?: string | null; paymentMethod?: string | null
   acceptedOffer: { id: string; amount: number } | null
-  meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null } | null
+  meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null; handoverMethod?: 'CODE' | 'SELLER_DECLARED' | null } | null
   buyer: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; buyerRating: number; buyerReviewsCount: number }
   seller: { id: string; fullName: string; avatarUrl: string | null; city: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
   listing: {
@@ -196,7 +196,7 @@ export type UserSession = { id: string; userAgent: string | null; createdAt: str
 export type PurchaseOrder = {
   id: string; reference: string; stage: string; agreedPrice: number | null; dealStatus: string; dealClosedAt: string | null; agreedAt: string
   disputeId: string | null; disputeStatus: DisputeStatus | null; paymentMethod: string | null
-  meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null } | null
+  meetup: { id: string; place: string; scheduledAt: string; status: string; proposedById: string; handoverCode: string | null; handedOverAt: string | null; handoverMethod?: 'CODE' | 'SELLER_DECLARED' | null } | null
   seller: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; averageRating: number; reviewsCount: number }
   listing: { id: string; title: string; price: number | null; currency: string; condition: string | null; size?: string | null; coverImageUrl: string | null; paymentMethods: string[]; meetupSpot?: string | null; city?: string; category: { name: string } }
 }

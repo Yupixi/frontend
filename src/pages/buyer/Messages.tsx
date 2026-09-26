@@ -413,7 +413,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   <div className="flex flex-1 flex-col gap-3 px-4 py-4">
                     {conv.dealStatus !== 'DISCUSSING' && (
                       <p className={`m-0 flex items-center gap-2 rounded-xl p-3 text-label-md ${conv.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
-                        {conv.dealStatus === 'CONCLUDED' ? <><Handshake size={17} className="shrink-0" /> Vente conclue — l'annonce est marquée comme vendue.</> : <><CircleX size={17} className="shrink-0" /> Cette discussion n'a pas abouti à une vente.</>}
+                        {conv.dealStatus === 'CONCLUDED' ? <><Handshake size={17} className="shrink-0" /> Remise effectuée — la vente est conclue et l'annonce est marquée comme vendue.</> : <><CircleX size={17} className="shrink-0" /> Cette discussion n'a pas abouti à une vente.</>}
                       </p>
                     )}
                     <div className="flex items-start gap-2 rounded-xl bg-surface-container-high p-2.5 md:hidden">
@@ -634,7 +634,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
       {viewer && <ImageLightbox images={viewer.photos} start={viewer.index} alt={`Photos de ${other?.fullName ?? 'la discussion'}`} onClose={() => setViewer(null)} />}
       <ConfirmSheet
         open={!!confirming}
-        title={confirming === 'REPORT' ? 'Signaler une tentative d’arnaque' : confirming === 'CONCLUDED' ? 'Vente conclue ?' : 'Discussion non conclue ?'}
+        title={confirming === 'REPORT' ? 'Signaler une tentative d’arnaque' : confirming === 'CONCLUDED' ? 'Confirmer la remise ?' : 'Discussion non conclue ?'}
         confirmLabel={confirming === 'REPORT' ? 'Signaler' : 'Confirmer'}
         loading={closingDeal}
         tone={confirming === 'REPORT' ? 'danger' : 'primary'}
@@ -642,7 +642,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
         onConfirm={() => confirming === 'REPORT' ? reportScam() : confirming && closeDeal(confirming)}
       >
         {confirming === 'REPORT' ? `Signaler ${other?.fullName ?? 'ce membre'} à l’équipe Dilchap ? La conversation sera jointe au signalement.`
-          : confirming === 'CONCLUDED' ? 'L’annonce sera marquée comme vendue.' : 'Cette discussion sera marquée comme n’ayant pas abouti.'}
+          : confirming === 'CONCLUDED' ? 'La remise est enregistrée maintenant : l’annonce passe en vendue et la discussion sera fermée. Si vous êtes avec l’acheteur, préférez son code de remise.' : 'Cette discussion sera marquée comme n’ayant pas abouti.'}
       </ConfirmSheet>
     </AccountLayout>
   )
