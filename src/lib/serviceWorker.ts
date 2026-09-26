@@ -1,3 +1,4 @@
+import { GRAPHQL_URL } from './apollo'
 export const SW_UPDATE_EVENT = 'sw:update-available'
 
 let waitingWorker: ServiceWorker | null = null
@@ -20,6 +21,9 @@ export function registerServiceWorker() {
 
   const register = () => {
     navigator.serviceWorker.register('/sw.js').then(registration => {
+      // The worker reports push deliveries/clicks to the API even when every
+      // tab is closed — it keeps this URL (see sw.js readConfig).
+      void navigator.serviceWorker.ready.then(ready => ready.active?.postMessage({ type: 'CONFIG', graphqlUrl: new URL(GRAPHQL_URL, window.location.href).href }))
       const notifyIfWaiting = () => {
         if (!registration.waiting || !navigator.serviceWorker.controller) return
         waitingWorker = registration.waiting

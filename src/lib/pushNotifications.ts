@@ -88,10 +88,25 @@ export async function subscribeToPush(requestPermission = false): Promise<PushSu
 
     await apolloClient.mutate({
       mutation: SAVE_PUSH_SUBSCRIPTION_MUTATION,
-      variables: { input: { endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth } },
+      variables: { input: { endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, userAgent: navigator.userAgent.slice(0, 300), platform: devicePlatform() } },
     })
     return 'subscribed'
   } catch {
     return 'error'
   }
+}
+
+// Coarse device family, for reach per platform in the Backoffice.
+function devicePlatform(): string {
+  const ua = navigator.userAgent
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios'
+  if (/Android/i.test(ua)) return 'android'
+  return 'desktop'
+}
+
+// App icon badge = unread notifications (installed PWA; no-op elsewhere).
+export function syncAppBadge(count: number) {
+  const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
+  if (!nav.setAppBadge) return
+  void (count > 0 ? nav.setAppBadge(count) : nav.clearAppBadge?.())?.catch(() => undefined)
 }

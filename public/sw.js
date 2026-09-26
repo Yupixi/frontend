@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v12'
+const VERSION = 'v13'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -32,12 +32,57 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
+  if (event.data?.type === 'CONFIG' && event.data.graphqlUrl) {
+    event.waitUntil(
+      caches.open(CONFIG_CACHE).then((cache) =>
+        cache.put(CONFIG_KEY, new Response(JSON.stringify({ graphqlUrl: event.data.graphqlUrl }), { headers: { 'content-type': 'application/json' } })),
+      ),
+    )
+  }
   if (event.data?.type === 'ACTIVE_CONVERSATION') activeConversationId = event.data.conversationId || null
 })
 
+// Where the app's GraphQL API lives (sent by the app on startup, see
+// src/lib/serviceWorker.ts) — kept in Cache Storage because a push can wake
+// this worker long after every tab is closed.
+const CONFIG_CACHE = 'yupixi-sw-config'
+const CONFIG_KEY = '/__sw-config'
+
+async function readConfig() {
+  try {
+    const res = await (await caches.open(CONFIG_CACHE)).match(CONFIG_KEY)
+    if (res) return await res.json()
+  } catch {
+    // fall through
+  }
+  return { graphqlUrl: `${self.location.origin}/graphql` }
+}
+
+// Delivery tracking (Backend PushService.track): delivered / clicked
+// (+ which button) / dismissed. Signed by the server, best-effort.
+async function track(data, event, action) {
+  if (!data?.d || !data?.s) return
+  try {
+    const { graphqlUrl } = await readConfig()
+    await fetch(graphqlUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({
+        query: 'mutation($d: String!, $s: String!, $e: String!, $a: String) { trackPush(delivery: $d, signature: $s, event: $e, action: $a) }',
+        variables: { d: data.d, s: data.s, e: event, a: action ?? null },
+      }),
+    })
+  } catch {
+    // offline: the stats just miss this one
+  }
+}
+
 // Fires even when no tab is open — this is what lets an anonymous guest
 // (no email/SMS ever sent to them) learn a seller replied. Payload shape
-// is set by Backend NotificationsService.create → PushService.sendToUser.
+// (v2) is Backend push-payload.ts → PushPayload: every Notification API
+// option the platforms support — big picture, action buttons, grouping tag,
+// sticky, silent — plus the app icon badge count.
 self.addEventListener('push', (event) => {
   let data = {}
   try {
@@ -56,33 +101,68 @@ self.addEventListener('push', (event) => {
         const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
         if (windows.some((client) => client.focused)) return
       }
+      const maxActions = self.Notification?.maxActions ?? 2
+      const actions = Array.isArray(data.actions) ? data.actions.slice(0, maxActions) : []
       await self.registration.showNotification(title, {
         body: data.body || '',
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        data: { url: data.url || '/' },
+        // Large icon: the sender's avatar, a listing photo… else the app icon.
+        icon: data.icon || '/icon-192.png',
+        // Status-bar icon: must be a white silhouette on transparent.
+        badge: '/badge-96.png',
+        image: data.image || undefined,
+        tag: data.tag || undefined,
+        renotify: !!(data.tag && data.renotify),
+        requireInteraction: !!data.requireInteraction,
+        silent: !!data.silent,
+        vibrate: data.silent ? undefined : [120, 60, 120],
+        timestamp: data.ts || Date.now(),
+        lang: 'fr',
+        actions: actions.map((a) => ({ action: a.action, title: a.title })),
+        data: {
+          url: data.url || '/',
+          actionUrls: Object.fromEntries(actions.map((a) => [a.action, a.url])),
+          d: data.d,
+          s: data.s,
+        },
       })
+      if (typeof data.badgeCount === 'number' && 'setAppBadge' in self.navigator) {
+        await (data.badgeCount > 0 ? self.navigator.setAppBadge(data.badgeCount) : self.navigator.clearAppBadge()).catch(() => {})
+      }
+      await track(data, 'delivered')
     })(),
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = event.notification.data?.url || '/'
+  const data = event.notification.data || {}
+  // A button opens its own page; the notification body opens `url`.
+  const url = (event.action && data.actionUrls?.[event.action]) || data.url || '/'
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    (async () => {
+      await track(data, 'clicked', event.action || 'open')
+      // External links (https://…) open in a new window.
+      if (!url.startsWith('/') && !url.startsWith(self.location.origin)) {
+        return self.clients.openWindow?.(url)
+      }
+      const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       for (const client of windowClients) {
         if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-          // A conversation / listing link opens in the running app without a
-          // reload (App listens for this message); anything else navigates.
-          if (/[?&](conversation|listing)=/.test(url)) client.postMessage({ type: 'yupixi:open-url', url })
+          // A conversation / listing / shop link opens in the running app
+          // without a reload (App listens for this message); anything else
+          // navigates.
+          if (/[?&](conversation|listing|shop)=/.test(url)) client.postMessage({ type: 'yupixi:open-url', url })
           else client.navigate?.(url)
           return client.focus()
         }
       }
       if (self.clients.openWindow) return self.clients.openWindow(url)
-    }),
+    })(),
   )
+})
+
+self.addEventListener('notificationclose', (event) => {
+  event.waitUntil(track(event.notification.data || {}, 'dismissed'))
 })
 
 self.addEventListener('activate', (event) => {
@@ -92,7 +172,7 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== STATIC_CACHE && key !== PAGE_CACHE)
+            .filter((key) => key !== STATIC_CACHE && key !== PAGE_CACHE && key !== CONFIG_CACHE)
             .map((key) => caches.delete(key)),
         ),
       )
