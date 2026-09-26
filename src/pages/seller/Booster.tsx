@@ -419,10 +419,10 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
         onPaid={() => confirmPack && paid(confirmPack)}
       >
         {confirmPack && listing && (
-          <div className="rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant">
-            <p className="m-0"><b className="text-on-surface">{pack(confirmPack)?.label ?? 'Formule'}</b> sur « {listing.title} ».</p>
-            <p className="m-0 mt-1">Montant : <b className="text-primary"><Price amount={pack(confirmPack)?.price ?? 0} /></b> — la mise en avant démarre dès la confirmation du paiement.</p>
-          </div>
+          <>
+            <b className="block text-label-lg text-on-surface">{pack(confirmPack)?.label ?? 'Formule'}</b>
+            <span className="line-clamp-1">« {listing.title} »</span>
+          </>
         )}
       </PaymentSheet>
     </AccountLayout>

@@ -35,7 +35,7 @@ export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: B
         onClose={() => setPicked(null)}
         onPaid={onDone}
       >
-        {picked && <p className="m-0 rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant"><b className="text-on-surface">{picked.label}</b> pour <b className="text-primary"><Price amount={picked.price} /></b>. La mise en avant démarre dès la confirmation du paiement.</p>}
+        {picked && <><b className="block text-label-lg text-on-surface">{picked.label}</b>Démarre dès la confirmation du paiement</>}
       </PaymentSheet>
     </div>
   )

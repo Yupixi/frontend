@@ -1,5 +1,5 @@
 import AnimatedIcon from '../components/AnimatedIcon'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import DOMPurify from 'dompurify'
 import { gql } from '@apollo/client'
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
@@ -34,6 +34,7 @@ import {
 import Price from '../components/Price'
 import BottomSheet from '../components/BottomSheet'
 import BoostSheet from '../components/BoostSheet'
+import ImageLightbox from '../components/ImageLightbox'
 import InlineConversation from '../components/InlineConversation'
 import QuickNegotiation from '../components/QuickNegotiation'
 import { ListingCard } from '../components/ListingCard'
@@ -98,6 +99,8 @@ function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, s
 export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser, onContactSeller }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [brokenImgs, setBrokenImgs] = useState<number[]>([])
+  const [viewer, setViewer] = useState<number | null>(null)
+  const galleryTrack = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState<typeof TABS[number]['key']>('description')
   const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
@@ -143,6 +146,19 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   }
 
   const images = listing.media.length > 0 ? listing.media.map(m => m.url) : (listing.coverImageUrl ? [listing.coverImageUrl] : [])
+  // Gallery = a swipeable scroll-snap track; arrows, dots and thumbnails scroll it.
+  const showImage = (i: number, smooth = true) => {
+    const n = (i + images.length) % images.length
+    const t = galleryTrack.current
+    if (t) t.scrollTo({ left: n * t.clientWidth, behavior: smooth ? 'smooth' : 'auto' })
+    setImgIdx(n)
+  }
+  const onGalleryScroll = () => {
+    const t = galleryTrack.current
+    if (!t || !t.clientWidth) return
+    const i = Math.round(t.scrollLeft / t.clientWidth)
+    if (i !== imgIdx) setImgIdx(i)
+  }
   const isFav = favorites.includes(listing.id)
   const isOwner = !!currentUser && listing.seller.id === currentUser.id
   const isExpired = listing.status === 'EXPIRED'
@@ -230,6 +246,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   return (
     <div className="pb-24 lg:pb-8">
+      {viewer !== null && images.length > 0 && <ImageLightbox images={images} start={viewer} alt={listing.title} onClose={() => setViewer(null)} onIndexChange={i => showImage(i, false)} />}
       {isOwner && <BoostSheet open={boostOpen} onClose={() => setBoostOpen(false)} listing={listing} />}
       {/* Mobile app bar (Stitch "Détails Article") — replaces the site header here */}
       <div className="safe-top sticky z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface px-2 lg:hidden">
@@ -293,12 +310,20 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           {/* Gallery */}
           <div className="overflow-hidden max-lg:order-1 bg-surface-lowest lg:rounded-2xl lg:border lg:border-outline-variant lg:p-3">
             <div className="relative aspect-square overflow-hidden bg-surface-container-low lg:aspect-[4/3] lg:rounded-xl">
-              {images.length > 0 && !brokenImgs.includes(imgIdx) ? (
-                <img src={images[imgIdx]} alt={listing.title} onError={() => setBrokenImgs(b => [...b, imgIdx])} className="h-full w-full object-cover" />
+              {images.length > 0 ? (
+                <div ref={galleryTrack} onScroll={onGalleryScroll} className="flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {images.map((src, i) => (
+                    <button key={i} onClick={() => setViewer(i)} aria-label={`Agrandir la photo ${i + 1}`} className="h-full w-full shrink-0 cursor-zoom-in snap-center border-none bg-transparent p-0">
+                      {brokenImgs.includes(i)
+                        ? <span className="flex h-full items-center justify-center text-outline"><Tag size={56} /></span>
+                        : <img src={src} alt={`${listing.title} — photo ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => setBrokenImgs(b => [...b, i])} className="h-full w-full select-none object-cover" />}
+                    </button>
+                  ))}
+                </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-outline"><Tag size={56} /></div>
               )}
-              <div className="absolute left-3 right-16 top-3 flex flex-wrap gap-1.5 lg:right-3">
+              <div className="pointer-events-none absolute left-3 right-16 top-3 flex flex-wrap gap-1.5 lg:right-3">
                 {(listing.seller.isVerified || seller?.isVerified) && (
                   <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><BadgeCheck size={13} /> <span className="lg:hidden">Authentique certifié</span><span className="hidden lg:inline">Vendeur certifié</span></span>
                 )}
@@ -318,19 +343,19 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               )}
               {images.length > 1 && (
                 <>
-                  <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)} className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronLeft size={20} /></button>
-                  <button onClick={() => setImgIdx(i => (i + 1) % images.length)} className="absolute right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronRight size={20} /></button>
+                  <button onClick={() => showImage(imgIdx - 1)} aria-label="Photo précédente" className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronLeft size={20} /></button>
+                  <button onClick={() => showImage(imgIdx + 1)} aria-label="Photo suivante" className="absolute right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 text-on-surface lg:flex"><ChevronRight size={20} /></button>
                   <div className="absolute bottom-3 left-3 flex gap-1 lg:hidden">
-                    {images.map((_, i) => <button key={i} onClick={() => setImgIdx(i)} className={`h-1.5 cursor-pointer rounded-full border-none p-0 ${i === imgIdx ? 'w-5 bg-primary' : 'w-1.5 bg-white/80'}`} aria-label={`Photo ${i + 1}`} />)}
+                    {images.map((_, i) => <button key={i} onClick={() => showImage(i)} className={`h-1.5 cursor-pointer rounded-full border-none p-0 ${i === imgIdx ? 'w-5 bg-primary' : 'w-1.5 bg-white/80'}`} aria-label={`Photo ${i + 1}`} />)}
                   </div>
-                  <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-0.5 text-label-sm text-white"><Icon name="photo_library" size={14} /> {imgIdx + 1} / {images.length}</span>
+                  <button onClick={() => setViewer(imgIdx)} aria-label="Afficher en plein écran" className="absolute bottom-3 right-3 flex cursor-pointer items-center gap-1 rounded-full border-none bg-black/55 px-2.5 py-1 text-label-sm text-white"><Icon name="fullscreen" size={16} /> {imgIdx + 1} / {images.length}</button>
                 </>
               )}
             </div>
             {images.length > 1 && (
               <div className="mt-3 hidden gap-2 overflow-x-auto lg:flex">
                 {images.map((img, i) => (
-                  <button key={i} onClick={() => setImgIdx(i)} className={`h-20 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 ${i === imgIdx ? 'border-primary' : 'border-transparent'}`}>
+                  <button key={i} onClick={() => showImage(i)} className={`h-20 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 ${i === imgIdx ? 'border-primary' : 'border-transparent'}`}>
                     <img loading="lazy" decoding="async" src={thumbnailUrl(img)} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}

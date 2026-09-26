@@ -7,11 +7,13 @@ type BottomSheetProps = {
   title?: string
   children: React.ReactNode
   maxHeight?: string
+  // Desktop width of the sheet (full width on phones).
+  maxWidth?: string
   // Pinned under the scrolling content (e.g. "Afficher les N annonces").
   footer?: React.ReactNode
 }
 
-export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh', footer }: BottomSheetProps) {
+export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh', maxWidth = '640px', footer }: BottomSheetProps) {
   const closedByBackRef = useRef(false)
   const onCloseRef = useRef(onClose)
 
@@ -62,8 +64,8 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
     <div className="fixed inset-0 z-[9990] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/45 animate-[fadeIn_0.2s_ease-out]" onClick={() => onCloseRef.current()} />
       <div
-        className="relative flex w-full max-w-[640px] flex-col rounded-t-3xl bg-surface pb-[env(safe-area-inset-bottom)] animate-[slideUp_0.3s_cubic-bezier(0.16,1,0.3,1)]"
-        style={{ maxHeight }}
+        className="relative flex w-full flex-col rounded-t-3xl bg-surface pb-[env(safe-area-inset-bottom)] animate-[slideUp_0.3s_cubic-bezier(0.16,1,0.3,1)]"
+        style={{ maxHeight, maxWidth }}
       >
         <div className="flex justify-center pb-0.5 pt-2.5"><span className="h-1 w-10 rounded-full bg-outline-variant" /></div>
         {title && (

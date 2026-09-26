@@ -295,12 +295,10 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           void refetchWallet(); void refetchTx()
         }}
       >
-        {checkout && (
-          <div className="flex items-center justify-between rounded-xl bg-surface-container-low p-4">
-            <span className="text-body-md text-on-surface">{checkout.credits + checkout.bonusCredits} crédits de remontée</span>
-            <span className="whitespace-nowrap text-headline-sm font-extrabold text-primary"><Price amount={checkout.price} /></span>
-          </div>
-        )}
+        {checkout && <>
+          <b className="block text-label-lg text-on-surface">{checkout.label}</b>
+          {checkout.credits + checkout.bonusCredits} crédits de remontée
+        </>}
       </PaymentSheet>
     </AccountLayout>
   )
