@@ -8,6 +8,7 @@ import {
   PAYMENT_QUERY, PENDING_PAYMENT_KEY, PROVIDERS, START_PAYMENT_MUTATION,
   type PaymentIntent, type PaymentProvider, type PaymentRequest,
 } from '../graphql/payments'
+import { momoNumberError, NETWORK_PREFIX } from '../lib/phone'
 
 const PHONE_KEY = 'dilchap_momo_phone'
 const POLL_MS = 3000
@@ -30,14 +31,17 @@ type Props = {
 export default function PaymentSheet({ open, onClose, title, amount, request, children, onPaid }: Props) {
   const client = useApolloClient()
   const [provider, setProvider] = useState<PaymentProvider>('wave')
-  const [phone, setPhone] = useState(() => { try { return localStorage.getItem(PHONE_KEY) ?? '' } catch { return '' } })
+  // One remembered number per operator (an Orange number is no use for MTN).
+  const savedPhone = (p: PaymentProvider) => { try { return localStorage.getItem(`${PHONE_KEY}_${p}`) ?? '' } catch { return '' } }
+  const [phone, setPhone] = useState(() => savedPhone('wave'))
+  const [touched, setTouched] = useState(false)
   const [otp, setOtp] = useState('')
   const [intent, setIntent] = useState<PaymentIntent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [start, { loading }] = useMutation<{ startPayment: PaymentIntent }>(START_PAYMENT_MUTATION)
   const timer = useRef<number | null>(null)
 
-  const reset = () => { setIntent(null); setError(null); setOtp('') }
+  const reset = () => { setIntent(null); setError(null); setOtp(''); setTouched(false) }
   useEffect(() => { if (!open) { reset(); if (timer.current) window.clearInterval(timer.current) } }, [open])
   useEffect(() => () => { if (timer.current) window.clearInterval(timer.current) }, [])
 
@@ -64,7 +68,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   const pay = async () => {
     if (!request) return
     setError(null)
-    try { localStorage.setItem(PHONE_KEY, phone) } catch { /* private mode */ }
+    try { localStorage.setItem(`${PHONE_KEY}_${provider}`, phone) } catch { /* private mode */ }
     try {
       const { data } = await start({ variables: { input: { ...request, provider, msisdn: phone, otp: provider === 'orange' ? otp.trim() : undefined } } })
       const p = data!.startPayment
@@ -83,8 +87,9 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
 
   const waiting = intent && (intent.status === 'PENDING' || intent.status === 'PROCESSING')
   const selected = PROVIDERS.find((p) => p.key === provider)!
-  const phoneOk = phone.replace(/\D/g, '').length >= 10
-  const canPay = !!request && phoneOk && (provider !== 'orange' || /^\d{4,8}$/.test(otp.trim()))
+  const phoneError = momoNumberError(phone, provider, selected.label)
+  const showPhoneError = !!phoneError && (touched || phone.replace(/\D/g, '').length >= 10)
+  const canPay = !!request && !phoneError && (provider !== 'orange' || /^\d{4,8}$/.test(otp.trim()))
 
   const footer = !intent || intent.status === 'FAILED' ? (
     <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
@@ -108,14 +113,15 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           <div className="mb-2 text-label-md text-on-surface">Payer avec</div>
           <div className="grid grid-cols-2 gap-2">
             {PROVIDERS.map((p) => (
-              <button key={p.key} type="button" onClick={() => setProvider(p.key)} aria-pressed={provider === p.key} className={`flex h-14 cursor-pointer items-center gap-2.5 rounded-xl border-[1.5px] border-solid px-3 text-left text-label-md text-on-surface ${provider === p.key ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-lowest'}`}>
+              <button key={p.key} type="button" onClick={() => { setProvider(p.key); setPhone(savedPhone(p.key)); setTouched(false) }} aria-pressed={provider === p.key} className={`flex h-14 cursor-pointer items-center gap-2.5 rounded-xl border-[1.5px] border-solid px-3 text-left text-label-md text-on-surface ${provider === p.key ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-lowest'}`}>
                 <PaymentLogo method={p.method} size={34} /> {p.label}
               </button>
             ))}
           </div>
           <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{selected.hint}</p>
           <label className="mt-4 block text-label-md text-on-surface">Numéro {selected.label}
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="07 00 00 00 00" className="mt-1.5 h-12 w-full rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:border-primary" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} inputMode="tel" autoComplete="tel" aria-invalid={showPhoneError} placeholder={`${NETWORK_PREFIX[provider] ?? '07'} 00 00 00 00`} className={`mt-1.5 h-12 w-full rounded-xl border border-solid bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:border-primary ${showPhoneError ? 'border-primary' : 'border-outline-variant'}`} />
+            {showPhoneError && phone && <span className="mt-1 flex items-center gap-1 text-body-sm font-normal text-primary"><Icon name="error" size={16} /> {phoneError}</span>}
           </label>
           {provider === 'orange' && (
             <label className="mt-3 block text-label-md text-on-surface">Code de paiement Orange Money
