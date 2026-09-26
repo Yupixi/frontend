@@ -41,3 +41,21 @@ export async function uploadImages(files: File[]): Promise<string[]> {
   const data = await res.json()
   return data.urls as string[]
 }
+
+// Identity-document photo (KYC): stored privately, answers a storage key
+// (there is no public URL for these files).
+export async function uploadKycPhoto(file: Blob, filename = 'photo.jpg'): Promise<string> {
+  const token = getAccessToken()
+  const formData = new FormData()
+  formData.append('file', file, filename)
+  const res = await fetch(GRAPHQL_URL.replace(/\/graphql\/?$/, '/kyc/uploads'), {
+    method: 'POST',
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.message || "Échec de l'envoi de la photo")
+  }
+  return ((await res.json()) as { key: string }).key
+}

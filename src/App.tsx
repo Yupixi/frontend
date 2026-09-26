@@ -29,6 +29,7 @@ const SellerStats = lazyPage(() => import('./pages/seller/Stats'))
 const Disputes = lazyPage(() => import('./pages/seller/Disputes'))
 const Handover = lazyPage(() => import('./pages/seller/Handover'))
 const Settings = lazyPage(() => import('./pages/seller/Settings'))
+const Kyc = lazyPage(() => import('./pages/account/Kyc'))
 const Purchases = lazyPage(() => import('./pages/buyer/Purchases'))
 const HandoverCode = lazyPage(() => import('./pages/buyer/HandoverCode'))
 const Receipt = lazyPage(() => import('./pages/buyer/Receipt'))
@@ -53,7 +54,7 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
   | 'legal'
 
@@ -90,7 +91,7 @@ const savedNav = loadNavState()
 
 // PWA manifest shortcuts (long-press the home screen icon) launch with
 // `?shortcut=<page>` — a real page, not session-restore, takes priority.
-const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers']
+const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc']
 function shortcutPage(): Page | null {
   const requested = new URLSearchParams(window.location.search).get('shortcut')
   return SHORTCUT_PAGES.includes(requested as Page) ? (requested as Page) : null
@@ -633,6 +634,8 @@ export default function App() {
           return <Notifications onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} currentUser={currentUser} onLogout={logout} />
         case 'buyer-history':
           return <History onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} onSearch={term => searchFromHome(term)} onSearchCategory={navigateToCategory} currentUser={currentUser} onProfileUpdated={setCurrentUser} onLogout={logout} />
+        case 'seller-kyc':
+          return <Kyc onNavigate={navigate} currentUser={currentUser} onLogout={logout} onViewShop={selectSeller} />
         case 'buyer-settings':
           return <Settings onNavigate={navigate} dark={dark} onToggleDark={() => setDark(d => !d)} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} onViewShop={selectSeller} />
         default:

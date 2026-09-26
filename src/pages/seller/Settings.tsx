@@ -405,8 +405,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <Icon name="badge" size={22} className={me.isVerified ? 'text-tertiary' : 'text-on-surface-variant'} />
                   <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Vérification d'identité (CNI)</div>
-                    <div className="text-body-sm text-on-surface-variant">{me.isVerified ? `Validée le ${new Date(me.verifiedAt ?? rep?.verifiedAt ?? me.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} par l'équipe Dilchap.` : "Le badge « Vendeur certifié » est attribué par l'équipe Dilchap après vérification de votre pièce d'identité."}</div>
+                    <div className="text-body-sm text-on-surface-variant">{me.isVerified ? `Validée le ${new Date(me.verifiedAt ?? rep?.verifiedAt ?? me.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} par l'équipe Dilchap.` : 'Envoyez une photo de votre pièce et un selfie pour obtenir le badge « Vendeur certifié ».'}</div>
                   </div>
+                  <button onClick={() => onNavigate('seller-kyc')} className={`flex cursor-pointer items-center gap-1.5 rounded-lg border-none px-3 py-1.5 text-label-md ${me.isVerified ? 'bg-surface-lowest text-on-surface' : 'bg-primary text-white'}`}>
+                    <Icon name={me.isVerified ? 'visibility' : 'verified_user'} size={16} /> {me.isVerified ? 'Voir' : 'Vérifier mon identité'}
+                  </button>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="password" size={22} className="text-on-surface-variant" />

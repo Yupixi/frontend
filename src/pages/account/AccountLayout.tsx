@@ -45,6 +45,7 @@ const SECTIONS = [
 
 export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-dashboard': 'Tableau de bord',
+  'seller-kyc': 'Vérification d’identité',
   'seller-post': 'Déposer une annonce',
   'seller-edit': "Modifier l'annonce",
   'seller-listings': 'Mes annonces',
