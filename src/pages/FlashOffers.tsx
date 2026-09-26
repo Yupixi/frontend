@@ -167,7 +167,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               const d = discountOf(e)
               const fav = favorites.includes(e.listing.id)
               return (
-                <div key={e.id} onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
+                <div key={e.id} onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-card-hover">
                   <div className="relative aspect-square bg-surface-container-low">
                     {imageOf(e) ? <img loading="lazy" decoding="async" src={imageOf(e)} alt={e.listing.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
                     {d > 0 && <span className="absolute left-2 top-2 rounded-md px-2 py-0.5 text-label-sm uppercase text-white" style={{ background: color }}>-{d}% Flash</span>}

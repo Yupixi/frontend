@@ -88,7 +88,9 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
 // "Mes Favoris & Annonces sauvegardées" (Stitch desktop + mobile).
 export default function Favorites({ onNavigate, onSelectListing, onToggleFavorite, onContactSeller, onSearchCategory, currentUser, onLogout }: Props) {
   const { data, loading, refetch } = useQuery<{ myFavoriteEntries: FavoriteEntry[] }>(MY_FAVORITE_ENTRIES_QUERY, { fetchPolicy: 'cache-and-network' })
-  const all = data?.myFavoriteEntries ?? []
+  // Removed entries disappear on tap; the list resyncs in the background.
+  const [removed, setRemoved] = useState<ReadonlySet<string>>(() => new Set())
+  const all = useMemo(() => (data?.myFavoriteEntries ?? []).filter(e => !removed.has(e.listing.id)), [data, removed])
   const [cat, setCat] = useState('')
   const [dropsOnly, setDropsOnly] = useState(false)
   const [hideSold, setHideSold] = useState(false)
@@ -108,7 +110,10 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
       : sort === 'price_asc' ? (a.listing.price ?? 0) - (b.listing.price ?? 0)
         : sort === 'price_desc' ? (b.listing.price ?? 0) - (a.listing.price ?? 0)
           : new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
-  const unfav = (id: string) => void Promise.resolve(onToggleFavorite(id)).then(() => refetch())
+  const unfav = (id: string) => {
+    setRemoved(r => new Set(r).add(id))
+    void Promise.resolve(onToggleFavorite(id)).finally(() => { void refetch().then(() => setRemoved(r => { const n = new Set(r); n.delete(id); return n })) })
+  }
 
   return (
     <AccountLayout active="buyer-favorites" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>

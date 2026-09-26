@@ -114,4 +114,10 @@ const splitLink = split(
 export const apolloClient = new ApolloClient({
   link: splitLink,
   cache: new InMemoryCache(),
+  defaultOptions: {
+    // Polled badges (notifications, conversations…) stop polling while the
+    // tab is hidden — a locked phone or a background tab kept hitting the API
+    // every 15-30 s for counts nobody was looking at.
+    watchQuery: { skipPollAttempt: () => document.hidden },
+  },
 })

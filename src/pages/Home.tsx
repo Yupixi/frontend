@@ -150,6 +150,12 @@ function Kicker({ children, className = 'text-primary' }: { children: React.Reac
 
 // Mobile follows "Dilchap Mobile – Accueil & Découverte"; desktop (lg+)
 // follows the dedicated desktop home mockup.
+type FeedState = { key: string, pages: RemoteListing[][], totalCount: number }
+// The feed's loaded pages outlive Home unmounting: opening a listing and
+// coming back restores every "Charger plus" page (and the scroll position,
+// see App), instead of dropping the visitor at the top of page 1.
+const feedMemory: { city: string | null, page: { key: string, page: number } | null, feed: FeedState | null } = { city: null, page: null, feed: null }
+
 export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, locationPending, onContactSeller, onSearch }: HomeProps) {
   const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
   const [sort, setSort] = useState<ListingSort>('RECENT')
@@ -185,11 +191,11 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // Dernières annonces — scoped to the market (and city chip), grown in place:
   // "Charger plus" fetches only the next page and appends it (it used to
   // re-request every listing already on screen with a growing pageSize).
-  const [feedCity, setFeedCity] = useState<string | null>(null)
+  const [feedCity, setFeedCity] = useState<string | null>(() => feedMemory.city)
   const cityFilter = feedCity ?? location?.city
   const feedFilter = marketFilter || cityFilter ? { ...marketFilter, ...(cityFilter ? { city: cityFilter } : {}) } : undefined
   const feedKey = JSON.stringify([feedFilter ?? null, sort, pageSize])
-  const [pageState, setPageState] = useState({ key: feedKey, page: 1 })
+  const [pageState, setPageState] = useState(() => feedMemory.page ?? { key: feedKey, page: 1 })
   const page = pageState.key === feedKey ? pageState.page : 1
   const setPage = (next: (p: number) => number) => setPageState({ key: feedKey, page: next(page) })
   const { data: feedData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
@@ -198,7 +204,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   })
   // Pages received so far for the current filter; the previous filter's
   // list stays on screen until the new first page lands.
-  const [feed, setFeed] = useState<{ key: string, pages: RemoteListing[][], totalCount: number } | null>(null)
+  const [feed, setFeed] = useState<FeedState | null>(() => feedMemory.feed)
   useEffect(() => {
     const res = feedData?.listings
     if (!res) return
@@ -214,6 +220,11 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     return (feed?.pages ?? []).flat().filter(l => l && !seen.has(l.id) && !!seen.add(l.id))
   }, [feed])
   const canLoadMore = !!feed && feed.key === feedKey && feed.totalCount > latest.length
+  useEffect(() => {
+    feedMemory.city = feedCity
+    feedMemory.page = pageState
+    feedMemory.feed = feed
+  }, [feedCity, pageState, feed])
 
   // Hero slider (autoplay with progress bar)
   // One timer per slide (restarted by manual navigation); the progress bar
@@ -299,7 +310,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 </div>
               ))}
               <div className="absolute left-0 top-0 z-30 h-1 w-full bg-white/20">
-                <div key={slide} className="hero-progress h-full bg-primary" style={{ animationDuration: `${SLIDE_MS}ms` }} />
+                <div key={slide} className="hero-progress h-full w-full bg-primary" style={{ animationDuration: `${SLIDE_MS}ms` }} />
               </div>
 
               <div className="relative z-20">

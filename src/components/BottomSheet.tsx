@@ -74,7 +74,7 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
             </button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-4 pb-5 pt-1">{children}</div>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-5 pt-1">{children}</div>
         {footer}
       </div>
     </div>

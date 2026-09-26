@@ -176,7 +176,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
 
   return (
     <div
-      className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-xl bg-surface-lowest shadow-sm transition-all duration-300 active:scale-[0.98] hover:shadow-card-hover md:rounded-2xl md:active:scale-100"
+      className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-xl bg-surface-lowest shadow-sm transition-[transform,box-shadow] duration-300 active:scale-[0.98] hover:shadow-card-hover md:rounded-2xl md:active:scale-100"
       onClick={onSelect}
       {...prefetchOnIntent(listing.id)}
     >
@@ -204,8 +204,8 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <PromoBadge listing={listing} />
             {isUrgent(listing) && <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2 md:text-label-sm">Urgent</span>}
             {/* Phone: size or category tag. Desktop: the condition. */}
-            <span className="max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface backdrop-blur-sm md:hidden">{phoneTag}</span>
-            {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface backdrop-blur md:inline">{condition}</span>}
+            <span className="max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface md:hidden">{phoneTag}</span>
+            {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface md:inline">{condition}</span>}
           </div>
 
           {featured && verified && (
@@ -216,7 +216,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
 
           <button
             onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
-            className={`absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 backdrop-blur-sm transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
+            className={`absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
             aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
             <AnimatedIcon name="heart" fallback="favorite" size={17} fill={isFav} trigger={isFav} />

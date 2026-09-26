@@ -242,7 +242,7 @@ export default function Layout({
       {/* Listing detail brings its own mobile app bar (back + title +
           share), as in the Stitch mockup — the site header is desktop-only
           there. */}
-      <header className={`safe-top sticky z-[100] bg-surface/95 ${currentPage === 'listing-detail' ? 'hidden lg:block' : ''} shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-md`}>
+      <header className={`safe-top sticky z-[100] bg-surface ${currentPage === 'listing-detail' ? 'hidden lg:block' : ''} shadow-[0_1px_8px_rgba(0,0,0,0.04)]`}>
         {/* Reassurance strip — desktop only */}
         <div className="hidden h-9 items-center justify-between bg-surface-container-low px-4 text-label-sm text-on-surface-variant lg:flex lg:px-12">
           <div className="flex items-center gap-6">
@@ -647,7 +647,7 @@ export default function Layout({
       {isMobile && currentPage !== 'listing-detail' && (
         <nav
           aria-label="Navigation principale"
-          className="fixed inset-x-0 bottom-0 z-[300] grid grid-cols-5 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 backdrop-blur-md"
+          className="fixed inset-x-0 bottom-0 z-[300] grid grid-cols-5 border-0 border-t border-solid border-outline-variant bg-surface-lowest"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           {[

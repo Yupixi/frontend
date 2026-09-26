@@ -129,7 +129,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto overscroll-contain">
         <div className="mx-auto max-w-[760px] px-4 pb-8 pt-2">
           {q && suggestLoading && <p className="py-8 text-center text-body-md text-on-surface-variant">Recherche…</p>}
 

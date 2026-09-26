@@ -1,5 +1,5 @@
 import EmptyState from '../components/EmptyState'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { CategoryIcon } from '../components/Icon'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from '../components/icons'
@@ -98,6 +98,34 @@ function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
   )
 }
 
+// Keeps keystrokes local: typing re-renders this input only, not the App,
+// the layout and every result card. The term goes up after a 300 ms pause
+// (which is when the results query runs anyway).
+function DebouncedSearchInput({ value, onCommit }: { value: string, onCommit: (term: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  const committed = useRef(value)
+  const commit = useRef(onCommit)
+  commit.current = onCommit
+  useEffect(() => { committed.current = value; setDraft(value) }, [value])
+  useEffect(() => {
+    if (draft === committed.current) return
+    const t = setTimeout(() => { committed.current = draft; commit.current(draft) }, 300)
+    return () => clearTimeout(t)
+  }, [draft])
+  return (
+    <input
+      type="search"
+      enterKeyHint="search"
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onKeyDown={e => { if (e.key === 'Enter' && draft !== committed.current) { committed.current = draft; commit.current(draft) } }}
+      placeholder="Rechercher sur Dilchap"
+      aria-label="Rechercher"
+      className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80"
+    />
+  )
+}
+
 export default function SearchPage({
   onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, onCategorySelect,
   searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, currentUserId, isLoggedIn, onContactSeller,
@@ -125,7 +153,9 @@ export default function SearchPage({
   const [search, setSearch] = useState(searchTerm || '')
   const [alertState, setAlertState] = useState<'idle' | 'done' | 'error'>('idle')
 
-  useEffect(() => { const t = setTimeout(() => setSearch(searchTerm || ''), 300); return () => clearTimeout(t) }, [searchTerm])
+  // The mobile input already debounces before lifting the term (see
+  // DebouncedSearchInput); other sources (header search, chips) apply at once.
+  useEffect(() => { setSearch(searchTerm || '') }, [searchTerm])
   useEffect(() => { setSubcategories([]) }, [categoryFilter])
 
   const filter: ListingFilterInput = useMemo(() => ({
@@ -329,15 +359,7 @@ export default function SearchPage({
       <div className="mb-4 flex items-center gap-2 lg:hidden">
         <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-xl border border-solid border-outline-variant bg-surface-lowest">
           <SearchIcon size={20} className="pointer-events-none absolute left-3.5 text-primary" />
-          <input
-            type="search"
-            enterKeyHint="search"
-            value={searchTerm ?? ''}
-            onChange={e => onSearchTermChange?.(e.target.value)}
-            placeholder="Rechercher sur Dilchap"
-            aria-label="Rechercher"
-            className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80"
-          />
+          <DebouncedSearchInput value={searchTerm ?? ''} onCommit={term => onSearchTermChange?.(term)} />
         </label>
         <button onClick={() => setFiltersOpen(true)} aria-label="Filtres" className="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-inverse-surface text-white">
           <SlidersHorizontal size={20} />

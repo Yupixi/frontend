@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Suspense, startTransition } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
@@ -74,6 +74,8 @@ type NavState = {
 }
 const LOCATION_WAIT_MS = 700
 
+if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+
 const NAV_STORAGE_KEY = 'yupixi_nav_state'
 
 function loadNavState(): Partial<NavState> {
@@ -112,6 +114,10 @@ function sharedListingId(): string | null {
 
 export default function App() {
   const [page, setPage] = useState<Page>(sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  // Scroll position to apply on the next page change (see the layout effect
+  // below); the app restores it itself, the browser's automatic restoration
+  // would fight it (it runs before the restored page has rendered).
+  const pendingScroll = useRef(0)
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
@@ -293,6 +299,8 @@ export default function App() {
       const st = window.history.state
       // Same transition as navigate() — the current page stays up while the
       // target page's chunk loads.
+      // Back/forward lands where the visitor was on that page.
+      pendingScroll.current = typeof st?.scrollY === 'number' ? st.scrollY : 0
       startTransition(() => {
         if (st && typeof st.__yupixiPage === 'string') {
           // Restore the selection the entry was pushed with too — otherwise
@@ -323,9 +331,11 @@ export default function App() {
     preloadPages([SearchPage, ListingDetail, SellerProfile, Categories])
   }, [])
 
-  // Scroll to top on page change
-  useEffect(() => {
-    window.scrollTo(0, 0)
+  // Page change: top of the new page, or the remembered position on
+  // back/forward. Instant and before paint — no slide through the old page.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: pendingScroll.current, behavior: 'instant' })
+    pendingScroll.current = 0
   }, [page])
 
   // Persist navigation state so a hard reload lands back where the user was.
@@ -361,6 +371,8 @@ export default function App() {
     } else if (p === 'auth' && page !== 'auth') {
       setAuthReturn(page)
     }
+    // Remember where the visitor was, for when they come back to it.
+    window.history.replaceState({ ...window.history.state, scrollY: window.scrollY }, '')
     // A transition keeps the current page on screen while the next page's
     // chunk loads, instead of flashing the Suspense fallback.
     startTransition(() => setPage(p))
@@ -461,9 +473,21 @@ export default function App() {
       navigate('auth')
       return Promise.resolve()
     }
-    return toggleFavoriteMutation({ variables: { listingId: id } }).then(() => {
-      void refetchFavorites()
-    })
+    // Optimistic: the heart fills on tap, the ids list is patched in the
+    // cache from the mutation's answer (the new state) — it used to wait for
+    // the mutation *and* a refetch of every favorite id.
+    const wasFav = favorites.includes(id)
+    return toggleFavoriteMutation({
+      variables: { listingId: id },
+      optimisticResponse: { toggleFavorite: !wasFav },
+      update: (cache, { data }) => {
+        const nowFav = data?.toggleFavorite ?? !wasFav
+        cache.updateQuery<{ myFavoriteIds: string[] }>({ query: MY_FAVORITE_IDS_QUERY }, prev => {
+          const ids = prev?.myFavoriteIds ?? []
+          return { myFavoriteIds: nowFav ? (ids.includes(id) ? ids : [...ids, id]) : ids.filter(x => x !== id) }
+        })
+      },
+    }).then(() => undefined, () => { void refetchFavorites() })
   }
 
   const logout = () => {

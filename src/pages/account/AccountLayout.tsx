@@ -290,7 +290,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
           {children}
         </main>
         {!isGuest && tabs && (
-          <nav aria-label="Navigation du compte" className={`${fill ? 'relative shrink-0' : 'fixed inset-x-0 bottom-0'} z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden`}>
+          <nav aria-label="Navigation du compte" className={`${fill ? 'relative shrink-0' : 'fixed inset-x-0 bottom-0'} z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest pb-[env(safe-area-inset-bottom)] lg:hidden`}>
             {tabs.map(t => {
               const on = t.match.includes(active)
               if (t.primary) {
