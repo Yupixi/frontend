@@ -512,7 +512,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                     {offerOpen ? negotiation : (
                     <>
                     <button onClick={openChat} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark">
-                      <MessageSquare size={18} /> Discuter en direct
+                      <MessageSquare size={18} /> <span className="max-[400px]:hidden">Discuter en direct</span><span className="min-[400px]:hidden">Discuter</span>
                     </button>
                     {listing.negotiable && (
                       <button onClick={requireAuth(() => setOfferOpen(true), 'offer')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
@@ -643,7 +643,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               </button>
             )}
             <button onClick={openChat} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
-              <MessageSquare size={18} /> Discuter en direct
+              <MessageSquare size={18} /> <span className="max-[400px]:hidden">Discuter en direct</span><span className="min-[400px]:hidden">Discuter</span>
             </button>
           </>
         )}

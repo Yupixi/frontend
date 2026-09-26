@@ -340,7 +340,8 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
               onOpen={id => { setActiveId(id); setShowList(false) }}
               onExplore={() => onNavigate('search')}
             />
-            <p className="m-0 border-0 border-t border-solid border-outline-variant p-3 text-center text-body-sm text-on-surface-variant">Toutes les discussions sont sauvegardées sur votre compte</p>
+            {/* max-lg:pb-8: the raised « Déposer » button of the bottom bar sits over this line */}
+            <p className="m-0 border-0 border-t border-solid border-outline-variant p-3 text-center text-body-sm text-on-surface-variant max-lg:pb-8">Toutes les discussions sont sauvegardées sur votre compte</p>
           </aside>
 
           {/* Thread */}

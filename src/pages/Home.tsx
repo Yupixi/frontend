@@ -263,9 +263,9 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     <button
       onClick={() => setPage(p => p + 1)}
       disabled={feedLoading}
-      className="mx-auto mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container-low px-10 py-3.5 text-label-lg font-bold text-on-surface hover:bg-surface-container disabled:opacity-60 lg:w-auto"
+      className="mx-auto mt-6 flex w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border-none bg-surface-container-low px-6 py-3.5 md:px-10 text-label-lg font-bold text-on-surface hover:bg-surface-container disabled:opacity-60 lg:w-auto"
     >
-      {feedLoading ? <Loader2 size={18} className="animate-spin" /> : <>Charger plus d'annonces <Icon name="arrow_downward" size={20} /></>}
+      {feedLoading ? <Loader2 size={18} className="animate-spin" /> : <><span className="max-[380px]:hidden">Charger plus d'annonces</span><span className="min-[380px]:hidden">Voir plus</span> <Icon name="arrow_downward" size={20} /></>}
     </button>
   )
 

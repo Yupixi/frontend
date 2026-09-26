@@ -224,7 +224,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                 {statsData?.myDisputeStats.mediationWhatsapp && (
                   <a href={`https://wa.me/${statsData.myDisputeStats.mediationWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer" className="order-5 flex items-center gap-3 rounded-2xl bg-surface-container-low p-3 no-underline md:hidden">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="support_agent" size={20} /></span>
-                    <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">Médiateurs Dilchap</span><span className="block truncate text-body-sm text-on-surface-variant">7j/7 • 8h-22h</span></span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-label-md text-on-surface">Médiateurs Dilchap</span><span className="block truncate text-body-sm text-on-surface-variant">7j/7 • 8h-22h</span></span>
                     <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-tertiary px-3 py-2 text-label-md text-white"><Icon name="chat" size={16} /> WhatsApp</span>
                   </a>
                 )}

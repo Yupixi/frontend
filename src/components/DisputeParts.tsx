@@ -122,7 +122,7 @@ export function MediationCard({ whatsapp, compact }: { whatsapp: string | null; 
             </div>
           </div>
           <a href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-tertiary px-4 py-3 text-label-md text-white no-underline hover:opacity-90">
-            <Icon name="call" size={18} /> Joindre un médiateur d'astreinte
+            <Icon name="call" size={18} /> <span className="max-[380px]:hidden">Joindre un médiateur d'astreinte</span><span className="min-[380px]:hidden">Joindre un médiateur</span>
           </a>
         </>
       ) : (

@@ -645,15 +645,17 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 </div>
               </div>
 
-              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-4">
-                <input type="checkbox" checked={form.negotiable} onChange={e => set('negotiable', e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--primary)]" />
-                <span className="flex-1">
+              {/* Wraps on phones: the floor price goes under the text instead of
+                  squeezing it into a one-word column and running off-screen. */}
+              <label className="mt-4 flex cursor-pointer flex-wrap items-start gap-3 rounded-xl bg-surface-container-low p-4">
+                <input type="checkbox" checked={form.negotiable} onChange={e => set('negotiable', e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--primary)]" />
+                <span className="min-w-[12rem] flex-1">
                   <span className="block text-label-md text-on-surface">Accepter les propositions de prix dans le chat</span>
                   <span className="text-body-sm text-on-surface-variant">Autoriser les acheteurs à vous faire une proposition de négociation raisonnable.</span>
                 </span>
                 {form.negotiable && (
-                  <span className="flex shrink-0 items-center gap-2 text-body-sm text-on-surface-variant">
-                    Prix plancher :
+                  <span className="flex basis-full items-center gap-2 pl-8 text-body-sm text-on-surface-variant sm:basis-auto sm:pl-0">
+                    <span className="whitespace-nowrap">Prix plancher :</span>
                     <input type="number" min={0} value={form.minOfferPrice} onChange={e => set('minOfferPrice', e.target.value)} className="w-24 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1.5 text-label-md text-on-surface outline-none" placeholder="Optionnel" />
                   </span>
                 )}

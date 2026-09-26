@@ -175,7 +175,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
         <section className="flex flex-col p-6 md:p-10">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2"><Logo size="md" /><span className="hidden items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary sm:flex"><Icon name="verified" size={14} /> Côte d'Ivoire</span></div>
-            <button onClick={() => onNavigate('search')} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface"><Icon name="storefront" size={18} /> Explorer le catalogue</button>
+            <button onClick={() => onNavigate('search')} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface"><Icon name="storefront" size={18} /> <span className="max-[400px]:hidden">Explorer le catalogue</span><span className="min-[400px]:hidden">Catalogue</span></button>
           </div>
           <div className="mt-4 flex flex-col items-center gap-2 lg:hidden">
             <span className="flex items-center gap-1.5 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="verified" size={15} /> La seconde main de confiance</span>

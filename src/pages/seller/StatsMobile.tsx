@@ -101,7 +101,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, verified, on
       </section>
 
       <section>
-        <div className="mb-2 flex items-center justify-between"><h2 className="m-0 text-headline-sm text-on-surface">Annonces actives &amp; récentes</h2><button onClick={() => onNavigate('seller-listings')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">Voir tout ({s?.listings.length ?? 0})</button></div>
+        <div className="mb-2 flex items-center justify-between"><h2 className="m-0 text-headline-sm text-on-surface">Annonces actives &amp; récentes</h2><button onClick={() => onNavigate('seller-listings')} className="shrink-0 cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md text-primary">Voir tout ({s?.listings.length ?? 0})</button></div>
         <div className="flex flex-col gap-2">
           {(s?.listings ?? []).slice(0, 4).map(p => (
             <button key={p.listing.id} onClick={() => onSelectListing(p.listing.id)} className="flex cursor-pointer flex-col gap-2 rounded-2xl border-none bg-surface-lowest p-3 text-left shadow-sm">
@@ -139,7 +139,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, verified, on
           </div>
         </div>
         {s?.avgSaleDaysBoosted != null && <p className="m-0 mt-3 flex gap-2 rounded-xl bg-surface-lowest p-3 text-body-sm text-on-surface"><Icon name="lightbulb" size={18} className="shrink-0 text-tertiary" /> Vos annonces boostées se vendent en moyenne en {formatNumber(s.avgSaleDaysBoosted)} jours.</p>}
-        <button onClick={() => onNavigate('seller-premium')} className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white"><Icon name="bolt" size={19} /> Booster une annonce maintenant</button>
+        <button onClick={() => onNavigate('seller-premium')} className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white"><Icon name="bolt" size={19} /> <span className="max-[380px]:hidden">Booster une annonce maintenant</span><span className="min-[380px]:hidden">Booster une annonce</span></button>
       </section>
     </div>
   )

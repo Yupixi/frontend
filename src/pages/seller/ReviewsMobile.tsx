@@ -85,7 +85,7 @@ export default function ReviewsMobile({ rep, reviews, currentUser, replying, onR
       <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Filtrer les avis">
         {([['all', 'Tous', total, null], ['five', '5 étoiles', reviews.filter(r => r.rating === 5).length, 'star'], ['comment', 'Commentés', reviews.filter(r => r.comment?.trim()).length, 'chat']] as const).map(([k, label, n, icon]) => (
           <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className={`flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none px-1.5 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm'}`}>
-            {icon && <Icon name={icon} size={15} className={filter === k ? '' : 'text-amber-500'} />}{label}<span className={`rounded-full px-1.5 text-label-sm ${filter === k ? 'bg-white/20' : 'bg-surface-container'}`}>{n}</span>
+            {icon && <span className="inline-flex max-[360px]:hidden"><Icon name={icon} size={15} className={filter === k ? '' : 'text-amber-500'} /></span>}{label}<span className={`rounded-full px-1.5 text-label-sm ${filter === k ? 'bg-white/20' : 'bg-surface-container'}`}>{n}</span>
           </button>
         ))}
       </div>
@@ -133,7 +133,7 @@ export default function ReviewsMobile({ rep, reviews, currentUser, replying, onR
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified" size={20} /></span>
           <div><div className="text-label-lg text-on-surface">Passeport de confiance Dilchap</div><div className="text-body-sm text-on-surface-variant">Partagez votre réputation avec vos contacts</div></div>
         </div>
-        <a href={`https://wa.me/?text=${encodeURIComponent(`Retrouvez ma boutique Dilchap (★ ${total ? rep!.averageRating.toFixed(1) : '—'}, ${total} avis) : ${profileUrl}`)}`} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-tertiary py-3 text-label-lg text-white no-underline"><Icon name="share" size={19} /> Partager mon badge sur WhatsApp</a>
+        <a href={`https://wa.me/?text=${encodeURIComponent(`Retrouvez ma boutique Dilchap (★ ${total ? rep!.averageRating.toFixed(1) : '—'}, ${total} avis) : ${profileUrl}`)}`} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-tertiary py-3 text-label-lg text-white no-underline"><Icon name="share" size={19} /> <span className="max-[380px]:hidden">Partager mon badge sur WhatsApp</span><span className="min-[380px]:hidden">Partager sur WhatsApp</span></a>
       </section>
     </div>
   )
