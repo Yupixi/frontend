@@ -1,10 +1,11 @@
-import { useState, useEffect, Suspense, startTransition } from 'react'
+import { useState, useEffect, useRef, Suspense, startTransition } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
 import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
+import { NAVIGATE_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -356,6 +357,15 @@ export default function App() {
     startTransition(() => setPage(p))
     window.history.pushState(historyEntry(p, sel), '')
   }
+
+  // Page requests from components without an onNavigate prop (lib/navigation).
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
+  useEffect(() => {
+    const onRequest = (e: Event) => navigateRef.current((e as CustomEvent<Page>).detail)
+    window.addEventListener(NAVIGATE_EVENT, onRequest)
+    return () => window.removeEventListener(NAVIGATE_EVENT, onRequest)
+  }, [])
 
   const replacePage = (p: Page) => {
     setPage(p)
