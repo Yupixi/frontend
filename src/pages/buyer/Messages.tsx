@@ -1,5 +1,4 @@
 import EmptyState from '../../components/EmptyState'
-import AnimatedIcon from '../../components/AnimatedIcon'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
@@ -22,8 +21,11 @@ import {
   CONVERSATION_QUERY, CONVERSATION_UPDATED_SUBSCRIPTION, MARK_CONVERSATION_READ_MUTATION, MESSAGE_ADDED_SUBSCRIPTION,
   MY_CONVERSATIONS_QUERY, SEND_MESSAGE_MUTATION, SET_CONVERSATION_DEAL_STATUS_MUTATION, START_CONVERSATION_MUTATION,
   PROPOSE_MEETUP_MUTATION, RESPOND_TO_MEETUP_MUTATION,
-  type RemoteConversation, type RemoteMessage, type RemoteMeetup,
+  messagePreview, type RemoteConversation, type RemoteMessage, type RemoteMeetup,
 } from '../../graphql/messaging'
+import ChatComposer, { type ComposerHandle, type ComposerReply } from '../../components/ChatComposer'
+import ChatBubble from '../../components/ChatBubble'
+import ImageLightbox from '../../components/ImageLightbox'
 import { formatRelativeDate } from '../../lib/format'
 import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
@@ -103,13 +105,16 @@ type Props = {
   onLogout: () => void
   startWith?: { listingId?: string; sellerId: string } | null
   onStartWithConsumed?: () => void
+  // Thread to open directly (message notification).
+  openConversationId?: string | null
+  onOpenConversationConsumed?: () => void
   // Confirmed meet-up shortcuts: seller → "Confirmation de remise",
   // buyer → "Mon code de remise" (the sale id is the conversation id).
   onOpenHandover?: (conversationId: string, as: 'SELLER' | 'BUYER') => void
 }
 
 // "Boîte de réception & Chat" mockups (desktop 3 columns, mobile thread).
-export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, onOpenHandover }: Props) {
+export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = listData?.myConversations ?? []
   const [filter, setFilter] = useState<'all' | 'buy' | 'sell'>('all')
@@ -128,7 +133,10 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const [reported, setReported] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirming, setConfirming] = useState<'CONCLUDED' | 'NOT_CONCLUDED' | 'REPORT' | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<ComposerHandle>(null)
+  const [replyTo, setReplyTo] = useState<ComposerReply | null>(null)
+  const [viewer, setViewer] = useState<{ photos: string[]; index: number } | null>(null)
+  const [flashId, setFlashId] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const startedFor = useRef<string | null>(null)
 
@@ -146,7 +154,14 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startWith])
 
-  useEffect(() => { if (!activeId && conversations.length > 0) setActiveId(conversations[0].id) }, [conversations, activeId])
+  useEffect(() => {
+    if (!openConversationId) return
+    setActiveId(openConversationId); setShowList(false)
+    onOpenConversationConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openConversationId])
+
+  useEffect(() => { if (!activeId && !openConversationId && conversations.length > 0) setActiveId(conversations[0].id) }, [conversations, activeId, openConversationId])
   useEffect(() => { setActiveConversation(activeId); return () => setActiveConversation(null) }, [activeId])
 
   const { data: convData, loading: convLoading, refetch: refetchConv } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, { variables: { id: activeId }, skip: !activeId })
@@ -158,7 +173,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const { data: otherData } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, { variables: { sellerId: other?.id ?? '' }, skip: !other })
   const otherProfile = otherData?.sellerProfile
 
-  const [sendMessage, { loading: sending }] = useMutation(SEND_MESSAGE_MUTATION)
+  const [sendMessage] = useMutation(SEND_MESSAGE_MUTATION)
   const [markRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
   const [setDealStatus, { loading: closingDeal }] = useMutation(SET_CONVERSATION_DEAL_STATUS_MUTATION)
   const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
@@ -174,6 +189,9 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     if (!activeId) return
     void markRead({ variables: { conversationId: activeId } }).then(() => refetchList())
     setOfferOpen(false); setOfferAmount(''); setOfferError(null); setMeetupOpen(false); setReported(false); setMenuOpen(false)
+    setReplyTo(null)
+    // Unsent text is kept per conversation.
+    try { setMsg(localStorage.getItem(`dilchap_chat_draft_${activeId}`) ?? '') } catch { setMsg('') }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId])
 
@@ -189,14 +207,33 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])
 
   const refresh = () => { void refetchConv(); void refetchList() }
-  const [sentCount, setSentCount] = useState(0)
-  const send = (text?: string) => {
-    const body = (text ?? msg).trim()
+  // Empty-state suggestions send right away.
+  const send = (text: string) => {
+    const body = text.trim()
     if (!body || !activeId) return
-    setMsg('')
     notifyStoppedTyping()
-    setSentCount(c => c + 1)
     void sendMessage({ variables: { conversationId: activeId, body } }).then(refresh)
+  }
+  // Composer: text, photos and quoted reply; the draft is cleared once sent.
+  const sendFromComposer = async ({ body, attachments, replyToId }: { body: string; attachments: string[]; replyToId?: string }) => {
+    if (!activeId) return
+    notifyStoppedTyping()
+    await sendMessage({ variables: { conversationId: activeId, body, attachments, replyToId } })
+    setMsg('')
+    try { localStorage.removeItem(`dilchap_chat_draft_${activeId}`) } catch { /* private mode */ }
+    refresh()
+  }
+  const replyToMessage = (m: RemoteMessage) => setReplyTo({
+    id: m.id,
+    author: m.senderId === currentUser?.id ? 'vous-même' : m.sender.fullName.split(' ')[0],
+    preview: messagePreview(m),
+    photo: m.attachments?.[0],
+  })
+  // Tapping a quote scrolls to the quoted message and flashes it.
+  const jumpTo = (id: string) => {
+    document.getElementById(`msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setFlashId(id)
+    window.setTimeout(() => setFlashId(f => (f === id ? null : f)), 1400)
   }
   const closeDeal = (status: 'CONCLUDED' | 'NOT_CONCLUDED') => {
     if (!activeId) return
@@ -339,7 +376,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       </span>
                       {c.listing && <span className="block truncate text-body-sm text-primary">{c.listing.title}</span>}
                       <span className="flex items-center gap-1.5">
-                        <span className={`min-w-0 flex-1 truncate text-body-sm ${c.unreadCount ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}`}>{c.lastMessage?.body || (c.lastMessage ? 'Offre ou rendez-vous' : 'Démarrez la discussion')}</span>
+                        <span className={`min-w-0 flex-1 truncate text-body-sm ${c.unreadCount ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}`}>{messagePreview(c.lastMessage) || (c.lastMessage ? 'Offre ou rendez-vous' : 'Démarrez la discussion')}</span>
                         {c.dealStatus !== 'DISCUSSING' && <span className={`shrink-0 rounded-full px-1.5 text-[10px] font-bold ${c.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.dealStatus === 'CONCLUDED' ? 'CONCLU' : 'NON CONCLU'}</span>}
                         <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${c.canManageDeal ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.canManageDeal ? 'Vente' : 'Achat'}</span>
                       </span>
@@ -434,7 +471,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       // An accepted offer is a deal milestone: full-width card, no avatar.
                       const milestone = m.offer?.status === 'ACCEPTED'
                       return (
-                        <div key={m.id}>
+                        <div key={m.id} id={`msg-${m.id}`} className={`scroll-mt-24 rounded-2xl transition-colors duration-500 ${flashId === m.id ? 'bg-primary-fixed/50' : ''}`}>
                           {divider && <div className="mb-3 flex justify-center"><span className="rounded-full bg-surface-container px-3 py-1 text-label-sm text-on-surface-variant">{dayLabel(m.createdAt)}</span></div>}
                           <div className={`flex items-start gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                             {!mine && !milestone && <span className="mt-1"><Avatar url={m.sender.avatarUrl} name={m.sender.fullName} size={28} /></span>}
@@ -449,7 +486,14 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                                       : m.meetup.handoverCode || m.meetup.handedOverAt ? { label: m.meetup.handedOverAt ? 'Voir mon reçu' : 'Mon code de remise', icon: m.meetup.handedOverAt ? 'receipt_long' : 'qr_code_2', onClick: () => onOpenHandover(conv.id, 'BUYER') } : undefined}
                                 />
                               ) : (
-                                <div className={`whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2.5 text-body-md shadow-sm ${mine ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-surface-lowest text-on-surface'}`}>{m.body}</div>
+                                <ChatBubble
+                                  message={m}
+                                  mine={mine}
+                                  quoteAuthor={id => (id === currentUser?.id ? 'Vous' : other?.fullName.split(' ')[0] ?? '')}
+                                  onReply={() => replyToMessage(m)}
+                                  onOpenPhotos={(photos, index) => setViewer({ photos, index })}
+                                  onJumpTo={jumpTo}
+                                />
                               )}
                               <span className={`mt-1 flex items-center gap-1 text-label-sm text-on-surface-variant ${mine ? '' : 'ml-1'}`}>
                                 {time(m.createdAt)}
@@ -512,18 +556,19 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                     <span className="flex shrink-0 items-center gap-1 text-label-sm text-on-surface-variant"><Lock size={15} className="text-tertiary" /> Échanges protégés</span>
                   </div>
 
-                  {/* Messages are text-only in the API — no photo attachment button. */}
-                  <form onSubmit={e => { e.preventDefault(); send() }} className="flex items-center gap-2">
-                    <input
-                      ref={inputRef}
-                      className="h-11 min-w-0 flex-1 rounded-full border border-solid border-transparent bg-surface-container px-4 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant focus:bg-surface-container-high"
-                      placeholder={`Écrivez à ${firstName}…`}
-                      value={msg}
-                      enterKeyHint="send"
-                      onChange={e => { setMsg(e.target.value); notifyTyping() }}
-                    />
-                    <button type="submit" disabled={sending || !msg.trim()} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md disabled:opacity-50" aria-label="Envoyer le message"><AnimatedIcon name="send" fallback="send" size={19} trigger={sentCount} /></button>
-                  </form>
+                  <ChatComposer
+                    ref={inputRef}
+                    value={msg}
+                    onChange={text => {
+                      setMsg(text)
+                      try { if (activeId) localStorage.setItem(`dilchap_chat_draft_${activeId}`, text) } catch { /* private mode */ }
+                    }}
+                    onTyping={notifyTyping}
+                    onSend={sendFromComposer}
+                    replyTo={replyTo}
+                    onCancelReply={() => setReplyTo(null)}
+                    placeholder={`Écrivez à ${firstName}…`}
+                  />
                 </div>
               </>
             )}
@@ -589,6 +634,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
           )}
         </div>
       </div>
+      {viewer && <ImageLightbox images={viewer.photos} start={viewer.index} alt={`Photos de ${other?.fullName ?? 'la discussion'}`} onClose={() => setViewer(null)} />}
       <ConfirmSheet
         open={!!confirming}
         title={confirming === 'REPORT' ? 'Signaler une tentative d’arnaque' : confirming === 'CONCLUDED' ? 'Vente conclue ?' : 'Discussion non conclue ?'}

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
+import ZoomableImage from './ZoomableImage'
 import { thumbnailUrl } from '../lib/media'
 
 type Props = {
@@ -12,11 +13,13 @@ type Props = {
   onIndexChange?: (i: number) => void
 }
 
-// Full-screen photo viewer: swipe (scroll-snap), arrows / keyboard on
-// desktop, and the system back button closes it instead of leaving the page.
+// Full-screen photo viewer: swipe (scroll-snap), pinch / double-tap zoom,
+// arrows / keyboard on desktop, and the system back button closes it
+// instead of leaving the page.
 export default function ImageLightbox({ images, start, alt, onClose, onIndexChange }: Props) {
   const track = useRef<HTMLDivElement>(null)
   const [idx, setIdx] = useState(start)
+  const [zoomed, setZoomed] = useState(false)
   const closeRef = useRef(onClose)
   const closedByBack = useRef(false)
   const alive = useRef(false)
@@ -79,10 +82,10 @@ export default function ImageLightbox({ images, start, alt, onClose, onIndexChan
       </div>
 
       <div className="relative min-h-0 flex-1">
-        <div ref={track} onScroll={onScroll} className="flex h-full snap-x snap-mandatory overflow-x-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div ref={track} onScroll={onScroll} className={`flex h-full snap-x snap-mandatory overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${zoomed ? 'overflow-hidden' : 'overflow-x-auto'}`}>
           {images.map((src, i) => (
             <div key={i} className="flex h-full w-full shrink-0 snap-center items-center justify-center">
-              <img src={src} alt={`${alt} — photo ${i + 1}`} draggable={false} decoding="async" loading={Math.abs(i - start) <= 1 ? 'eager' : 'lazy'} className="max-h-full max-w-full select-none object-contain" />
+              <ZoomableImage src={src} alt={`${alt} — photo ${i + 1}`} eager={Math.abs(i - start) <= 1} active={i === idx} onZoomChange={z => { if (i === idx || !z) setZoomed(z) }} />
             </div>
           ))}
         </div>

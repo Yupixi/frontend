@@ -31,9 +31,10 @@ import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, LEGAL_PAGES, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
 import { PaymentLogos } from './PaymentLogo'
-import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationTarget } from '../graphql/account'
+import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationConversation, notificationTarget } from '../graphql/account'
+import { requestOpenConversation } from '../lib/navigation'
 import MsIcon from './Icon'
-import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
+import { MY_CONVERSATIONS_QUERY, messagePreview, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 
@@ -170,8 +171,10 @@ export default function Layout({
   const openNotification = (n: RemoteNotification) => {
     if (!n.readAt) void markNotificationRead({ variables: { id: n.id } }).then(() => refetchNotifs())
     setNotifMenuOpen(false)
+    const conversationId = notificationConversation(n)
     const target = notificationTarget(n)
-    if (target) onNavigate(target as Page)
+    if (conversationId) requestOpenConversation(conversationId)
+    else if (target) onNavigate(target as Page)
     else if (n.listingId) onSelectListing?.(n.listingId)
     else onNavigate('buyer-notifications')
   }
@@ -344,7 +347,7 @@ export default function Layout({
                                   <span className={`truncate text-label-md ${c.unreadCount > 0 ? 'font-extrabold' : ''}`}>{c.otherParticipant.fullName}</span>
                                   <span className="shrink-0 text-[11px] text-outline">{c.lastMessageAt ? formatRelativeDate(c.lastMessageAt) : ''}</span>
                                 </div>
-                                <p className="m-0 truncate text-body-sm text-on-surface-variant">{c.lastMessage?.body ?? 'Nouvelle conversation'}</p>
+                                <p className="m-0 truncate text-body-sm text-on-surface-variant">{messagePreview(c.lastMessage) || 'Nouvelle conversation'}</p>
                               </div>
                             </button>
                           ))}

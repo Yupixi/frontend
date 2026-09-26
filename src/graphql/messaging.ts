@@ -5,6 +5,8 @@ const MESSAGE_FIELDS = `
   conversationId
   senderId
   body
+  attachments
+  replyTo { id senderId body attachments }
   readAt
   createdAt
   sender {
@@ -95,8 +97,8 @@ export const START_CONVERSATION_MUTATION = gql`
 `
 
 export const SEND_MESSAGE_MUTATION = gql`
-  mutation SendMessage($conversationId: String!, $body: String!) {
-    sendMessage(conversationId: $conversationId, body: $body) {
+  mutation SendMessage($conversationId: String!, $body: String!, $attachments: [String!], $replyToId: String) {
+    sendMessage(conversationId: $conversationId, body: $body, attachments: $attachments, replyToId: $replyToId) {
       ${MESSAGE_FIELDS}
     }
   }
@@ -199,6 +201,9 @@ export type RemoteMessage = {
   conversationId: string
   senderId: string
   body: string
+  // Photos sent with the message (body may be empty).
+  attachments: string[]
+  replyTo: { id: string; senderId: string; body: string; attachments: string[] } | null
   readAt: string | null
   createdAt: string
   sender: RemoteUserRef
@@ -235,3 +240,7 @@ export const RESPOND_TO_MEETUP_MUTATION = gql`
     respondToMeetup(meetupId: $meetupId, confirm: $confirm) { id status }
   }
 `
+
+// Inbox preview of a message: its text, or what it carries.
+export const messagePreview = (m: { body: string; attachments?: string[] } | null | undefined) =>
+  !m ? '' : m.body || (m.attachments?.length ? (m.attachments.length > 1 ? `${m.attachments.length} photos` : 'Photo') : '')
