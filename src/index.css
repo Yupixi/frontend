@@ -585,6 +585,16 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .safe-top { top: env(safe-area-inset-top, 0px); }
 .statusbar-backdrop { position: fixed; inset: 0 0 auto 0; height: env(safe-area-inset-top, 0px); z-index: 150; pointer-events: none; }
 
+/* Printable documents (e.g. the hand-over receipt): only rendered on paper,
+   the app itself (sidebar, header, bottom bar) is left out. */
+.print-doc { display: none; }
+@media print {
+  body:has(.print-doc) > *:not(.print-doc) { display: none !important; }
+  body:has(.print-doc) { background: #fff !important; }
+  .print-doc { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4 portrait; margin: 14mm; }
+}
+
 /* A visually hidden input (sr-only is position:absolute) must be anchored to
    its label: otherwise it's placed against <body>, escapes the account
    pages' scrolling <main> and makes the whole document scroll too, which
