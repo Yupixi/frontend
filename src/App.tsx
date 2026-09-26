@@ -5,7 +5,7 @@ import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './co
 import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
-import { NAVIGATE_EVENT } from './lib/navigation'
+import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -109,7 +109,7 @@ function sharedListingId(): string | null {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
@@ -121,6 +121,8 @@ export default function App() {
   // Transient — consumed once by BuyerMessages on mount to start/open the
   // right conversation, not part of the session-restored nav state.
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
+  // Conversation to open directly (message notification / push link), consumed by BuyerMessages.
+  const [openConversationId, setOpenConversationId] = useState<string | null>(() => conversationFromUrl())
   const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
   const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
   const [selectedDisputeId, setSelectedDisputeId] = useState(savedNav.selectedDisputeId ?? '')
@@ -367,6 +369,31 @@ export default function App() {
     return () => window.removeEventListener(NAVIGATE_EVENT, onRequest)
   }, [])
 
+  // Message notifications open the thread itself: in-app bell/page
+  // (OPEN_CONVERSATION_EVENT) and OS notifications clicked while the app is
+  // already open (the service worker posts the push link).
+  const openConversationRef = useRef((id: string) => { setOpenConversationId(id); navigate('buyer-messages') })
+  openConversationRef.current = (id: string) => { setOpenConversationId(id); navigate('buyer-messages') }
+  useEffect(() => {
+    const onOpen = (e: Event) => openConversationRef.current((e as CustomEvent<string>).detail)
+    const onSwMessage = (e: MessageEvent) => {
+      const data = e.data as { type?: string; url?: string } | null
+      if (data?.type !== 'yupixi:open-url' || !data.url) return
+      const conversationId = conversationFromUrl(data.url)
+      if (conversationId) { openConversationRef.current(conversationId); return }
+      const listingId = new URL(data.url, window.location.origin).searchParams.get('listing')
+      if (listingId) { setSelectedListingId(listingId); navigateRef.current('listing-detail', { listingId }) }
+    }
+    window.addEventListener(OPEN_CONVERSATION_EVENT, onOpen)
+    navigator.serviceWorker?.addEventListener('message', onSwMessage)
+    // The push link is consumed once: a reload shouldn't reopen it.
+    if (conversationFromUrl()) window.history.replaceState(window.history.state, '', window.location.pathname)
+    return () => {
+      window.removeEventListener(OPEN_CONVERSATION_EVENT, onOpen)
+      navigator.serviceWorker?.removeEventListener('message', onSwMessage)
+    }
+  }, [])
+
   const replacePage = (p: Page) => {
     setPage(p)
     window.history.replaceState(historyEntry(p), '')
@@ -562,7 +589,7 @@ export default function App() {
         case 'buyer-favorites':
           return <Favorites onNavigate={navigate} onSelectListing={selectListing} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} onSearchCategory={navigateToCategory} currentUser={currentUser} onLogout={logout} />
         case 'buyer-messages':
-          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} onOpenHandover={(id, as) => as === 'SELLER' ? openHandover(id) : openPurchase(id, 'buyer-handover')} />
+          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} openConversationId={openConversationId} onOpenConversationConsumed={() => setOpenConversationId(null)} onOpenHandover={(id, as) => as === 'SELLER' ? openHandover(id) : openPurchase(id, 'buyer-handover')} />
         case 'buyer-notifications':
           return <Notifications onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} currentUser={currentUser} onLogout={logout} />
         case 'buyer-history':

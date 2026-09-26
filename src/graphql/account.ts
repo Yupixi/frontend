@@ -58,6 +58,10 @@ export const NOTIFICATION_META: Record<NotificationKind, { icon: string; cls: st
 
 // Dispute notifications go to the seller's "Litiges" page or the buyer's
 // purchases, told apart by their (server-side) wording.
+// Notifications tied to a conversation open that thread directly.
+export const notificationConversation = (n: { type: NotificationKind; conversationId?: string | null }) =>
+  n.conversationId && n.type !== 'DISPUTE' ? n.conversationId : null
+
 export const notificationTarget = (n: { type: NotificationKind; title: string }) =>
   n.type === 'MESSAGE' || n.type === 'MEETUP' ? 'buyer-messages'
     : n.type === 'DISPUTE' ? (/vente|L'acheteur/.test(n.title) ? 'seller-disputes' : 'buyer-disputes')

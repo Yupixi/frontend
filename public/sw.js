@@ -73,7 +73,10 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-          client.navigate?.(url)
+          // A conversation / listing link opens in the running app without a
+          // reload (App listens for this message); anything else navigates.
+          if (/[?&](conversation|listing)=/.test(url)) client.postMessage({ type: 'yupixi:open-url', url })
+          else client.navigate?.(url)
           return client.focus()
         }
       }
