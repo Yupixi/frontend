@@ -160,6 +160,12 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   )
   const verified = !!listing.seller.isVerified
   const shop = listing.seller.shop
+  const tier = listing.bundleOffer?.tiers[0]
+  const bundleLine = tier && (
+    <p className="m-0 mt-0.5 flex min-w-0 items-center gap-1 text-[11px] font-semibold text-tertiary md:text-label-sm">
+      <Icon name="inventory_2" size={13} className="shrink-0" /> <span className="truncate">Dès {tier.minQty} achetés : -{tier.percent} %</span>
+    </p>
+  )
   const place = isRoute
     ? <ArchetypeLine listing={listing} />
     : shop ? (
@@ -239,6 +245,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
           </div>
           <h4 className={`m-0 truncate text-on-surface ${featured ? 'text-label-lg font-bold' : 'text-label-md font-semibold'}`}>{listing.title}</h4>
           {place}
+          {bundleLine}
         </div>
 
         {/* Desktop body */}
@@ -259,6 +266,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <span className={`text-headline-md font-extrabold ${struck != null ? 'text-primary' : 'text-on-surface'}`}>{price}</span>
             {struck != null && <span className="text-body-sm text-outline line-through"><Price amount={struck} currency={listing.currency} /></span>}
           </div>
+          {bundleLine}
         </div>
       </div>
 

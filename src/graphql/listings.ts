@@ -29,6 +29,7 @@ export const LISTINGS_QUERY = gql`
         quantity
         aisleId
         featuredAt
+        bundleOffer { name tiers { minQty percent } }
         deliveryAvailable
         tags
         attributes
@@ -95,6 +96,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       quantity
       aisleId
       featuredAt
+      bundleOffer { name tiers { minQty percent } }
       deliveryAvailable
       tags
       attributes
@@ -160,6 +162,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       quantity
       aisleId
       featuredAt
+      bundleOffer { name tiers { minQty percent } }
       deliveryAvailable
       tags
       attributes
@@ -224,6 +227,7 @@ export const LISTING_QUERY = gql`
       quantity
       aisleId
       featuredAt
+      bundleOffer { name tiers { minQty percent } }
       deliveryAvailable
       status
       tags
@@ -289,6 +293,7 @@ export const MY_LISTING_QUERY = gql`
       quantity
       aisleId
       featuredAt
+      bundleOffer { name tiers { minQty percent } }
       status
       attributes
       media {
@@ -527,7 +532,11 @@ export type RemoteListing = {
   quantity?: number
   aisleId?: string | null
   featuredAt?: string | null
+  // Official shop bundle ("2 achetés = -10 %").
+  bundleOffer?: BundleOffer | null
 }
+
+export type BundleOffer = { name: string; tiers: { minQty: number; percent: number }[] }
 
 // Official shop of the seller (null for members).
 export type ShopBadge = { id: string; slug: string; name: string; logoUrl: string | null }
@@ -555,6 +564,7 @@ export type ListingFilterInput = {
   officialShopsOnly?: boolean
   aisleId?: string
   featuredOnly?: boolean
+  promoOnly?: boolean
 }
 
 export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'

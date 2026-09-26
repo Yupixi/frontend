@@ -572,6 +572,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
         <div className="grid grid-cols-2 gap-2 md:flex">
           <button onClick={() => onOpenShop(shop.slug)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-lowest px-4 text-label-md text-on-surface shadow-sm"><Icon name="visibility" size={18} /> Voir ma page</button>
           <button onClick={() => onNavigate('seller-shop-stats')} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-lowest px-4 text-label-md text-on-surface shadow-sm"><Icon name="monitoring" size={18} /> Statistiques</button>
+          <button onClick={() => onNavigate('seller-shop-promos')} className="col-span-2 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white shadow-sm md:col-span-1"><Icon name="sell" size={18} /> Promotions</button>
         </div>
       </div>
 

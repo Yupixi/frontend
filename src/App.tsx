@@ -5,7 +5,7 @@ import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './co
 import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
-import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT } from './lib/navigation'
+import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_SHOP_EVENT, shopFromUrl } from './lib/navigation'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -32,6 +32,7 @@ const Settings = lazyPage(() => import('./pages/seller/Settings'))
 const Kyc = lazyPage(() => import('./pages/account/Kyc'))
 const MyShop = lazyPage(() => import('./pages/account/MyShop'))
 const ShopStats = lazyPage(() => import('./pages/account/ShopStats'))
+const ShopPromos = lazyPage(() => import('./pages/account/ShopPromos'))
 const ShopPage = lazyPage(() => import('./pages/ShopPage'))
 const ShopsDirectory = lazyPage(() => import('./pages/ShopsDirectory'))
 const Purchases = lazyPage(() => import('./pages/buyer/Purchases'))
@@ -58,7 +59,7 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
   | 'legal' | 'shop' | 'shops'
 
@@ -96,7 +97,7 @@ const savedNav = loadNavState()
 
 // PWA manifest shortcuts (long-press the home screen icon) launch with
 // `?shortcut=<page>` — a real page, not session-restore, takes priority.
-const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'shops']
+const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'shops']
 function shortcutPage(): Page | null {
   const requested = new URLSearchParams(window.location.search).get('shortcut')
   return SHORTCUT_PAGES.includes(requested as Page) ? (requested as Page) : null
@@ -414,6 +415,8 @@ export default function App() {
   // already open (the service worker posts the push link).
   const openConversationRef = useRef((id: string) => { setOpenConversationId(id); navigate('buyer-messages') })
   openConversationRef.current = (id: string) => { setOpenConversationId(id); navigate('buyer-messages') }
+  const openShopRef = useRef((slug: string) => { setShopKey(slug); navigate('shop', { shopKey: slug }) })
+  openShopRef.current = (slug: string) => { setShopKey(slug); navigate('shop', { shopKey: slug }) }
   useEffect(() => {
     const onOpen = (e: Event) => openConversationRef.current((e as CustomEvent<string>).detail)
     const onSwMessage = (e: MessageEvent) => {
@@ -421,15 +424,20 @@ export default function App() {
       if (data?.type !== 'yupixi:open-url' || !data.url) return
       const conversationId = conversationFromUrl(data.url)
       if (conversationId) { openConversationRef.current(conversationId); return }
+      const shopSlug = shopFromUrl(data.url)
+      if (shopSlug) { openShopRef.current(shopSlug); return }
       const listingId = new URL(data.url, window.location.origin).searchParams.get('listing')
       if (listingId) { setSelectedListingId(listingId); navigateRef.current('listing-detail', { listingId }) }
     }
+    const onOpenShop = (e: Event) => openShopRef.current((e as CustomEvent<string>).detail)
+    window.addEventListener(OPEN_SHOP_EVENT, onOpenShop)
     window.addEventListener(OPEN_CONVERSATION_EVENT, onOpen)
     navigator.serviceWorker?.addEventListener('message', onSwMessage)
     // The push link is consumed once: a reload shouldn't reopen it.
     if (conversationFromUrl()) window.history.replaceState(window.history.state, '', window.location.pathname)
     return () => {
       window.removeEventListener(OPEN_CONVERSATION_EVENT, onOpen)
+      window.removeEventListener(OPEN_SHOP_EVENT, onOpenShop)
       navigator.serviceWorker?.removeEventListener('message', onSwMessage)
     }
   }, [])
@@ -659,6 +667,8 @@ export default function App() {
           return <Kyc onNavigate={navigate} currentUser={currentUser} onLogout={logout} onViewShop={selectSeller} />
         case 'seller-shop':
           return <MyShop onNavigate={navigate} currentUser={currentUser} onLogout={logout} onOpenShop={openShop} />
+        case 'seller-shop-promos':
+          return <ShopPromos onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-shop-stats':
           return <ShopStats onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
         case 'buyer-settings':
