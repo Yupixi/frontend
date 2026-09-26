@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import BottomSheet from './BottomSheet'
 import Icon from './Icon'
 import { thumbnailUrl } from '../lib/media'
+import { VoicePlayer } from './VoiceMessage'
 import { messagePreview, type RemoteMessage } from '../graphql/messaging'
 
 type Props = {
@@ -94,6 +95,7 @@ export default function ChatBubble({ message: m, mine, quoteAuthor, onReply, onO
         className={`min-w-0 max-w-full select-text rounded-2xl text-body-md shadow-sm ${photos.length && !m.body && !m.replyTo ? 'p-1' : 'px-3.5 py-2.5'} ${mine ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-surface-lowest text-on-surface'}`}
       >
         {quote}
+        {m.audioUrl && <VoicePlayer src={m.audioUrl} duration={m.audioDuration ?? 0} mine={mine} seed={m.id} />}
         {photos.length > 0 && <div className={m.body ? 'mb-2' : ''}><PhotoGrid photos={photos} onOpen={i => onOpenPhotos(photos, i)} /></div>}
         {m.body && <div className="whitespace-pre-wrap break-words"><Linkified text={m.body} mine={mine} /></div>}
       </div>

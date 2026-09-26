@@ -34,7 +34,7 @@ import { PaymentLogos } from './PaymentLogo'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationConversation, notificationTarget } from '../graphql/account'
 import { requestOpenConversation } from '../lib/navigation'
 import MsIcon from './Icon'
-import { MY_CONVERSATIONS_QUERY, messagePreview, type RemoteConversation } from '../graphql/messaging'
+import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 
@@ -165,7 +165,7 @@ export default function Layout({
     skip: !isLoggedIn,
     pollInterval: 30_000,
   })
-  const conversations = convData?.myConversations ?? []
+  const conversations = [...(convData?.myConversations ?? [])].sort(byLatestMessage)
   const unreadMsgCount = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
 
   const openNotification = (n: RemoteNotification) => {
