@@ -798,9 +798,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           </aside>
         </div>
 
-        {/* Mobile wizard bar, above the account bottom tabs */}
-        <div className="h-16 lg:hidden" />
-        <div className="fixed inset-x-0 bottom-[calc(58px+env(safe-area-inset-bottom))] z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 py-2.5 lg:hidden">
+        {/* Mobile wizard bar: the wizard has no account tabs, so it sits at the very bottom */}
+        <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))] lg:hidden" />
+        <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5 lg:hidden">
           {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
           <div className="flex items-center gap-2">
             {step > 0 ? (
