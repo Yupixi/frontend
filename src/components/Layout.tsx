@@ -31,9 +31,10 @@ import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, LEGAL_PAGES, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
 import { PaymentLogos } from './PaymentLogo'
-import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationTarget } from '../graphql/account'
+import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationConversation, notificationTarget } from '../graphql/account'
+import { requestOpenConversation } from '../lib/navigation'
 import MsIcon from './Icon'
-import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../graphql/messaging'
+import { MY_CONVERSATIONS_QUERY, messagePreview, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 
@@ -170,8 +171,10 @@ export default function Layout({
   const openNotification = (n: RemoteNotification) => {
     if (!n.readAt) void markNotificationRead({ variables: { id: n.id } }).then(() => refetchNotifs())
     setNotifMenuOpen(false)
+    const conversationId = notificationConversation(n)
     const target = notificationTarget(n)
-    if (target) onNavigate(target as Page)
+    if (conversationId) requestOpenConversation(conversationId)
+    else if (target) onNavigate(target as Page)
     else if (n.listingId) onSelectListing?.(n.listingId)
     else onNavigate('buyer-notifications')
   }
@@ -260,7 +263,7 @@ export default function Layout({
         {/* Main row */}
         <div className="flex h-16 items-center gap-3 px-4 lg:h-20 lg:gap-6 lg:px-12">
           <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label="Accueil Dilchap">
-            <Logo size="md" />
+            <Logo size={isMobile ? 'sm' : 'md'} />
             <span className="hidden rounded bg-surface-container-high px-2 py-0.5 text-label-sm uppercase tracking-wider text-on-surface-variant xl:inline-block">Seconde main</span>
           </button>
 
@@ -344,7 +347,7 @@ export default function Layout({
                                   <span className={`truncate text-label-md ${c.unreadCount > 0 ? 'font-extrabold' : ''}`}>{c.otherParticipant.fullName}</span>
                                   <span className="shrink-0 text-[11px] text-outline">{c.lastMessageAt ? formatRelativeDate(c.lastMessageAt) : ''}</span>
                                 </div>
-                                <p className="m-0 truncate text-body-sm text-on-surface-variant">{c.lastMessage?.body ?? 'Nouvelle conversation'}</p>
+                                <p className="m-0 truncate text-body-sm text-on-surface-variant">{messagePreview(c.lastMessage) || 'Nouvelle conversation'}</p>
                               </div>
                             </button>
                           ))}

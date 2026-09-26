@@ -6,13 +6,14 @@ import { AccountLayout } from '../account/AccountLayout'
 import { formatRelativeDate } from '../../lib/format'
 import {
   DELETE_NOTIFICATION_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, MARK_NOTIFICATION_READ_MUTATION, MY_NOTIFICATIONS_QUERY,
-  NOTIFICATION_META, notificationTarget, type NotificationKind, type RemoteNotification,
+  NOTIFICATION_META, notificationConversation, notificationTarget, type NotificationKind, type RemoteNotification,
 } from '../../graphql/account'
 import { RESPOND_TO_OFFER_MUTATION } from '../../graphql/offers'
 import { MY_PURCHASE_ORDERS_QUERY, disputeIsOpen, type PurchaseOrder } from '../../graphql/sellerTools'
 import { MY_SALES_ORDERS_QUERY, type SalesOrder } from '../../graphql/sellerHub'
 import { getPushAvailability } from '../../lib/pushNotifications'
 import type { AuthUser } from '../../graphql/auth'
+import { requestOpenConversation } from '../../lib/navigation'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -75,8 +76,10 @@ export default function Notifications({ onNavigate, onSelectListing, onOpenPurch
 
   const open = (n: RemoteNotification) => {
     if (!n.readAt) void markRead({ variables: { id: n.id } }).then(() => refetch())
+    const conversationId = notificationConversation(n)
     const target = notificationTarget(n)
-    if (target) onNavigate(target)
+    if (conversationId) requestOpenConversation(conversationId)
+    else if (target) onNavigate(target)
     else if (n.listingId) onSelectListing(n.listingId)
   }
   const accept = (n: RemoteNotification) => void respond({ variables: { offerId: n.offerId, accept: true } })
