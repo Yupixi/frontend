@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare, Truck, Wallet, Star,
-  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store, Gavel, Handshake, Tag,
+  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store, Gavel, Handshake, Tag, Megaphone,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import { MY_DISPUTE_STATS_QUERY } from '../../graphql/sellerTools'
@@ -26,6 +26,7 @@ const SECTIONS = [
       { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
       { key: 'seller-shop', icon: Store, label: 'Ma Boutique officielle' },
       { key: 'seller-shop-promos', icon: Tag, label: 'Promotions & Soldes' },
+      { key: 'seller-campaigns', icon: Megaphone, label: 'Campagnes Dilchap' },
       { key: 'seller-orders', icon: Truck, label: 'Commandes & Envois' },
       { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
       { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
@@ -52,6 +53,7 @@ export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-dashboard': 'Tableau de bord',
   'seller-kyc': 'Vérification d’identité',
   'seller-badge': 'Mon badge',
+  'seller-campaigns': 'Campagnes Dilchap',
   'seller-shop': 'Ma Boutique officielle',
   'seller-shop-stats': 'Statistiques boutique',
   'seller-shop-promos': 'Promotions & Soldes',
@@ -94,7 +96,7 @@ const MEMBER_TABS: MobileTab[] = [
 
 const SELLER_TABS: MobileTab[] = [
   { key: 'home', icon: 'storefront', label: 'Accueil', match: [] },
-  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-premium', 'seller-shop', 'seller-shop-stats', 'seller-shop-promos'] },
+  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-premium', 'seller-shop', 'seller-shop-stats', 'seller-shop-promos', 'seller-campaigns'] },
   { key: 'buyer-messages', icon: 'chat_bubble', label: 'Messages', match: [] },
   { key: 'seller-orders', icon: 'account_balance_wallet', label: 'Ventes', match: ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-disputes'] },
   { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: [] },

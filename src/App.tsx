@@ -34,6 +34,7 @@ const MyShop = lazyPage(() => import('./pages/account/MyShop'))
 const ShopStats = lazyPage(() => import('./pages/account/ShopStats'))
 const ShopPromos = lazyPage(() => import('./pages/account/ShopPromos'))
 const MyBadgePage = lazyPage(() => import('./pages/account/MyBadgePage'))
+const SellerCampaigns = lazyPage(() => import('./pages/account/SellerCampaigns'))
 const ShopPage = lazyPage(() => import('./pages/ShopPage'))
 const ShopsDirectory = lazyPage(() => import('./pages/ShopsDirectory'))
 const Purchases = lazyPage(() => import('./pages/buyer/Purchases'))
@@ -60,7 +61,7 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-campaigns'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
   | 'legal' | 'shop' | 'shops'
 
@@ -98,7 +99,7 @@ const savedNav = loadNavState()
 
 // PWA manifest shortcuts (long-press the home screen icon) launch with
 // `?shortcut=<page>` — a real page, not session-restore, takes priority.
-const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'seller-badge', 'shops']
+const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'seller-badge', 'seller-campaigns', 'shops']
 function shortcutPage(): Page | null {
   const requested = new URLSearchParams(window.location.search).get('shortcut')
   return SHORTCUT_PAGES.includes(requested as Page) ? (requested as Page) : null
@@ -668,6 +669,8 @@ export default function App() {
           return <Kyc onNavigate={navigate} currentUser={currentUser} onLogout={logout} onViewShop={selectSeller} />
         case 'seller-shop':
           return <MyShop onNavigate={navigate} currentUser={currentUser} onLogout={logout} onOpenShop={openShop} />
+        case 'seller-campaigns':
+          return <SellerCampaigns onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-badge':
           return <MyBadgePage onNavigate={navigate} currentUser={currentUser} onLogout={logout} onProfileUpdated={setCurrentUser} />
         case 'seller-shop-promos':
