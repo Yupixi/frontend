@@ -668,7 +668,7 @@ export default function App() {
         case 'seller-shop':
           return <MyShop onNavigate={navigate} currentUser={currentUser} onLogout={logout} onOpenShop={openShop} />
         case 'seller-shop-promos':
-          return <ShopPromos onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+          return <ShopPromos onNavigate={navigate} currentUser={currentUser} onLogout={logout} onOpenShop={openShop} />
         case 'seller-shop-stats':
           return <ShopStats onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
         case 'buyer-settings':

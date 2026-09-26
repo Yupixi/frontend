@@ -229,6 +229,7 @@ export const JOIN_CAMPAIGN_MUTATION = gql`mutation JoinCampaign($input: JoinCamp
 export const WITHDRAW_CAMPAIGN_ENTRY_MUTATION = gql`mutation WithdrawCampaignEntry($entryId: ID!) { withdrawCampaignEntry(entryId: $entryId) }`
 export const SAVE_SHOP_BUNDLE_MUTATION = gql`mutation SaveShopBundle($input: ShopBundleInput!, $id: ID) { saveShopBundle(input: $input, id: $id) { ${BUNDLE_FIELDS} } }`
 export const STOP_SHOP_BUNDLE_MUTATION = gql`mutation StopShopBundle($id: ID!) { stopShopBundle(id: $id) { ${BUNDLE_FIELDS} } }`
+export const DELETE_SHOP_BUNDLE_MUTATION = gql`mutation DeleteShopBundle($id: ID!) { deleteShopBundle(id: $id) }`
 export const CREATE_SHOP_POST_MUTATION = gql`mutation CreateShopPost($input: ShopPostInput!) { createShopPost(input: $input) { ${POST_FIELDS} } }`
 export const SHOP_POSTS_QUERY = gql`query ShopPosts($key: String!) { shopPosts(key: $key) { ${POST_FIELDS} } }`
 export const TRACK_SHOP_POST_VIEWS_MUTATION = gql`mutation TrackShopPostViews($ids: [ID!]!) { trackShopPostViews(ids: $ids) }`
