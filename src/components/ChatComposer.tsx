@@ -87,8 +87,8 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
     setSending(true)
     setError(null)
     try {
-      const audioUrl = await uploadAudio(rec.blob, rec.filename)
-      await onSend({ body: '', attachments: [], replyToId: replyTo?.id, audioUrl, audioDuration: rec.duration })
+      const { url: audioUrl, duration } = await uploadAudio(rec.blob, rec.filename)
+      await onSend({ body: '', attachments: [], replyToId: replyTo?.id, audioUrl, audioDuration: Math.min(300, Math.max(1, duration || rec.duration)) })
       setSentCount(c => c + 1)
       onCancelReply?.()
     } catch (e) {
