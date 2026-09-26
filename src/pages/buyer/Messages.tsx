@@ -282,8 +282,18 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const agreedPrice = acceptedOffer?.amount ?? conv?.listing?.price ?? null
   const lastMeetup = [...messages].reverse().find(m => m.meetup)?.meetup
   const suggestions = conv?.canManageDeal ? SELLER_SUGGESTIONS : BUYER_SUGGESTIONS
-  const canNegotiate = !!conv && !conv.canManageDeal && !!conv.listing?.negotiable && conv.dealStatus === 'DISCUSSING'
-  const discussing = conv?.dealStatus === 'DISCUSSING'
+  const canNegotiate = !!conv && !conv.closedAt && !conv.canManageDeal && !!conv.listing?.negotiable && conv.dealStatus === 'DISCUSSING'
+  const closed = !!conv?.closedAt
+  const discussing = conv?.dealStatus === 'DISCUSSING' && !closed
+  // An inactive conversation is revived by contacting the member again.
+  const [reopening, setReopening] = useState(false)
+  const reopen = () => {
+    if (!other) return
+    setReopening(true)
+    void startConversation({ variables: { recipientId: other.id, listingId: conv?.listingId ?? undefined } })
+      .then(refresh)
+      .finally(() => setReopening(false))
+  }
   const otherResponse = formatResponseTime(otherProfile?.responseTimeMinutes)
   // "Quartier, ville": the member's own city, else — when they're the seller —
   // where their listing is.
@@ -410,7 +420,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       <Icon name="shield" size={20} fill className="mt-0.5 shrink-0 text-tertiary" />
                       <p className="m-0 text-body-sm text-on-surface-variant"><b className="block text-on-surface">Sécurité &amp; Confiance Dilchap</b>Rappelez-vous : testez toujours l'objet avant tout règlement en main propre. 0 F de commission appliquée.</p>
                     </div>
-                    {messages.length === 0 && (
+                    {messages.length === 0 && !closed && (
                       <div className="m-auto max-w-md text-center">
                         <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="forum" size={24} /></span>
                         <h3 className="m-0 text-headline-sm text-on-surface">Commencez la discussion</h3>
@@ -471,8 +481,38 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   </div>
                 )}
 
-                {/* Composer — extra bottom room on a phone for the bar's raised "Déposer" button */}
+                {/* Closed conversation: no composer. Composer — extra bottom room on a phone for the bar's raised "Déposer" button */}
+                {closed ? (
+                  <div className={`shrink-0 bg-surface-lowest px-4 pt-3 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${currentUser?.isGuest ? 'pb-3' : 'pb-7 lg:pb-3'}`}>
+                    <div className="rounded-2xl bg-surface-container-low px-4 py-3">
+                      <div className="flex items-start gap-3">
+                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${conv.closedReason === 'DEAL_CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container-high text-on-surface-variant'}`}>
+                        <Icon name={conv.closedReason === 'DEAL_CONCLUDED' ? 'handshake' : 'lock'} size={20} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-label-lg text-on-surface">Discussion fermée</div>
+                        <div className="text-body-sm text-on-surface-variant">
+                          {conv.closedReason === 'DEAL_CONCLUDED'
+                            ? 'La vente est conclue : plus aucun message ni offre n’est possible, pour votre sécurité.'
+                            : 'Fermée faute d’activité. Vous pouvez la relancer si l’article vous intéresse toujours.'}
+                        </div>
+                      </div>
+                      </div>
+                      {conv.closedReason === 'INACTIVE' && (
+                        <button onClick={reopen} disabled={reopening} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white disabled:opacity-60">
+                          <Icon name="refresh" size={18} /> {reopening ? 'Un instant…' : 'Relancer la discussion'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
                 <div className={`shrink-0 bg-surface-lowest px-4 pt-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${currentUser?.isGuest ? 'pb-3' : 'pb-7 lg:pb-3'}`}>
+                  {conv.closesAt && (
+                    <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-body-sm text-amber-900">
+                      <Icon name="schedule" size={18} className="mt-0.5 shrink-0" />
+                      <span>Sans nouveau message, cette discussion sera fermée le <b>{new Date(conv.closesAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</b>. Écrivez pour la garder ouverte.</span>
+                    </p>
+                  )}
                   {otherIsTyping && <div className="mb-1 text-center text-body-sm italic text-primary">{other!.fullName} est en train d'écrire…</div>}
 
                   {meetupOpen && (
@@ -526,6 +566,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                     placeholder={`Écrivez à ${firstName}…`}
                   />
                 </div>
+                )}
               </>
             )}
           </section>
