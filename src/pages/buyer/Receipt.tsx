@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
+import PrintableReceipt from '../../components/PrintableReceipt'
 import { ListingCard } from '../../components/ListingCard'
 import { AccountLayout } from '../account/AccountLayout'
 import { BuyerTabs, TrustFooter } from './BuyerShared'
@@ -49,6 +50,13 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
   // to boost) their own listings on a purchase receipt.
   const similar = (similarData?.similarListings ?? []).filter(l => l.seller.id !== currentUser?.id)
   const payment = o?.paymentMethod && PAYMENT_LABELS[o.paymentMethod] ? PAYMENT_LABELS[o.paymentMethod] : 'Paiement direct au vendeur'
+  // The PDF gets a meaningful file name (browsers use the page title).
+  const printReceipt = () => {
+    const title = document.title
+    document.title = `Recu-Dilchap-${o?.reference ?? ''}-CI`
+    window.addEventListener('afterprint', () => { document.title = title }, { once: true })
+    window.print()
+  }
   const send = () => o && void createReview({ variables: { input: { sellerId: o.seller.id, rating, comment: comment.trim() || undefined, tags } } }).then(() => refetchProfile())
 
   return (
@@ -66,6 +74,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
 
         {o && o.stage === 'DONE' && (
           <>
+            <PrintableReceipt order={o} amount={amount} payment={payment} closedAt={closedAt} />
             {/* Mobile hero */}
             <div className="mb-4 text-center md:hidden">
               <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-tertiary text-white ring-8 ring-tertiary-soft"><AnimatedIcon name="check" fallback="check_circle" size={40} playOnMount /></span>
@@ -158,7 +167,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                   </div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 print:hidden">
-                    <button onClick={() => window.print()} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-3 text-label-md text-on-surface"><Icon name="download" size={18} /> Reçu PDF</button>
+                    <button onClick={printReceipt} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-3 text-label-md text-on-surface"><Icon name="download" size={18} /> Reçu PDF</button>
                     <button onClick={share} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-inverse-surface py-3 text-label-md text-white"><Icon name="share" size={18} /> Partager</button>
                   </div>
                 </div>
