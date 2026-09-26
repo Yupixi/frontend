@@ -20,3 +20,9 @@ export function formatRelativeDate(iso: string): string {
 export function formatNumber(n: number, maximumFractionDigits = 1): string {
   return numberFormat('fr-FR', { maximumFractionDigits }).format(n).replace(/ /g, ' ')
 }
+
+// How a concluded hand-over was validated (receipts).
+export const handoverProof = (m: { handedOverAt: string | null; handoverMethod?: 'CODE' | 'SELLER_DECLARED' | null } | null | undefined) =>
+  !m?.handedOverAt ? 'Clôturée après accord de médiation'
+    : m.handoverMethod === 'SELLER_DECLARED' ? 'Remise confirmée par le vendeur'
+      : 'Validée par le code de remise à 4 chiffres'

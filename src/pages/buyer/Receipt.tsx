@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
+import { handoverProof } from '../../lib/format'
 import PrintableReceipt from '../../components/PrintableReceipt'
 import { ListingCard } from '../../components/ListingCard'
 import { AccountLayout } from '../account/AccountLayout'
@@ -150,7 +151,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                   <dl className="m-0 mt-4 grid gap-4 sm:grid-cols-2">
                     {[
                       ['location_on', 'Lieu de rendez-vous', o.meetup?.place ?? '—', 'Point de rencontre convenu'],
-                      ['schedule', 'Date et horodatage', closedAt ? new Date(closedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', o.meetup?.handedOverAt ? 'Validation par code à 4 chiffres' : 'Clôture après accord de médiation'],
+                      ['schedule', 'Date et horodatage', closedAt ? new Date(closedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', handoverProof(o.meetup)],
                       ['account_balance_wallet', 'Mode de règlement', payment, 'Réglé directement au vendeur'],
                       ['sell', 'Commission plateforme', '0 F (0% sans frais)', 'Aucun frais pour l’acheteur'],
                     ].map(([icon, label, value, sub]) => (

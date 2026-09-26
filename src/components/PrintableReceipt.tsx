@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { thumbnailUrl } from '../lib/media'
+import { handoverProof } from '../lib/format'
 import type { HandoverOrder } from '../graphql/sellerTools'
 
 type Props = {
@@ -23,7 +24,7 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
   const ref = `${o.reference}-CI`
   const rows: [string, string, string?][] = [
     ['Lieu de remise', o.meetup?.place ?? '—', 'Lieu public convenu entre les deux parties'],
-    ['Date de la remise', fmtDate(closedAt), o.meetup?.handedOverAt ? 'Validée par le code de remise à 4 chiffres' : 'Clôturée après accord de médiation'],
+    ['Date de la remise', fmtDate(closedAt), handoverProof(o.meetup)],
     ['Mode de règlement', payment, 'Payé directement au vendeur, à la remise'],
     ['Accord conclu le', fmtDate(o.agreedAt, false)],
   ]
