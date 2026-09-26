@@ -149,6 +149,14 @@ export default function SearchPage({
   const [nearCity] = useState(selectedCity ?? '')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice ? String(initialMaxPrice) : '')
+  // Typed prices reach the query after a pause — every digit used to refetch
+  // the results and the facets. Chips and "clear" apply at once (applyPrice).
+  const [appliedPrice, setAppliedPrice] = useState({ min: minPrice, max: maxPrice })
+  useEffect(() => {
+    const t = setTimeout(() => setAppliedPrice(p => p.min === minPrice && p.max === maxPrice ? p : { min: minPrice, max: maxPrice }), 400)
+    return () => clearTimeout(t)
+  }, [minPrice, maxPrice])
+  const applyPrice = (min: string, max: string) => { setMinPrice(min); setMaxPrice(max); setAppliedPrice({ min, max }) }
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState(searchTerm || '')
   const [alertState, setAlertState] = useState<'idle' | 'done' | 'error'>('idle')
@@ -170,9 +178,9 @@ export default function SearchPage({
     ...(handoverOnly ? { handoverOnly: true } : {}),
     ...(mobileMoneyOnly ? { mobileMoneyOnly: true } : {}),
     ...(categorySlugs.length ? { categorySlugs } : {}),
-    ...(minPrice ? { minPrice: Number(minPrice) } : {}),
-    ...(maxPrice ? { maxPrice: Number(maxPrice) } : {}),
-  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, handoverOnly, mobileMoneyOnly, categorySlugs, minPrice, maxPrice])
+    ...(appliedPrice.min ? { minPrice: Number(appliedPrice.min) } : {}),
+    ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
+  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, handoverOnly, mobileMoneyOnly, categorySlugs, appliedPrice])
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
@@ -206,7 +214,7 @@ export default function SearchPage({
   const resetAll = () => {
     setVerifiedOnly(false); setSubcategories([]); setConditions([]); setBrands([]); setSizes([]); setCities([])
     setHandoverOnly(false); setMobileMoneyOnly(false); setCategorySlugs([])
-    setMinPrice(''); setMaxPrice('')
+    applyPrice('', '')
     onClearCategoryFilter?.()
     onSearchTermChange?.('')
   }
@@ -219,7 +227,7 @@ export default function SearchPage({
     ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
     ...brands.map(v => ({ key: `brand-${v}`, label: v, clear: () => setBrands(s => s.filter(x => x !== v)) })),
     ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
-    ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => { setMinPrice(''); setMaxPrice('') } }] : []),
+    ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => applyPrice('', '') }] : []),
     ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs certifiés', clear: () => setVerifiedOnly(false) }] : []),
     ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
     ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
@@ -297,7 +305,7 @@ export default function SearchPage({
             return (
               <button
                 key={b.label}
-                onClick={() => { setMinPrice(active ? '' : String(b.min ?? '')); setMaxPrice(active ? '' : String(b.max ?? '')) }}
+                onClick={() => applyPrice(active ? '' : String(b.min ?? ''), active ? '' : String(b.max ?? ''))}
                 className={`cursor-pointer rounded-lg border-none px-2.5 py-1 text-body-sm ${active ? 'bg-inverse-surface font-semibold text-white' : 'bg-surface-container text-on-surface hover:bg-surface-container-highest'}`}
               >
                 {b.label}
