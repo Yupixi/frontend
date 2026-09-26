@@ -107,7 +107,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
   return (
     <AccountLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="md:hidden">
-        <StatsMobile s={s} period={period} periods={PERIODS} onPeriod={setPeriod} verified={currentUser?.isVerified} onNavigate={onNavigate} onSelectListing={onSelectListing} />
+        <StatsMobile s={s} period={period} periods={PERIODS} onPeriod={setPeriod} badge={currentUser?.badge} onNavigate={onNavigate} onSelectListing={onSelectListing} />
       </div>
       <div className="mx-auto hidden max-w-[1180px] pb-8 md:block">
         <nav className="mb-2 hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">

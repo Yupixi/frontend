@@ -19,6 +19,8 @@
   --color-tertiary: var(--tertiary);
   --color-tertiary-container: var(--tertiary-container);
   --color-tertiary-soft: var(--tertiary-soft);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
   --color-surface: var(--bg);
   --color-surface-lowest: var(--bg-card);
   --color-surface-container-low: var(--surface-container-low);
@@ -94,6 +96,9 @@
   --tertiary: #006947;
   --tertiary-container: #00855B;
   --tertiary-soft: #E3F5EC;
+  /* "Compte vérifié" paid badge (blue check). */
+  --verified: #1877F2;
+  --verified-soft: #E7F0FE;
   --accent: #FF3333;
   --success: #006947;
   --warning: #F59E0B;
@@ -128,6 +133,8 @@
   --secondary-fg: #1C1B1B;
   --tertiary: #4EDEA3;
   --tertiary-soft: rgba(78, 222, 163, 0.12);
+  --verified: #5AA2FF;
+  --verified-soft: rgba(90, 162, 255, 0.14);
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.5);

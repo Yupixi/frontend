@@ -11,6 +11,7 @@ import { MY_REPUTATION_QUERY, SELLER_REVIEWS_FULL_QUERY, REPLY_TO_REVIEW_MUTATIO
 import { formatRelativeDate } from '../../lib/format'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import { BADGE_LABEL, MY_BADGE_QUERY, type MyBadge } from '../../graphql/badges'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 const PAGE = 5
@@ -39,13 +40,17 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
     .sort((a, b) => sort === 'best' ? b.rating - a.rating : sort === 'worst' ? a.rating - b.rating : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   const max = Math.max(1, ...(rep?.distribution ?? []).map(d => d.count))
   const responseTime = formatResponseTime(rep?.responseTimeMinutes)
-  const checks = [
-    { ok: !!rep?.isVerified, label: 'Pièce d’identité validée par Dilchap' },
-    { ok: !!rep?.hasPhone, label: 'Numéro mobile renseigné' },
-    { ok: (rep?.salesCount ?? 0) >= 50, label: `Plus de 50 ventes réussies (${rep?.salesCount ?? 0})` },
-    { ok: (rep?.averageRating ?? 0) >= 4.5 && (rep?.reviewsCount ?? 0) >= 5, label: 'Note ≥ 4,5 sur au moins 5 avis' },
-  ]
-  const score = checks.filter(c => c.ok).length
+  // Same criteria as the server (BadgesService) for "Vendeur certifié".
+  const badge = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY).data?.myBadge
+  const c = badge?.criteria
+  const checks = badge && c ? [
+    { ok: badge.identityVerified, label: 'Pièce d’identité validée par Dilchap' },
+    { ok: badge.sales >= c.minSales, label: `Au moins ${c.minSales} ventes conclues (${badge.sales})` },
+    { ok: badge.reviews >= c.minReviews, label: `Au moins ${c.minReviews} avis d’acheteurs (${badge.reviews})` },
+    { ok: badge.reviews > 0 && badge.rating >= c.minRating, label: `Note moyenne d’au moins ${c.minRating.toLocaleString('fr-FR')} / 5` },
+    { ok: badge.penalties === 0, label: 'Aucune pénalité de litige' },
+  ] : []
+  const score = checks.filter(x => x.ok).length
 
   const share = async () => {
     if (!currentUser) return
@@ -70,7 +75,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
           </div>
           <div className="flex gap-2">
             <button onClick={() => void share()} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2.5 text-label-md text-on-surface"><Share2 size={16} /> {copied ? 'Lien copié !' : 'Partager mon profil public'}</button>
-            <button onClick={() => document.getElementById('statut')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white"><ShieldCheck size={16} /> Critères badge certifié</button>
+            <button onClick={() => document.getElementById('statut')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white"><ShieldCheck size={16} /> Critères Vendeur certifié</button>
           </div>
         </div>
 
@@ -83,8 +88,8 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
               <div className="mt-1 text-body-sm text-on-surface-variant">{rep?.reviewsCount ?? 0} avis d'acheteurs après échange</div>
             </div>
             <div className="mt-4 flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
-              <span className={`flex h-10 w-10 items-center justify-center rounded-full ${rep?.isVerified ? 'bg-tertiary text-white' : 'bg-surface-container-high text-on-surface-variant'}`}><BadgeCheck size={20} /></span>
-              <div className="text-body-sm"><div className="font-semibold text-on-surface">{rep?.isVerified ? 'Vendeur certifié' : 'Certification en attente'}</div><div className="text-on-surface-variant">{rep?.isVerified ? 'Identité vérifiée par Dilchap' : 'Demandez la vérification de votre identité'} • {rep?.negativeCount ?? 0} avis négatif{(rep?.negativeCount ?? 0) > 1 ? 's' : ''}</div></div>
+              <span className={`flex h-10 w-10 items-center justify-center rounded-full ${currentUser?.badge === 'CERTIFIED' ? 'bg-tertiary text-white' : currentUser?.badge ? 'bg-verified text-white' : 'bg-surface-container-high text-on-surface-variant'}`}><BadgeCheck size={20} /></span>
+              <div className="text-body-sm"><div className="font-semibold text-on-surface">{currentUser?.badge ? BADGE_LABEL[currentUser.badge] : 'Aucun badge actif'}</div><div className="text-on-surface-variant">{currentUser?.badge ? 'Badge affiché sur vos annonces' : <button onClick={() => onNavigate('seller-badge')} className="cursor-pointer border-none bg-transparent p-0 text-primary">Obtenir un badge</button>} • {rep?.negativeCount ?? 0} avis négatif{(rep?.negativeCount ?? 0) > 1 ? 's' : ''}</div></div>
             </div>
           </div>
 
@@ -207,13 +212,13 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
             </div>
 
             <div id="statut" className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
-              <div className="flex items-center justify-between text-label-lg text-on-surface">Statut vendeur certifié <ShieldCheck size={19} className="text-tertiary" /></div>
+              <div className="flex items-center justify-between text-label-lg text-on-surface">Badge Vendeur certifié <ShieldCheck size={19} className="text-tertiary" /></div>
               <div className="mt-3 flex items-center justify-between text-body-sm text-on-surface-variant">Critères remplis <span className="font-bold text-tertiary">{score} / {checks.length}</span></div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full bg-tertiary" style={{ width: `${(score / checks.length) * 100}%` }} /></div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full bg-tertiary" style={{ width: `${checks.length ? (score / checks.length) * 100 : 0}%` }} /></div>
               <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0 text-body-sm">
-                {checks.map(c => <li key={c.label} className={`flex items-start gap-2 ${c.ok ? 'text-on-surface' : 'text-on-surface-variant'}`}><CheckCircle2 size={15} className={`mt-0.5 shrink-0 ${c.ok ? 'text-tertiary' : 'text-outline'}`} /> {c.label}</li>)}
+                {checks.map(x => <li key={x.label} className={`flex items-start gap-2 ${x.ok ? 'text-on-surface' : 'text-on-surface-variant'}`}><CheckCircle2 size={15} className={`mt-0.5 shrink-0 ${x.ok ? 'text-tertiary' : 'text-outline'}`} /> {x.label}</li>)}
               </ul>
-              <p className="m-0 mt-3 rounded-lg bg-surface-container-low p-2.5 text-body-sm text-on-surface-variant">La certification est attribuée par l'équipe Dilchap après vérification de votre identité.</p>
+              <button onClick={() => onNavigate('seller-badge')} className="mt-3 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container text-label-md text-on-surface"><Icon name="verified" size={17} fill className="text-tertiary" /> Voir les badges et tarifs</button>
             </div>
           </aside>
         </div>

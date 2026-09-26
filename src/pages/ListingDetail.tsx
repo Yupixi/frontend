@@ -50,6 +50,8 @@ import { thumbnailUrl } from '../lib/media'
 import Select from '../components/Select'
 import Icon from '../components/Icon'
 import PaymentLogo from '../components/PaymentLogo'
+import SellerBadge from '../components/SellerBadge'
+import { BADGE_LABEL } from '../graphql/badges'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -199,6 +201,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   )
   // Official shop: shown under its trade name and logo, with the stock.
   const shop = listing.seller.shop
+  const sellerBadge = listing.seller.badge ?? seller?.badge ?? null
   const sellerName = shop?.name ?? listing.seller.fullName
   const sellerAvatar = shop?.logoUrl ?? listing.seller.avatarUrl
   const qty = listing.quantity ?? 1
@@ -254,7 +257,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const negotiation = (
     <QuickNegotiation
       listing={listing}
-      sellerRating={seller ? { average: seller.averageRating, count: seller.reviewsCount, verified: seller.isVerified } : null}
+      sellerRating={seller ? { average: seller.averageRating, count: seller.reviewsCount, badge: seller.badge } : null}
       responseTime={responseTime}
       onSent={(sellerId, id) => { setOfferOpen(false); onContactSeller?.(sellerId, id) }}
     />
@@ -364,8 +367,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <div className="pointer-events-none absolute left-3 right-16 top-3 flex flex-wrap gap-1.5 lg:right-3">
                 {shop ? (
                   <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><Icon name="storefront" size={14} /> Boutique officielle</span>
-                ) : (listing.seller.isVerified || seller?.isVerified) && (
-                  <span className="flex items-center gap-1 rounded-full bg-tertiary px-2.5 py-1 text-label-sm uppercase text-white"><BadgeCheck size={13} /> <span className="lg:hidden">Authentique certifié</span><span className="hidden lg:inline">Vendeur certifié</span></span>
+                ) : sellerBadge && (
+                  <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase text-white ${sellerBadge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}><Icon name="verified" size={13} fill /> {BADGE_LABEL[sellerBadge]}</span>
                 )}
                 {listing.condition && listing.condition !== 'N/A' && (
                   <span className="rounded-full bg-surface-lowest px-2.5 py-1 text-label-sm uppercase text-on-surface">{listing.condition}</span>
@@ -585,12 +588,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             <div className="flex items-center gap-3">
               <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0" aria-label={`Profil de ${sellerName}`}>
                 <Avatar url={sellerAvatar} name={sellerName} size={44} />
-                {(shop || seller?.isVerified) && <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-solid border-surface-container-low bg-tertiary text-white"><Icon name="check" size={10} /></span>}
+                {(shop || sellerBadge) && <span className={`absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-solid border-surface-container-low text-white ${!shop && sellerBadge === 'VERIFIED' ? 'bg-verified' : 'bg-tertiary'}`}><Icon name="check" size={10} /></span>}
               </button>
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1 text-label-lg text-on-surface">
                   <span className="truncate">{sellerName}</span>
-                  {(shop || seller?.isVerified) && <Icon name="verified" size={16} className="shrink-0 text-tertiary" title={shop ? 'Boutique officielle' : 'Vendeur vérifié'} />}
+                  {shop ? <Icon name="verified" size={16} className="shrink-0 text-tertiary" title="Boutique officielle" /> : <SellerBadge tier={sellerBadge} />}
                 </div>
                 {seller && seller.reviewsCount > 0 ? (
                   <div className="truncate text-label-sm text-primary">{seller.averageRating.toFixed(1)} ★ <span className="text-on-surface-variant">({seller.reviewsCount} avis vérifié{seller.reviewsCount > 1 ? 's' : ''})</span></div>
@@ -616,13 +619,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             <div className="flex items-center gap-3">
               <button onClick={() => onSelectSeller(listing.seller.id)} className="relative cursor-pointer border-none bg-transparent p-0">
                 <Avatar url={sellerAvatar} name={sellerName} size={52} />
-                {(shop || seller?.isVerified) && <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={11} /></span>}
+                {(shop || sellerBadge) && <span className={`absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest text-white ${!shop && sellerBadge === 'VERIFIED' ? 'bg-verified' : 'bg-tertiary'}`}><BadgeCheck size={11} /></span>}
               </button>
               <div className="min-w-0 flex-1">
                 <button onClick={() => onSelectSeller(listing.seller.id)} className="flex max-w-full cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-left text-headline-sm text-on-surface">
                   <span className="truncate">{sellerName}</span>
                   {shop ? <span className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><Icon name="storefront" size={13} /> Boutique officielle</span>
-                    : seller?.isVerified && <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><BadgeCheck size={12} /> Certifié</span>}
+                    : <SellerBadge tier={sellerBadge} variant="pill" short />}
                 </button>
                 <div className="flex items-center gap-1 text-body-sm text-on-surface-variant">
                   {seller && seller.reviewsCount > 0 && <><Star size={13} fill="#F59E0B" color="#F59E0B" /> <b className="text-on-surface">{seller.averageRating.toFixed(1)}</b> ({seller.reviewsCount} avis) •</>}

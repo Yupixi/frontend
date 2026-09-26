@@ -1,7 +1,7 @@
 import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
-import { CheckCircle2, BadgeCheck, MessageSquare, MapPin, Calendar, ShieldCheck, ArrowRight, Wallet, Star, Clock, TrendingUp, CircleX } from '../../components/icons'
+import { CheckCircle2, MessageSquare, MapPin, Calendar, ShieldCheck, ArrowRight, Wallet, Star, Clock, TrendingUp, CircleX } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import ConfirmSheet from '../../components/ConfirmSheet'
@@ -10,6 +10,7 @@ import { PAYMENT_LABELS } from '../ListingDetail'
 import { SET_CONVERSATION_DEAL_STATUS_MUTATION } from '../../graphql/messaging'
 import { MY_SALES_ORDERS_QUERY, MY_SALES_ORDERS_STATS_QUERY, type SalesOrder, type SalesStage, type SalesStats } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -155,7 +156,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                           {o.buyer.avatarUrl ? <img src={o.buyer.avatarUrl} alt="" className="h-full w-full object-cover" /> : o.buyer.fullName.charAt(0)}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 text-label-lg text-on-surface"><span className="truncate">{o.buyer.fullName}</span>{o.buyer.isVerified && <BadgeCheck size={15} className="text-tertiary" />}</div>
+                          <div className="flex items-center gap-1 text-label-lg text-on-surface"><span className="truncate">{o.buyer.fullName}</span><SellerBadge tier={o.buyer.badge} size={15} /></div>
                           <div className="flex items-center gap-1 text-body-sm text-on-surface-variant">
                             {o.buyer.city && <span className="truncate">{o.buyer.city}</span>}
                             {!!o.buyer.buyerReviewsCount && <><Star size={12} fill="#F59E0B" color="#F59E0B" /> {o.buyer.buyerRating.toFixed(1)} · {o.buyer.buyerReviewsCount} avis</>}

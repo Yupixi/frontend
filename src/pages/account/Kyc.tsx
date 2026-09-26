@@ -341,18 +341,18 @@ export default function Kyc({ onNavigate, currentUser, onLogout, onViewShop }: P
   // ─── Wizard ──────────────────────────────────────────────────────────
   if (current === 'intro') return layout(<>
     {progress}
-    <h1 className="m-0 text-headline-lg text-on-surface">Obtenez le badge Vendeur certifié</h1>
-    <p className="m-0 mt-2 text-body-md text-on-surface-variant">Montrez aux acheteurs que votre identité a été vérifiée par l’équipe Dilchap.</p>
+    <h1 className="m-0 text-headline-lg text-on-surface">Vérifiez votre identité</h1>
+    <p className="m-0 mt-2 text-body-md text-on-surface-variant">Étape indispensable pour activer le badge « Compte vérifié » ou « Vendeur certifié » sur votre profil et vos annonces.</p>
     {currentUser && (
       <div className="mt-4 flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
-        <span className="relative h-14 w-14 shrink-0"><span className="block h-full w-full overflow-hidden rounded-full bg-primary-fixed"><SafeImg src={currentUser.avatarUrl} icon="person" /></span><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-tertiary text-white ring-2 ring-surface-lowest"><Icon name="verified" size={15} /></span></span>
-        <div className="min-w-0"><div className="flex items-center gap-1 text-label-lg text-on-surface">{currentUser.fullName} <Icon name="verified" size={17} className="text-tertiary" /></div><div className="text-label-sm uppercase text-tertiary">Vendeur certifié</div><div className="text-body-sm text-on-surface-variant">Aperçu de votre profil après validation</div></div>
+        <span className="relative h-14 w-14 shrink-0"><span className="block h-full w-full overflow-hidden rounded-full bg-primary-fixed"><SafeImg src={currentUser.avatarUrl} icon="person" /></span><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-verified text-white ring-2 ring-surface-lowest"><Icon name="verified" size={15} /></span></span>
+        <div className="min-w-0"><div className="flex items-center gap-1 text-label-lg text-on-surface">{currentUser.fullName} <Icon name="verified" size={17} fill className="text-verified" /></div><div className="text-label-sm uppercase text-verified">Compte vérifié</div><div className="text-body-sm text-on-surface-variant">Aperçu avec le badge activé</div></div>
       </div>
     )}
-    <div className="mt-5 text-label-md uppercase text-on-surface-variant">Ce que le badge vous apporte</div>
+    <div className="mt-5 text-label-md uppercase text-on-surface-variant">Ce que la vérification vous ouvre</div>
     <div className="mt-2"><Tips items={[
-      ['verified', 'Badge sur votre profil et vos annonces', 'Le sceau « Vendeur certifié » apparaît à côté de votre nom partout sur Dilchap.'],
-      ['filter_alt', 'Visible avec le filtre « Vendeurs vérifiés »', 'Les acheteurs qui ne veulent voir que des vendeurs vérifiés trouvent vos annonces.'],
+      ['verified', 'Accès aux badges Dilchap', 'Activez le badge « Compte vérifié » (ou « Vendeur certifié » avec un bon historique) par abonnement.'],
+      ['storefront', 'Boutique officielle', 'La vérification d’identité est requise pour ouvrir une boutique officielle.'],
       ['handshake', 'Plus de confiance au rendez-vous', 'L’acheteur sait que votre identité a été contrôlée avant de vous rencontrer.'],
     ]} /></div>
     <div className="mt-5 rounded-2xl bg-surface-container-low p-4">
@@ -370,10 +370,10 @@ export default function Kyc({ onNavigate, currentUser, onLogout, onViewShop }: P
       {desktop && (
         <aside className="flex flex-col gap-4">
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-label-lg text-on-surface"><Icon name="verified" size={22} className="text-tertiary" /> Badge Vendeur certifié</div>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Affiché sur votre profil et sur chacune de vos annonces, après vérification manuelle de votre pièce par l’équipe Dilchap.</p>
+            <div className="flex items-center gap-2 text-label-lg text-on-surface"><Icon name="verified" size={22} fill className="text-verified" /> Badges Dilchap</div>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Une fois votre pièce vérifiée par l’équipe Dilchap, activez le badge « Compte vérifié » ou « Vendeur certifié » par abonnement.</p>
             <div className="mt-3"><Tips items={[
-              ['filter_alt', 'Filtre « Vendeurs vérifiés »', 'Vos annonces restent visibles pour les acheteurs qui filtrent.'],
+              ['filter_alt', 'Filtre « Vendeurs vérifiés »', 'Avec un badge actif, vos annonces restent visibles pour les acheteurs qui filtrent.'],
               ['handshake', 'Rendez-vous en confiance', 'L’acheteur sait à qui il a affaire.'],
             ]} /></div>
           </div>
@@ -488,7 +488,7 @@ export default function Kyc({ onNavigate, currentUser, onLogout, onViewShop }: P
         {!desktop && <><div className="mt-4 text-label-md uppercase text-on-surface-variant">Photos ({parts.length})</div><div className="mt-2">{files}</div></>}
         <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <input type="checkbox" checked={form.consent} onChange={e => setForm(f => ({ ...f, consent: e.target.checked }))} className="mt-0.5 h-5 w-5 shrink-0 accent-primary" />
-          <span className="text-body-sm text-on-surface">Je certifie l’exactitude de ces informations et j’autorise Dilchap à vérifier ma pièce d’identité afin d’obtenir le badge <b className="text-tertiary">Vendeur certifié</b>. Mes photos seront supprimées {retention} jours après la décision.</span>
+          <span className="text-body-sm text-on-surface">Je certifie l’exactitude de ces informations et j’autorise Dilchap à vérifier ma pièce d’identité afin de pouvoir activer un <b className="text-on-surface">badge Dilchap</b>. Mes photos seront supprimées {retention} jours après la décision.</span>
         </label>
         {error && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {error}</p>}
         <p className="m-0 mt-3 flex items-center gap-2 text-body-sm text-on-surface-variant"><Icon name="lock" size={16} /> Vos pièces ne sont jamais affichées aux acheteurs.</p>
@@ -530,7 +530,7 @@ function Pending({ sub, retention, onNavigate }: { sub: KycSubmission; retention
         <ol className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
           {[
             ['Vérification par l’équipe', 'Contrôle de l’authenticité de la pièce et de sa correspondance avec votre selfie.'],
-            ['Activation du badge', 'Le sceau « Vendeur certifié » apparaît sur votre profil et vos annonces.'],
+            ['Accès aux badges', 'Vous pourrez activer le badge « Compte vérifié » par abonnement.'],
             ['Suppression des photos', `Vos photos d’identité sont supprimées ${retention} jours après la décision.`],
           ].map(([t, d], i) => (
             <li key={t} className="flex items-start gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-lowest text-label-md text-primary">{i + 1}</span><div><div className="text-label-lg text-on-surface">{t}</div><div className="text-body-sm text-on-surface-variant">{d}</div></div></li>
@@ -599,7 +599,7 @@ function Validated({ kyc, currentUser, onNavigate, onViewShop }: { kyc: MyKyc; c
   const first = currentUser?.fullName.split(' ')[0] ?? ''
   return (
     <div className="mx-auto max-w-xl">
-      <StatusHero icon="workspace_premium" tone="good" badge="Vérification approuvée" title={`Félicitations${first ? ` ${first}` : ''} !`} text={<>Votre identité a été vérifiée. Vous bénéficiez désormais du statut <b className="text-on-surface">Vendeur certifié</b> sur Dilchap.</>} />
+      <StatusHero icon="workspace_premium" tone="good" badge="Vérification approuvée" title={`Félicitations${first ? ` ${first}` : ''} !`} text={<>Votre identité a été vérifiée. Vous pouvez maintenant activer le badge <b className="text-on-surface">Compte vérifié</b> sur votre profil et vos annonces.</>} />
       {currentUser && (
         <div className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
           <div className="flex items-center gap-3">
@@ -611,20 +611,21 @@ function Validated({ kyc, currentUser, onNavigate, onViewShop }: { kyc: MyKyc; c
           </div>
           <div className="mt-4 flex items-center gap-3 rounded-xl bg-tertiary-soft p-3">
             <Icon name="verified_user" size={22} className="text-tertiary" />
-            <div className="flex-1"><div className="text-label-lg text-tertiary">Vendeur certifié</div>{kyc.verifiedAt && <div className="text-body-sm text-on-surface-variant">Identité vérifiée le {new Date(kyc.verifiedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>}</div>
+            <div className="min-w-0 flex-1"><div className="text-label-lg text-tertiary">Identité vérifiée</div>{kyc.verifiedAt && <div className="text-body-sm text-on-surface-variant">Le {new Date(kyc.verifiedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>}</div>
             <Icon name="check_circle" size={22} className="text-tertiary" />
           </div>
+          <button onClick={() => onNavigate('seller-badge')} className="mt-3 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="verified" size={19} fill /> {currentUser.badge ? 'Gérer mon badge' : 'Activer mon badge'}</button>
         </div>
       )}
-      <div className="mt-5 text-label-md uppercase text-on-surface-variant">Vos avantages actifs</div>
+      <div className="mt-5 text-label-md uppercase text-on-surface-variant">Avec un badge actif</div>
       <div className="mt-2"><Tips items={[
-        ['verified', 'Badge sur toutes vos annonces', 'Le sceau apparaît à côté de votre nom sur chaque article.'],
+        ['verified', 'Coche à côté de votre nom', 'Sur votre profil, chacune de vos annonces et la messagerie.'],
         ['filter_alt', 'Visible avec le filtre « Vendeurs vérifiés »', 'Vos annonces apparaissent aux acheteurs qui filtrent sur ce critère.'],
         ['handshake', 'Plus de confiance', 'Les acheteurs savent que votre identité a été contrôlée.'],
       ]} /></div>
       <p className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="lock" size={17} className="mt-0.5 shrink-0" /> Vos photos d’identité sont supprimées {kyc.retentionDays} jours après la décision.</p>
       <div className="mt-5 grid gap-2">
-        {currentUser && onViewShop && <button onClick={() => onViewShop(currentUser.id)} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="account_circle" size={19} /> Voir mon profil certifié</button>}
+        {currentUser && onViewShop && <button onClick={() => onViewShop(currentUser.id)} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="account_circle" size={19} /> Voir mon profil</button>}
         <button onClick={() => onNavigate('seller-post')} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container text-label-md text-on-surface"><Icon name="add_circle" size={19} /> Publier une nouvelle annonce</button>
       </div>
     </div>

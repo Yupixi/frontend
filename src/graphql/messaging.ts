@@ -1,3 +1,4 @@
+import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 const MESSAGE_FIELDS = `
@@ -66,7 +67,7 @@ const CONVERSATION_FIELDS = `
     avatarUrl
     city
     createdAt
-    isVerified
+    isVerified badge
     averageRating
     reviewsCount
   }
@@ -181,7 +182,7 @@ export type RemoteUserRef = {
   avatarUrl: string | null
   city?: string | null
   createdAt?: string
-  isVerified?: boolean
+  isVerified?: boolean; badge?: BadgeTier | null
   averageRating?: number
   reviewsCount?: number
 }

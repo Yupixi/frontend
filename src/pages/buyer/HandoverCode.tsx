@@ -9,6 +9,8 @@ import { PAYMENT_LABELS } from '../ListingDetail'
 import { SALES_ORDER_QUERY, disputeIsOpen, type HandoverOrder } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 import PaymentLogo from '../../components/PaymentLogo'
+import SellerBadge from '../../components/SellerBadge'
+import { BADGE_LABEL } from '../../graphql/badges'
 
 type Props = {
   orderId: string
@@ -197,8 +199,8 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 <div className="mt-2 flex items-center gap-3">
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{o.seller.avatarUrl ? <SafeImg src={o.seller.avatarUrl} icon="person" fallbackClassName="flex h-full w-full items-center justify-center" /> : o.seller.fullName.charAt(0)}</span>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1 text-label-lg text-on-surface">{o.seller.fullName}{o.seller.isVerified && <Icon name="verified" size={16} className="text-tertiary" />}</div>
-                    <div className="text-body-sm text-on-surface-variant">{o.seller.reviewsCount ? <>★ {o.seller.averageRating.toFixed(1)} • {o.seller.reviewsCount} avis</> : 'Nouveau vendeur'}{o.seller.isVerified ? ' • Vérifié' : ''}</div>
+                    <div className="flex items-center gap-1 text-label-lg text-on-surface">{o.seller.fullName}<SellerBadge tier={o.seller.badge} /></div>
+                    <div className="text-body-sm text-on-surface-variant">{o.seller.reviewsCount ? <>★ {o.seller.averageRating.toFixed(1)} • {o.seller.reviewsCount} avis</> : 'Nouveau vendeur'}{o.seller.badge ? ` • ${BADGE_LABEL[o.seller.badge]}` : ''}</div>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">

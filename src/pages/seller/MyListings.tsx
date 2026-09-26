@@ -16,6 +16,7 @@ import Select from '../../components/Select'
 import BottomSheet from '../../components/BottomSheet'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import PaymentSheet from '../../components/PaymentSheet'
+import { BADGE_LABEL } from '../../graphql/badges'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -224,7 +225,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             { label: 'Valeur du stock actif', value: <><Price amount={stock} /></>, sub: <span className="flex items-center gap-1 text-tertiary"><CheckCircle2 size={13} /> 0 F de frais cachés</span> },
             { label: 'Vues totales', value: views.toLocaleString('fr-FR'), sub: <span className="text-tertiary">+{views24} sur 24h</span> },
             { label: 'Discussions en cours', value: <>{discussions} <span className="text-body-sm font-normal">acheteur{discussions > 1 ? 's' : ''}</span></>, sub: <span className="flex items-center gap-1"><Tag size={13} /> {pendingOffers} offre{pendingOffers > 1 ? 's' : ''} en attente</span> },
-            { label: 'Indice de réputation', value: rep?.reviewsCount ? <span className="text-tertiary">{rep.averageRating.toFixed(1)} / 5 <span className="text-body-sm font-normal text-on-surface-variant">({rep.reviewsCount} avis)</span></span> : '—', sub: <span className="flex items-center gap-1"><Star size={13} /> {rep?.isVerified ? 'Vendeur certifié' : 'Avis des acheteurs'}</span> },
+            { label: 'Indice de réputation', value: rep?.reviewsCount ? <span className="text-tertiary">{rep.averageRating.toFixed(1)} / 5 <span className="text-body-sm font-normal text-on-surface-variant">({rep.reviewsCount} avis)</span></span> : '—', sub: <span className="flex items-center gap-1"><Star size={13} /> {currentUser?.badge ? BADGE_LABEL[currentUser.badge] : 'Avis des acheteurs'}</span> },
           ].map(k => (
             <div key={k.label} className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
               <div className="text-label-sm uppercase text-on-surface-variant">{k.label}</div>

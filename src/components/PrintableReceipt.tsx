@@ -57,7 +57,7 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
           {([['Acheteur', o.buyer], ['Vendeur', o.seller]] as const).map(([label, p]) => (
             <div key={label} className="rounded-lg border border-solid border-[#e3dcdc] px-4 py-3">
               <div className="text-[8.5pt] font-semibold uppercase tracking-wide text-[#6b6363]">{label}</div>
-              <div className="mt-1 flex items-center gap-1 text-[12pt] font-bold">{p.fullName}{p.isVerified && <Icon name="verified" size={15} className="text-[#0f6b3a]" />}</div>
+              <div className="mt-1 flex items-center gap-1 text-[12pt] font-bold">{p.fullName}{p.badge && <Icon name="verified" size={15} className={p.badge === 'CERTIFIED' ? 'text-[#0f6b3a]' : 'text-[#1877F2]'} />}</div>
               {p.city && <div className="text-[9.5pt] text-[#6b6363]">{p.city}</div>}
             </div>
           ))}

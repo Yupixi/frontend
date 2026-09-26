@@ -1,3 +1,4 @@
+import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 export const LISTINGS_QUERY = gql`
@@ -62,7 +63,7 @@ export const LISTINGS_QUERY = gql`
           id
           fullName
           avatarUrl
-          isVerified
+          isVerified badge
           averageRating
           reviewsCount
           shop { id slug name logoUrl }
@@ -129,7 +130,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
         id
         fullName
         avatarUrl
-        isVerified
+        isVerified badge
         averageRating
         reviewsCount
         shop { id slug name logoUrl }
@@ -194,7 +195,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
         id
         fullName
         avatarUrl
-        isVerified
+        isVerified badge
         averageRating
         reviewsCount
         shop { id slug name logoUrl }
@@ -528,7 +529,7 @@ export type RemoteListing = {
   media: { url: string }[]
   category: { slug: string; name: string }
   subcategory: { slug: string; name: string } | null
-  seller: { id: string; fullName: string; avatarUrl?: string | null; isVerified?: boolean; averageRating?: number; reviewsCount?: number; shop?: ShopBadge | null }
+  seller: { id: string; fullName: string; avatarUrl?: string | null; isVerified?: boolean; badge?: BadgeTier | null; averageRating?: number; reviewsCount?: number; shop?: ShopBadge | null }
   quantity?: number
   aisleId?: string | null
   featuredAt?: string | null

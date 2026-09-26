@@ -16,6 +16,8 @@ import { PAYMENT_LABELS } from '../ListingDetail'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import BottomSheet from '../../components/BottomSheet'
+import SellerBadge from '../../components/SellerBadge'
+import { BADGE_LABEL } from '../../graphql/badges'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; focusDisputeId?: string; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -158,7 +160,7 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
                   {d.buyer.avatarUrl ? <img src={d.buyer.avatarUrl} alt="" className="h-full w-full object-cover" /> : d.buyer.fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1 text-label-md text-on-surface"><span className="truncate">{d.buyer.fullName}</span>{d.buyer.isVerified && <Icon name="check_circle" size={15} fill className="text-tertiary" />}</div>
+                  <div className="flex items-center gap-1 text-label-md text-on-surface"><span className="truncate">{d.buyer.fullName}</span><SellerBadge tier={d.buyer.badge} size={15} /></div>
                   <div className="text-body-sm text-on-surface-variant">{[d.buyer.city && `Résident ${d.buyer.city}`, d.buyer.buyerReviewsCount ? `★ ${d.buyer.buyerRating.toFixed(1)} · ${d.buyer.buyerReviewsCount} achat${d.buyer.buyerReviewsCount > 1 ? 's' : ''} noté${d.buyer.buyerReviewsCount > 1 ? 's' : ''}` : null].filter(Boolean).join(' • ') || 'Membre Dilchap'}</div>
                 </div>
               </div>
@@ -275,7 +277,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
             <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">Tableau de bord</button>
             <Icon name="chevron_right" size={14} /><span className="text-on-surface">Sécurité, Litiges &amp; Signalements</span>
           </nav>
-          {currentUser?.isVerified && <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="shield_with_heart" size={15} /> Protocole P2P Dilchap vérifié</span>}
+          <SellerBadge tier={currentUser?.badge} variant="pill" size={16} />
         </div>
 
         <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
@@ -330,7 +332,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
           </div>
           <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
             <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">Protection compte</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><Icon name="military_tech" size={18} /></span></div>
-            <div className="mt-2 text-headline-sm text-on-surface">{currentUser?.isVerified ? 'Vendeur Vérifié' : 'Vendeur standard'}</div>
+            <div className="mt-2 text-headline-sm text-on-surface">{currentUser?.badge ? BADGE_LABEL[currentUser.badge] : 'Vendeur standard'}</div>
             <div className={`mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-label-sm ${stats?.penalties ? 'bg-primary-fixed text-primary' : 'bg-tertiary-soft text-tertiary'}`}><Icon name="security" size={14} /> {stats?.penalties ? 'Surveillance renforcée' : 'Aucun blocage préventif'}</div>
           </div>
         </section>

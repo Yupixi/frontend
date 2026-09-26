@@ -13,6 +13,7 @@ import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } fro
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
@@ -245,7 +246,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
             <div className="flex min-w-0 flex-col gap-5">
               {/* Profil */}
               <Card id="profil" icon="store" title="Profil Public du Vendeur" sub={`Visible par les acheteurs sur vos ${rep?.activeListings ?? 0} annonce${(rep?.activeListings ?? 0) > 1 ? 's' : ''} en ligne.`}
-                aside={me.isVerified ? <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="verified" size={15} /> Vendeur Certifié</span> : undefined}>
+                aside={me.badge ? <SellerBadge tier={me.badge} variant="pill" size={16} /> : undefined}>
                 <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-surface-container-low p-4">
                   <div className="relative">
                     <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-solid border-surface-lowest bg-primary text-headline-md text-white">
@@ -255,7 +256,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     <input ref={avatarInput} type="file" accept="image/*" hidden onChange={e => { void pickAvatar(e.target.files); e.target.value = '' }} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 text-headline-sm text-on-surface">{form.fullName}{me.isVerified && <Icon name="verified" size={18} className="text-tertiary" />}</div>
+                    <div className="flex items-center gap-1 text-headline-sm text-on-surface">{form.fullName}<SellerBadge tier={me.badge} size={18} /></div>
                     <div className="text-body-sm text-on-surface-variant">Membre depuis {sinceLabel(me.createdAt)}{rep?.reviewsCount ? ` • ${Math.round(rep.satisfactionRate ?? 0)}% d'avis positifs` : ''} ({rep?.salesCount ?? 0} vente{(rep?.salesCount ?? 0) > 1 ? 's' : ''})</div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {me.isVerified && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="check_circle" size={13} className="text-tertiary" /> Identité validée</span>}
@@ -405,7 +406,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <Icon name="badge" size={22} className={me.isVerified ? 'text-tertiary' : 'text-on-surface-variant'} />
                   <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Vérification d'identité (CNI)</div>
-                    <div className="text-body-sm text-on-surface-variant">{me.isVerified ? `Validée le ${new Date(me.verifiedAt ?? rep?.verifiedAt ?? me.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} par l'équipe Dilchap.` : 'Envoyez une photo de votre pièce et un selfie pour obtenir le badge « Vendeur certifié ».'}</div>
+                    <div className="text-body-sm text-on-surface-variant">{me.isVerified ? `Validée le ${new Date(me.verifiedAt ?? rep?.verifiedAt ?? me.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} par l'équipe Dilchap.` : 'Envoyez une photo de votre pièce et un selfie : c’est le prérequis des badges « Compte vérifié » et « Vendeur certifié ».'}</div>
                   </div>
                   <button onClick={() => onNavigate('seller-kyc')} className={`flex cursor-pointer items-center gap-1.5 rounded-lg border-none px-3 py-1.5 text-label-md ${me.isVerified ? 'bg-surface-lowest text-on-surface' : 'bg-primary text-white'}`}>
                     <Icon name={me.isVerified ? 'visibility' : 'verified_user'} size={16} /> {me.isVerified ? 'Voir' : 'Vérifier mon identité'}
@@ -479,11 +480,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <div className="flex items-center gap-2">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{form.avatarUrl ? <img src={form.avatarUrl} alt="" className="h-full w-full object-cover" /> : form.fullName.charAt(0)}</span>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1 truncate text-label-md text-on-surface">{form.fullName}{me.isVerified && <Icon name="check_circle" size={14} className="text-tertiary" />}</div>
+                      <div className="flex items-center gap-1 truncate text-label-md text-on-surface">{form.fullName}<SellerBadge tier={me.badge} size={14} /></div>
                       <div className="text-body-sm text-on-surface-variant">{form.city || '—'}</div>
                     </div>
                   </div>
-                  {me.isVerified && <div className="mt-2 flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-label-sm text-tertiary"><Icon name="verified" size={14} /> Identité certifiée Dilchap</div>}
+                  {me.badge && <div className="mt-2"><SellerBadge tier={me.badge} variant="pill" size={15} /></div>}
                   {form.bio && <p className="m-0 mt-2 line-clamp-3 text-body-sm italic text-on-surface-variant">« {form.bio} »</p>}
                 </div>
                 <dl className="m-0 mt-3 flex flex-col gap-2 text-body-sm">

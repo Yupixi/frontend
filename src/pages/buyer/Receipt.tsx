@@ -14,6 +14,7 @@ import { SALES_ORDER_QUERY, type HandoverOrder } from '../../graphql/sellerTools
 import { SIMILAR_LISTINGS_QUERY, type RemoteListing } from '../../graphql/listings'
 import { CREATE_REVIEW_MUTATION, SELLER_PROFILE_QUERY } from '../../graphql/reviews'
 import type { AuthUser } from '../../graphql/auth'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   orderId: string
@@ -123,11 +124,11 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                         ['Date & Heure', closedAt ? new Date(closedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(':', 'h') : '—', 'schedule'],
                         ['Règlement', payment, 'account_balance_wallet'],
                         ['Lieu de rendez-vous', o.meetup?.place ?? '—', 'location_on'],
-                        ['Vendeur', o.seller.fullName, o.seller.isVerified ? 'verified' : ''],
+                        ['Vendeur', o.seller.fullName, o.seller.badge ? 'verified' : ''],
                       ].map(([label, value, icon]) => (
                         <div key={label} className="flex items-start justify-between gap-3">
                           <dt className="shrink-0 text-on-surface-variant">{label}</dt>
-                          <dd className="m-0 flex min-w-0 items-center gap-1 text-right text-on-surface">{icon && icon !== 'verified' && <Icon name={icon} size={15} className="shrink-0 text-primary" />}<span className="min-w-0">{value}</span>{icon === 'verified' && <Icon name="verified" size={15} className="shrink-0 text-tertiary" />}</dd>
+                          <dd className="m-0 flex min-w-0 items-center gap-1 text-right text-on-surface">{icon && icon !== 'verified' && <Icon name={icon} size={15} className="shrink-0 text-primary" />}<span className="min-w-0">{value}</span>{icon === 'verified' && <SellerBadge tier={o.seller.badge} size={15} />}</dd>
                         </div>
                       ))}
                     </dl>
@@ -178,7 +179,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                 <section className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
                   <div className="flex items-center gap-3">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-fixed text-label-md text-primary">{o.seller.avatarUrl ? <SafeImg src={o.seller.avatarUrl} icon="person" fallbackClassName="flex h-full w-full items-center justify-center" /> : o.seller.fullName.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
-                    <div><div className="flex items-center gap-1 text-label-lg text-on-surface">{o.seller.fullName}{o.seller.isVerified && <Icon name="verified" size={16} className="text-tertiary" />}</div><div className="text-body-sm text-on-surface-variant">Comment s'est passée la remise ?</div></div>
+                    <div><div className="flex items-center gap-1 text-label-lg text-on-surface">{o.seller.fullName}<SellerBadge tier={o.seller.badge} /></div><div className="text-body-sm text-on-surface-variant">Comment s'est passée la remise ?</div></div>
                   </div>
                   {reviewed ? (
                     <div className="mt-4 rounded-xl bg-tertiary-soft p-4 text-center">

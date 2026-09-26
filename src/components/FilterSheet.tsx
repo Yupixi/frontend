@@ -190,7 +190,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
 
           <Section icon="shield" title="Confiance & Transactions directes">
             {([
-              ['verifiedOnly', 'verified_user', 'Vendeurs certifiés uniquement', 'Identité vérifiée par Dilchap'],
+              ['verifiedOnly', 'verified_user', 'Vendeurs vérifiés uniquement', 'Badge Compte vérifié ou Vendeur certifié'],
               ['shopsOnly', 'storefront', 'Boutiques officielles uniquement', 'Entreprises vérifiées (RCCM / NCC)'],
               ['handoverOnly', 'storefront', 'Remise en main propre privilégiée', 'Point de rendez-vous public indiqué'],
               ['mobileMoneyOnly', 'account_balance_wallet', 'Wave & Orange Money acceptés', 'Paiement mobile direct à la remise'],

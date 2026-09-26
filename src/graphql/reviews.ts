@@ -1,3 +1,4 @@
+import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 export const SELLER_PROFILE_QUERY = gql`
@@ -13,7 +14,7 @@ export const SELLER_PROFILE_QUERY = gql`
       reviewsCount
       canReview
       hasReviewed
-      isVerified
+      isVerified badge
       bio
       coverUrl
       salesCount
@@ -67,7 +68,7 @@ export type RemoteSellerProfile = {
   listingsCount: number
   averageRating: number
   reviewsCount: number
-  isVerified: boolean
+  isVerified: boolean; badge?: BadgeTier | null
   bio: string | null
   coverUrl: string | null
   salesCount: number
