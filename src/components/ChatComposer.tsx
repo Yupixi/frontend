@@ -1,7 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import AnimatedIcon from './AnimatedIcon'
-import { uploadImages } from '../lib/upload'
+import { uploadAudio, uploadImages } from '../lib/upload'
+import { formatSeconds, useVoiceRecorder, type VoiceRecording } from './VoiceMessage'
 import { thumbnailUrl } from '../lib/media'
 
 export const MAX_PHOTOS = 6
@@ -16,7 +17,7 @@ type Photo = { key: string; preview: string; url?: string; error?: boolean }
 type Props = {
   value: string
   onChange: (text: string) => void
-  onSend: (msg: { body: string; attachments: string[]; replyToId?: string }) => Promise<unknown> | void
+  onSend: (msg: { body: string; attachments: string[]; replyToId?: string; audioUrl?: string; audioDuration?: number }) => Promise<unknown> | void
   placeholder: string
   replyTo?: ComposerReply | null
   onCancelReply?: () => void
@@ -78,6 +79,26 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
   const uploading = photos.some(p => !p.url && !p.error)
   const ready = photos.filter(p => p.url).map(p => p.url!)
   const canSend = !disabled && !sending && !uploading && (!!value.trim() || ready.length > 0)
+  // Empty field: the send button becomes the microphone.
+  const voiceMode = !value.trim() && photos.length === 0
+
+  const sendVoice = async (rec: VoiceRecording | null) => {
+    if (!rec) return
+    setSending(true)
+    setError(null)
+    try {
+      const audioUrl = await uploadAudio(rec.blob, rec.filename)
+      await onSend({ body: '', attachments: [], replyToId: replyTo?.id, audioUrl, audioDuration: rec.duration })
+      setSentCount(c => c + 1)
+      onCancelReply?.()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Message vocal non envoyé, réessayez.')
+    } finally {
+      setSending(false)
+    }
+  }
+  // Reaching the 5-minute limit sends what was recorded.
+  const voice = useVoiceRecorder(rec => void sendVoice(rec))
 
   const send = async () => {
     if (!canSend) return
@@ -132,7 +153,21 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
         </div>
       )}
 
-      {error && <p className="m-0 mb-2 flex items-center gap-1.5 text-body-sm text-primary"><Icon name="error" size={16} /> {error}</p>}
+      {(error || voice.error) && <p className="m-0 mb-2 flex items-center gap-1.5 text-body-sm text-primary"><Icon name="error" size={16} /> {error || voice.error}</p>}
+
+      {voice.recording ? (
+        <div className="flex items-center gap-2 animate-[fadeIn_0.15s_ease-out]">
+          <button type="button" onClick={voice.cancel} aria-label="Annuler l’enregistrement" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:text-primary"><Icon name="delete" size={22} /></button>
+          <div className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-3xl bg-primary-fixed/40 px-4">
+            <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-primary" />
+            <span className="w-10 shrink-0 text-label-lg tabular-nums text-on-surface">{formatSeconds(voice.elapsed)}</span>
+            <span className="flex h-6 min-w-0 flex-1 items-center gap-[3px] overflow-hidden" aria-hidden="true">
+              {Array.from({ length: 24 }, (_, i) => <span key={i} className="w-[3px] shrink-0 rounded-full bg-primary/70 transition-[height] duration-100" style={{ height: `${Math.max(12, Math.round(voice.level * 100 * (0.45 + 0.55 * Math.abs(Math.sin(i * 1.7 + voice.elapsed * 6)))))}%` }} />)}
+            </span>
+          </div>
+          <button type="button" onClick={() => void voice.stop().then(sendVoice)} aria-label="Envoyer le message vocal" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md active:scale-90"><Icon name="send" size={20} /></button>
+        </div>
+      ) : (
 
       <form onSubmit={e => { e.preventDefault(); void send() }} className="flex items-end gap-2">
         <input ref={picker} type="file" accept="image/*" multiple hidden onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = '' }} />
@@ -157,10 +192,17 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
             className="block max-h-[136px] w-full resize-none border-none bg-transparent p-0 text-body-md leading-6 text-on-surface outline-none placeholder:text-on-surface-variant"
           />
         </div>
-        <button type="submit" disabled={!canSend} aria-label="Envoyer le message" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md transition-transform active:scale-90 disabled:opacity-45 disabled:shadow-none">
+        {voiceMode && !sending ? (
+          <button type="button" disabled={disabled} onClick={() => void voice.start()} aria-label="Enregistrer un message vocal" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md transition-transform active:scale-90 disabled:opacity-45">
+            <Icon name="mic" size={22} />
+          </button>
+        ) : (
+          <button type="submit" disabled={!canSend} aria-label="Envoyer le message" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md transition-transform active:scale-90 disabled:opacity-45 disabled:shadow-none">
           {sending ? <Icon name="progress_activity" size={20} className="animate-spin" /> : <AnimatedIcon name="send" fallback="send" size={19} trigger={sentCount} />}
         </button>
+        )}
       </form>
+      )}
       {value.length > MAX_LENGTH - 200 && <div className="mt-1 text-right text-label-sm normal-case tracking-normal text-on-surface-variant">{value.length} / {MAX_LENGTH}</div>}
     </div>
   )

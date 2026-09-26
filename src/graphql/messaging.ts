@@ -6,7 +6,9 @@ const MESSAGE_FIELDS = `
   senderId
   body
   attachments
-  replyTo { id senderId body attachments }
+  audioUrl
+  audioDuration
+  replyTo { id senderId body attachments audioUrl }
   readAt
   createdAt
   sender {
@@ -97,8 +99,8 @@ export const START_CONVERSATION_MUTATION = gql`
 `
 
 export const SEND_MESSAGE_MUTATION = gql`
-  mutation SendMessage($conversationId: String!, $body: String!, $attachments: [String!], $replyToId: String) {
-    sendMessage(conversationId: $conversationId, body: $body, attachments: $attachments, replyToId: $replyToId) {
+  mutation SendMessage($conversationId: String!, $body: String!, $attachments: [String!], $replyToId: String, $audioUrl: String, $audioDuration: Int) {
+    sendMessage(conversationId: $conversationId, body: $body, attachments: $attachments, replyToId: $replyToId, audioUrl: $audioUrl, audioDuration: $audioDuration) {
       ${MESSAGE_FIELDS}
     }
   }
@@ -203,7 +205,10 @@ export type RemoteMessage = {
   body: string
   // Photos sent with the message (body may be empty).
   attachments: string[]
-  replyTo: { id: string; senderId: string; body: string; attachments: string[] } | null
+  // Voice message: file URL and length in seconds.
+  audioUrl?: string | null
+  audioDuration?: number | null
+  replyTo: { id: string; senderId: string; body: string; attachments: string[]; audioUrl?: string | null } | null
   readAt: string | null
   createdAt: string
   sender: RemoteUserRef
@@ -242,5 +247,9 @@ export const RESPOND_TO_MEETUP_MUTATION = gql`
 `
 
 // Inbox preview of a message: its text, or what it carries.
-export const messagePreview = (m: { body: string; attachments?: string[] } | null | undefined) =>
-  !m ? '' : m.body || (m.attachments?.length ? (m.attachments.length > 1 ? `${m.attachments.length} photos` : 'Photo') : '')
+export const messagePreview = (m: { body: string; attachments?: string[]; audioUrl?: string | null } | null | undefined) =>
+  !m ? '' : m.body || (m.audioUrl ? 'Message vocal' : m.attachments?.length ? (m.attachments.length > 1 ? `${m.attachments.length} photos` : 'Photo') : '')
+
+// Inbox order: latest message first, conversations without messages last.
+export const byLatestMessage = (a: { lastMessageAt: string | null }, b: { lastMessageAt: string | null }) =>
+  (b.lastMessageAt ? Date.parse(b.lastMessageAt) : -Infinity) - (a.lastMessageAt ? Date.parse(a.lastMessageAt) : -Infinity)

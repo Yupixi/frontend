@@ -21,7 +21,7 @@ import {
   CONVERSATION_QUERY, CONVERSATION_UPDATED_SUBSCRIPTION, MARK_CONVERSATION_READ_MUTATION, MESSAGE_ADDED_SUBSCRIPTION,
   MY_CONVERSATIONS_QUERY, SEND_MESSAGE_MUTATION, SET_CONVERSATION_DEAL_STATUS_MUTATION, START_CONVERSATION_MUTATION,
   PROPOSE_MEETUP_MUTATION, RESPOND_TO_MEETUP_MUTATION,
-  messagePreview, type RemoteConversation, type RemoteMessage, type RemoteMeetup,
+  byLatestMessage, messagePreview, type RemoteConversation, type RemoteMessage, type RemoteMeetup,
 } from '../../graphql/messaging'
 import ChatComposer, { type ComposerHandle, type ComposerReply } from '../../components/ChatComposer'
 import ChatBubble from '../../components/ChatBubble'
@@ -117,7 +117,7 @@ type Props = {
 // "Boîte de réception & Chat" mockups (desktop 3 columns, mobile thread).
 export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
-  const conversations = listData?.myConversations ?? []
+  const conversations = [...(listData?.myConversations ?? [])].sort(byLatestMessage)
   const [filter, setFilter] = useState<'all' | 'buy' | 'sell'>('all')
   const [q, setQ] = useState('')
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -216,10 +216,11 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     void sendMessage({ variables: { conversationId: activeId, body } }).then(refresh)
   }
   // Composer: text, photos and quoted reply; the draft is cleared once sent.
-  const sendFromComposer = async ({ body, attachments, replyToId }: { body: string; attachments: string[]; replyToId?: string }) => {
+  const sendFromComposer = async ({ body, attachments, replyToId, audioUrl, audioDuration }: { body: string; attachments: string[]; replyToId?: string; audioUrl?: string; audioDuration?: number }) => {
     if (!activeId) return
     notifyStoppedTyping()
-    await sendMessage({ variables: { conversationId: activeId, body, attachments, replyToId } })
+    await sendMessage({ variables: { conversationId: activeId, body, attachments, replyToId, audioUrl, audioDuration } })
+    if (audioUrl) { refresh(); return }
     setMsg('')
     try { localStorage.removeItem(`dilchap_chat_draft_${activeId}`) } catch { /* private mode */ }
     refresh()

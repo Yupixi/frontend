@@ -6,6 +6,23 @@ const defaultGraphqlUrl = ['localhost', '127.0.0.1'].includes(window.location.ho
 const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || defaultGraphqlUrl
 const UPLOADS_URL = GRAPHQL_URL.replace(/\/graphql\/?$/, '/uploads')
 
+// One voice message, stored as recorded.
+export async function uploadAudio(blob: Blob, filename: string): Promise<string> {
+  const token = getAccessToken()
+  const formData = new FormData()
+  formData.append('file', blob, filename)
+  const res = await fetch(`${UPLOADS_URL}/audio`, {
+    method: 'POST',
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.message || "Échec de l'envoi du message vocal")
+  }
+  return ((await res.json()) as { url: string }).url
+}
+
 export async function uploadImages(files: File[]): Promise<string[]> {
   const token = getAccessToken()
   const formData = new FormData()
