@@ -166,7 +166,8 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-[1180px] px-4 py-4 md:px-8 md:py-12">
+    <div className="safe-pt mx-auto min-h-screen max-w-[1180px] px-4 pb-4 md:px-8 md:pb-12">
+      <div className="h-4 md:h-12" />
       <button onClick={onClose} className="mb-2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface md:mb-4" aria-label="Retour">
         <Icon name="arrow_back" size={22} />
       </button>

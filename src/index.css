@@ -575,3 +575,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .empty-state-disc { animation: empty-disc-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.3) both; }
 }
 @keyframes empty-disc-in { from { opacity: 0; transform: scale(0.6); } }
+
+/* iPhone notch / status bar (PWA uses viewport-fit=cover): keep content and
+   sticky headers below it. env() is 0 everywhere else. */
+.safe-pt { padding-top: env(safe-area-inset-top, 0px); }
+.safe-top { top: env(safe-area-inset-top, 0px); }
+.statusbar-backdrop { position: fixed; inset: 0 0 auto 0; height: env(safe-area-inset-top, 0px); z-index: 150; pointer-events: none; }
