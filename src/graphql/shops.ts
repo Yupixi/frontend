@@ -208,7 +208,7 @@ export type ShopListing = {
 // ─── Promotions ─────────────────────────────────────────────────────────
 
 const PROMO_ITEM = 'entryId listingId title coverUrl price discountPercent salePrice promoPrice status rejectReason'
-const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt items { ${PROMO_ITEM} }`
+const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt salesCount salesVolume items { ${PROMO_ITEM} }`
 const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt minDiscountPercent state myItems { ${PROMO_ITEM} }`
 const BUNDLE_FIELDS = 'id name tiers { minQty percent } scope aisleId aisleName listingIds startsAt endsAt active state listingsCount'
 const POST_FIELDS = 'id title body imageUrl listings { id title price coverUrl } recipients views createdAt'
@@ -223,6 +223,7 @@ export const MY_SHOP_PROMOS_QUERY = gql`
   }
 `
 export const CREATE_SHOP_SALE_MUTATION = gql`mutation CreateShopSale($input: ShopSaleInput!) { createShopSale(input: $input) { ${SALE_FIELDS} } }`
+export const UPDATE_SHOP_SALE_MUTATION = gql`mutation UpdateShopSale($id: ID!, $input: ShopSaleInput!) { updateShopSale(id: $id, input: $input) { ${SALE_FIELDS} } }`
 export const END_SHOP_SALE_MUTATION = gql`mutation EndShopSale($id: ID!) { endShopSale(id: $id) { ${SALE_FIELDS} } }`
 export const JOIN_CAMPAIGN_MUTATION = gql`mutation JoinCampaign($input: JoinCampaignInput!) { joinCampaign(input: $input) { ${CAMPAIGN_FIELDS} } }`
 export const WITHDRAW_CAMPAIGN_ENTRY_MUTATION = gql`mutation WithdrawCampaignEntry($entryId: ID!) { withdrawCampaignEntry(entryId: $entryId) }`
@@ -238,7 +239,7 @@ export type PromoItem = {
   discountPercent: number | null; salePrice: number | null; promoPrice: number | null
   status: 'PENDING' | 'APPROVED' | 'REJECTED'; rejectReason: string | null
 }
-export type ShopSale = { id: string; name: string; slug: string; startsAt: string; endsAt: string; state: PromoState; notifyFollowers: boolean; followersNotifiedAt: string | null; items: PromoItem[] }
+export type ShopSale = { id: string; name: string; slug: string; startsAt: string; endsAt: string; state: PromoState; notifyFollowers: boolean; followersNotifiedAt: string | null; salesCount: number; salesVolume: number; items: PromoItem[] }
 export type OpenCampaign = { id: string; name: string; slug: string; description: string | null; themeColor: string | null; startsAt: string; endsAt: string; minDiscountPercent: number | null; state: PromoState; myItems: PromoItem[] }
 export type BundleTier = { minQty: number; percent: number }
 export type ShopBundle = { id: string; name: string; tiers: BundleTier[]; scope: 'ALL' | 'AISLE' | 'LISTINGS'; aisleId: string | null; aisleName: string | null; listingIds: string[]; startsAt: string | null; endsAt: string | null; active: boolean; state: PromoState; listingsCount: number }
