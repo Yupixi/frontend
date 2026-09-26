@@ -23,7 +23,7 @@ function AppMark({ size = 44 }: { size?: number }) {
 export function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onUpdate: () => void; onDismiss: () => void }) {
   if (!show) return null
   return (
-    <div role="status" className="fixed inset-x-3 top-3 z-[9999] mx-auto max-w-xl">
+    <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-[9999] mx-auto max-w-xl">
       {/* Buttons wrap under the text on a phone instead of squeezing it
           into a one-word-per-line column. */}
       <div className={`${card} flex-wrap sm:flex-nowrap`}>
@@ -81,7 +81,7 @@ const PUSH_COPY: Partial<Record<PushSubscriptionResult, string>> = {
 export function PushBanner({ status, enabling, onEnable, onDismiss }: { status: PushSubscriptionResult; enabling: boolean; onEnable: () => void; onDismiss: () => void }) {
   const actionable = status === 'permission-required' || status === 'error'
   return (
-    <div role="status" className="fixed inset-x-3 top-20 z-[1000] mx-auto max-w-xl">
+    <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+5rem)] z-[1000] mx-auto max-w-xl">
       <div className={`${card} flex-wrap sm:flex-nowrap`}>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="notifications_active" size={21} /></span>
         <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-auto">

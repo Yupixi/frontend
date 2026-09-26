@@ -256,7 +256,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
   const go = (p: string) => { setSidebarOpen(false); onNavigate(p) }
 
   return (
-    <div className={`flex bg-surface ${fill ? 'h-[100dvh]' : 'h-screen'}`}>
+    <div className={`safe-pt flex bg-surface ${fill ? 'h-[100dvh]' : 'h-screen'}`}>
       <aside className="hidden w-64 shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest lg:block">
         <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} />
       </aside>
@@ -264,7 +264,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
       {sidebarOpen && (
         <div className="fixed inset-0 z-[9999] lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative flex h-full w-72 flex-col bg-surface-lowest">
+          <aside className="safe-pt relative flex h-full w-72 flex-col bg-surface-lowest">
             <div className="flex items-center justify-between border-0 border-b border-solid border-outline-variant px-4 py-3">
               <Logo size="sm" />
               <button onClick={() => setSidebarOpen(false)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant" aria-label="Fermer"><X size={22} /></button>

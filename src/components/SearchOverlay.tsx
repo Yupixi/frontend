@@ -101,7 +101,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   )
 
   return (
-    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label="Rechercher sur Dilchap" className="fixed inset-0 z-[9999] flex flex-col bg-surface">
+    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label="Rechercher sur Dilchap" className="safe-pt fixed inset-0 z-[9999] flex flex-col bg-surface">
       <div className="border-0 border-b border-solid border-outline-variant bg-surface-lowest">
         <div className="mx-auto flex max-w-[760px] items-center gap-3 px-4 py-3">
           <div className="relative flex-1" role="none">
