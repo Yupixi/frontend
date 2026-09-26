@@ -227,12 +227,17 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
         </div>
 
         {/* Mobile: the strip scrolls; a right-edge fade hints at the hidden tabs */}
-        <div className="sticky top-0 z-20 -mx-1 mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-surface-lowest p-1.5 shadow-sm [scrollbar-width:none] max-md:[mask-image:linear-gradient(to_right,#000_85%,transparent)] md:mb-5">
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => goTab(t.id)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none px-3 py-2 text-label-md ${tab === t.id ? 'bg-surface-container-low text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
-              <Icon name={t.icon} size={17} /> <span className="md:hidden">{t.short}</span><span className="max-md:hidden">{t.label}</span>
-            </button>
-          ))}
+        {/* Opaque full-width band pinned to the very top of the scroll area:
+            the tab strip's fade mask also fades its own background, and a
+            sticky element inside main's top padding let text show above it. */}
+        <div className="sticky -top-4 z-20 -mx-4 -mt-3 mb-3 bg-surface px-3 pb-2 pt-4 lg:-top-6 lg:-mx-8 lg:-mt-4 lg:mb-4 lg:px-7 lg:pt-6">
+          <div className="flex gap-1 overflow-x-auto rounded-2xl bg-surface-lowest p-1.5 shadow-sm [scrollbar-width:none] max-md:[mask-image:linear-gradient(to_right,#000_85%,transparent)]">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => goTab(t.id)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none px-3 py-2 text-label-md ${tab === t.id ? 'bg-surface-container-low text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
+                <Icon name={t.icon} size={17} /> <span className="md:hidden">{t.short}</span><span className="max-md:hidden">{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {!form || !me ? <p className="text-body-md text-on-surface-variant">Chargement…</p> : (
@@ -304,7 +309,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                       </div>
                       <div className="mt-2 grid grid-cols-3 gap-2 sm:pl-12">
                         {([['push', 'Push'], ['whatsapp', 'WhatsApp'], ['email', 'E-mail']] as [Channel, string][]).map(([ch, label]) => (
-                          <label key={ch} className="flex min-w-0 items-center justify-between gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2 py-1.5 text-label-sm text-on-surface-variant sm:gap-2 sm:px-2.5">
+                          <label key={ch} className="flex min-w-0 flex-col items-center gap-1.5 whitespace-nowrap rounded-lg bg-surface-container-low px-1 py-2 text-label-sm text-on-surface-variant sm:flex-row sm:justify-between sm:gap-2 sm:px-2.5 sm:py-1.5">
                             {label}
                             <Toggle label={`${a.title} — ${label}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />
                           </label>
