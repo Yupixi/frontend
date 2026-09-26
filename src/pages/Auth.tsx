@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, type AuthPayload } from '../graphql/auth'
 import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
+import { REQUEST_RECOVERY_MUTATION } from '../graphql/support'
 import { storeTokens } from '../lib/auth'
 import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
@@ -132,23 +133,47 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
   )
 }
 
-// No self-service reset exists yet (no e-mail/SMS sender): the honest path
-// is Dilchap support, reachable on WhatsApp.
+// No e-mail/SMS sender yet: a recovery request reaches the Dilchap support
+// queue (matched to the account, with its badge priority); WhatsApp stays
+// available as a second way.
 function ForgotPassword({ onBack }: { onBack: () => void }) {
   const { data } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
   const phone = data?.footerSettings?.supportPhone
+  const [form, setForm] = useState({ name: '', contact: '', message: '' })
+  const [done, setDone] = useState<{ reference: string } | null>(null)
+  const [send, { loading, error }] = useMutation<{ requestAccountRecovery: { reference: string } }>(REQUEST_RECOVERY_MUTATION)
+  const isEmail = form.contact.includes('@')
+  const ok = form.name.trim().length >= 2 && form.contact.trim().length >= 6 && form.message.trim().length >= 10
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    void send({ variables: { input: { name: form.name.trim(), message: form.message.trim(), ...(isEmail ? { email: form.contact.trim() } : { phone: form.contact.trim() }) } } })
+      .then(r => r.data && setDone(r.data.requestAccountRecovery))
+  }
   return (
     <div className="flex flex-col gap-4">
       <button onClick={onBack} className="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant"><Icon name="arrow_back" size={18} /> Retour à la connexion</button>
-      <div className="rounded-2xl bg-surface-container-low p-5 text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="lock_reset" size={24} /></span>
-        <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Mot de passe oublié</h2>
-        <p className="m-0 mt-1 text-body-md text-on-surface-variant">Pour protéger votre compte, la réinitialisation se fait avec le support Dilchap : écrivez-nous depuis le numéro ou l'e-mail de votre compte.</p>
-        {phone ? (
-          <a href={`https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent('Bonjour, je souhaite réinitialiser le mot de passe de mon compte Dilchap.')}`} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-tertiary px-5 py-3 text-label-md text-white no-underline">
-            <Icon name="chat" size={19} /> Contacter le support ({phone})
+      <div className="rounded-2xl bg-surface-container-low p-5">
+        <div className="text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="lock_reset" size={24} /></span>
+          <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Mot de passe oublié</h2>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant">Pour protéger votre compte, un membre de l’équipe vérifie votre identité et vous recontacte sur l’e-mail ou le numéro de votre compte.</p>
+        </div>
+        {done ? (
+          <p className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><Icon name="check_circle" size={18} className="mt-0.5 shrink-0" /> Demande {done.reference} reçue. L’équipe Dilchap vous recontacte rapidement.</p>
+        ) : (
+          <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
+            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value.slice(0, 80) }))} placeholder="Nom et prénoms" autoComplete="name" className="h-12 rounded-xl border-none bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" />
+            <input value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value.slice(0, 120) }))} placeholder="E-mail ou téléphone du compte" autoComplete="username" className="h-12 rounded-xl border-none bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" />
+            <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value.slice(0, 2000) }))} rows={3} placeholder="Ce qui se passe (mot de passe oublié, numéro changé…)" className="resize-y rounded-xl border-none bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" />
+            {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{error.message}</p>}
+            <button type="submit" disabled={!ok || loading} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60"><Icon name="send" size={19} /> {loading ? 'Envoi…' : 'Envoyer la demande'}</button>
+          </form>
+        )}
+        {phone && (
+          <a href={`https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent('Bonjour, je souhaite récupérer l’accès à mon compte Dilchap.')}`} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 text-label-md text-tertiary no-underline">
+            <Icon name="chat" size={18} /> Ou écrire au support sur WhatsApp
           </a>
-        ) : <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Le contact du support n'est pas encore configuré.</p>}
+        )}
       </div>
     </div>
   )
