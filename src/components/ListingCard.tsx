@@ -6,7 +6,7 @@ import Price from './Price'
 import BoostSheet from './BoostSheet'
 import BottomSheet from './BottomSheet'
 import type { RemoteListing } from '../graphql/listings'
-import { formatRelativeDate } from '../lib/format'
+import { formatRelativeDate, plainText } from '../lib/format'
 import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
 import { getAccessToken } from '../lib/auth'
@@ -339,7 +339,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
           </button>
         </div>
 
-        <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{listing.description}</p>
+        <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{plainText(listing.description)}</p>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-label-sm text-on-surface-variant">
           {highlight && <span className="flex items-center gap-1" style={{ color: accent }}><ArchetypeIcon archetype={getArchetype(listing)} size={13} />{highlight}</span>}

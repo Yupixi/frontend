@@ -10,6 +10,7 @@ import { UPDATE_PREFERENCES_JSON_MUTATION } from '../../graphql/sellerTools'
 import { POPULAR_SEARCHES_QUERY, type PopularSearch } from '../../graphql/categories'
 import { MY_VIEW_HISTORY_FULL_QUERY, listingPlace, type HistoryEntry } from '../../graphql/buyerSpace'
 import type { AuthUser } from '../../graphql/auth'
+import { plainText } from '../../lib/format'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -110,8 +111,8 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                   const off = l.status !== 'APPROVED'
                   return (
                     <article key={l.id} className="flex flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
-                      <div className="relative aspect-square bg-surface-container">
-                        <button onClick={() => onSelectListing(l.id)} className="block h-full w-full cursor-pointer border-none bg-transparent p-0"><SafeImg src={l.coverImageUrl} className={`h-full w-full object-cover ${off ? 'opacity-50 grayscale' : ''}`} iconSize={36} /></button>
+                      <div className="relative aspect-square overflow-hidden bg-surface-container">
+                        <button onClick={() => onSelectListing(l.id)} className="absolute inset-0 block cursor-pointer border-none bg-transparent p-0"><SafeImg src={l.coverImageUrl} className={`h-full w-full object-cover ${off ? 'opacity-50 grayscale' : ''}`} iconSize={36} /></button>
                         {l.condition && l.condition !== 'N/A' && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-surface-lowest/90 px-2 py-0.5 text-label-sm text-on-surface"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {l.condition}</span>}
                         {off && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm uppercase text-primary"><Icon name="cancel" size={14} /> {l.status === 'SOLD' ? 'Article vendu' : 'Indisponible'}</span>}
                         <button onClick={() => remove(l.id)} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest text-on-surface shadow" aria-label="Retirer de l'historique"><Icon name="close" size={17} /></button>
@@ -119,7 +120,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                       <div className="flex flex-1 flex-col p-3">
                         <div className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="location_on" size={13} className="text-primary" /> <span className="truncate">{listingPlace(l)}</span></div>
                         <button onClick={() => onSelectListing(l.id)} className={`mt-0.5 cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg ${off ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{l.title}</button>
-                        <p className="m-0 truncate text-body-sm text-on-surface-variant">{l.description}</p>
+                        <p className="m-0 truncate text-body-sm text-on-surface-variant">{plainText(l.description)}</p>
                         <div className="mt-2 flex items-center justify-between">
                           <span className={`text-headline-sm font-extrabold ${off ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}><Price amount={l.price} currency={l.currency} /></span>
                           {off ? <span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">Indisponible</span> : l.seller.isVerified && <span className="flex items-center gap-0.5 text-label-sm text-tertiary"><Icon name="verified" size={13} /> Vérifié</span>}

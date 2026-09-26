@@ -6,7 +6,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
-import { formatNumber } from '../../lib/format'
+import { formatNumber, plainText } from '../../lib/format'
 import { MY_FAVORITE_ENTRIES_QUERY, listingPlace, type FavoriteEntry } from '../../graphql/buyerSpace'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
@@ -36,8 +36,8 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
   const drop = dropOf(e)
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
-      <div className="relative aspect-square bg-surface-container md:aspect-[4/3]">
-        <button onClick={onSelect} className="block h-full w-full cursor-pointer border-none bg-transparent p-0">
+      <div className="relative aspect-square overflow-hidden bg-surface-container md:aspect-[4/3]">
+        <button onClick={onSelect} className="absolute inset-0 block cursor-pointer border-none bg-transparent p-0">
           <SafeImg src={l.coverImageUrl} className={`h-full w-full object-cover ${unavailable ? 'grayscale' : ''}`} iconSize={36} />
         </button>
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1 md:left-3 md:top-3">
@@ -53,7 +53,7 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
           <span className="hidden shrink-0 items-center gap-0.5 text-on-surface-variant md:flex"><Icon name="location_on" size={13} /> {listingPlace(l)}</span>
         </div>
         <button onClick={onSelect} className={`mt-1 cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg md:text-headline-sm ${unavailable ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{l.title}</button>
-        <p className="m-0 mt-1 line-clamp-2 hidden text-body-sm text-on-surface-variant md:block">{l.description}</p>
+        <p className="m-0 mt-1 line-clamp-2 hidden text-body-sm text-on-surface-variant md:block">{plainText(l.description)}</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-2 md:mt-3">
           <span className={`text-headline-sm font-extrabold md:text-headline-md ${unavailable ? 'text-on-surface-variant' : 'text-on-surface'}`}><Price amount={l.price} currency={l.currency} /></span>
           {drop > 0 && <span className="text-body-sm text-on-surface-variant line-through"><Price amount={e.priceAtSave} currency={l.currency} /></span>}
