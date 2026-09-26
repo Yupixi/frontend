@@ -37,7 +37,7 @@ import BoostSheet from '../components/BoostSheet'
 import ImageLightbox from '../components/ImageLightbox'
 import InlineConversation from '../components/InlineConversation'
 import QuickNegotiation from '../components/QuickNegotiation'
-import { ListingCard } from '../components/ListingCard'
+import { ListingCard, discountedPrice } from '../components/ListingCard'
 import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteSellerProfile } from '../graphql/reviews'
@@ -167,6 +167,25 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const saving = listing.originalPrice && listing.price != null && listing.originalPrice > listing.price
     ? Math.round((1 - listing.price / listing.originalPrice) * 100) : 0
   const location = listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+  // Live promotion (shop sale or Dilchap campaign) and shop bundle.
+  const promoPrice = discountedPrice(listing)
+  const promo = listing.activeCampaignDiscount
+  const shownPrice = promoPrice ?? listing.price
+  const promoTag = promo && promoPrice != null && listing.price != null && (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-label-sm text-white" style={{ background: promo.themeColor || 'var(--primary)' }}>
+      <Icon name="sell" size={14} className="shrink-0" /> <span className="truncate">-{promo.discountPercent ?? Math.round((1 - promoPrice / listing.price) * 100)} % · {promo.campaignName}</span>
+    </span>
+  )
+  const bundle = listing.bundleOffer && (
+    <div className="mt-3 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-on-surface">
+      <Icon name="inventory_2" size={18} className="mt-0.5 shrink-0 text-tertiary" />
+      <div className="min-w-0">
+        <div className="text-label-md text-tertiary">Offre groupée</div>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5">{listing.bundleOffer.tiers.map(t => <span key={t.minQty} className="whitespace-nowrap">{t.minQty} achetés : <b>-{t.percent} %</b></span>)}</div>
+        <div className="text-on-surface-variant">Appliquée par le vendeur à la conclusion de la vente.</div>
+      </div>
+    </div>
+  )
   // Official shop: shown under its trade name and logo, with the stock.
   const shop = listing.seller.shop
   const sellerName = shop?.name ?? listing.seller.fullName
@@ -381,11 +400,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </div>
             <h1 className="m-0 mt-1 text-headline-md text-on-surface">{listing.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <span className="text-headline-lg font-extrabold text-primary"><Price amount={listing.price} currency={listing.currency} /></span>
-              {saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
-              {saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">-{saving}% épargné</span>}
+              <span className="text-headline-lg font-extrabold text-primary"><Price amount={shownPrice} currency={listing.currency} /></span>
+              {promoPrice != null
+                ? <span className="text-headline-sm text-outline line-through"><Price amount={listing.price} currency={listing.currency} /></span>
+                : saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
+              {promoPrice == null && saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">-{saving}% épargné</span>}
+              {promoTag}
               {stock}
             </div>
+            {bundle}
             <div className="mt-4 flex items-start gap-3 rounded-xl bg-tertiary-soft p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><Percent size={18} /></span>
               <div className="text-body-sm">
@@ -479,17 +502,21 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
             <div className="mt-4 rounded-xl bg-surface-container-low p-4">
               <div className="flex flex-wrap items-baseline gap-3">
-                <span className="text-[40px] font-extrabold leading-none tracking-tight text-primary"><Price amount={listing.price} currency={listing.currency} /></span>
-                {saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
+                <span className="text-[40px] font-extrabold leading-none tracking-tight text-primary"><Price amount={shownPrice} currency={listing.currency} /></span>
+                {promoPrice != null
+                  ? <span className="text-headline-sm text-outline line-through"><Price amount={listing.price} currency={listing.currency} /></span>
+                  : saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
               </div>
-              {saving > 0 && <span className="mt-2 inline-block rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">-{saving}% par rapport au prix neuf</span>}
+              {promoTag && <span className="mr-2 mt-2 inline-flex max-w-full">{promoTag}</span>}
+              {promoPrice == null && saving > 0 && <span className="mt-2 inline-block rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">-{saving}% par rapport au prix neuf</span>}
               {listing.negotiable && <span className="ml-2 mt-2 inline-block rounded-md bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">Prix négociable</span>}
               {stock && <span className="ml-2 mt-2 inline-block">{stock}</span>}
+              {bundle}
             </div>
 
             <dl className="m-0 mt-4 flex flex-col gap-2 text-body-sm">
               <div className="flex justify-between"><dt className="flex items-center gap-1.5 text-on-surface-variant"><ShieldCheck size={14} /> Commission Dilchap</dt><dd className="m-0 font-bold text-tertiary">0 F (0%)</dd></div>
-              <div className="flex justify-between border-0 border-t border-solid border-outline-variant pt-2"><dt className="font-bold text-on-surface">Montant à régler au vendeur</dt><dd className="m-0 text-label-lg text-on-surface"><Price amount={listing.price} currency={listing.currency} /></dd></div>
+              <div className="flex justify-between border-0 border-t border-solid border-outline-variant pt-2"><dt className="font-bold text-on-surface">Montant à régler au vendeur</dt><dd className="m-0 text-label-lg text-on-surface"><Price amount={shownPrice} currency={listing.currency} /></dd></div>
             </dl>
 
             <div className="mt-4">

@@ -15,3 +15,14 @@ export const requestOpenConversation = (conversationId: string) =>
 export const conversationFromUrl = (url: string = window.location.href) => {
   try { return new URL(url, window.location.origin).searchParams.get('conversation') } catch { return null }
 }
+
+// Opens an official shop (notification of a followed shop: `/?shop=<slug>`).
+export const OPEN_SHOP_EVENT = 'yupixi:open-shop'
+
+export const requestOpenShop = (slug: string) =>
+  window.dispatchEvent(new CustomEvent<string>(OPEN_SHOP_EVENT, { detail: slug }))
+
+export const shopFromUrl = (url: string | null | undefined) => {
+  if (!url) return null
+  try { return new URL(url, window.location.origin).searchParams.get('shop') } catch { return null }
+}

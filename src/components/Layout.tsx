@@ -33,7 +33,7 @@ import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, LEGAL_PAGES, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
 import { PaymentLogos } from './PaymentLogo'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationConversation, notificationTarget } from '../graphql/account'
-import { requestOpenConversation } from '../lib/navigation'
+import { requestOpenConversation, requestOpenShop, shopFromUrl } from '../lib/navigation'
 import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
@@ -43,7 +43,7 @@ type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
   | 'buyer-dashboard' | 'buyer-favorites' | 'buyer-messages' | 'buyer-notifications' | 'buyer-history' | 'buyer-settings'
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
-  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats'
+  | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
   | 'legal' | 'shop' | 'shops'
 
@@ -174,7 +174,9 @@ export default function Layout({
     setNotifMenuOpen(false)
     const conversationId = notificationConversation(n)
     const target = notificationTarget(n)
+    const shopSlug = shopFromUrl(n.link)
     if (conversationId) requestOpenConversation(conversationId)
+    else if (shopSlug) requestOpenShop(shopSlug)
     else if (target) onNavigate(target as Page)
     else if (n.listingId) onSelectListing?.(n.listingId)
     else onNavigate('buyer-notifications')

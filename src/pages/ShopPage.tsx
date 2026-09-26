@@ -8,7 +8,8 @@ import { ListingCard } from '../components/ListingCard'
 import { LISTINGS_QUERY, type ListingSort, type RemoteListing } from '../graphql/listings'
 import { FOLLOW_SELLER_MUTATION, SELLER_REVIEWS_QUERY, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteReview } from '../graphql/reviews'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
-import { DAYS, SHOP_QUERY, TRACK_SHOP_VISIT_MUTATION, openNow, shopUrl, type Shop } from '../graphql/shops'
+import { DAYS, SHOP_POSTS_QUERY, SHOP_QUERY, TRACK_SHOP_POST_VIEWS_MUTATION, TRACK_SHOP_VISIT_MUTATION, openNow, shopUrl, type Shop, type ShopPost } from '../graphql/shops'
+import Price from '../components/Price'
 import { formatNumber, formatRelativeDate } from '../lib/format'
 import { ShopLogo } from '../components/ShopCard'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
@@ -26,7 +27,7 @@ type Props = {
   preloaded?: Shop
 }
 
-type Tab = 'home' | 'all' | 'reviews' | 'infos'
+type Tab = 'home' | 'all' | 'news' | 'reviews' | 'infos'
 const REPORT_REASONS = ['Contrefaçon', 'Tentative d’arnaque', 'Informations trompeuses', 'Comportement inapproprié', 'Autre']
 const since = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : null)
 const socialUrl = (kind: 'facebook' | 'instagram' | 'tiktok', v: string) => {
@@ -147,6 +148,20 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   const { data: featured } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId: ownerId, featuredOnly: true }, pageSize: 8 }, skip: !ownerId,
   })
+  const { data: promoData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+    variables: { filter: { sellerId: ownerId, promoOnly: true }, pageSize: 12 }, skip: !ownerId,
+  })
+  const { data: postsData } = useQuery<{ shopPosts: ShopPost[] }>(SHOP_POSTS_QUERY, { variables: { key: shopKey }, skip: !shopKey })
+  const [trackPosts] = useMutation(TRACK_SHOP_POST_VIEWS_MUTATION)
+  const posts = postsData?.shopPosts ?? []
+  // News seen once per browser session.
+  useEffect(() => {
+    if (tab !== 'news' || !posts.length) return
+    const unseen = posts.map(p => p.id).filter(id => { try { return !sessionStorage.getItem(`dilchap_post_${id}`) } catch { return false } })
+    if (!unseen.length) return
+    unseen.forEach(id => { try { sessionStorage.setItem(`dilchap_post_${id}`, '1') } catch { /* private mode */ } })
+    void trackPosts({ variables: { ids: unseen } }).catch(() => undefined)
+  }, [tab, posts, trackPosts])
   const { data: reviewsData } = useQuery<{ sellerReviews: RemoteReview[] }>(SELLER_REVIEWS_QUERY, { variables: { sellerId: ownerId }, skip: !ownerId || tab !== 'reviews' })
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
@@ -207,7 +222,12 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
     { icon: 'group', value: formatNumber(shop.followersCount), label: 'Abonnés' },
     { icon: 'star', value: shop.reviewsCount ? shop.averageRating.toFixed(1) : '—', label: `${shop.reviewsCount} avis` },
   ]
-  const tabs: [Tab, string, number | null][] = [['home', 'Accueil', null], ['all', 'Tous les articles', shop.listingsCount], ['reviews', 'Avis', shop.reviewsCount], ['infos', 'Infos & horaires', null]]
+  const tabs: [Tab, string, number | null][] = [
+    ['home', 'Accueil', null], ['all', 'Tous les articles', shop.listingsCount],
+    ...(posts.length ? [['news', 'Actualités', posts.length] as [Tab, string, number]] : []),
+    ['reviews', 'Avis', shop.reviewsCount], ['infos', 'Infos & horaires', null],
+  ]
+  const promoItems = promoData?.listings.items ?? []
   const featuredItems = featured?.listings.items ?? []
   const infos = <ShopInfos shop={shop} canReport={!isOwner && !reportDone} onReport={requireAuth(() => setReportOpen(true), 'report')} />
 
@@ -324,6 +344,12 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
         {tab === 'home' && (
           <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div className="flex min-w-0 flex-col gap-7">
+              {promoItems.length > 0 && (
+                <section>
+                  <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="sell" size={20} className="text-primary" /> En promotion</h2>
+                  <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4">{promoItems.slice(0, 6).map(card)}</div>
+                </section>
+              )}
               {featuredItems.length > 0 && (
                 <section>
                   <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="push_pin" size={20} className="text-primary" /> Articles phares</h2>
@@ -364,6 +390,32 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
               </Select>
             </div>
             {grid(filtered, true)}
+          </section>
+        )}
+
+        {tab === 'news' && (
+          <section className="mx-auto mt-5 flex max-w-3xl flex-col gap-4">
+            {posts.map(p => (
+              <article key={p.id} className="overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
+                {p.imageUrl && <img src={p.imageUrl} alt="" loading="lazy" className="max-h-80 w-full object-cover" />}
+                <div className="p-4 md:p-5">
+                  <div className="flex items-center gap-2 text-body-sm text-on-surface-variant"><Icon name="campaign" size={16} className="text-primary" /> {formatRelativeDate(p.createdAt)}</div>
+                  <h3 className="m-0 mt-1 text-headline-sm text-on-surface">{p.title}</h3>
+                  <p className="m-0 mt-1 whitespace-pre-line text-body-md text-on-surface">{p.body}</p>
+                  {p.listings.length > 0 && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {p.listings.map(l => (
+                        <button key={l.id} onClick={() => onSelectListing(l.id)} className="min-w-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-low p-0 text-left">
+                          <span className="block aspect-square bg-surface-container">{l.coverUrl && <img src={l.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}</span>
+                          <span className="block truncate px-2 pt-1 text-label-sm text-on-surface">{l.title}</span>
+                          <span className="block px-2 pb-1.5 text-label-md text-primary"><Price amount={l.price} /></span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
           </section>
         )}
 

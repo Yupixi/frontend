@@ -204,3 +204,50 @@ export type ShopListing = {
   id: string; title: string; price: number | null; currency: string; status: string; coverImageUrl: string | null
   quantity: number; aisleId: string | null; featuredAt: string | null; category: { name: string }
 }
+
+// ─── Promotions ─────────────────────────────────────────────────────────
+
+const PROMO_ITEM = 'entryId listingId title coverUrl price discountPercent salePrice promoPrice status rejectReason'
+const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt items { ${PROMO_ITEM} }`
+const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt minDiscountPercent state myItems { ${PROMO_ITEM} }`
+const BUNDLE_FIELDS = 'id name tiers { minQty percent } scope aisleId aisleName listingIds startsAt endsAt active state listingsCount'
+const POST_FIELDS = 'id title body imageUrl listings { id title price coverUrl } recipients views createdAt'
+
+export const MY_SHOP_PROMOS_QUERY = gql`
+  query MyShopPromos {
+    myShopSales { ${SALE_FIELDS} }
+    openShopCampaigns { ${CAMPAIGN_FIELDS} }
+    myShopBundles { ${BUNDLE_FIELDS} }
+    myShopPosts { ${POST_FIELDS} }
+    myShopPostQuota { limit used nextAt followers }
+  }
+`
+export const CREATE_SHOP_SALE_MUTATION = gql`mutation CreateShopSale($input: ShopSaleInput!) { createShopSale(input: $input) { ${SALE_FIELDS} } }`
+export const END_SHOP_SALE_MUTATION = gql`mutation EndShopSale($id: ID!) { endShopSale(id: $id) { ${SALE_FIELDS} } }`
+export const JOIN_CAMPAIGN_MUTATION = gql`mutation JoinCampaign($input: JoinCampaignInput!) { joinCampaign(input: $input) { ${CAMPAIGN_FIELDS} } }`
+export const WITHDRAW_CAMPAIGN_ENTRY_MUTATION = gql`mutation WithdrawCampaignEntry($entryId: ID!) { withdrawCampaignEntry(entryId: $entryId) }`
+export const SAVE_SHOP_BUNDLE_MUTATION = gql`mutation SaveShopBundle($input: ShopBundleInput!, $id: ID) { saveShopBundle(input: $input, id: $id) { ${BUNDLE_FIELDS} } }`
+export const STOP_SHOP_BUNDLE_MUTATION = gql`mutation StopShopBundle($id: ID!) { stopShopBundle(id: $id) { ${BUNDLE_FIELDS} } }`
+export const CREATE_SHOP_POST_MUTATION = gql`mutation CreateShopPost($input: ShopPostInput!) { createShopPost(input: $input) { ${POST_FIELDS} } }`
+export const SHOP_POSTS_QUERY = gql`query ShopPosts($key: String!) { shopPosts(key: $key) { ${POST_FIELDS} } }`
+export const TRACK_SHOP_POST_VIEWS_MUTATION = gql`mutation TrackShopPostViews($ids: [ID!]!) { trackShopPostViews(ids: $ids) }`
+
+export type PromoState = 'SCHEDULED' | 'LIVE' | 'ENDED'
+export type PromoItem = {
+  entryId: string; listingId: string; title: string; coverUrl: string | null; price: number | null
+  discountPercent: number | null; salePrice: number | null; promoPrice: number | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'; rejectReason: string | null
+}
+export type ShopSale = { id: string; name: string; slug: string; startsAt: string; endsAt: string; state: PromoState; notifyFollowers: boolean; followersNotifiedAt: string | null; items: PromoItem[] }
+export type OpenCampaign = { id: string; name: string; slug: string; description: string | null; themeColor: string | null; startsAt: string; endsAt: string; minDiscountPercent: number | null; state: PromoState; myItems: PromoItem[] }
+export type BundleTier = { minQty: number; percent: number }
+export type ShopBundle = { id: string; name: string; tiers: BundleTier[]; scope: 'ALL' | 'AISLE' | 'LISTINGS'; aisleId: string | null; aisleName: string | null; listingIds: string[]; startsAt: string | null; endsAt: string | null; active: boolean; state: PromoState; listingsCount: number }
+export type ShopPost = { id: string; title: string; body: string; imageUrl: string | null; listings: { id: string; title: string; price: number | null; coverUrl: string | null }[]; recipients: number; views: number; createdAt: string }
+export type ShopPromos = {
+  myShopSales: ShopSale[]
+  openShopCampaigns: OpenCampaign[]
+  myShopBundles: ShopBundle[]
+  myShopPosts: ShopPost[]
+  myShopPostQuota: { limit: number; used: number; nextAt: string | null; followers: number }
+}
+export const PROMO_STATE_LABEL: Record<PromoState, string> = { SCHEDULED: 'Programmée', LIVE: 'En cours', ENDED: 'Terminée' }
