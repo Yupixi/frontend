@@ -249,7 +249,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
       {viewer !== null && images.length > 0 && <ImageLightbox images={images} start={viewer} alt={listing.title} onClose={() => setViewer(null)} onIndexChange={i => showImage(i, false)} />}
       {isOwner && <BoostSheet open={boostOpen} onClose={() => setBoostOpen(false)} listing={listing} />}
       {/* Mobile app bar (Stitch "Détails Article") — replaces the site header here */}
-      <div className="safe-top sticky z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface/95 px-2 backdrop-blur-md lg:hidden">
+      <div className="safe-top sticky z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface px-2 lg:hidden">
         <button onClick={() => (window.history.length > 1 ? window.history.back() : onNavigate('home'))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Retour">
           <ArrowLeft size={22} />
         </button>
@@ -634,7 +634,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
       )}
 
       {/* Mobile sticky action bar */}
-      <div className="fixed inset-x-0 bottom-0 z-[300] flex gap-2 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 p-3 backdrop-blur-md lg:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+      <div className="fixed inset-x-0 bottom-0 z-[300] flex gap-2 border-0 border-t border-solid border-outline-variant bg-surface-lowest p-3 lg:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
         {ownerPanel ?? (
           <>
             {listing.negotiable && (

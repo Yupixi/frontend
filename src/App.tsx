@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Suspense, startTransition } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
@@ -7,7 +7,7 @@ import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
-import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
+import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
 import Home, { type SearchPreset } from './pages/Home'
@@ -72,6 +72,10 @@ type NavState = {
   selectedDisputeId?: string
   legalSlug?: string
 }
+const LOCATION_WAIT_MS = 700
+
+if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+
 const NAV_STORAGE_KEY = 'yupixi_nav_state'
 
 function loadNavState(): Partial<NavState> {
@@ -110,6 +114,10 @@ function sharedListingId(): string | null {
 
 export default function App() {
   const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  // Scroll position to apply on the next page change (see the layout effect
+  // below); the app restores it itself, the browser's automatic restoration
+  // would fight it (it runs before the restored page has rendered).
+  const pendingScroll = useRef(0)
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
   const [dark, setDark] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
@@ -135,6 +143,8 @@ export default function App() {
   const [pushDismissed, setPushDismissed] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [location, setLocation] = useState<StoredLocation | null>(() => getStoredLocation())
+  // True while a first-visit IP lookup is in flight (capped, see below).
+  const [locationPending, setLocationPending] = useState(() => !getStoredLocation())
 
   // Only ever runs the IP lookup once per browser — a stored value (even a
   // manually-cleared "all countries" one) means we already know what to do
@@ -142,12 +152,17 @@ export default function App() {
   useEffect(() => {
     if (location) return
     let cancelled = false
-    void detectLocationFromIP().then(detected => {
-      if (cancelled || !detected) return
-      setStoredLocation(detected)
-      setLocation(detected)
+    // Past this, the feed loads unscoped and re-scopes when the lookup lands.
+    const giveUp = setTimeout(() => setLocationPending(false), LOCATION_WAIT_MS)
+    void (earlyLocationLookup ?? detectLocationFromIP()).then(detected => {
+      if (cancelled) return
+      if (detected) {
+        setStoredLocation(detected)
+        setLocation(detected)
+      }
+      setLocationPending(false)
     })
-    return () => { cancelled = true }
+    return () => { cancelled = true; clearTimeout(giveUp) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -286,6 +301,8 @@ export default function App() {
       const st = window.history.state
       // Same transition as navigate() — the current page stays up while the
       // target page's chunk loads.
+      // Back/forward lands where the visitor was on that page.
+      pendingScroll.current = typeof st?.scrollY === 'number' ? st.scrollY : 0
       startTransition(() => {
         if (st && typeof st.__yupixiPage === 'string') {
           // Restore the selection the entry was pushed with too — otherwise
@@ -316,9 +333,17 @@ export default function App() {
     preloadPages([SearchPage, ListingDetail, SellerProfile, Categories])
   }, [])
 
-  // Scroll to top on page change
-  useEffect(() => {
-    window.scrollTo(0, 0)
+  // Page change: top of the new page, or the remembered position on
+  // back/forward. Instant and before paint — no slide through the old page.
+  const firstPage = useRef(true)
+  useLayoutEffect(() => {
+    // Not on the first render (already at the top): scrollTo — or even
+    // reading scrollY — would force a full synchronous layout of the page
+    // being mounted, ~0.5 s of blocked main thread on a mid-range phone.
+    if (firstPage.current) { firstPage.current = false; return }
+    const top = pendingScroll.current
+    pendingScroll.current = 0
+    window.scrollTo({ top, behavior: 'instant' })
   }, [page])
 
   // Persist navigation state so a hard reload lands back where the user was.
@@ -354,6 +379,8 @@ export default function App() {
     } else if (p === 'auth' && page !== 'auth') {
       setAuthReturn(page)
     }
+    // Remember where the visitor was, for when they come back to it.
+    window.history.replaceState({ ...window.history.state, scrollY: window.scrollY }, '')
     // A transition keeps the current page on screen while the next page's
     // chunk loads, instead of flashing the Suspense fallback.
     startTransition(() => setPage(p))
@@ -479,9 +506,21 @@ export default function App() {
       navigate('auth')
       return Promise.resolve()
     }
-    return toggleFavoriteMutation({ variables: { listingId: id } }).then(() => {
-      void refetchFavorites()
-    })
+    // Optimistic: the heart fills on tap, the ids list is patched in the
+    // cache from the mutation's answer (the new state) — it used to wait for
+    // the mutation *and* a refetch of every favorite id.
+    const wasFav = favorites.includes(id)
+    return toggleFavoriteMutation({
+      variables: { listingId: id },
+      optimisticResponse: { toggleFavorite: !wasFav },
+      update: (cache, { data }) => {
+        const nowFav = data?.toggleFavorite ?? !wasFav
+        cache.updateQuery<{ myFavoriteIds: string[] }>({ query: MY_FAVORITE_IDS_QUERY }, prev => {
+          const ids = prev?.myFavoriteIds ?? []
+          return { myFavoriteIds: nowFav ? (ids.includes(id) ? ids : [...ids, id]) : ids.filter(x => x !== id) }
+        })
+      },
+    }).then(() => undefined, () => { void refetchFavorites() })
   }
 
   const logout = () => {
@@ -500,7 +539,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} locationPending={locationPending} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? location?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
       case 'listing-detail':

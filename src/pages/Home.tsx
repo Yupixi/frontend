@@ -26,6 +26,9 @@ type HomeProps = {
   onCategorySelect?: (categoryId: string) => void
   currentUser?: AuthUser | null
   location?: StoredLocation | null
+  // First visit: market detection still running — hold the market-scoped
+  // queries so they don't load twice.
+  locationPending?: boolean
   onContactSeller?: (sellerId: string, listingId?: string) => void
   onSearch?: (term: string, preset?: SearchPreset) => void
 }
@@ -147,7 +150,13 @@ function Kicker({ children, className = 'text-primary' }: { children: React.Reac
 
 // Mobile follows "Dilchap Mobile – Accueil & Découverte"; desktop (lg+)
 // follows the dedicated desktop home mockup.
-export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, onContactSeller, onSearch }: HomeProps) {
+type FeedState = { key: string, pages: RemoteListing[][], totalCount: number }
+// The feed's loaded pages outlive Home unmounting: opening a listing and
+// coming back restores every "Charger plus" page (and the scroll position,
+// see App), instead of dropping the visitor at the top of page 1.
+const feedMemory: { city: string | null, page: { key: string, page: number } | null, feed: FeedState | null } = { city: null, page: null, feed: null }
+
+export default function Home({ onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, locationPending, onContactSeller, onSearch }: HomeProps) {
   const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
@@ -164,6 +173,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
   // Pépites à la Une — the recommendation algorithm, boosted listings first.
   const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
     variables: { limit: 12, countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined },
+    skip: locationPending,
   })
   const isBoosted = (l: RemoteListing) => !!l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()
   // A showcase rail: listings with a photo only (a grey placeholder card as
@@ -175,25 +185,26 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
 
   // Cities (desktop quick filters + hero select) — real cities facet.
   const marketFilter = location?.countryCode ? { countryCode: location.countryCode } : undefined
-  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter: marketFilter } })
+  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter: marketFilter }, skip: locationPending })
   const cities = (facetsData?.listingFacets.cities ?? []).map(c => c.value)
 
   // Dernières annonces — scoped to the market (and city chip), grown in place:
   // "Charger plus" fetches only the next page and appends it (it used to
   // re-request every listing already on screen with a growing pageSize).
-  const [feedCity, setFeedCity] = useState<string | null>(null)
+  const [feedCity, setFeedCity] = useState<string | null>(() => feedMemory.city)
   const cityFilter = feedCity ?? location?.city
   const feedFilter = marketFilter || cityFilter ? { ...marketFilter, ...(cityFilter ? { city: cityFilter } : {}) } : undefined
   const feedKey = JSON.stringify([feedFilter ?? null, sort, pageSize])
-  const [pageState, setPageState] = useState({ key: feedKey, page: 1 })
+  const [pageState, setPageState] = useState(() => feedMemory.page ?? { key: feedKey, page: 1 })
   const page = pageState.key === feedKey ? pageState.page : 1
   const setPage = (next: (p: number) => number) => setPageState({ key: feedKey, page: next(page) })
   const { data: feedData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { sort, page, pageSize, filter: feedFilter },
+    skip: locationPending,
   })
   // Pages received so far for the current filter; the previous filter's
   // list stays on screen until the new first page lands.
-  const [feed, setFeed] = useState<{ key: string, pages: RemoteListing[][], totalCount: number } | null>(null)
+  const [feed, setFeed] = useState<FeedState | null>(() => feedMemory.feed)
   useEffect(() => {
     const res = feedData?.listings
     if (!res) return
@@ -209,6 +220,11 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
     return (feed?.pages ?? []).flat().filter(l => l && !seen.has(l.id) && !!seen.add(l.id))
   }, [feed])
   const canLoadMore = !!feed && feed.key === feedKey && feed.totalCount > latest.length
+  useEffect(() => {
+    feedMemory.city = feedCity
+    feedMemory.page = pageState
+    feedMemory.feed = feed
+  }, [feedCity, pageState, feed])
 
   // Hero slider (autoplay with progress bar)
   // One timer per slide (restarted by manual navigation); the progress bar
@@ -294,7 +310,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
                 </div>
               ))}
               <div className="absolute left-0 top-0 z-30 h-1 w-full bg-white/20">
-                <div key={slide} className="hero-progress h-full bg-primary" style={{ animationDuration: `${SLIDE_MS}ms` }} />
+                <div key={slide} className="hero-progress h-full w-full bg-primary" style={{ animationDuration: `${SLIDE_MS}ms` }} />
               </div>
 
               <div className="relative z-20">
@@ -483,7 +499,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
               )}
             </div>
             <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div>
-            {latest.length === 0 && !feedLoading && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
+            {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
             <div className="flex justify-center">{loadMore}</div>
           </section>
 
@@ -621,7 +637,7 @@ export default function Home({ onNavigate, onSelectListing, favorites, onToggleF
             }
           />
           <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div>
-          {latest.length === 0 && !feedLoading && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
+          {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
           {loadMore}
         </section>
       </div>}

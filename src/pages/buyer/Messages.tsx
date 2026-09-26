@@ -29,6 +29,7 @@ import ImageLightbox from '../../components/ImageLightbox'
 import { formatRelativeDate } from '../../lib/format'
 import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
+import { dateFormat } from '../../lib/intl'
 
 const BUYER_SUGGESTIONS = [
   'L’article est-il toujours disponible ?',
@@ -43,14 +44,14 @@ const SELLER_SUGGESTIONS = [
   'Paiement Wave ou espèces à la remise.',
 ]
 
-const time = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const time = (iso: string) => dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 // Day separator, stamped with the first message of that day ("Aujourd'hui, 10:42").
 function dayLabel(iso: string): string {
   const d = new Date(iso)
   const today = new Date()
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
   const same = (a: Date, b: Date) => a.toDateString() === b.toDateString()
-  const day = same(d, today) ? 'Aujourd’hui' : same(d, yesterday) ? 'Hier' : d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const day = same(d, today) ? 'Aujourd’hui' : same(d, yesterday) ? 'Hier' : dateFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d)
   return `${day.charAt(0).toUpperCase()}${day.slice(1)}, ${time(iso)}`
 }
 

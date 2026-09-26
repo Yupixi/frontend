@@ -1,5 +1,5 @@
 import EmptyState from '../components/EmptyState'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { CategoryIcon } from '../components/Icon'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from '../components/icons'
@@ -98,6 +98,34 @@ function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
   )
 }
 
+// Keeps keystrokes local: typing re-renders this input only, not the App,
+// the layout and every result card. The term goes up after a 300 ms pause
+// (which is when the results query runs anyway).
+function DebouncedSearchInput({ value, onCommit }: { value: string, onCommit: (term: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  const committed = useRef(value)
+  const commit = useRef(onCommit)
+  commit.current = onCommit
+  useEffect(() => { committed.current = value; setDraft(value) }, [value])
+  useEffect(() => {
+    if (draft === committed.current) return
+    const t = setTimeout(() => { committed.current = draft; commit.current(draft) }, 300)
+    return () => clearTimeout(t)
+  }, [draft])
+  return (
+    <input
+      type="search"
+      enterKeyHint="search"
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onKeyDown={e => { if (e.key === 'Enter' && draft !== committed.current) { committed.current = draft; commit.current(draft) } }}
+      placeholder="Rechercher sur Dilchap"
+      aria-label="Rechercher"
+      className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80"
+    />
+  )
+}
+
 export default function SearchPage({
   onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, onCategorySelect,
   searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, currentUserId, isLoggedIn, onContactSeller,
@@ -121,11 +149,21 @@ export default function SearchPage({
   const [nearCity] = useState(selectedCity ?? '')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice ? String(initialMaxPrice) : '')
+  // Typed prices reach the query after a pause — every digit used to refetch
+  // the results and the facets. Chips and "clear" apply at once (applyPrice).
+  const [appliedPrice, setAppliedPrice] = useState({ min: minPrice, max: maxPrice })
+  useEffect(() => {
+    const t = setTimeout(() => setAppliedPrice(p => p.min === minPrice && p.max === maxPrice ? p : { min: minPrice, max: maxPrice }), 400)
+    return () => clearTimeout(t)
+  }, [minPrice, maxPrice])
+  const applyPrice = (min: string, max: string) => { setMinPrice(min); setMaxPrice(max); setAppliedPrice({ min, max }) }
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState(searchTerm || '')
   const [alertState, setAlertState] = useState<'idle' | 'done' | 'error'>('idle')
 
-  useEffect(() => { const t = setTimeout(() => setSearch(searchTerm || ''), 300); return () => clearTimeout(t) }, [searchTerm])
+  // The mobile input already debounces before lifting the term (see
+  // DebouncedSearchInput); other sources (header search, chips) apply at once.
+  useEffect(() => { setSearch(searchTerm || '') }, [searchTerm])
   useEffect(() => { setSubcategories([]) }, [categoryFilter])
 
   const filter: ListingFilterInput = useMemo(() => ({
@@ -140,9 +178,9 @@ export default function SearchPage({
     ...(handoverOnly ? { handoverOnly: true } : {}),
     ...(mobileMoneyOnly ? { mobileMoneyOnly: true } : {}),
     ...(categorySlugs.length ? { categorySlugs } : {}),
-    ...(minPrice ? { minPrice: Number(minPrice) } : {}),
-    ...(maxPrice ? { maxPrice: Number(maxPrice) } : {}),
-  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, handoverOnly, mobileMoneyOnly, categorySlugs, minPrice, maxPrice])
+    ...(appliedPrice.min ? { minPrice: Number(appliedPrice.min) } : {}),
+    ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
+  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, handoverOnly, mobileMoneyOnly, categorySlugs, appliedPrice])
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
@@ -176,7 +214,7 @@ export default function SearchPage({
   const resetAll = () => {
     setVerifiedOnly(false); setSubcategories([]); setConditions([]); setBrands([]); setSizes([]); setCities([])
     setHandoverOnly(false); setMobileMoneyOnly(false); setCategorySlugs([])
-    setMinPrice(''); setMaxPrice('')
+    applyPrice('', '')
     onClearCategoryFilter?.()
     onSearchTermChange?.('')
   }
@@ -189,7 +227,7 @@ export default function SearchPage({
     ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
     ...brands.map(v => ({ key: `brand-${v}`, label: v, clear: () => setBrands(s => s.filter(x => x !== v)) })),
     ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
-    ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => { setMinPrice(''); setMaxPrice('') } }] : []),
+    ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => applyPrice('', '') }] : []),
     ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs certifiés', clear: () => setVerifiedOnly(false) }] : []),
     ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
     ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
@@ -267,7 +305,7 @@ export default function SearchPage({
             return (
               <button
                 key={b.label}
-                onClick={() => { setMinPrice(active ? '' : String(b.min ?? '')); setMaxPrice(active ? '' : String(b.max ?? '')) }}
+                onClick={() => applyPrice(active ? '' : String(b.min ?? ''), active ? '' : String(b.max ?? ''))}
                 className={`cursor-pointer rounded-lg border-none px-2.5 py-1 text-body-sm ${active ? 'bg-inverse-surface font-semibold text-white' : 'bg-surface-container text-on-surface hover:bg-surface-container-highest'}`}
               >
                 {b.label}
@@ -329,15 +367,7 @@ export default function SearchPage({
       <div className="mb-4 flex items-center gap-2 lg:hidden">
         <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-xl border border-solid border-outline-variant bg-surface-lowest">
           <SearchIcon size={20} className="pointer-events-none absolute left-3.5 text-primary" />
-          <input
-            type="search"
-            enterKeyHint="search"
-            value={searchTerm ?? ''}
-            onChange={e => onSearchTermChange?.(e.target.value)}
-            placeholder="Rechercher sur Dilchap"
-            aria-label="Rechercher"
-            className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80"
-          />
+          <DebouncedSearchInput value={searchTerm ?? ''} onCommit={term => onSearchTermChange?.(term)} />
         </label>
         <button onClick={() => setFiltersOpen(true)} aria-label="Filtres" className="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-inverse-surface text-white">
           <SlidersHorizontal size={20} />

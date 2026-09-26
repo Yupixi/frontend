@@ -9,12 +9,17 @@ import {
 
 const STOP_TYPING_AFTER_MS = 2500
 const TYPING_INDICATOR_TIMEOUT_MS = 5000
+// "Is typing" is re-announced at most this often while the user keeps typing
+// (well under the other side's 5 s indicator timeout) — it used to be sent
+// on every keystroke, one request per character.
+const TYPING_REANNOUNCE_MS = 2000
 
 export function useTypingIndicator(conversationId: string | null | undefined, otherParticipantId: string | undefined) {
   const [setTypingMutation] = useMutation(SET_TYPING_MUTATION)
   const [otherIsTyping, setOtherIsTyping] = useState(false)
   const stopSendingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const clearIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const lastAnnouncedRef = useRef(0)
 
   // Otherwise onData's closure can compare against a stale value captured
   // on the first render if Apollo doesn't tear the subscription down on
@@ -42,9 +47,14 @@ export function useTypingIndicator(conversationId: string | null | undefined, ot
 
   const notifyTyping = () => {
     if (!conversationId) return
-    void setTypingMutation({ variables: { conversationId, isTyping: true } })
+    const now = Date.now()
+    if (now - lastAnnouncedRef.current > TYPING_REANNOUNCE_MS) {
+      lastAnnouncedRef.current = now
+      void setTypingMutation({ variables: { conversationId, isTyping: true } })
+    }
     clearTimeout(stopSendingTimeoutRef.current)
     stopSendingTimeoutRef.current = setTimeout(() => {
+      lastAnnouncedRef.current = 0
       void setTypingMutation({ variables: { conversationId, isTyping: false } })
     }, STOP_TYPING_AFTER_MS)
   }
@@ -52,6 +62,7 @@ export function useTypingIndicator(conversationId: string | null | undefined, ot
   const notifyStoppedTyping = () => {
     if (!conversationId) return
     clearTimeout(stopSendingTimeoutRef.current)
+    lastAnnouncedRef.current = 0
     void setTypingMutation({ variables: { conversationId, isTyping: false } })
   }
 

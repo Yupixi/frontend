@@ -42,7 +42,7 @@ const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toD
 
 // "Centre de notifications" (Stitch desktop + mobile).
 export default function Notifications({ onNavigate, onSelectListing, onOpenPurchase, currentUser, onLogout }: Props) {
-  const { data, loading, refetch } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY, { fetchPolicy: 'cache-and-network', pollInterval: 15_000 })
+  const { data, loading, refetch } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY, { fetchPolicy: 'cache-and-network' }) // polled by AccountLayout
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY)
   const { data: salesData } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const [markRead] = useMutation(MARK_NOTIFICATION_READ_MUTATION)

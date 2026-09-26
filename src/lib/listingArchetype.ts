@@ -1,4 +1,5 @@
 import type { RemoteListing } from '../graphql/listings'
+import { numberFormat } from './intl'
 
 // Card presentation varies by SUBCATEGORY, not category — "Covoiturage" and
 // "Cours particuliers" both live under the "Services" category (they share
@@ -102,7 +103,7 @@ export function archetypeHighlight(listing: RemoteListing): string | null {
       const parts = [
         brandModel || undefined,
         attr(listing, 'annee'),
-        km ? `${Number(km).toLocaleString('fr-FR')} km` : undefined,
+        km ? `${numberFormat('fr-FR').format(Number(km))} km` : undefined,
       ].filter(Boolean)
       return parts.length ? parts.join(' · ') : null
     }

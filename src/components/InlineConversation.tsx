@@ -18,6 +18,7 @@ import { setActiveConversation } from '../lib/activeConversation'
 import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../lib/useMessagingLive'
 import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
+import { dateFormat } from '../lib/intl'
 
 // Short chip labels so the row wraps instead of being cut off on phones;
 // the full sentence goes into the message box.
@@ -165,7 +166,7 @@ function messageDayLabel(iso: string): string {
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
   if (sameDay(d, today)) return "Aujourd'hui"
   if (sameDay(d, yesterday)) return 'Hier'
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  return dateFormat('fr-FR', { day: 'numeric', month: 'long' }).format(d)
 }
 
 function ThreadView({ conversationId, sellerName, onClose }: { conversationId: string, sellerName: string, onClose: () => void }) {
@@ -263,7 +264,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
                     <div className={`px-3 py-2 text-body-sm ${isMe ? 'rounded-2xl rounded-br-md bg-primary text-white' : 'rounded-2xl rounded-bl-md bg-surface-lowest text-on-surface'}`}>{m.body}</div>
                   )}
                   <div className={`mt-0.5 flex items-center gap-1 text-label-sm text-on-surface-variant ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    {dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(m.createdAt))}
                     {isMe && <Icon name="done_all" size={14} className={m.readAt ? 'text-tertiary' : ''} />}
                   </div>
                 </div>

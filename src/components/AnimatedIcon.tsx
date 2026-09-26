@@ -14,6 +14,48 @@ export const hasAnimatedIcon = (name: string) => !!fileFor(name)
 let playerPromise: Promise<typeof import('lottie-web').default> | null = null
 const loadPlayer = () => (playerPromise ??= import('lottie-web/build/player/lottie_light').then(m => m.default as unknown as typeof import('lottie-web').default))
 
+// Building a Lottie instance (JSON parse + SVG tree) is main-thread work:
+// dozens of icons doing it during the first render cost over a second on a
+// mid-range phone and pushed the page's first paint back by seconds. Icons
+// are armed only once on screen, after the page has loaded, one per idle
+// slice — the static Material Symbol stands in until then.
+const armQueue: Array<() => void> = []
+let pageLoaded = typeof document !== 'undefined' && document.readyState === 'complete'
+if (!pageLoaded && typeof window !== 'undefined') {
+  window.addEventListener('load', () => { pageLoaded = true; scheduleArming() }, { once: true })
+}
+let armingScheduled = false
+// Never while the page is being scrolled: building an SVG tree mid-scroll
+// drops frames. Arming resumes once scrolling has been quiet for a moment.
+const SCROLL_QUIET_MS = 400
+let lastScroll = 0
+if (typeof window !== 'undefined') window.addEventListener('scroll', () => { lastScroll = performance.now() }, { passive: true, capture: true })
+const idle = (cb: (deadline?: IdleDeadline) => void) => {
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(cb, { timeout: 1500 })
+  else setTimeout(cb, 200)
+}
+function scheduleArming() {
+  if (armingScheduled || !pageLoaded || !armQueue.length) return
+  armingScheduled = true
+  const sinceScroll = performance.now() - lastScroll
+  if (sinceScroll < SCROLL_QUIET_MS) {
+    setTimeout(() => { armingScheduled = false; scheduleArming() }, SCROLL_QUIET_MS - sinceScroll)
+    return
+  }
+  idle(deadline => {
+    armingScheduled = false
+    if (performance.now() - lastScroll < SCROLL_QUIET_MS) return scheduleArming()
+    do armQueue.shift()?.()
+    while (armQueue.length && deadline && !deadline.didTimeout && deadline.timeRemaining() > 8)
+    scheduleArming()
+  })
+}
+function whenIdle(cb: () => void) {
+  armQueue.push(cb)
+  scheduleArming()
+  return () => { const i = armQueue.indexOf(cb); if (i >= 0) armQueue.splice(i, 1) }
+}
+
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 type Props = {
@@ -54,21 +96,53 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
   const box = useRef<HTMLSpanElement>(null)
   const anim = useRef<{ goToAndPlay: (v: number, f?: boolean) => void; goToAndStop: (v: number, f?: boolean) => void; destroy: () => void; totalFrames: number } | null>(null)
   const [ready, setReady] = useState(false)
+  const [armed, setArmed] = useState(false)
   const file = fileFor(name)
+  // Icons that only ever animate in response to the user (a card's heart,
+  // the bell, the tab bar) have nothing to show until then: they build their
+  // animation on first contact with their control, not ahead of time for
+  // every card on the page.
+  const onDemand = playOnView === undefined && !playOnMount && !loop && !replayEvery
+  const pendingPlay = useRef(false)
 
   useEffect(() => {
-    if (!file || reducedMotion() || !box.current) return
+    if (!onDemand || !file || reducedMotion() || !box.current || armed) return
+    const host = box.current.closest('button, a, [role="button"]')
+    if (!host) return
+    const arm = () => { if (playOnInteract) pendingPlay.current = true; setArmed(true) }
+    host.addEventListener('pointerenter', arm)
+    host.addEventListener('pointerdown', arm)
+    host.addEventListener('focusin', arm)
+    return () => { host.removeEventListener('pointerenter', arm); host.removeEventListener('pointerdown', arm); host.removeEventListener('focusin', arm) }
+  }, [onDemand, file, armed, playOnInteract])
+
+  // Arm when (nearly) on screen and the browser is idle — see armQueue.
+  useEffect(() => {
+    if (onDemand || !file || reducedMotion() || !box.current || armed) return
+    let cancelIdle: (() => void) | undefined
+    const io = new IntersectionObserver(entries => {
+      if (!entries.some(e => e.isIntersecting)) return
+      io.disconnect()
+      cancelIdle = whenIdle(() => setArmed(true))
+    }, { rootMargin: '150px' })
+    io.observe(box.current)
+    return () => { io.disconnect(); cancelIdle?.() }
+  }, [onDemand, file, armed])
+
+  useEffect(() => {
+    if (!armed || !file || !box.current) return
     let cancelled = false
     void Promise.all([loadPlayer(), file()]).then(([lottie, data]) => {
       if (cancelled || !box.current) return
       anim.current = lottie.loadAnimation({ container: box.current, renderer: 'svg', loop, autoplay: loop, animationData: data })
       // Rest on the last frame (the icon's final pose) until triggered.
-      if (playOnMount) anim.current.goToAndPlay(0, true)
+      if (playOnMount || pendingPlay.current) anim.current.goToAndPlay(0, true)
       else if (!loop) anim.current.goToAndStop(anim.current.totalFrames - 1, true)
+      pendingPlay.current = false
       setReady(true)
-    })
+    }).catch(() => undefined) // offline / missing chunk: the static icon stays
     return () => { cancelled = true; anim.current?.destroy(); anim.current = null }
-  }, [file, loop, playOnMount])
+  }, [armed, file, loop, playOnMount])
 
   // First time on screen: play once (optionally staggered).
   useEffect(() => {
@@ -114,7 +188,9 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
   const first = useRef(true)
   useEffect(() => {
     if (first.current) { first.current = false; return }
-    if (trigger) anim.current?.goToAndPlay(0, true)
+    if (!trigger) return
+    if (anim.current) anim.current.goToAndPlay(0, true)
+    else if (hasAnimatedIcon(name) && !reducedMotion()) { pendingPlay.current = true; setArmed(true) }
   }, [trigger])
 
   return (
