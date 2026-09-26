@@ -337,7 +337,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           onClose={() => setConfirm(null)}
           onPaid={() => { if (confirm) setFlash(`« ${confirm.l.title} » est remontée en tête.`); void refetch() }}
         >
-          <p className="m-0 rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant">« {confirm?.l.title} » repasse en tête du catalogue pour <b className="text-on-surface">500 F</b>.</p>
+          <b className="block text-label-lg text-on-surface">Remontée en tête</b>
+          <span className="line-clamp-1">« {confirm?.l.title} »</span>
         </PaymentSheet>
 
         <ConfirmSheet

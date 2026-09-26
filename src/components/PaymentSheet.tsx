@@ -25,24 +25,33 @@ type Props = {
   onPaid: (intent: PaymentIntent) => void
 }
 
+// "05 07 05 59 98" while typing a local number; anything else (+225…) as typed.
+const formatPhone = (v: string) => {
+  const digits = v.replace(/\D/g, '')
+  if (/[^\d\s]/.test(v.trim()) || digits.length > 10) return v
+  return digits.replace(/(\d{2})(?=\d)/g, '$1 ')
+}
+
 // Mobile Money checkout (Paytic) for Dilchap services: operator → number
 // (+ Orange Money code) → confirmation on the phone or in Wave → the pack is
 // applied by the server once the payment is confirmed.
 export default function PaymentSheet({ open, onClose, title, amount, request, children, onPaid }: Props) {
   const client = useApolloClient()
-  const [provider, setProvider] = useState<PaymentProvider>('wave')
+  // Nothing preselected: the number field appears once an operator is picked.
+  const [provider, setProvider] = useState<PaymentProvider | null>(null)
   // One remembered number per operator (an Orange number is no use for MTN).
-  const savedPhone = (p: PaymentProvider) => { try { return localStorage.getItem(`${PHONE_KEY}_${p}`) ?? '' } catch { return '' } }
-  const [phone, setPhone] = useState(() => savedPhone('wave'))
+  const savedPhone = (p: PaymentProvider) => { try { return formatPhone(localStorage.getItem(`${PHONE_KEY}_${p}`) ?? '') } catch { return '' } }
+  const [phone, setPhone] = useState('')
   const [touched, setTouched] = useState(false)
   const [otp, setOtp] = useState('')
   const [intent, setIntent] = useState<PaymentIntent | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [start, { loading }] = useMutation<{ startPayment: PaymentIntent }>(START_PAYMENT_MUTATION)
   const timer = useRef<number | null>(null)
 
-  const reset = () => { setIntent(null); setError(null); setOtp(''); setTouched(false) }
-  useEffect(() => { if (!open) { reset(); if (timer.current) window.clearInterval(timer.current) } }, [open])
+  const reset = () => { setIntent(null); setError(null); setOtp(''); setTouched(false); setCopied(false) }
+  useEffect(() => { if (!open) { reset(); setProvider(null); setPhone(''); if (timer.current) window.clearInterval(timer.current) } }, [open])
   useEffect(() => () => { if (timer.current) window.clearInterval(timer.current) }, [])
 
   const finish = (p: PaymentIntent) => {
@@ -66,7 +75,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   }
 
   const pay = async () => {
-    if (!request) return
+    if (!request || !provider) return
     setError(null)
     try { localStorage.setItem(`${PHONE_KEY}_${provider}`, phone) } catch { /* private mode */ }
     try {
@@ -85,78 +94,176 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
     }
   }
 
-  const waiting = intent && (intent.status === 'PENDING' || intent.status === 'PROCESSING')
-  const selected = PROVIDERS.find((p) => p.key === provider)!
-  const phoneError = momoNumberError(phone, provider, selected.label)
-  const showPhoneError = !!phoneError && (touched || phone.replace(/\D/g, '').length >= 10)
-  const canPay = !!request && !phoneError && (provider !== 'orange' || /^\d{4,8}$/.test(otp.trim()))
+  const copyRef = (ref: string) => {
+    void navigator.clipboard?.writeText(ref).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500) }).catch(() => undefined)
+  }
 
+  const waiting = intent && (intent.status === 'PENDING' || intent.status === 'PROCESSING')
+  const selected = PROVIDERS.find((p) => p.key === provider)
+  const phoneError = provider && selected ? momoNumberError(phone, provider, selected.label) : 'Choisissez un moyen de paiement.'
+  const showPhoneError = !!phoneError && !!phone && (touched || phone.replace(/\D/g, '').length >= 10)
+  // Operator of the payment in progress (the picker may have been reset).
+  const paidWith = PROVIDERS.find((p) => p.key === intent?.provider) ?? selected ?? PROVIDERS[0]
+  const otpOk = provider !== 'orange' || /^\d{4,8}$/.test(otp.trim())
+  const canPay = !!request && !phoneError && otpOk
+
+  const btn = 'h-12 cursor-pointer rounded-xl border-none text-label-lg'
   const footer = !intent || intent.status === 'FAILED' ? (
-    <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
-      <button onClick={onClose} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Annuler</button>
-      <button onClick={() => { if (intent) reset(); else void pay() }} disabled={!intent && (!canPay || loading)} className="flex h-12 flex-[1.6] cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-50">
-        {intent ? 'Réessayer' : loading ? 'Connexion…' : <>Payer <Price amount={amount} /></>}
+    <div className="border-0 border-t border-solid border-outline-variant px-4 pb-3 pt-3">
+      <button onClick={() => { if (intent) reset(); else void pay() }} disabled={!intent && (!canPay || loading)} className={`${btn} flex w-full items-center justify-center gap-2 bg-primary text-white disabled:cursor-not-allowed disabled:opacity-45`}>
+        {intent
+          ? <><Icon name="refresh" size={18} /> Réessayer</>
+          : loading
+            ? <><Icon name="progress_activity" size={18} className="animate-spin" /> Connexion à {selected?.label}…</>
+            : selected
+              ? <><Icon name="lock" size={18} /> Payer <Price amount={amount} /></>
+              : 'Choisissez un moyen de paiement'}
       </button>
+      <p className="m-0 mt-2 flex items-center justify-center gap-1 text-label-sm normal-case tracking-normal text-on-surface-variant">
+        <Icon name="verified_user" size={14} className="text-tertiary" /> Paiement sécurisé par Paytic · aucun frais ajouté
+      </p>
     </div>
   ) : (
     <div className="border-0 border-t border-solid border-outline-variant px-4 py-3">
-      <button onClick={onClose} className="h-12 w-full cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">{waiting ? 'Fermer (le paiement continue)' : 'Terminer'}</button>
+      <button onClick={onClose} className={`${btn} w-full bg-surface-container-high text-on-surface`}>{waiting ? 'Fermer (le paiement continue)' : 'Terminer'}</button>
     </div>
   )
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={title} footer={footer}>
-      {children && <div className="mb-4">{children}</div>}
-
+    <BottomSheet open={open} onClose={onClose} title={title} footer={footer} maxHeight="90vh">
       {!intent && (
         <>
-          <div className="mb-2 text-label-md text-on-surface">Payer avec</div>
-          <div className="grid grid-cols-2 gap-2">
-            {PROVIDERS.map((p) => (
-              <button key={p.key} type="button" onClick={() => { setProvider(p.key); setPhone(savedPhone(p.key)); setTouched(false) }} aria-pressed={provider === p.key} className={`flex h-14 cursor-pointer items-center gap-2.5 rounded-xl border-[1.5px] border-solid px-3 text-left text-label-md text-on-surface ${provider === p.key ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-lowest'}`}>
-                <PaymentLogo method={p.method} size={34} /> {p.label}
-              </button>
-            ))}
+          {/* Order recap */}
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
+            <div className="min-w-0 text-body-sm text-on-surface-variant">{children}</div>
+            <div className="shrink-0 text-right">
+              <div className="text-label-sm uppercase text-on-surface-variant">Total</div>
+              <div className="text-headline-sm text-primary"><Price amount={amount} /></div>
+            </div>
           </div>
-          <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{selected.hint}</p>
-          <label className="mt-4 block text-label-md text-on-surface">Numéro {selected.label}
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} inputMode="tel" autoComplete="tel" aria-invalid={showPhoneError} placeholder={`${NETWORK_PREFIX[provider] ?? '07'} 00 00 00 00`} className={`mt-1.5 h-12 w-full rounded-xl border border-solid bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:border-primary ${showPhoneError ? 'border-primary' : 'border-outline-variant'}`} />
-            {showPhoneError && phone && <span className="mt-1 flex items-center gap-1 text-body-sm font-normal text-primary"><Icon name="error" size={16} /> {phoneError}</span>}
+
+          {/* 1. Operator */}
+          <div className="mb-2 flex items-center gap-2 text-label-md text-on-surface">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">1</span> Moyen de paiement
+          </div>
+          <div role="radiogroup" className="grid grid-cols-2 gap-3">
+            {PROVIDERS.map((p) => {
+              const on = provider === p.key
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => { if (!on) { setProvider(p.key); setPhone(savedPhone(p.key)); setOtp(''); setTouched(false); setError(null) } }}
+                  className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-3xl border-2 border-solid px-2 pb-3 pt-4 text-center transition-all duration-200 ${on ? 'scale-[1.02] border-primary bg-primary-fixed/25 shadow-card-hover' : 'border-outline-variant/70 bg-surface-lowest hover:border-outline active:scale-[0.98]'}`}
+                >
+                  <span className={`absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 ${on ? 'scale-100 bg-primary text-white opacity-100' : 'scale-50 opacity-0'}`}>
+                    <Icon name="check" size={14} />
+                  </span>
+                  <PaymentLogo method={p.method} size={48} />
+                  <span className="text-label-lg text-on-surface">{p.label}</span>
+                  <span className="text-[11px] leading-tight text-on-surface-variant">{p.hint}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {provider && selected && (
+          <div key={provider} className="animate-[slideDown_0.35s_cubic-bezier(0.16,1,0.3,1)]">
+          {/* 2. Number */}
+          <div className="mb-2 mt-5 flex items-center gap-2 text-label-md text-on-surface">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">2</span> Numéro {selected.label}
+          </div>
+          <label className={`flex h-14 items-center gap-2 rounded-2xl border-[1.5px] border-solid bg-surface-lowest pl-2 pr-3 transition-colors focus-within:border-primary ${showPhoneError ? 'border-primary' : 'border-outline-variant'}`}>
+            <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-surface-container-low px-2 text-label-md text-on-surface">
+              <PaymentLogo method={selected.method} size={22} /> +225
+            </span>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(formatPhone(e.target.value))}
+              onBlur={() => setTouched(true)}
+              inputMode="tel"
+              autoComplete="tel-national"
+              aria-label={`Numéro ${selected.label}`}
+              aria-invalid={showPhoneError}
+              autoFocus={!phone}
+              placeholder={`${NETWORK_PREFIX[provider] ?? '07'} 00 00 00 00`}
+              className="h-full min-w-0 flex-1 border-none bg-transparent text-body-lg tracking-wide text-on-surface outline-none"
+            />
+            {!phoneError && <Icon name="check_circle" size={22} fill className="shrink-0 text-tertiary" />}
           </label>
+          {showPhoneError
+            ? <p className="m-0 mt-1.5 flex items-start gap-1 text-body-sm text-primary"><Icon name="error" size={16} className="mt-0.5 shrink-0" /> {phoneError}</p>
+            : <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{provider === 'wave' ? 'Le numéro de votre compte Wave.' : `Le numéro qui recevra la demande de paiement ${selected.label}.`}</p>}
+
+          {/* 3. Orange Money code */}
           {provider === 'orange' && (
-            <label className="mt-3 block text-label-md text-on-surface">Code de paiement Orange Money
-              <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={8} placeholder="Ex : 1234" className="mt-1.5 h-12 w-full rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-body-md tracking-widest text-on-surface outline-none focus:border-primary" />
-              <span className="mt-1 flex items-center gap-1 text-body-sm font-normal text-on-surface-variant"><Icon name="dialpad" size={16} /> Composez <b className="text-on-surface">#144*82#</b> sur votre téléphone Orange pour obtenir ce code.</span>
-            </label>
+            <div className="mt-5">
+              <div className="mb-2 flex items-center gap-2 text-label-md text-on-surface">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">3</span> Code de paiement
+              </div>
+              <div className="rounded-2xl bg-[#FF7900]/10 p-3">
+                <p className="m-0 flex items-center gap-2 text-body-sm text-on-surface">
+                  <Icon name="dialpad" size={18} className="shrink-0 text-[#FF7900]" />
+                  <span>Sur votre téléphone Orange, composez <a href="tel:%23144*82%23" className="font-bold text-on-surface">#144*82#</a> puis saisissez le code reçu.</span>
+                </p>
+                <input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={8}
+                  aria-label="Code de paiement Orange Money"
+                  placeholder="• • • •"
+                  className="mt-3 h-12 w-full rounded-xl border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-3 text-center text-headline-sm tracking-[0.4em] text-on-surface outline-none focus:border-[#FF7900]"
+                />
+              </div>
+            </div>
           )}
-          {error && <p className="m-0 mt-3 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
-          <p className="m-0 mt-4 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Icon name="lock" size={16} className="mt-0.5 shrink-0 text-tertiary" /> Paiement sécurisé via Paytic. Votre pack est activé dès la confirmation de l’opérateur.</p>
+          </div>
+          )}
+
+          {error && <p className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-primary-fixed px-3 py-2.5 text-body-sm text-primary"><Icon name="error" size={18} className="shrink-0" /> {error}</p>}
         </>
       )}
 
       {waiting && (
-        <div className="flex flex-col items-center gap-3 py-4 text-center">
-          <PaymentLogo method={selected.method} size={56} />
-          <Icon name="progress_activity" size={32} className="animate-spin text-primary" />
-          <p className="m-0 text-headline-sm text-on-surface">{intent.redirectUrl ? 'Redirection vers Wave…' : 'Validez le paiement sur votre téléphone'}</p>
-          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.redirectUrl ? 'Si rien ne se passe, ouvrez la page de paiement :' : `Une demande de ${amount.toLocaleString('fr-FR')} F a été envoyée au ${phone}. Confirmez-la avec votre code secret.`}</p>
-          {intent.redirectUrl && <a href={intent.redirectUrl} className="rounded-xl bg-[#1DC8FF] px-4 py-2.5 text-label-lg text-white no-underline">Ouvrir Wave</a>}
-          <p className="m-0 text-label-sm normal-case tracking-normal text-outline">Réf. {intent.reference}</p>
+        <div className="flex flex-col items-center gap-4 py-3 text-center">
+          <span className="relative flex h-20 w-20 items-center justify-center">
+            <span className="absolute inset-0 animate-ping rounded-full bg-primary/15" />
+            <PaymentLogo method={paidWith.method} size={64} />
+          </span>
+          <div>
+            <p className="m-0 text-headline-sm text-on-surface">{intent.redirectUrl ? 'Redirection vers Wave…' : 'Validez sur votre téléphone'}</p>
+            <p className="m-0 mt-1 max-w-xs text-body-sm text-on-surface-variant">
+              {intent.redirectUrl ? 'Si rien ne se passe, ouvrez la page de paiement Wave.' : <>Une demande de <b className="text-on-surface"><Price amount={amount} /></b> a été envoyée au <b className="text-on-surface">{phone}</b>. Confirmez-la avec votre code secret {paidWith.label}.</>}
+            </p>
+          </div>
+          {intent.redirectUrl && <a href={intent.redirectUrl} className="flex items-center gap-2 rounded-xl bg-[#1DC8FF] px-5 py-3 text-label-lg text-white no-underline"><Icon name="open_in_new" size={18} /> Ouvrir Wave</a>}
+          <ol className="m-0 flex w-full max-w-xs list-none flex-col gap-2.5 rounded-2xl bg-surface-container-low p-4 text-left text-body-sm">
+            <li className="flex items-center gap-2.5 text-on-surface"><Icon name="check_circle" size={20} fill className="text-tertiary" /> Demande envoyée à {paidWith.label}</li>
+            <li className="flex items-center gap-2.5 text-on-surface"><Icon name="progress_activity" size={20} className="animate-spin text-primary" /> Confirmation de l’opérateur</li>
+            <li className="flex items-center gap-2.5 text-on-surface-variant"><Icon name="radio_button_unchecked" size={20} /> Activation de votre pack</li>
+          </ol>
+          <button onClick={() => copyRef(intent.reference)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-transparent text-label-sm normal-case tracking-normal text-on-surface-variant">
+            Réf. {intent.reference} <Icon name={copied ? 'check' : 'content_copy'} size={14} />
+          </button>
         </div>
       )}
 
       {intent?.status === 'SUCCESS' && (
-        <div className="flex flex-col items-center gap-2 py-4 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={40} fill /></span>
-          <p className="m-0 text-headline-sm text-on-surface">Paiement confirmé</p>
-          <p className="m-0 text-body-sm text-on-surface-variant">{intent.simulated ? 'Mode test : paiement simulé (Paytic non configuré).' : `Réf. ${intent.reference}`}</p>
+        <div className="flex flex-col items-center gap-2 py-5 text-center">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={48} fill /></span>
+          <p className="m-0 mt-1 text-headline-sm text-on-surface">Paiement confirmé</p>
+          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.simulated ? 'Mode test : paiement simulé (Paytic non configuré).' : <>Votre pack est activé. Réf. {intent.reference}</>}</p>
         </div>
       )}
 
       {intent && (intent.status === 'FAILED' || intent.status === 'FULFILMENT_FAILED') && (
-        <div className="flex flex-col items-center gap-2 py-4 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={40} /></span>
-          <p className="m-0 text-headline-sm text-on-surface">{intent.status === 'FAILED' ? 'Paiement non abouti' : 'Paiement reçu, activation en attente'}</p>
+        <div className="flex flex-col items-center gap-2 py-5 text-center">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={48} /></span>
+          <p className="m-0 mt-1 text-headline-sm text-on-surface">{intent.status === 'FAILED' ? 'Paiement non abouti' : 'Paiement reçu, activation en attente'}</p>
           <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.status === 'FAILED' ? intent.failedReason ?? 'L’opérateur a refusé ou annulé la transaction. Aucun montant n’a été débité.' : `Notre équipe a été alertée et activera votre pack. Réf. ${intent.reference}`}</p>
         </div>
       )}
