@@ -11,6 +11,7 @@ import { POPULAR_SEARCHES_QUERY, type PopularSearch } from '../../graphql/catego
 import { MY_VIEW_HISTORY_FULL_QUERY, listingPlace, type HistoryEntry } from '../../graphql/buyerSpace'
 import type { AuthUser } from '../../graphql/auth'
 import { plainText } from '../../lib/format'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -123,7 +124,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                         <p className="m-0 truncate text-body-sm text-on-surface-variant">{plainText(l.description)}</p>
                         <div className="mt-2 flex items-center justify-between">
                           <span className={`text-headline-sm font-extrabold ${off ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}><Price amount={l.price} currency={l.currency} /></span>
-                          {off ? <span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">Indisponible</span> : l.seller.isVerified && <span className="flex items-center gap-0.5 text-label-sm text-tertiary"><Icon name="verified" size={13} /> Vérifié</span>}
+                          {off ? <span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">Indisponible</span> : <SellerBadge tier={l.seller.badge} variant="pill" size={14} short />}
                         </div>
                         <div className="flex-1" />
                         {off
@@ -145,7 +146,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                         {off && <span className="absolute inset-x-1 bottom-1 rounded bg-primary px-1 text-center text-label-sm uppercase text-white">Vendu</span>}
                       </button>
                       <button onClick={() => onSelectListing(l.id)} className="min-w-0 flex-1 cursor-pointer border-none bg-transparent p-0 text-left">
-                        <span className="flex items-center gap-1 text-label-sm text-on-surface-variant">{l.seller.isVerified && !off && <span className="flex items-center gap-0.5 rounded bg-tertiary-soft px-1 text-tertiary"><Icon name="verified" size={12} /> Vérifié</span>}<span className="truncate">{l.locationLabel ?? l.city}</span>{off && <span className="text-primary">Indisponible</span>}</span>
+                        <span className="flex items-center gap-1 text-label-sm text-on-surface-variant">{!off && <SellerBadge tier={l.seller.badge} variant="pill" size={14} short />}<span className="truncate">{l.locationLabel ?? l.city}</span>{off && <span className="text-primary">Indisponible</span>}</span>
                         <span className={`block truncate text-label-lg ${off ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{l.title}</span>
                         <span className={`text-headline-sm font-extrabold ${off ? 'text-on-surface-variant' : 'text-primary'}`}><Price amount={l.price} currency={l.currency} /></span>
                         {l.negotiable && !off && <span className="ml-2 text-label-sm text-tertiary max-[360px]:hidden">Négociable</span>}

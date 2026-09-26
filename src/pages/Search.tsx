@@ -230,7 +230,7 @@ export default function SearchPage({
     ...brands.map(v => ({ key: `brand-${v}`, label: v, clear: () => setBrands(s => s.filter(x => x !== v)) })),
     ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
     ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => applyPrice('', '') }] : []),
-    ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs certifiés', clear: () => setVerifiedOnly(false) }] : []),
+    ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs vérifiés', clear: () => setVerifiedOnly(false) }] : []),
     ...(shopsOnly ? [{ key: 'shops', label: 'Boutiques officielles', clear: () => setShopsOnly(false) }] : []),
     ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
     ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
@@ -253,7 +253,7 @@ export default function SearchPage({
         <span className="flex items-center gap-2">
           <BadgeCheck size={19} className="text-tertiary" />
           <span className="flex flex-col">
-            <span className="text-label-md text-on-surface">Vendeurs certifiés</span>
+            <span className="text-label-md text-on-surface">Vendeurs vérifiés</span>
             <span className="text-label-sm text-tertiary">Identité vérifiée par Dilchap</span>
           </span>
         </span>

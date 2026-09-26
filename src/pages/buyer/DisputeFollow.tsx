@@ -12,6 +12,7 @@ import {
   type Dispute, type DisputeStats,
 } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   focusDisputeId?: string
@@ -85,7 +86,7 @@ function Decision({ d, onDone }: { d: Dispute; onDone: () => void }) {
       </div>
       {sellerEvent?.body && (
         <div className="mt-3 rounded-xl bg-surface-container-low p-4">
-          <div className="flex items-center gap-2 text-label-md text-on-surface">{d.seller.fullName}{d.seller.isVerified && <Icon name="verified" size={15} className="text-tertiary" />}</div>
+          <div className="flex items-center gap-2 text-label-md text-on-surface">{d.seller.fullName}<SellerBadge tier={d.seller.badge} size={15} /></div>
           <p className="m-0 mt-1 text-body-md italic text-on-surface-variant">« {sellerEvent.body} »</p>
         </div>
       )}
@@ -216,7 +217,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                   <div className="text-label-sm uppercase text-on-surface-variant">Vendeur</div>
                   <div className="mt-2 flex items-center gap-3">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{d.seller.avatarUrl ? <SafeImg src={d.seller.avatarUrl} icon="person" fallbackClassName="flex h-full w-full items-center justify-center" /> : d.seller.fullName.charAt(0)}</span>
-                    <div className="min-w-0 flex-1"><div className="flex items-center gap-1 text-label-md text-on-surface">{d.seller.fullName}{d.seller.isVerified && <Icon name="verified" size={15} className="text-tertiary" />}</div><div className="text-body-sm text-on-surface-variant">{d.seller.reviewsCount ? `★ ${d.seller.averageRating.toFixed(1)} (${d.seller.reviewsCount} avis)` : 'Nouveau vendeur'}</div></div>
+                    <div className="min-w-0 flex-1"><div className="flex items-center gap-1 text-label-md text-on-surface">{d.seller.fullName}<SellerBadge tier={d.seller.badge} size={15} /></div><div className="text-body-sm text-on-surface-variant">{d.seller.reviewsCount ? `★ ${d.seller.averageRating.toFixed(1)} (${d.seller.reviewsCount} avis)` : 'Nouveau vendeur'}</div></div>
                     {d.listing && <button onClick={() => onOpenConversation(d.seller.id, d.listing!.id)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface" aria-label="Chat"><Icon name="chat" size={18} /></button>}
                   </div>
                 </section>

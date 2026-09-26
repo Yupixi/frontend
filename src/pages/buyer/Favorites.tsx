@@ -10,6 +10,7 @@ import { formatNumber, plainText } from '../../lib/format'
 import { MY_FAVORITE_ENTRIES_QUERY, listingPlace, type FavoriteEntry } from '../../graphql/buyerSpace'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -61,7 +62,7 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
         </div>
         <div className="mt-3 hidden items-center gap-2 rounded-xl bg-surface-container-low p-2.5 md:flex">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-fixed text-label-sm text-primary">{l.seller.avatarUrl ? <SafeImg src={l.seller.avatarUrl} icon="person" iconSize={16} fallbackClassName="flex h-full w-full items-center justify-center" /> : l.seller.fullName.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
-          <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{l.seller.fullName}</div>{l.seller.isVerified && <div className="flex items-center gap-0.5 text-label-sm text-tertiary"><Icon name="verified" size={12} /> Vendeur certifié</div>}</div>
+          <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{l.seller.fullName}</div>{l.seller.badge && <div className="mt-0.5"><SellerBadge tier={l.seller.badge} variant="pill" size={13} /></div>}</div>
           {!!l.seller.reviewsCount && <span className="text-label-sm text-on-surface"><Icon name="star" size={13} fill className="text-amber-500" /> {l.seller.averageRating.toFixed(1)} ({l.seller.reviewsCount})</span>}
         </div>
         <div className="flex-1" />

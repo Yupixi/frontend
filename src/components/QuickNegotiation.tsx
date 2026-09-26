@@ -5,6 +5,8 @@ import Price from './Price'
 import { formatNumber } from '../lib/format'
 import { SEND_MESSAGE_MUTATION, START_CONVERSATION_MUTATION, type RemoteConversation } from '../graphql/messaging'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
+import SellerBadge from '../components/SellerBadge'
+import type { BadgeTier } from '../graphql/badges'
 
 type Props = {
   listing: {
@@ -12,7 +14,7 @@ type Props = {
     coverImageUrl: string | null; city: string; locationLabel?: string | null; meetupSpot?: string | null
     seller: { id: string; fullName: string; avatarUrl: string | null }
   }
-  sellerRating?: { average: number; count: number; verified: boolean } | null
+  sellerRating?: { average: number; count: number; badge?: BadgeTier | null } | null
   responseTime?: string | null
   // Chat opened on the conversation once the message/offer is sent.
   onSent: (sellerId: string, listingId: string) => void
@@ -75,7 +77,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
         </div>
         <div className="flex items-center gap-2 rounded-xl bg-surface-lowest px-2.5 py-1.5">
           <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary text-label-sm text-white">{listing.seller.avatarUrl ? <img src={listing.seller.avatarUrl} alt="" className="h-full w-full object-cover" /> : listing.seller.fullName.charAt(0)}</span>
-          <div className="text-label-sm"><div className="flex items-center gap-0.5 text-on-surface">{listing.seller.fullName}{sellerRating?.verified && <Icon name="verified" size={13} className="text-tertiary" />}</div>{!!sellerRating?.count && <div className="text-on-surface-variant">★ {sellerRating.average.toFixed(1)}</div>}</div>
+          <div className="text-label-sm"><div className="flex items-center gap-0.5 text-on-surface">{listing.seller.fullName}<SellerBadge tier={sellerRating?.badge} size={13} /></div>{!!sellerRating?.count && <div className="text-on-surface-variant">★ {sellerRating.average.toFixed(1)}</div>}</div>
         </div>
       </div>
 

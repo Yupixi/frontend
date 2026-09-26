@@ -13,6 +13,7 @@ import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/m
 import { MY_NOTIFICATIONS_QUERY, type RemoteNotification } from '../../graphql/account'
 import type { AuthUser } from '../../graphql/auth'
 import { syncAppBadge } from '../../lib/pushNotifications'
+import { BADGE_LABEL } from '../../graphql/badges'
 
 // Every member is both a buyer and a seller — one account, one space. This
 // shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
@@ -29,6 +30,7 @@ const SECTIONS = [
       { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
       { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
       { key: 'seller-reviews', icon: Star, label: 'Avis & Réputation' },
+      { key: 'seller-badge', icon: BadgeCheck, label: 'Mon badge' },
       { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
       { key: 'buyer-messages', icon: MessageSquare, label: 'Messagerie' },
       { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
@@ -49,6 +51,7 @@ const SECTIONS = [
 export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-dashboard': 'Tableau de bord',
   'seller-kyc': 'Vérification d’identité',
+  'seller-badge': 'Mon badge',
   'seller-shop': 'Ma Boutique officielle',
   'seller-shop-stats': 'Statistiques boutique',
   'seller-shop-promos': 'Promotions & Soldes',
@@ -86,7 +89,7 @@ const MEMBER_TABS: MobileTab[] = [
   { key: 'buyer-favorites', icon: 'favorite', label: 'Favoris', match: ['buyer-favorites'] },
   { key: 'seller-post', icon: 'add', label: 'Déposer', match: [], primary: true },
   { key: 'buyer-messages', icon: 'chat', label: 'Messages', match: ['buyer-messages'] },
-  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews'] },
+  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews', 'seller-badge'] },
 ]
 
 const SELLER_TABS: MobileTab[] = [
@@ -228,8 +231,8 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
         : <button onClick={onBack} className={`${iconBtn} -ml-2 text-on-surface lg:hidden`} aria-label="Retour"><Icon name="arrow_back" size={24} /></button>}
       <button onClick={() => onNavigate('home')} className={`${isHome ? 'block' : 'hidden'} cursor-pointer border-none bg-transparent p-0 lg:block`} aria-label="Accueil"><Logo size="sm" /></button>
       {!isGuest && (
-        <span className={`hidden items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase md:flex ${currentUser?.isVerified ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
-          {currentUser?.isVerified ? <><BadgeCheck size={14} /> Vendeur certifié</> : 'Espace vendeur'}
+        <span className={`hidden items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase md:flex ${currentUser?.badge === 'CERTIFIED' ? 'bg-tertiary-soft text-tertiary' : currentUser?.badge ? 'bg-verified-soft text-verified' : 'bg-surface-container text-on-surface-variant'}`}>
+          {currentUser?.badge ? <><BadgeCheck size={14} /> {BADGE_LABEL[currentUser.badge]}</> : 'Espace vendeur'}
         </span>
       )}
       <h1 className={`m-0 min-w-0 truncate lg:hidden ${isHome ? 'text-label-md text-on-surface-variant' : 'text-headline-sm text-on-surface'}`}>{isHome ? 'Mon compte' : activeLabel}</h1>

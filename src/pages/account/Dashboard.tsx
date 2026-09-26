@@ -92,7 +92,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
         <section className="flex flex-wrap items-center gap-4 rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5">
           <span className="relative">
             <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-primary text-headline-sm text-white">{currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : firstName.charAt(0)}</span>
-            {currentUser?.isVerified && <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-tertiary text-white"><Icon name="check" size={12} /></span>}
+            {currentUser?.badge && <span className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest text-white ${currentUser.badge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}><Icon name="check" size={12} /></span>}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">

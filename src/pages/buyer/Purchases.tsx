@@ -9,6 +9,7 @@ import { BuyerTabs } from './BuyerShared'
 import { MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, disputeIsOpen, type DisputeStats, type PurchaseOrder } from '../../graphql/sellerTools'
 import { RESPOND_TO_MEETUP_MUTATION } from '../../graphql/messaging'
 import type { AuthUser } from '../../graphql/auth'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   mode: 'purchases' | 'receipts'
@@ -154,7 +155,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
                     <div className="flex items-center gap-2">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white"><SafeImg src={o.seller.avatarUrl} icon="person" iconSize={18} fallbackClassName="flex h-full w-full items-center justify-center" /></span>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1 truncate text-label-md text-on-surface">{o.seller.fullName}{o.seller.isVerified && <Icon name="verified" size={14} className="text-tertiary" />}</div>
+                        <div className="flex items-center gap-1 truncate text-label-md text-on-surface">{o.seller.fullName}<SellerBadge tier={o.seller.badge} size={14} /></div>
                         <div className="text-label-sm text-on-surface-variant">{o.seller.reviewsCount ? `${o.seller.averageRating.toFixed(1)} ★ (${o.seller.reviewsCount} avis)` : 'Nouveau vendeur'}</div>
                       </div>
                     </div>

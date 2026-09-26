@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
-  CheckCheck, Tag, X, MapPin, ShieldCheck, BadgeCheck, Star, Handshake, CircleX, Flag,
+  CheckCheck, Tag, X, MapPin, ShieldCheck, Star, Handshake, CircleX, Flag,
   Calendar, CheckCircle2, Wallet, Info, Lock, Zap,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
@@ -29,6 +29,7 @@ import ImageLightbox from '../../components/ImageLightbox'
 import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
 import { dateFormat } from '../../lib/intl'
+import SellerBadge from '../../components/SellerBadge'
 
 const BUYER_SUGGESTIONS = [
   'L’article est-il toujours disponible ?',
@@ -368,7 +369,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                 <div className="relative z-20 flex items-center gap-3 bg-surface-lowest px-4 py-2 shadow-sm">
                   <Avatar url={other!.avatarUrl} name={other!.fullName} size={44} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 text-headline-sm text-on-surface"><span className="truncate">{other!.fullName}</span>{other!.isVerified && <BadgeCheck size={18} className="shrink-0 text-tertiary" />}</div>
+                    <div className="flex items-center gap-1 text-headline-sm text-on-surface"><span className="truncate">{other!.fullName}</span><SellerBadge tier={other!.badge} size={18} /></div>
                     <div className="flex items-center gap-1.5 truncate text-label-sm text-on-surface-variant">
                       {!!other!.reviewsCount && <span className="flex shrink-0 items-center gap-0.5 max-md:hidden"><Star size={13} fill="#F59E0B" color="#F59E0B" /> {other!.averageRating?.toFixed(1)} ({other!.reviewsCount} avis) •</span>}
                       {otherPlace && <span className="flex min-w-0 items-center gap-0.5"><MapPin size={13} className="shrink-0" /><span className="truncate">{otherPlace}</span></span>}
@@ -580,7 +581,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                 <div className="flex items-center gap-3">
                   <Avatar url={other.avatarUrl} name={other.fullName} size={52} />
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1 text-headline-sm text-on-surface"><span className="truncate">{other.fullName}</span>{other.isVerified && <BadgeCheck size={17} className="text-tertiary" />}</div>
+                    <div className="flex items-center gap-1 text-headline-sm text-on-surface"><span className="truncate">{other.fullName}</span><SellerBadge tier={other.badge} size={17} /></div>
                     {other.createdAt && <div className="text-body-sm text-on-surface-variant">Membre depuis {new Date(other.createdAt).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</div>}
                     {otherResponse && <div className="flex items-center gap-1 text-body-sm text-tertiary"><Zap size={13} /> Répond en {otherResponse}</div>}
                   </div>

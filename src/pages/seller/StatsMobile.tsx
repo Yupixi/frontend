@@ -6,13 +6,14 @@ import { formatNumber } from '../../lib/format'
 import { MY_REPUTATION_QUERY } from '../../graphql/sellerHub'
 import type { SellerStats } from '../../graphql/sellerTools'
 import Select from '../../components/Select'
+import { BADGE_LABEL, type BadgeTier } from '../../graphql/badges'
 
 type Props = {
   s?: SellerStats
   period: string
   periods: { key: string; label: string }[]
   onPeriod: (key: string) => void
-  verified?: boolean
+  badge?: BadgeTier | null
   onNavigate: (p: any) => void
   onSelectListing: (id: string) => void
 }
@@ -27,7 +28,7 @@ function Delta({ v }: { v: number | null }) {
 
 // "Statistiques Vendeur" (Stitch mobile): revenue hero, 4 KPIs, views vs
 // contacts curve, recent listings and the boost comparison.
-export default function StatsMobile({ s, period, periods, onPeriod, verified, onNavigate, onSelectListing }: Props) {
+export default function StatsMobile({ s, period, periods, onPeriod, badge, onNavigate, onSelectListing }: Props) {
   const { data: repData } = useQuery<{ myReputation: { averageRating: number; reviewsCount: number } }>(MY_REPUTATION_QUERY)
   const rep = repData?.myReputation
   const chart = (s?.series ?? []).map(d => ({ day: new Date(d.day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }), Vues: d.views, Contacts: d.contacts }))
@@ -43,7 +44,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, verified, on
     <div className="flex flex-col gap-4 pb-6">
       <div className="flex items-start justify-between gap-2">
         <div>
-          {verified && <div className="flex items-center gap-1 text-label-sm uppercase text-tertiary"><Icon name="verified" size={14} /> Vendeur certifié</div>}
+          {badge && <div className={`flex items-center gap-1 text-label-sm uppercase ${badge === 'CERTIFIED' ? 'text-tertiary' : 'text-verified'}`}><Icon name="verified" size={14} fill /> {BADGE_LABEL[badge]}</div>}
           <h1 className="m-0 text-headline-lg-mobile text-on-surface">Statistiques Vendeur</h1>
         </div>
         <label className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-2.5 py-2 text-label-md text-on-surface">

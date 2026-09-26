@@ -12,6 +12,7 @@ import {
   type Dispute, type DisputeReason, type DisputeStats, type HandoverOrder, type PurchaseOrder,
 } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
+import SellerBadge from '../../components/SellerBadge'
 
 type Props = {
   orderId: string
@@ -96,7 +97,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2"><span className="text-label-sm text-on-surface-variant">#{o.reference}</span><span className="text-label-lg font-extrabold text-primary"><Price amount={amount} currency={o.listing.currency} /></span></div>
                   <div className="truncate text-label-lg text-on-surface">{o.listing.title}</div>
-                  <div className="flex items-center gap-1 truncate text-body-sm text-on-surface-variant"><Icon name="storefront" size={14} /> {o.seller.fullName}{o.seller.isVerified && <Icon name="verified" size={14} className="text-tertiary" />}</div>
+                  <div className="flex items-center gap-1 truncate text-body-sm text-on-surface-variant"><Icon name="storefront" size={14} /> {o.seller.fullName}<SellerBadge tier={o.seller.badge} size={14} /></div>
                 </div>
               </div>
               {o.meetup && <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-2 text-body-sm text-on-surface-variant"><Icon name="location_on" size={16} className="shrink-0 text-primary" /> <span className="truncate">RDV prévu : <b className="text-on-surface">{o.meetup.place}</b></span></div>}

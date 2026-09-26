@@ -10,6 +10,8 @@ import {
 } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 import PaymentLogo from '../../components/PaymentLogo'
+import SellerBadge from '../../components/SellerBadge'
+import { BADGE_LABEL } from '../../graphql/badges'
 
 type Props = { orderId: string; onNavigate: (p: any) => void; onOpenDispute: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -121,8 +123,8 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
               <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{o.buyer.avatarUrl ? <img src={o.buyer.avatarUrl} alt="" className="h-full w-full object-cover" /> : o.buyer.fullName.charAt(0)}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1 text-label-md text-on-surface">{o.buyer.fullName}{o.buyer.isVerified && <Icon name="check_circle" size={15} fill className="text-tertiary" />}</div>
-                  <div className="text-label-sm text-on-surface-variant">{o.buyer.isVerified ? "Pièce d'identité vérifiée" : 'Membre Dilchap'}{o.buyer.buyerReviewsCount ? ` • ${o.buyer.buyerReviewsCount} achat${o.buyer.buyerReviewsCount > 1 ? 's' : ''} réussi${o.buyer.buyerReviewsCount > 1 ? 's' : ''}` : ''}</div>
+                  <div className="flex items-center gap-1 text-label-md text-on-surface">{o.buyer.fullName}<SellerBadge tier={o.buyer.badge} size={15} /></div>
+                  <div className="text-label-sm text-on-surface-variant">{o.buyer.badge ? BADGE_LABEL[o.buyer.badge] : 'Membre Dilchap'}{o.buyer.buyerReviewsCount ? ` • ${o.buyer.buyerReviewsCount} achat${o.buyer.buyerReviewsCount > 1 ? 's' : ''} réussi${o.buyer.buyerReviewsCount > 1 ? 's' : ''}` : ''}</div>
                 </div>
                 {!!o.buyer.buyerReviewsCount && <span className="flex items-center gap-0.5 rounded-lg bg-surface-lowest px-2 py-1 text-label-sm text-on-surface"><Icon name="star" size={14} fill className="text-amber-500" /> {o.buyer.buyerRating.toFixed(1)}</span>}
               </div>

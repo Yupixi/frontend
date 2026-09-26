@@ -19,6 +19,8 @@ import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { SHOP_QUERY, type Shop } from '../graphql/shops'
 import ShopPage from './ShopPage'
+import SellerBadge from '../components/SellerBadge'
+import { BADGE_LABEL } from '../graphql/badges'
 
 const REPORT_REASONS = ['Tentative d’arnaque', 'Faux profil', 'Comportement inapproprié', 'Article non conforme', 'Autre']
 
@@ -145,7 +147,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       <nav className="mb-3 hidden items-center md:flex gap-1 text-label-md text-on-surface-variant">
         <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
         <ChevronRight size={14} className="text-outline-variant" />
-        <span>{seller.isVerified ? 'Vendeurs certifiés Dilchap' : 'Vendeurs'}</span>
+        <span>{seller.badge ? `${BADGE_LABEL[seller.badge]}s Dilchap`.replace('Compte vérifiés', 'Comptes vérifiés') : 'Vendeurs'}</span>
         <ChevronRight size={14} className="text-outline-variant" />
         <span className="font-semibold text-on-surface">{seller.fullName}</span>
       </nav>
@@ -168,12 +170,12 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-solid border-surface-lowest bg-surface-container-high text-headline-lg text-primary md:h-28 md:w-28">
                   {seller.avatarUrl ? <img src={seller.avatarUrl} alt={seller.fullName} className="h-full w-full object-cover" /> : seller.fullName.charAt(0).toUpperCase()}
                 </div>
-                {seller.isVerified && <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={15} /></span>}
+                {seller.badge && <span className={`absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest text-white ${seller.badge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}><BadgeCheck size={15} /></span>}
               </div>
               <div className="min-w-0 md:pb-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="m-0 text-headline-md text-on-surface md:text-headline-lg">{seller.fullName}</h1>
-                  {seller.isVerified && <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><BadgeCheck size={13} /> Vendeur certifié</span>}
+                  <SellerBadge tier={seller.badge} variant="pill" size={15} />
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-on-surface-variant">
                   {seller.city && <span className="flex items-center gap-1"><MapPin size={14} /> {seller.city}</span>}
@@ -218,7 +220,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       {/* Trust tiles */}
       <section className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
         {[
-          { icon: <ShieldCheck size={20} />, box: 'bg-tertiary-soft text-tertiary', title: seller.isVerified ? 'Identité vérifiée' : 'Profil public', text: seller.isVerified ? 'Pièce d’identité contrôlée par Dilchap' : 'Avis et historique visibles de tous' },
+          { icon: <ShieldCheck size={20} />, box: 'bg-tertiary-soft text-tertiary', title: seller.badge ? BADGE_LABEL[seller.badge] : 'Profil public', text: seller.badge ? 'Identité contrôlée par Dilchap' : 'Avis et historique visibles de tous' },
           { icon: <MessageSquare size={20} />, box: 'bg-surface-container text-on-surface', title: 'Chat & négociation', text: responseTime ? `Répond en ${responseTime}` : 'Messagerie intégrée' },
           { icon: <Handshake size={20} />, box: 'bg-surface-container text-on-surface', title: 'Remise en main propre', text: 'Testez l’article avant tout paiement' },
           { icon: <Percent size={20} />, box: 'bg-primary-fixed text-primary', title: '0 F de commission', text: '100% de la somme revient au vendeur' },

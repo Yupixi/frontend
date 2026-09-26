@@ -19,6 +19,8 @@ import {
   ARCHETYPE_ACCENT,
   type ArchetypeKey,
 } from '../lib/listingArchetype'
+import SellerBadge from '../components/SellerBadge'
+import { BADGE_LABEL } from '../graphql/badges'
 
 // Visitors are sent to the login screen by the favourite toggle; tell it why.
 const favWithReason = (toggle: () => void) => { if (!getAccessToken()) setAuthReason('favorite'); toggle() }
@@ -158,7 +160,8 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       {priceSuffix && <span className="text-[0.65em] font-semibold text-on-surface-variant"> {priceSuffix}</span>}
     </>
   )
-  const verified = !!listing.seller.isVerified
+  const badge = listing.seller.badge ?? null
+  const verified = !!badge
   const shop = listing.seller.shop
   const tier = listing.bundleOffer?.tiers[0]
   const bundleLine = tier && (
@@ -176,7 +179,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
     ) : (
       <p className="m-0 flex min-w-0 items-center gap-0.5 text-[11px] text-on-surface-variant md:mt-1 md:gap-1 md:text-body-sm">
         {/* Phones: a verified seller swaps the pin for the check (mockup). */}
-        {verified && <span className="flex shrink-0 md:hidden"><Icon name="verified" size={14} className="text-tertiary" /></span>}
+        {verified && <span className="flex shrink-0 md:hidden"><SellerBadge tier={badge} size={14} /></span>}
         <span className={`shrink-0 ${verified ? 'hidden md:flex' : 'flex'}`}><Icon name="location_on" size={14} className="text-tertiary" /></span>
         <span className="truncate">{listingLocation(listing)}</span>
       </p>
@@ -223,8 +226,8 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
           <StockTag listing={listing} />
 
           {featured && verified && !shop && (
-            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-tertiary px-1.5 py-0.5 text-[10px] font-bold text-white md:hidden">
-              <Icon name="verified_user" size={12} /> Vendeur vérifié
+            <span className={`absolute bottom-2 left-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-white md:hidden ${badge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}>
+              <Icon name="verified" size={12} fill /> {BADGE_LABEL[badge!]}
             </span>
           )}
 
@@ -254,8 +257,8 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <span className="truncate">{category}{listing.size && ` • T. ${listing.size}`}</span>
             {shop ? (
               <span className="flex shrink-0 items-center text-tertiary" title="Boutique officielle"><Icon name="verified" size={16} fill /></span>
-            ) : listing.seller.isVerified ? (
-              <span className="flex shrink-0 items-center gap-1 text-label-sm font-semibold text-tertiary"><Icon name="verified" size={14} /> Vérifié</span>
+            ) : badge ? (
+              <SellerBadge tier={badge} variant="pill" short />
             ) : rating != null && (
               <span className="flex shrink-0 items-center gap-1 text-label-sm font-semibold text-primary">★ {rating.toFixed(1)} ({listing.seller.reviewsCount})</span>
             )}
