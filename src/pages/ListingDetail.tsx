@@ -80,9 +80,9 @@ export const PAYMENT_LABELS: Record<string, string> = {
 }
 
 const TABS = [
-  { key: 'description', label: 'Description du vendeur' },
-  { key: 'specs', label: 'Fiche technique & Détails' },
-  { key: 'safety', label: 'Remise & Sécurité' },
+  { key: 'description', label: 'Description du vendeur', short: 'Description' },
+  { key: 'specs', label: 'Fiche technique & Détails', short: 'Fiche technique' },
+  { key: 'safety', label: 'Remise & Sécurité', short: 'Sécurité' },
 ] as const
 
 // Small icon per spec row (mobile "Spécifications vérifiées").
@@ -176,14 +176,25 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
       <Icon name="sell" size={14} className="shrink-0" /> <span className="truncate">-{promo.discountPercent ?? Math.round((1 - promoPrice / listing.price) * 100)} % · {promo.campaignName}</span>
     </span>
   )
-  const bundle = listing.bundleOffer && (
-    <div className="mt-3 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-on-surface">
-      <Icon name="inventory_2" size={18} className="mt-0.5 shrink-0 text-tertiary" />
-      <div className="min-w-0">
-        <div className="text-label-md text-tertiary">Offre groupée</div>
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5">{listing.bundleOffer.tiers.map(t => <span key={t.minQty} className="whitespace-nowrap">{t.minQty} achetés : <b>-{t.percent} %</b></span>)}</div>
-        <div className="text-on-surface-variant">Appliquée par le vendeur à la conclusion de la vente.</div>
+  // Unit price per tier from the price actually asked (promo included), as
+  // the deal amount is computed server-side (common/pricing.ts).
+  const tiers = listing.bundleOffer?.tiers ?? []
+  const bundle = tiers.length > 0 && (
+    <div className="mt-3 rounded-xl bg-primary-fixed/30 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1 text-label-sm uppercase text-primary"><Icon name="inventory_2" size={16} /> Offre groupée</span>
+        <span className="whitespace-nowrap rounded-md bg-primary px-2 py-0.5 text-label-sm text-white">Jusqu’à -{Math.max(...tiers.map(t => t.percent))} %</span>
       </div>
+      <div className="mt-2 flex flex-col gap-1.5">
+        {tiers.map((t, i) => (
+          <div key={t.minQty} className="flex items-center gap-2 rounded-lg bg-surface-lowest px-2.5 py-2 text-body-sm">
+            <span className="min-w-0 flex-1 truncate text-on-surface">{t.minQty}{i === tiers.length - 1 && tiers.length > 1 ? '+' : ''} achetés</span>
+            <span className="whitespace-nowrap rounded bg-primary px-1.5 text-label-sm text-white">-{t.percent} %</span>
+            {shownPrice != null && <span className="whitespace-nowrap text-label-md text-on-surface"><Price amount={Math.round((shownPrice * (100 - t.percent)) / 100)} currency={listing.currency} />/u</span>}
+          </div>
+        ))}
+      </div>
+      <p className="m-0 mt-2 text-[11px] text-on-surface-variant">Remise appliquée par le vendeur à la conclusion de la vente.</p>
     </div>
   )
   // Official shop: shown under its trade name and logo, with the stock.
@@ -440,8 +451,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           <div className="mt-6 px-4 max-lg:order-5 lg:rounded-2xl lg:border lg:border-outline-variant lg:bg-surface-lowest lg:p-0">
             <div className="hidden border-0 border-b border-solid border-outline-variant lg:flex">
               {TABS.map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 cursor-pointer border-0 border-b-2 border-solid bg-transparent px-4 py-3.5 text-label-lg ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}>
-                  {t.label}
+                <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 cursor-pointer whitespace-nowrap border-0 border-b-2 border-solid bg-transparent px-2 py-3.5 text-label-lg xl:px-4 ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}>
+                  <span className="xl:hidden">{t.short}</span><span className="hidden xl:inline">{t.label}</span>
                 </button>
               ))}
             </div>
@@ -608,7 +619,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 {(shop || seller?.isVerified) && <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-tertiary text-white"><BadgeCheck size={11} /></span>}
               </button>
               <div className="min-w-0 flex-1">
-                <button onClick={() => onSelectSeller(listing.seller.id)} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-left text-headline-sm text-on-surface">
+                <button onClick={() => onSelectSeller(listing.seller.id)} className="flex max-w-full cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-left text-headline-sm text-on-surface">
                   <span className="truncate">{sellerName}</span>
                   {shop ? <span className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><Icon name="storefront" size={13} /> Boutique officielle</span>
                     : seller?.isVerified && <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary"><BadgeCheck size={12} /> Certifié</span>}
