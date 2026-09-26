@@ -48,3 +48,10 @@ export async function detectLocationFromIP(): Promise<StoredLocation | null> {
     return null
   }
 }
+
+// First visit only: the lookup starts as soon as the bundle runs rather than
+// after React's first render, and Home waits for it briefly (see
+// LOCATION_WAIT_MS in App) so the feed loads once, already scoped to the
+// visitor's market, instead of loading twice and swapping under their eyes.
+export const earlyLocationLookup: Promise<StoredLocation | null> | null =
+  typeof window !== 'undefined' && !getStoredLocation() ? detectLocationFromIP() : null

@@ -1,4 +1,5 @@
 import { localeForCurrency } from '../data/markets'
+import { numberFormat } from '../lib/intl'
 
 // The CFA francs read as a plain "F" locally ("45 000 F").
 const CURRENCY_SYMBOL: Record<string, string> = { XOF: 'F', XAF: 'F', EUR: '€' }
@@ -17,7 +18,7 @@ export default function Price({ amount, currency = 'XOF', fallback = 'Prix sur d
   const normalizedCurrency = currency.toUpperCase()
   return (
     <>
-      {new Intl.NumberFormat(localeForCurrency(normalizedCurrency), {
+      {numberFormat(localeForCurrency(normalizedCurrency), {
         style: 'currency',
         currency: normalizedCurrency,
         currencyDisplay: 'code',

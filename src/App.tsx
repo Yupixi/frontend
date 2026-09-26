@@ -7,7 +7,7 @@ import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { NAVIGATE_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
-import { detectLocationFromIP, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
+import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
 import Home, { type SearchPreset } from './pages/Home'
@@ -72,6 +72,8 @@ type NavState = {
   selectedDisputeId?: string
   legalSlug?: string
 }
+const LOCATION_WAIT_MS = 700
+
 const NAV_STORAGE_KEY = 'yupixi_nav_state'
 
 function loadNavState(): Partial<NavState> {
@@ -133,6 +135,8 @@ export default function App() {
   const [pushDismissed, setPushDismissed] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [location, setLocation] = useState<StoredLocation | null>(() => getStoredLocation())
+  // True while a first-visit IP lookup is in flight (capped, see below).
+  const [locationPending, setLocationPending] = useState(() => !getStoredLocation())
 
   // Only ever runs the IP lookup once per browser — a stored value (even a
   // manually-cleared "all countries" one) means we already know what to do
@@ -140,12 +144,17 @@ export default function App() {
   useEffect(() => {
     if (location) return
     let cancelled = false
-    void detectLocationFromIP().then(detected => {
-      if (cancelled || !detected) return
-      setStoredLocation(detected)
-      setLocation(detected)
+    // Past this, the feed loads unscoped and re-scopes when the lookup lands.
+    const giveUp = setTimeout(() => setLocationPending(false), LOCATION_WAIT_MS)
+    void (earlyLocationLookup ?? detectLocationFromIP()).then(detected => {
+      if (cancelled) return
+      if (detected) {
+        setStoredLocation(detected)
+        setLocation(detected)
+      }
+      setLocationPending(false)
     })
-    return () => { cancelled = true }
+    return () => { cancelled = true; clearTimeout(giveUp) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -473,7 +482,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} locationPending={locationPending} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
       case 'search':
         return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? location?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
       case 'listing-detail':
