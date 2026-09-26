@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import SafeImg from '../../components/SafeImg'
@@ -39,14 +40,121 @@ const useDesktop = () => {
 const isoDay = (d: string) => (d ? new Date(`${d}T00:00:00.000Z`).toISOString() : '')
 const dayOf = (iso: string) => iso.slice(0, 10)
 
-// Photo of one piece: take it (camera) or pick it (gallery), uploaded to the
-// private KYC storage right away.
+// Phones/tablets get the native camera through `capture`; desktop browsers
+// ignore that attribute, so there the camera button opens the webcam instead.
+const touchDevice = () => window.matchMedia('(pointer: coarse)').matches
+
+// Desktop webcam capture: live preview, one shot encoded to JPEG.
+function WebcamDialog({ selfie, title, onShot, onImport, onClose }: {
+  selfie: boolean; title: string; onShot: (file: File) => void; onImport: () => void; onClose: () => void
+}) {
+  const video = useRef<HTMLVideoElement>(null)
+  const [error, setError] = useState('')
+  const [ready, setReady] = useState(false)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    let stream: MediaStream | null = null
+    let cancelled = false
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Votre navigateur ne permet pas d’utiliser la caméra. Importez une photo à la place.')
+    } else {
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: selfie ? 'user' : 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      }).then(s => {
+        if (cancelled) { s.getTracks().forEach(t => t.stop()); return }
+        stream = s
+        if (video.current) { video.current.srcObject = s; void video.current.play().catch(() => {}) }
+      }).catch((e: unknown) => {
+        if (cancelled) return
+        const name = e instanceof DOMException ? e.name : ''
+        setError(name === 'NotAllowedError' || name === 'SecurityError'
+          ? 'L’accès à la caméra a été refusé. Autorisez-le depuis la barre d’adresse du navigateur, ou importez une photo.'
+          : name === 'NotFoundError' || name === 'OverconstrainedError'
+            ? 'Aucune caméra détectée sur cet ordinateur. Importez une photo prise avec votre téléphone.'
+            : name === 'NotReadableError'
+              ? 'La caméra est déjà utilisée par une autre application. Fermez-la puis réessayez, ou importez une photo.'
+              : 'Impossible d’ouvrir la caméra. Importez une photo à la place.')
+      })
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current() }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      cancelled = true
+      stream?.getTracks().forEach(t => t.stop())
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [selfie])
+
+  const shoot = () => {
+    const v = video.current
+    if (!v || !v.videoWidth) return
+    const canvas = document.createElement('canvas')
+    canvas.width = v.videoWidth
+    canvas.height = v.videoHeight
+    canvas.getContext('2d')?.drawImage(v, 0, 0)
+    canvas.toBlob(blob => {
+      if (!blob) return
+      onShot(new File([blob], `${selfie ? 'selfie' : 'piece'}-${Date.now()}.jpg`, { type: 'image/jpeg' }))
+      onClose()
+    }, 'image/jpeg', 0.92)
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-[640px] rounded-2xl bg-surface-lowest p-4 shadow-lg" onClick={e => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="m-0 min-w-0 truncate text-title-md text-on-surface">{title}</h2>
+          <button type="button" onClick={onClose} aria-label="Fermer" className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface"><Icon name="close" size={20} /></button>
+        </div>
+        {error ? (
+          <div className="flex flex-col items-center gap-3 rounded-xl bg-surface-container-low px-4 py-8 text-center">
+            <Icon name="videocam_off" size={32} className="text-on-surface-variant" />
+            <p className="m-0 max-w-[420px] text-body-md text-on-surface-variant">{error}</p>
+            <button type="button" onClick={() => { onClose(); onImport() }} className="flex h-11 cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl border-none bg-primary px-5 text-label-lg text-white">
+              <Icon name="upload_file" size={19} /> Importer une photo
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[#2a2626]">
+              {/* Selfie preview mirrored like a mirror; the saved shot stays unmirrored so the document reads correctly. */}
+              <video ref={video} playsInline muted onLoadedData={() => setReady(true)} className={`h-full w-full object-cover ${selfie ? '-scale-x-100' : ''}`} />
+              {selfie
+                ? <span className="pointer-events-none absolute left-1/2 top-1/2 h-[70%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-white/60" />
+                : <span className="pointer-events-none absolute left-1/2 top-1/2 h-[62%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 border-dashed border-white/60" />}
+              {!ready && <span className="absolute inset-0 flex items-center justify-center"><Icon name="progress_activity" size={36} className="animate-spin text-white" /></span>}
+            </div>
+            <p className="m-0 mt-3 text-body-sm text-on-surface-variant">
+              {selfie ? 'Placez votre visage dans l’ovale et tenez la pièce à côté, bien lisible.' : 'Placez la pièce dans le cadre, bien éclairée et sans reflet.'}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" onClick={onClose} className="flex h-12 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container text-label-md text-on-surface">Annuler</button>
+              <button type="button" onClick={shoot} disabled={!ready} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:cursor-default disabled:opacity-50">
+                <Icon name="photo_camera" size={20} /> Capturer
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+// Photo of one piece: take it (camera / webcam) or pick a file, uploaded to
+// the private KYC storage right away.
 function PhotoCapture({ part, docLabel, photo, onPick, compact }: {
   part: KycPart; docLabel: string; photo?: Photo; onPick: (file: File) => void; compact?: boolean
 }) {
   const camera = useRef<HTMLInputElement>(null)
   const gallery = useRef<HTMLInputElement>(null)
   const selfie = part === 'SELFIE'
+  const [webcam, setWebcam] = useState(false)
+  const [touch] = useState(touchDevice)
+  const takePhoto = () => (touch ? camera.current?.click() : setWebcam(true))
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = '' }
   return (
     <div>
@@ -71,13 +179,16 @@ function PhotoCapture({ part, docLabel, photo, onPick, compact }: {
       </div>
       {photo?.error && <p className="m-0 mt-2 flex items-center gap-1.5 text-body-sm text-primary"><Icon name="error" size={16} /> {photo.error}</p>}
       <div className={`mt-3 grid gap-2 ${compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
-        <button type="button" onClick={() => camera.current?.click()} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white">
+        <button type="button" onClick={takePhoto} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white">
           <Icon name={photo?.key ? 'refresh' : 'photo_camera'} size={20} /> {photo?.key ? 'Reprendre' : selfie ? 'Prendre le selfie' : 'Prendre la photo'}
         </button>
         <button type="button" onClick={() => gallery.current?.click()} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container text-label-md text-on-surface">
-          <Icon name="upload_file" size={19} /> Importer depuis la galerie
+          <Icon name="upload_file" size={19} /> {touch ? 'Importer depuis la galerie' : 'Importer un fichier'}
         </button>
       </div>
+      {webcam && (
+        <WebcamDialog selfie={selfie} title={PART_LABEL[part]} onShot={onPick} onImport={() => gallery.current?.click()} onClose={() => setWebcam(false)} />
+      )}
     </div>
   )
 }
