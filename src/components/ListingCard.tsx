@@ -1,9 +1,9 @@
 import AnimatedIcon from './AnimatedIcon'
 import { useState } from 'react'
-import { MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, ArrowUp, type AppIcon } from './icons'
+import { MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, type AppIcon } from './icons'
 import Icon from './Icon'
 import Price from './Price'
-import BoostMenu from './BoostMenu'
+import BoostSheet from './BoostSheet'
 import BottomSheet from './BottomSheet'
 import type { RemoteListing } from '../graphql/listings'
 import { formatRelativeDate } from '../lib/format'
@@ -95,19 +95,13 @@ function isActivelyBoosted(listing: RemoteListing): boolean {
 function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   const [open, setOpen] = useState(false)
   const [done, setDone] = useState(false)
-  if (isActivelyBoosted(listing) || done) return null
+  if (isActivelyBoosted(listing) || (done && !open)) return null
   return (
     <div className="mt-2" onClick={e => e.stopPropagation()}>
-      {open ? (
-        // 'dropdown' would be clipped invisible here — the card root has
-        // overflow: hidden (for the image's rounded corners), which cuts
-        // off anything absolutely positioned past its bounds.
-        <BoostMenu listingId={listing.id} variant="inline" onDone={() => { setOpen(false); setDone(true) }} />
-      ) : (
-        <button onClick={() => setOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border border-dashed border-primary bg-primary-fixed/40 px-2 py-1.5 text-label-sm text-primary">
-          <ArrowUp size={13} /> <span className="whitespace-nowrap">Booster<span className="hidden md:inline"> cette annonce</span></span>
-        </button>
-      )}
+      <button onClick={() => setOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary px-2 py-2 text-label-md text-white hover:bg-primary-dark">
+        <Icon name="rocket_launch" size={16} /> <span className="whitespace-nowrap">Booster<span className="hidden md:inline"> cette annonce</span></span>
+      </button>
+      <BoostSheet open={open} onClose={() => setOpen(false)} listing={listing} onBumped={() => setDone(true)} />
     </div>
   )
 }

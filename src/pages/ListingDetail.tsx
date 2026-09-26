@@ -33,6 +33,7 @@ import {
 } from '../components/icons'
 import Price from '../components/Price'
 import BottomSheet from '../components/BottomSheet'
+import BoostSheet from '../components/BoostSheet'
 import InlineConversation from '../components/InlineConversation'
 import QuickNegotiation from '../components/QuickNegotiation'
 import { ListingCard } from '../components/ListingCard'
@@ -127,6 +128,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
   const [bumpListing, { loading: renewing }] = useMutation(BUMP_LISTING_MUTATION)
+  const [boostOpen, setBoostOpen] = useState(false)
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
 
@@ -216,7 +218,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         </button>
       )
     ) : (
-      <button onClick={() => onNavigate('seller-premium')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
+      <button onClick={() => setBoostOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
         <Rocket size={18} /> Booster cette annonce
       </button>
     )
@@ -228,6 +230,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   return (
     <div className="pb-24 lg:pb-8">
+      {isOwner && <BoostSheet open={boostOpen} onClose={() => setBoostOpen(false)} listing={listing} />}
       {/* Mobile app bar (Stitch "Détails Article") — replaces the site header here */}
       <div className="safe-top sticky z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface/95 px-2 backdrop-blur-md lg:hidden">
         <button onClick={() => (window.history.length > 1 ? window.history.back() : onNavigate('home'))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Retour">
