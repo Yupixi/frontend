@@ -45,7 +45,10 @@ function Avatar({ c, size }: { c: RemoteConversation; size: number }) {
   )
 }
 
-const DealChip = ({ c }: { c: RemoteConversation }) => c.dealStatus === 'DISCUSSING' ? null : (
+const DealChip = ({ c }: { c: RemoteConversation }) => c.dealStatus === 'DISCUSSING' ? (
+  c.closedAt ? <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-surface-container px-1.5 py-px text-[10px] font-bold text-on-surface-variant"><Icon name="lock" size={11} /> Fermée</span>
+    : c.closesAt ? <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-bold text-amber-800">Inactive</span> : null
+) : (
   <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold ${c.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.dealStatus === 'CONCLUDED' ? 'Conclu' : 'Non conclu'}</span>
 )
 

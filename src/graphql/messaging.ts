@@ -39,6 +39,9 @@ const CONVERSATION_FIELDS = `
   unreadCount
   dealStatus
   dealClosedAt
+  closedAt
+  closedReason
+  closesAt
   canManageDeal
   createdAt
   listing {
@@ -223,6 +226,11 @@ export type RemoteConversation = {
   unreadCount: number
   dealStatus: 'DISCUSSING' | 'CONCLUDED' | 'NOT_CONCLUDED'
   dealClosedAt: string | null
+  // No more messages: concluded sale, or closed after warned inactivity.
+  closedAt?: string | null
+  closedReason?: 'DEAL_CONCLUDED' | 'INACTIVE' | null
+  // Inactivity warning sent: closes at this date unless someone writes.
+  closesAt?: string | null
   canManageDeal: boolean
   createdAt: string
   listing: {
