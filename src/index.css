@@ -348,7 +348,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 
   .dashboard-sidebar-desktop { display: none !important; }
   .dashboard-sidebar-mobile-btn { display: flex !important; }
-  .dashboard-main { padding: 1rem !important; }
+  /* Not the bottom: pb-24 keeps the last line clear of the fixed account tabs. */
+  .dashboard-main { padding-top: 1rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
   .dashboard-main h1 { font-size: 1.25rem !important; }
   .dashboard-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .dashboard-two-col { grid-template-columns: 1fr !important; }
@@ -593,3 +594,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .print-doc { display: block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: A4 portrait; margin: 14mm; }
 }
+
+/* A visually hidden input (sr-only is position:absolute) must be anchored to
+   its label: otherwise it's placed against <body>, escapes the account
+   pages' scrolling <main> and makes the whole document scroll too, which
+   cuts the content off above the bottom tabs on phones. */
+label:has(> input.sr-only) { position: relative; }

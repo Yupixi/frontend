@@ -193,7 +193,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
               ['handoverOnly', 'storefront', 'Remise en main propre privilégiée', 'Point de rendez-vous public indiqué'],
               ['mobileMoneyOnly', 'account_balance_wallet', 'Wave & Orange Money acceptés', 'Paiement mobile direct à la remise'],
             ] as const).map(([key, icon, title, sub]) => (
-              <label key={key} className="flex cursor-pointer items-center gap-3 py-2">
+              <label key={key} className="relative flex cursor-pointer items-center gap-3 py-2">
                 {key === 'mobileMoneyOnly' ? <span className="flex shrink-0 -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={22} className="ring-2 ring-surface-lowest" />)}</span> : <Icon name={icon} size={20} className="text-tertiary" />}
                 <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">{title}</span><span className="block text-body-sm text-on-surface-variant">{sub}</span></span>
                 <input type="checkbox" className="peer sr-only" checked={state[key]} onChange={() => onChange({ [key]: !state[key] } as Partial<SheetState>)} />

@@ -153,7 +153,7 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
             </label>
           </div>
           {/* Mobile: a single switch replaces the desktop checkboxes */}
-          <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 text-body-sm text-on-surface md:hidden">
+          <label className="relative mt-3 flex cursor-pointer items-center justify-between gap-3 text-body-sm text-on-surface md:hidden">
             <span className="flex items-center gap-2"><Icon name="visibility_off" size={18} className="text-on-surface-variant" /> Masquer les articles vendus</span>
             <input type="checkbox" role="switch" checked={hideSold} onChange={e => setHideSold(e.target.checked)} className="peer sr-only" />
             <span aria-hidden className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform after:content-[''] peer-checked:bg-tertiary peer-checked:after:translate-x-5" />
