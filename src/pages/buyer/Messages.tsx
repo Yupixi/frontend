@@ -1,8 +1,7 @@
-import EmptyState from '../../components/EmptyState'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
-  Search, CheckCheck, Tag, X, MapPin, ShieldCheck, BadgeCheck, Star, Handshake, CircleX, Flag,
+  CheckCheck, Tag, X, MapPin, ShieldCheck, BadgeCheck, Star, Handshake, CircleX, Flag,
   Calendar, CheckCircle2, Wallet, Info, Lock, Zap,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
@@ -25,8 +24,8 @@ import {
 } from '../../graphql/messaging'
 import ChatComposer, { type ComposerHandle, type ComposerReply } from '../../components/ChatComposer'
 import ChatBubble from '../../components/ChatBubble'
+import InboxList from '../../components/InboxList'
 import ImageLightbox from '../../components/ImageLightbox'
-import { formatRelativeDate } from '../../lib/format'
 import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
 import { dateFormat } from '../../lib/intl'
@@ -118,8 +117,6 @@ type Props = {
 export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = [...(listData?.myConversations ?? [])].sort(byLatestMessage)
-  const [filter, setFilter] = useState<'all' | 'buy' | 'sell'>('all')
-  const [q, setQ] = useState('')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showList, setShowList] = useState(true)
   const [msg, setMsg] = useState('')
@@ -279,11 +276,6 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     void createReport({ variables: { targetType: 'USER', targetUserId: other.id, reason: 'Tentative d’arnaque', message: `Conversation ${activeId}` } }).then(() => setReported(true)).finally(() => setConfirming(null))
   }
 
-  const counts = { all: conversations.length, buy: conversations.filter(c => !c.canManageDeal).length, sell: conversations.filter(c => c.canManageDeal).length }
-  const shown = conversations
-    .filter(c => filter === 'all' || (filter === 'sell') === c.canManageDeal)
-    .filter(c => !q || `${c.otherParticipant.fullName} ${c.listing?.title ?? ''}`.toLowerCase().includes(q.toLowerCase()))
-  const unread = conversations.reduce((n, c) => n + c.unreadCount, 0)
 
   // Deal summary: the accepted offer price wins over the asking price.
   const acceptedOffer = [...messages].reverse().find(m => m.offer?.status === 'ACCEPTED')?.offer
@@ -340,53 +332,14 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
 
         <div className="flex min-h-0 flex-1">
           {/* Conversations */}
-          <aside className={`${showList ? 'flex' : 'hidden'} w-full shrink-0 flex-col border-0 border-r border-solid border-outline-variant bg-surface-lowest md:flex md:w-80`}>
-            <div className="border-0 border-b border-solid border-outline-variant p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <h1 className="m-0 text-headline-sm text-on-surface">Boîte de réception</h1>
-                {unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-label-sm text-white">{unread} non lu{unread > 1 ? 's' : ''}</span>}
-              </div>
-              <div className="mb-2 flex gap-1.5">
-                {([['all', 'Toutes'], ['buy', 'Achats'], ['sell', 'Ventes']] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setFilter(k)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${filter === k ? 'bg-primary text-white' : 'bg-transparent text-on-surface-variant hover:bg-surface-container-low'}`}>{label} ({counts[k]})</button>
-                ))}
-              </div>
-              <label className="flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2">
-                <Search size={17} className="text-outline" />
-                <input value={q} onChange={e => setQ(e.target.value)} placeholder="Chercher un contact, un produit…" className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
-              </label>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {shown.length === 0 && <EmptyState className="m-3" icon="empty-messages" fallback="chat" title="Aucune conversation" text="Contactez un vendeur depuis une annonce pour démarrer." action={{ label: 'Explorer les annonces', onClick: () => onNavigate('search') }} />}
-              {shown.map(c => {
-                const active = c.id === activeId
-                return (
-                  <button key={c.id} onClick={() => { setActiveId(c.id); setShowList(false) }} className={`flex w-full cursor-pointer gap-3 border-0 border-b border-l-[3px] border-solid border-b-surface-container-low px-3 py-3 text-left ${active ? 'border-l-primary bg-primary-fixed/30' : 'border-l-transparent bg-transparent hover:bg-surface-container-low'}`}>
-                    {/* Listing photo, else the contact's avatar/initial — never an empty tag glyph */}
-                    <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container">
-                      {c.listing?.coverImageUrl
-                        ? <SafeImg src={c.listing.coverImageUrl} icon="sell" />
-                        : c.otherParticipant.avatarUrl
-                          ? <SafeImg src={c.otherParticipant.avatarUrl} icon="person" />
-                          : <span className="flex h-full w-full items-center justify-center bg-primary-fixed text-label-lg text-primary">{c.otherParticipant.fullName.charAt(0).toUpperCase()}</span>}
-                      {c.unreadCount > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-solid border-white bg-primary" />}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className={`truncate text-label-md text-on-surface ${c.unreadCount ? 'font-extrabold' : ''}`}>{c.otherParticipant.fullName}</span>
-                        <span className="shrink-0 text-[11px] text-outline">{c.lastMessageAt ? formatRelativeDate(c.lastMessageAt) : ''}</span>
-                      </span>
-                      {c.listing && <span className="block truncate text-body-sm text-primary">{c.listing.title}</span>}
-                      <span className="flex items-center gap-1.5">
-                        <span className={`min-w-0 flex-1 truncate text-body-sm ${c.unreadCount ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}`}>{messagePreview(c.lastMessage) || (c.lastMessage ? 'Offre ou rendez-vous' : 'Démarrez la discussion')}</span>
-                        {c.dealStatus !== 'DISCUSSING' && <span className={`shrink-0 rounded-full px-1.5 text-[10px] font-bold ${c.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.dealStatus === 'CONCLUDED' ? 'CONCLU' : 'NON CONCLU'}</span>}
-                        <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${c.canManageDeal ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.canManageDeal ? 'Vente' : 'Achat'}</span>
-                      </span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+          <aside className={`${showList ? 'flex' : 'hidden'} w-full shrink-0 flex-col border-0 border-r border-solid border-outline-variant bg-surface-lowest md:flex md:w-80 lg:w-[360px]`}>
+            <InboxList
+              conversations={conversations}
+              activeId={activeId}
+              currentUserId={currentUser?.id}
+              onOpen={id => { setActiveId(id); setShowList(false) }}
+              onExplore={() => onNavigate('search')}
+            />
             <p className="m-0 border-0 border-t border-solid border-outline-variant p-3 text-center text-body-sm text-on-surface-variant">Toutes les discussions sont sauvegardées sur votre compte</p>
           </aside>
 
