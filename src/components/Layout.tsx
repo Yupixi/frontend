@@ -674,7 +674,7 @@ export default function Layout({
               return (
                 <button key={item.label} onClick={() => onNavigate(item.page)} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
                   <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]">
-                    <AnimatedIcon name={item.anim} fallback={item.ms} size={28} className="text-white" playOnInteract />
+                    <AnimatedIcon name={item.anim} fallback={item.ms} size={28} className="text-white" playOnInteract preload />
                   </span>
                   {item.label}
                 </button>
@@ -688,7 +688,7 @@ export default function Layout({
                 className={`relative flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}
               >
                 <span className="relative">
-                  <AnimatedIcon name={item.anim} fallback={item.ms} size={24} fill={isActive} trigger={isActive} playOnInteract />
+                  <AnimatedIcon name={item.anim} fallback={item.ms} size={24} fill={isActive} trigger={isActive} playOnInteract preload />
                   {!!item.badge && <span className="notif-dot" style={{ top: -6, right: -10 }}>{item.badge > 9 ? '9+' : item.badge}</span>}
                 </span>
                 {item.label}
