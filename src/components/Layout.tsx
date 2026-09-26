@@ -260,7 +260,7 @@ export default function Layout({
         {/* Main row */}
         <div className="flex h-16 items-center gap-3 px-4 lg:h-20 lg:gap-6 lg:px-12">
           <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label="Accueil Dilchap">
-            <Logo size="md" />
+            <Logo size={isMobile ? 'sm' : 'md'} />
             <span className="hidden rounded bg-surface-container-high px-2 py-0.5 text-label-sm uppercase tracking-wider text-on-surface-variant xl:inline-block">Seconde main</span>
           </button>
 
