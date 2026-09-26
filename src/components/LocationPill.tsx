@@ -47,7 +47,7 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
         className={`flex cursor-pointer items-center justify-center rounded-xl border-none text-label-md text-on-surface ${compact ? 'h-9 gap-1 rounded-full bg-surface-container pl-2 pr-1.5 hover:bg-surface-container-high' : 'h-10 gap-1.5 bg-surface-container-low px-3 hover:bg-surface-container'}`}
       >
         <AnimatedIcon name="location" fallback="location_on" size={compact ? 16 : 18} className="text-primary" playOnView={300} playOnInteract trigger={label} />
-        <span className={`truncate ${compact ? 'max-w-[76px]' : 'max-w-[140px]'}`}>{compact ? shortLabel : label}</span>
+        <span className={`truncate ${compact ? 'max-w-[76px] max-[400px]:hidden' : 'max-w-[140px]'}`}>{compact ? shortLabel : label}</span>
         <Icon name="expand_more" size={compact ? 16 : 17} className="text-on-surface-variant" />
       </button>
 

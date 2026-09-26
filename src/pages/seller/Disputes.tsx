@@ -100,7 +100,7 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
       </div>
       <div className="mt-4 text-label-sm uppercase text-on-surface-variant">Message explicatif à l'acheteur</div>
       <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder={`Bonjour ${d.buyer.fullName.split(' ')[0]}, ...`} className="mt-2 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
-      <div className="mt-3"><PhotoPicker urls={photos} onChange={setPhotos} label="Ajouter des photos témoins" /></div>
+      <div className="mt-3"><PhotoPicker urls={photos} onChange={setPhotos} label="Ajouter des photos" /></div>
       {error && <p className="m-0 mt-2 text-body-sm text-primary">{error.message}</p>}
       <button onClick={send} disabled={loading || (proposal === 'COURTESY_DISCOUNT' && discount <= 0)} className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white hover:bg-primary-dark disabled:opacity-60">
         <Icon name="send" size={18} /> <span className="sm:hidden">Envoyer ma réponse</span><span className="hidden sm:inline">Envoyer ma réponse &amp; mes justificatifs</span>

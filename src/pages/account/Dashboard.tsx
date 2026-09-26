@@ -214,7 +214,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           <section className="min-w-0">
             <div className="mb-3 flex items-end justify-between gap-2">
               <div><h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Mes annonces actives</h2><p className="m-0 hidden text-body-sm text-on-surface-variant md:block">Surveillez vos vues et boostez pour multiplier les prises de contact.</p></div>
-              <button onClick={() => onNavigate('seller-listings')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir ({live.length}) <Icon name="chevron_right" size={17} /></button>
+              <button onClick={() => onNavigate('seller-listings')} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-md text-primary">Tout voir ({live.length}) <Icon name="chevron_right" size={17} /></button>
             </div>
             {toBoost.length === 0 && (
               <div className="rounded-2xl bg-surface-container-low p-6 text-center"><p className="m-0 text-label-lg text-on-surface">Aucune annonce en ligne</p><button onClick={() => onNavigate('seller-post')} className="mt-3 cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white">Déposer une annonce</button></div>
@@ -226,10 +226,11 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                 return (
                   <article key={l.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm">
                     <button onClick={() => onSelectListing(l.id)} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0"><SafeImg src={l.coverImageUrl} /></button>
-                    <div className="min-w-0 flex-1">
+                    {/* min width: on narrow phones the Booster button wraps under instead of covering the price */}
+                    <div className="min-w-[8.5rem] flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-label-sm text-on-surface-variant">{l.condition && l.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 text-tertiary">{l.condition}</span>}<span>{l.city}</span></div>
                       <button onClick={() => onSelectListing(l.id)} className="block max-w-full cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg text-on-surface">{l.title}</button>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-3"><span className="text-headline-sm font-extrabold text-on-surface"><Price amount={l.price} currency={l.currency} /></span>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-3"><span className="whitespace-nowrap text-headline-sm font-extrabold text-on-surface max-sm:text-label-lg max-sm:font-extrabold"><Price amount={l.price} currency={l.currency} /></span>
                         <span className="flex items-center gap-2 text-label-sm text-on-surface-variant"><span className="flex items-center gap-0.5"><Icon name="visibility" size={14} /> {formatNumber(l.viewsCount)}</span><span className="flex items-center gap-0.5"><Icon name="favorite" size={14} /> {l.favoritesCount}</span>{!!l.pendingOffersCount && <span className="flex items-center gap-0.5 text-primary"><Icon name="local_offer" size={14} /> {l.pendingOffersCount} offre{l.pendingOffersCount > 1 ? 's' : ''}</span>}</span>
                       </div>
                     </div>

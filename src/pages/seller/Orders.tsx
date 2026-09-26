@@ -208,7 +208,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
 
                   {o.disputeId && (
                     <button onClick={() => onOpenDispute(o.disputeId!)} className="mt-3 flex w-full cursor-pointer items-center gap-2 rounded-xl border-none bg-primary-fixed/60 px-3 py-2 text-left text-label-md text-primary">
-                      <Icon name="gavel" size={17} /> <span className="flex-1">Un litige est associé à cette vente</span> <ArrowRight size={15} />
+                      <Icon name="gavel" size={17} /> <span className="flex-1"><span className="max-[380px]:hidden">Un litige est associé à cette vente</span><span className="min-[380px]:hidden">Litige en cours</span></span> <ArrowRight size={15} />
                     </button>
                   )}
                   {!final && (

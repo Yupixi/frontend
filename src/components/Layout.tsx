@@ -440,7 +440,7 @@ export default function Layout({
                       <span className="text-label-md leading-tight text-on-surface">Mon compte</span>
                       <span className="max-w-[120px] truncate text-label-sm leading-tight text-tertiary">{displayName.split(' ')[0]}</span>
                     </div>
-                    <ChevronDown size={15} className="hidden text-on-surface-variant lg:inline" />
+                    <span className="hidden lg:inline-flex"><ChevronDown size={15} className="text-on-surface-variant" /></span>
                   </button>
 
                   {userMenuOpen && (
@@ -491,7 +491,7 @@ export default function Layout({
                 onClick={() => onNavigate('auth')}
                 className="cursor-pointer whitespace-nowrap rounded-lg border-[1.5px] border-solid border-on-surface bg-surface-lowest px-3 py-2 text-label-md text-on-surface transition-colors hover:bg-surface-container-low lg:px-4 lg:py-2.5"
               >
-                Se connecter
+                <span className="max-[380px]:hidden">Se connecter</span><span className="min-[380px]:hidden">Connexion</span>
               </button>
             )}
           </div>

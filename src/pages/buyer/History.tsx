@@ -147,7 +147,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                         <span className="flex items-center gap-1 text-label-sm text-on-surface-variant">{l.seller.isVerified && !off && <span className="flex items-center gap-0.5 rounded bg-tertiary-soft px-1 text-tertiary"><Icon name="verified" size={12} /> Vérifié</span>}<span className="truncate">{l.locationLabel ?? l.city}</span>{off && <span className="text-primary">Indisponible</span>}</span>
                         <span className={`block truncate text-label-lg ${off ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{l.title}</span>
                         <span className={`text-headline-sm font-extrabold ${off ? 'text-on-surface-variant' : 'text-primary'}`}><Price amount={l.price} currency={l.currency} /></span>
-                        {l.negotiable && !off && <span className="ml-2 text-label-sm text-tertiary">Négociable</span>}
+                        {l.negotiable && !off && <span className="ml-2 text-label-sm text-tertiary max-[360px]:hidden">Négociable</span>}
                       </button>
                       <button onClick={() => remove(l.id)} className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center self-start rounded-full border-none bg-transparent text-on-surface-variant" aria-label="Retirer"><Icon name="close" size={18} /></button>
                     </div>
