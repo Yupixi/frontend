@@ -30,11 +30,11 @@ export type PaymentIntent = {
 }
 export type PaymentRequest = { kind: 'CREDIT_PACK' | 'BOOST_PACK'; product: string; listingId?: string }
 
-export const PROVIDERS: { key: PaymentProvider; method: string; label: string; hint: string }[] = [
-  { key: 'wave', method: 'WAVE', label: 'Wave', hint: 'Confirmation dans l’app' },
-  { key: 'orange', method: 'ORANGE_MONEY', label: 'Orange Money', hint: 'Code #144*82#' },
-  { key: 'mtn', method: 'MTN_MOMO', label: 'MTN MoMo', hint: 'Validation mobile' },
-  { key: 'moov', method: 'MOOV_MONEY', label: 'Moov Money', hint: 'Validation mobile' },
+export const PROVIDERS: { key: PaymentProvider; method: string; label: string }[] = [
+  { key: 'wave', method: 'WAVE', label: 'Wave' },
+  { key: 'orange', method: 'ORANGE_MONEY', label: 'Orange' },
+  { key: 'mtn', method: 'MTN_MOMO', label: 'MoMo' },
+  { key: 'moov', method: 'MOOV_MONEY', label: 'Flooz' },
 ]
 
 // Pending payment kept across the Wave redirect.
