@@ -333,9 +333,15 @@ export default function App() {
 
   // Page change: top of the new page, or the remembered position on
   // back/forward. Instant and before paint — no slide through the old page.
+  const firstPage = useRef(true)
   useLayoutEffect(() => {
-    window.scrollTo({ top: pendingScroll.current, behavior: 'instant' })
+    // Not on the first render (already at the top): scrollTo — or even
+    // reading scrollY — would force a full synchronous layout of the page
+    // being mounted, ~0.5 s of blocked main thread on a mid-range phone.
+    if (firstPage.current) { firstPage.current = false; return }
+    const top = pendingScroll.current
     pendingScroll.current = 0
+    window.scrollTo({ top, behavior: 'instant' })
   }, [page])
 
   // Persist navigation state so a hard reload lands back where the user was.
