@@ -210,7 +210,7 @@ export type ShopListing = {
 
 const PROMO_ITEM = 'entryId listingId title coverUrl price discountPercent salePrice promoPrice status rejectReason'
 const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt salesCount salesVolume items { ${PROMO_ITEM} }`
-const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt minDiscountPercent state myItems { ${PROMO_ITEM} }`
+const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt minDiscountPercent state entryFee listingFee entryFeePaid amountDue myItems { ${PROMO_ITEM} }`
 const BUNDLE_FIELDS = 'id name tiers { minQty percent } scope aisleId aisleName listingIds startsAt endsAt active state listingsCount'
 const POST_FIELDS = 'id title body imageUrl listings { id title price coverUrl } recipients views createdAt'
 
@@ -227,6 +227,8 @@ export const CREATE_SHOP_SALE_MUTATION = gql`mutation CreateShopSale($input: Sho
 export const UPDATE_SHOP_SALE_MUTATION = gql`mutation UpdateShopSale($id: ID!, $input: ShopSaleInput!) { updateShopSale(id: $id, input: $input) { ${SALE_FIELDS} } }`
 export const END_SHOP_SALE_MUTATION = gql`mutation EndShopSale($id: ID!) { endShopSale(id: $id) { ${SALE_FIELDS} } }`
 export const JOIN_CAMPAIGN_MUTATION = gql`mutation JoinCampaign($input: JoinCampaignInput!) { joinCampaign(input: $input) { ${CAMPAIGN_FIELDS} } }`
+// Dilchap campaigns open to shops and badge holders ("Campagnes Dilchap" page).
+export const OPEN_CAMPAIGNS_QUERY = gql`query OpenCampaigns { openShopCampaigns { ${CAMPAIGN_FIELDS} } }`
 export const WITHDRAW_CAMPAIGN_ENTRY_MUTATION = gql`mutation WithdrawCampaignEntry($entryId: ID!) { withdrawCampaignEntry(entryId: $entryId) }`
 export const SAVE_SHOP_BUNDLE_MUTATION = gql`mutation SaveShopBundle($input: ShopBundleInput!, $id: ID) { saveShopBundle(input: $input, id: $id) { ${BUNDLE_FIELDS} } }`
 export const STOP_SHOP_BUNDLE_MUTATION = gql`mutation StopShopBundle($id: ID!) { stopShopBundle(id: $id) { ${BUNDLE_FIELDS} } }`
@@ -239,10 +241,13 @@ export type PromoState = 'SCHEDULED' | 'LIVE' | 'ENDED'
 export type PromoItem = {
   entryId: string; listingId: string; title: string; coverUrl: string | null; price: number | null
   discountPercent: number | null; salePrice: number | null; promoPrice: number | null
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'; rejectReason: string | null
+  // AWAITING_PAYMENT: accepted in a paid campaign, not paid yet.
+  status: 'PENDING' | 'AWAITING_PAYMENT' | 'APPROVED' | 'REJECTED'; rejectReason: string | null
 }
 export type ShopSale = { id: string; name: string; slug: string; startsAt: string; endsAt: string; state: PromoState; notifyFollowers: boolean; followersNotifiedAt: string | null; salesCount: number; salesVolume: number; items: PromoItem[] }
-export type OpenCampaign = { id: string; name: string; slug: string; description: string | null; themeColor: string | null; startsAt: string; endsAt: string; minDiscountPercent: number | null; state: PromoState; myItems: PromoItem[] }
+export type OpenCampaign = { id: string; name: string; slug: string; description: string | null; themeColor: string | null; startsAt: string; endsAt: string; minDiscountPercent: number | null; state: PromoState; myItems: PromoItem[]
+  // Paid participation (F CFA), charged once items are accepted.
+  entryFee: number; listingFee: number; entryFeePaid: boolean; amountDue: number }
 export type BundleTier = { minQty: number; percent: number }
 export type ShopBundle = { id: string; name: string; tiers: BundleTier[]; scope: 'ALL' | 'AISLE' | 'LISTINGS'; aisleId: string | null; aisleName: string | null; listingIds: string[]; startsAt: string | null; endsAt: string | null; active: boolean; state: PromoState; listingsCount: number }
 export type ShopPost = { id: string; title: string; body: string; imageUrl: string | null; listings: { id: string; title: string; price: number | null; coverUrl: string | null }[]; recipients: number; views: number; createdAt: string }
