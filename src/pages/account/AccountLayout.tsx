@@ -123,23 +123,31 @@ function useUnreadCounts() {
   return { listingsCount: listingsData?.myListings.totalCount, unreadMessages, unreadNotifications, activeDisputes: disputesData?.myDisputeStats.active ?? 0 }
 }
 
-function NavItem({ active, icon: Icon, label, badge, onClick, muted }: {
-  active?: boolean, icon: typeof Home, label: string, badge?: React.ReactNode, onClick: () => void, muted?: boolean
+const SIDEBAR_KEY = 'dilchap_sidebar_collapsed'
+
+function NavItem({ active, icon: Icon, label, badge, dot, onClick, muted, collapsed }: {
+  active?: boolean, icon: typeof Home, label: string, badge?: React.ReactNode, dot?: string | number, onClick: () => void, muted?: boolean, collapsed?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className={`mb-0.5 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none px-3 py-2.5 text-left ${active ? 'bg-primary text-white' : `bg-transparent hover:bg-surface-container-low ${muted ? 'text-on-surface-variant' : 'text-on-surface'}`} ${muted ? 'text-body-sm' : 'text-label-md'}`}
+      title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
+      className={`relative mb-0.5 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none py-2.5 text-left ${collapsed ? 'justify-center px-0' : 'px-3'} ${active ? 'bg-primary text-white' : `bg-transparent hover:bg-surface-container-low ${muted ? 'text-on-surface-variant' : 'text-on-surface'}`} ${muted ? 'text-body-sm' : 'text-label-md'}`}
     >
       <Icon size={20} className={active ? 'text-white' : 'text-on-surface-variant'} />
-      <span className="flex-1">{label}</span>
-      {badge}
+      {collapsed
+        // Reduced rail: counters become a small bubble on the icon.
+        ? dot !== undefined && <span className={`absolute right-2 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${active ? 'bg-white text-primary' : 'bg-primary text-white'}`}>{dot}</span>
+        : <><span className="flex-1 whitespace-nowrap">{label}</span>{badge}</>}
     </button>
   )
 }
 
-function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, activeDisputes, isGuest }: {
+function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, activeDisputes, isGuest, collapsed, onToggleCollapsed }: {
   active: string; onNavigate: (p: any) => void; listingsCount?: number; unreadMessages?: number; activeDisputes?: number; isGuest?: boolean
+  // Desktop only: icons-only rail, and the button that switches it.
+  collapsed?: boolean; onToggleCollapsed?: () => void
 }) {
   // A guest identity only exists to hold a conversation open — there's no
   // account behind it, so every other area stays hidden.
@@ -148,10 +156,12 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
     : SECTIONS
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-3 py-4">
-        {sections.map(section => (
-          <div key={section.title} className="mb-5">
-            <div className="mb-2 px-3 text-label-sm uppercase text-on-surface-variant">{section.title}</div>
+      <div className={`flex-1 overflow-y-auto overflow-x-hidden py-4 ${collapsed ? 'px-2' : 'px-3'}`}>
+        {sections.map((section, i) => (
+          <div key={section.title} className={collapsed ? 'mb-3' : 'mb-5'}>
+            {collapsed
+              ? i > 0 && <div className="mx-2 mb-3 border-0 border-t border-solid border-outline-variant" />
+              : <div className="mb-2 whitespace-nowrap px-3 text-label-sm uppercase text-on-surface-variant">{section.title}</div>}
             {section.items.map(item => {
               const badge = item.key === 'buyer-messages' && unreadMessages
                 ? <span className={`rounded-full px-2 text-label-sm ${active === item.key ? 'bg-white text-primary' : 'bg-primary-fixed text-primary'}`}>{unreadMessages} non lu{unreadMessages > 1 ? 's' : ''}</span>
@@ -160,20 +170,34 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
                   : item.key === 'seller-disputes' && activeDisputes
                     ? <span className={`h-2 w-2 rounded-full ${active === item.key ? 'bg-white' : 'bg-primary'}`} aria-label={`${activeDisputes} litige(s) en cours`} />
                     : undefined
-              return <NavItem key={item.key} active={active === item.key} icon={item.icon} label={item.label} badge={badge} onClick={() => onNavigate(item.key)} />
+              const dot = item.key === 'buyer-messages' && unreadMessages ? unreadMessages
+                : item.key === 'seller-disputes' && activeDisputes ? activeDisputes : undefined
+              return <NavItem key={item.key} collapsed={collapsed} active={active === item.key} icon={item.icon} label={item.label} badge={badge} dot={dot} onClick={() => onNavigate(item.key)} />
             })}
           </div>
         ))}
-        {!isGuest && (
+        {!isGuest && !collapsed && (
           <div className="mx-1 mt-2 rounded-xl bg-tertiary-soft p-3">
             <div className="mb-1 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={15} /> Sécurité Dilchap</div>
             <p className="m-0 text-body-sm text-on-surface-variant">Vos ventes se règlent de la main à la main, après vérification de l'article. 0 F de commission.</p>
           </div>
         )}
       </div>
-      <div className="border-0 border-t border-solid border-outline-variant px-3 py-3">
-        <NavItem icon={Store} label="Retour à la boutique" onClick={() => onNavigate('home')} muted />
-        {!isGuest && <NavItem active={active === 'buyer-settings'} icon={Settings} label="Paramètres" onClick={() => onNavigate('buyer-settings')} muted />}
+      <div className={`border-0 border-t border-solid border-outline-variant py-3 ${collapsed ? 'px-2' : 'px-3'}`}>
+        <NavItem collapsed={collapsed} icon={Store} label="Retour à la boutique" onClick={() => onNavigate('home')} muted />
+        {!isGuest && <NavItem collapsed={collapsed} active={active === 'buyer-settings'} icon={Settings} label="Paramètres" onClick={() => onNavigate('buyer-settings')} muted />}
+        {onToggleCollapsed && (
+          <button
+            onClick={onToggleCollapsed}
+            title={collapsed ? 'Agrandir le menu' : 'Réduire le menu'}
+            aria-label={collapsed ? 'Agrandir le menu' : 'Réduire le menu'}
+            aria-expanded={!collapsed}
+            className={`mt-1 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none bg-transparent py-2 text-body-sm text-on-surface-variant hover:bg-surface-container-low ${collapsed ? 'justify-center px-0' : 'px-3'}`}
+          >
+            <Icon name={collapsed ? 'left_panel_open' : 'left_panel_close'} size={20} />
+            {!collapsed && <span className="whitespace-nowrap">Réduire le menu</span>}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -257,6 +281,9 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
   fill?: boolean
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Desktop sidebar reduced to icons (remembered).
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(SIDEBAR_KEY) === '1' } catch { return false } })
+  const toggleCollapsed = () => setCollapsed(c => { try { localStorage.setItem(SIDEBAR_KEY, c ? '0' : '1') } catch { /* private mode */ } return !c })
   const { listingsCount, unreadMessages, unreadNotifications, activeDisputes } = useUnreadCounts()
   const tabs = hideBottomNav ? null : mobileTabsFor(active)
   const back = onBack ?? (() => (window.history.length > 1 ? window.history.back() : onNavigate('buyer-dashboard')))
@@ -265,8 +292,8 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
 
   return (
     <div className={`safe-pt flex bg-surface ${fill ? 'h-[100dvh]' : 'h-screen'}`}>
-      <aside className="hidden w-64 shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest lg:block">
-        <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} />
+      <aside className={`hidden shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest transition-[width] duration-200 lg:block ${collapsed ? 'w-[72px]' : 'w-64'}`}>
+        <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
       </aside>
 
       {sidebarOpen && (
