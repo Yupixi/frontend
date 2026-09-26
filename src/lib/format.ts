@@ -26,3 +26,15 @@ export const handoverProof = (m: { handedOverAt: string | null; handoverMethod?:
   !m?.handedOverAt ? 'Clôturée après accord de médiation'
     : m.handoverMethod === 'SELLER_DECLARED' ? 'Remise confirmée par le vendeur'
       : 'Validée par le code de remise à 4 chiffres'
+
+// Listing descriptions are rich text (HTML from the editor): card excerpts
+// need the words only.
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'", nbsp: ' ' }
+export function plainText(html: string | null | undefined): string {
+  return (html ?? '')
+    .replace(/<(br|\/p|\/li|\/h\d)\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(#39|[a-z]+);/gi, (m, e: string) => ENTITIES[e.toLowerCase()] ?? m)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
