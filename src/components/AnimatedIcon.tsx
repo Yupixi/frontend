@@ -56,6 +56,12 @@ function whenIdle(cb: () => void) {
   return () => { const i = armQueue.indexOf(cb); if (i >= 0) armQueue.splice(i, 1) }
 }
 
+// Names whose animation has already been built once this session, with the
+// SVG of their resting pose: a remount (the bottom bar after a navigation)
+// shows that snapshot at once while the player rebuilds, instead of a blank
+// or the Material stand-in.
+const snapshots = new Map<string, string>()
+
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 type Props = {
@@ -78,6 +84,10 @@ type Props = {
   playOnInteract?: boolean
   /** Idle replay every N ms while on screen (empty states). */
   replayEvery?: number
+  /** Always-visible chrome (bottom bars): build right away and show nothing
+   *  rather than the Material stand-in while it loads, so the icon set never
+   *  alternates between the two. The stand-in appears only if loading fails. */
+  preload?: boolean
 }
 
 // A counter that only moves when `value` goes up (a new notification, not
@@ -92,17 +102,20 @@ export function useIncreaseCounter(value: number) {
   return n
 }
 
-export default function AnimatedIcon({ name, fallback, size = 24, fill, className = '', trigger, loop = false, playOnMount = false, playOnView, playOnInteract = false, replayEvery }: Props) {
+export default function AnimatedIcon({ name, fallback, size = 24, fill, className = '', trigger, loop = false, playOnMount = false, playOnView, playOnInteract = false, replayEvery, preload = false }: Props) {
   const box = useRef<HTMLSpanElement>(null)
   const anim = useRef<{ goToAndPlay: (v: number, f?: boolean) => void; goToAndStop: (v: number, f?: boolean) => void; destroy: () => void; totalFrames: number } | null>(null)
   const [ready, setReady] = useState(false)
-  const [armed, setArmed] = useState(false)
   const file = fileFor(name)
+  // Only bar icons: a card's heart must keep going through the idle queue.
+  const eager = preload && !!file && !reducedMotion()
+  const [armed, setArmed] = useState(eager)
+  const [failed, setFailed] = useState(false)
   // Icons that only ever animate in response to the user (a card's heart,
   // the bell, the tab bar) have nothing to show until then: they build their
   // animation on first contact with their control, not ahead of time for
   // every card on the page.
-  const onDemand = playOnView === undefined && !playOnMount && !loop && !replayEvery
+  const onDemand = playOnView === undefined && !playOnMount && !loop && !replayEvery && !preload
   const pendingPlay = useRef(false)
 
   useEffect(() => {
@@ -136,13 +149,16 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
       if (cancelled || !box.current) return
       anim.current = lottie.loadAnimation({ container: box.current, renderer: 'svg', loop, autoplay: loop, animationData: data })
       // Rest on the last frame (the icon's final pose) until triggered.
+      if (!loop) {
+        anim.current.goToAndStop(anim.current.totalFrames - 1, true)
+        if (!snapshots.has(name)) snapshots.set(name, box.current.innerHTML)
+      }
       if (playOnMount || pendingPlay.current) anim.current.goToAndPlay(0, true)
-      else if (!loop) anim.current.goToAndStop(anim.current.totalFrames - 1, true)
       pendingPlay.current = false
       setReady(true)
-    }).catch(() => undefined) // offline / missing chunk: the static icon stays
+    }).catch(() => setFailed(true)) // offline / missing chunk: the static icon stays
     return () => { cancelled = true; anim.current?.destroy(); anim.current = null }
-  }, [armed, file, loop, playOnMount])
+  }, [armed, file, loop, playOnMount, name])
 
   // First time on screen: play once (optionally staggered).
   useEffect(() => {
@@ -193,11 +209,14 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
     else if (hasAnimatedIcon(name) && !reducedMotion()) { pendingPlay.current = true; setArmed(true) }
   }, [trigger])
 
+  const snapshot = eager ? snapshots.get(name) : undefined
   return (
     <span className={`relative inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: size, height: size }} aria-hidden>
       {/* Lottie colours are baked in: tint the rendered SVG with currentColor */}
       <span ref={box} className={`lottie-tint absolute inset-0 ${ready ? '' : 'invisible'}`} />
-      {!ready && <Icon name={fallback} size={size} fill={fill} />}
+      {!ready && (snapshot && !failed
+        ? <span className="lottie-tint absolute inset-0" dangerouslySetInnerHTML={{ __html: snapshot }} />
+        : (!eager || failed) && <Icon name={fallback} size={size} fill={fill} />)}
     </span>
   )
 }
