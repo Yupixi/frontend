@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v13'
+const VERSION = 'v14'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -148,11 +148,10 @@ self.addEventListener('notificationclick', (event) => {
       const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       for (const client of windowClients) {
         if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-          // A conversation / listing / shop link opens in the running app
-          // without a reload (App listens for this message); anything else
-          // navigates.
-          if (/[?&](conversation|listing|shop)=/.test(url)) client.postMessage({ type: 'yupixi:open-url', url })
-          else client.navigate?.(url)
+          // The running app opens the page itself, without a reload (App
+          // routes every notification link: conversation, listing, shop,
+          // shortcut page + dispute / ticket…).
+          client.postMessage({ type: 'yupixi:open-url', url })
           return client.focus()
         }
       }

@@ -5,7 +5,7 @@ import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './co
 import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
-import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_SHOP_EVENT, shopFromUrl } from './lib/navigation'
+import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -100,11 +100,17 @@ const savedNav = loadNavState()
 
 // PWA manifest shortcuts (long-press the home screen icon) launch with
 // `?shortcut=<page>` — a real page, not session-restore, takes priority.
-const SHORTCUT_PAGES: Page[] = ['seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'seller-badge', 'seller-campaigns', 'support', 'shops']
-function shortcutPage(): Page | null {
-  const requested = new URLSearchParams(window.location.search).get('shortcut')
+const SHORTCUT_PAGES: Page[] = [
+  'seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'seller-badge', 'seller-campaigns', 'support', 'shops',
+  // Notification targets.
+  'seller-disputes', 'buyer-disputes', 'buyer-notifications', 'seller-listings', 'seller-orders', 'buyer-purchases', 'seller-wallet', 'seller-premium', 'seller-dashboard', 'buyer-dashboard',
+]
+function shortcutPage(search: string = window.location.search): Page | null {
+  const requested = new URLSearchParams(search).get('shortcut')
   return SHORTCUT_PAGES.includes(requested as Page) ? (requested as Page) : null
 }
+// Item a notification link focuses on its page (`&dispute=`, `&ticket=`).
+const linkParam = (name: string) => new URLSearchParams(window.location.search).get(name)
 
 // "Partager l'annonce" needs a link that actually opens the listing for
 // whoever receives it — the app otherwise never puts state in the URL, so
@@ -149,7 +155,9 @@ export default function App() {
   const [openConversationId, setOpenConversationId] = useState<string | null>(() => conversationFromUrl())
   const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
   const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
-  const [selectedDisputeId, setSelectedDisputeId] = useState(savedNav.selectedDisputeId ?? '')
+  const [selectedDisputeId, setSelectedDisputeId] = useState(linkParam('dispute') ?? savedNav.selectedDisputeId ?? '')
+  // Support ticket to open (notification of a reply).
+  const [focusTicketId, setFocusTicketId] = useState<string | null>(() => linkParam('ticket'))
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
@@ -424,23 +432,20 @@ export default function App() {
     const onOpen = (e: Event) => openConversationRef.current((e as CustomEvent<string>).detail)
     const onSwMessage = (e: MessageEvent) => {
       const data = e.data as { type?: string; url?: string } | null
-      if (data?.type !== 'yupixi:open-url' || !data.url) return
-      const conversationId = conversationFromUrl(data.url)
-      if (conversationId) { openConversationRef.current(conversationId); return }
-      const shopSlug = shopFromUrl(data.url)
-      if (shopSlug) { openShopRef.current(shopSlug); return }
-      const listingId = new URL(data.url, window.location.origin).searchParams.get('listing')
-      if (listingId) { setSelectedListingId(listingId); navigateRef.current('listing-detail', { listingId }) }
+      if (data?.type === 'yupixi:open-url' && data.url) openLinkRef.current(data.url)
     }
+    const onOpenLink = (e: Event) => openLinkRef.current((e as CustomEvent<string>).detail)
+    window.addEventListener(OPEN_LINK_EVENT, onOpenLink)
     const onOpenShop = (e: Event) => openShopRef.current((e as CustomEvent<string>).detail)
     window.addEventListener(OPEN_SHOP_EVENT, onOpenShop)
     window.addEventListener(OPEN_CONVERSATION_EVENT, onOpen)
     navigator.serviceWorker?.addEventListener('message', onSwMessage)
     // The push link is consumed once: a reload shouldn't reopen it.
-    if (conversationFromUrl()) window.history.replaceState(window.history.state, '', window.location.pathname)
+    if (['conversation', 'shortcut', 'dispute', 'ticket'].some(linkParam)) window.history.replaceState(window.history.state, '', window.location.pathname)
     return () => {
       window.removeEventListener(OPEN_CONVERSATION_EVENT, onOpen)
       window.removeEventListener(OPEN_SHOP_EVENT, onOpenShop)
+      window.removeEventListener(OPEN_LINK_EVENT, onOpenLink)
       navigator.serviceWorker?.removeEventListener('message', onSwMessage)
     }
   }, [])
@@ -459,6 +464,29 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, isLoggedIn])
+
+  // Page a notification link points to (push click with the app open,
+  // bell menu, notifications page). Unknown or empty links go home.
+  const openLink = (url: string) => {
+    let u: URL
+    try { u = new URL(url, window.location.origin) } catch { return }
+    if (u.origin !== window.location.origin) { window.open(u.href, '_blank', 'noopener'); return }
+    const q = u.searchParams
+    const conversation = q.get('conversation')
+    if (conversation) return openConversationRef.current(conversation)
+    if (q.get('shop')) return openShop(q.get('shop')!)
+    if (q.get('listing')) return selectListing(q.get('listing')!)
+    if (q.get('seller')) return selectSeller(q.get('seller')!)
+    if (q.get('legal')) return openLegal(q.get('legal')!)
+    const target = shortcutPage(u.search)
+    if (!target) return navigate('home')
+    const dispute = q.get('dispute')
+    if (dispute) setSelectedDisputeId(dispute)
+    setFocusTicketId(q.get('ticket'))
+    navigate(target, dispute ? { disputeId: dispute } : undefined)
+  }
+  const openLinkRef = useRef(openLink)
+  openLinkRef.current = openLink
 
   const openLegal = (slug: string) => {
     setLegalSlug(slug)
@@ -671,7 +699,7 @@ export default function App() {
         case 'seller-shop':
           return <MyShop onNavigate={navigate} currentUser={currentUser} onLogout={logout} onOpenShop={openShop} />
         case 'support':
-          return <Support onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+          return <Support onNavigate={navigate} focusTicketId={focusTicketId} currentUser={currentUser} onLogout={logout} />
         case 'seller-campaigns':
           return <SellerCampaigns onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-badge':

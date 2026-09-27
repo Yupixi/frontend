@@ -32,8 +32,7 @@ import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, LEGAL_PAGES, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
 import { PaymentLogos } from './PaymentLogo'
-import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, notificationConversation, notificationTarget } from '../graphql/account'
-import { requestOpenConversation, requestOpenShop, shopFromUrl } from '../lib/navigation'
+import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, openNotificationTarget } from '../graphql/account'
 import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteConversation } from '../graphql/messaging'
 import { formatRelativeDate } from '../lib/format'
@@ -174,14 +173,7 @@ export default function Layout({
   const openNotification = (n: RemoteNotification) => {
     if (!n.readAt) void markNotificationRead({ variables: { id: n.id } }).then(() => refetchNotifs())
     setNotifMenuOpen(false)
-    const conversationId = notificationConversation(n)
-    const target = notificationTarget(n)
-    const shopSlug = shopFromUrl(n.link)
-    if (conversationId) requestOpenConversation(conversationId)
-    else if (shopSlug) requestOpenShop(shopSlug)
-    else if (target) onNavigate(target as Page)
-    else if (n.listingId) onSelectListing?.(n.listingId)
-    else onNavigate('buyer-notifications')
+    openNotificationTarget(n, () => onNavigate('buyer-notifications'))
   }
 
   const triggerToast = (msg: string) => {

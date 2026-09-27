@@ -26,3 +26,12 @@ export const shopFromUrl = (url: string | null | undefined) => {
   if (!url) return null
   try { return new URL(url, window.location.origin).searchParams.get('shop') } catch { return null }
 }
+
+// Opens the page a notification points to (push click or in-app list):
+// `/?conversation=`, `/?shop=`, `/?listing=`, `/?seller=`, `/?legal=`,
+// `/?shortcut=<page>` (+ `dispute` / `ticket` to focus), `/`, or an
+// external URL. App resolves it (see openLink there).
+export const OPEN_LINK_EVENT = 'yupixi:open-link'
+
+export const requestOpenLink = (url: string) =>
+  window.dispatchEvent(new CustomEvent<string>(OPEN_LINK_EVENT, { detail: url }))

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Select from '../../components/Select'
@@ -11,7 +11,7 @@ import {
 } from '../../graphql/support'
 import type { AuthUser } from '../../graphql/auth'
 
-type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void }
+type Props = { onNavigate: (p: any) => void; focusTicketId?: string | null; currentUser?: AuthUser | null; onLogout: () => void }
 
 const card = 'rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5'
 const inputCls = 'h-11 w-full min-w-0 rounded-xl border-none bg-surface-container-low px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary'
@@ -24,14 +24,17 @@ const STATUS: Record<SupportTicket['status'], [string, string]> = {
   RESOLVED: ['bg-tertiary-soft text-tertiary', 'Résolu'],
 }
 
-function Ticket({ t, onChanged }: { t: SupportTicket, onChanged: () => void }) {
-  const [open, setOpen] = useState(t.status !== 'RESOLVED')
+function Ticket({ t, focus, onChanged }: { t: SupportTicket, focus?: boolean, onChanged: () => void }) {
+  const [open, setOpen] = useState(focus || t.status !== 'RESOLVED')
+  // Opened from a notification: bring this ticket into view.
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => { if (focus) ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }, [focus])
   const [text, setText] = useState('')
   const [reply, { loading }] = useMutation(REPLY_SUPPORT_TICKET_MUTATION)
   const [close] = useMutation(CLOSE_SUPPORT_TICKET_MUTATION)
   const [cls, label] = STATUS[t.status]
   return (
-    <section className={card}>
+    <section ref={ref} className={`${card} scroll-mt-4 ${focus ? 'ring-2 ring-primary' : ''}`}>
       <button onClick={() => setOpen(o => !o)} className="flex w-full cursor-pointer items-start gap-3 border-none bg-transparent p-0 text-left">
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${cls}`}>{label}</span><span className="whitespace-nowrap text-label-sm text-on-surface-variant">{t.reference} • {CATEGORY_LABEL[t.category]}</span></span>
@@ -61,7 +64,7 @@ function Ticket({ t, onChanged }: { t: SupportTicket, onChanged: () => void }) {
 
 // "Aide & support": requests to the Dilchap team, answered in the BO. The
 // response target depends on the paid badge.
-export default function Support({ onNavigate, currentUser, onLogout }: Props) {
+export default function Support({ onNavigate, focusTicketId, currentUser, onLogout }: Props) {
   const { data, refetch } = useQuery<{ mySupportTickets: SupportTicket[] }>(MY_SUPPORT_TICKETS_QUERY, { fetchPolicy: 'cache-and-network' })
   const [category, setCategory] = useState<SupportCategory>('PAYMENT')
   const [subject, setSubject] = useState('')
@@ -108,7 +111,7 @@ export default function Support({ onNavigate, currentUser, onLogout }: Props) {
         </section>
         <div className="flex min-w-0 flex-col gap-3">
           <h2 className="m-0 text-headline-sm text-on-surface">Mes demandes ({tickets.length})</h2>
-          {tickets.length === 0 ? <p className="m-0 rounded-2xl bg-surface-lowest p-6 text-center text-body-md text-on-surface-variant shadow-sm">Aucune demande pour l’instant.</p> : tickets.map(t => <Ticket key={t.id} t={t} onChanged={() => void refetch()} />)}
+          {tickets.length === 0 ? <p className="m-0 rounded-2xl bg-surface-lowest p-6 text-center text-body-md text-on-surface-variant shadow-sm">Aucune demande pour l’instant.</p> : tickets.map(t => <Ticket key={t.id} t={t} focus={t.id === focusTicketId} onChanged={() => void refetch()} />)}
         </div>
       </div>
     </AccountLayout>

@@ -1,3 +1,4 @@
+import { requestNavigate, requestOpenConversation, requestOpenLink } from '../lib/navigation'
 import { gql } from '@apollo/client'
 
 // ─── Notifications ──────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ export const MARK_ALL_NOTIFICATIONS_READ_MUTATION = gql`
 export type NotificationKind =
   | 'MESSAGE' | 'LISTING_APPROVED' | 'LISTING_REJECTED' | 'LISTING_STATUS_CHANGED'
   | 'OFFER_RECEIVED' | 'OFFER_ACCEPTED' | 'OFFER_REJECTED' | 'ANNOUNCEMENT' | 'SAVED_SEARCH_MATCH' | 'DISPUTE'
-  | 'MEETUP' | 'PRICE_DROP' | 'KYC' | 'SHOP' | 'SHOP_POST' | 'CAMPAIGN_ENTRY'
+  | 'MEETUP' | 'PRICE_DROP' | 'KYC' | 'SHOP' | 'SHOP_POST' | 'CAMPAIGN_ENTRY' | 'BADGE' | 'SUPPORT'
 
 // Material Symbols icon + tone per notification kind (bell menu and
 // notifications page).
@@ -59,6 +60,8 @@ export const NOTIFICATION_META: Record<NotificationKind, { icon: string; cls: st
   SHOP: { icon: 'storefront', cls: 'bg-tertiary-soft text-tertiary' },
   SHOP_POST: { icon: 'campaign', cls: 'bg-primary-fixed text-primary' },
   CAMPAIGN_ENTRY: { icon: 'sell', cls: 'bg-tertiary-soft text-tertiary' },
+  BADGE: { icon: 'verified', cls: 'bg-verified-soft text-verified' },
+  SUPPORT: { icon: 'support_agent', cls: 'bg-surface-container text-on-surface' },
 }
 
 // Dispute notifications go to the seller's "Litiges" page or the buyer's
@@ -72,6 +75,8 @@ export const notificationTarget = (n: { type: NotificationKind; title: string })
     : n.type === 'KYC' ? 'seller-kyc'
     : n.type === 'SHOP' ? 'seller-shop'
     : n.type === 'CAMPAIGN_ENTRY' ? 'seller-shop-promos'
+    : n.type === 'BADGE' ? 'seller-badge'
+    : n.type === 'SUPPORT' ? 'support'
     : n.type === 'DISPUTE' ? (/vente|L'acheteur/.test(n.title) ? 'seller-disputes' : 'buyer-disputes')
       : null
 
@@ -157,3 +162,15 @@ export const UPDATE_NOTIFICATION_PREFERENCES_MUTATION = gql`
     }
   }
 `
+
+// Click on a notification (bell menu, notifications page): its link — set
+// by the server on every notification — else, for older ones, by type.
+export function openNotificationTarget(n: RemoteNotification, fallback: () => void = () => requestNavigate('buyer-notifications')) {
+  if (n.link) return requestOpenLink(n.link)
+  const conversationId = notificationConversation(n)
+  if (conversationId) return requestOpenConversation(conversationId)
+  const target = notificationTarget(n)
+  if (target) return requestNavigate(target)
+  if (n.listingId) return requestOpenLink(`/?listing=${encodeURIComponent(n.listingId)}`)
+  fallback()
+}
