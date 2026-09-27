@@ -412,8 +412,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                     <span className="font-bold">{campaign.listings.length}</span>
                   </div>
                 )}
-                <button onClick={() => onNavigate('flash-offers')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-white py-2.5 text-label-lg font-bold shadow hover:bg-primary-fixed" style={{ color: campaignColor }}>
-                  Explorer la sélection flash <ArrowRight size={18} />
+                <button onClick={() => onNavigate('flash-offers')} className="flex w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border-none bg-white py-2.5 text-label-lg font-bold shadow hover:bg-primary-fixed" style={{ color: campaignColor }}>
+                  Voir la sélection <ArrowRight size={18} />
                 </button>
               </div>
             </div>

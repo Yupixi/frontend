@@ -287,8 +287,8 @@ export default function SearchPage({
         ) : (
           <div className="flex flex-col">
             {categories.map(c => (
-              <button key={c.id} onClick={() => onCategorySelect?.(c.slug)} className="flex cursor-pointer items-center justify-between border-none bg-transparent px-0 py-1 text-left text-body-sm text-on-surface hover:text-primary">
-                <span className="flex items-center gap-2"><CategoryIcon icon={c.icon} size={18} className="text-on-surface-variant" /> {c.name}</span>
+              <button key={c.id} onClick={() => onCategorySelect?.(c.slug)} title={c.name} className="flex cursor-pointer items-center justify-between gap-2 border-none bg-transparent px-0 py-1 text-left text-body-sm text-on-surface hover:text-primary">
+                <span className="flex min-w-0 items-center gap-2"><CategoryIcon icon={c.icon} size={18} className="shrink-0 text-on-surface-variant" /> <span className="truncate">{c.name}</span></span>
                 <ChevronRight size={14} className="text-outline" />
               </button>
             ))}
@@ -358,7 +358,7 @@ export default function SearchPage({
         </FilterBlock>
       )}
 
-      <FilterBlock title="Confiance & Transactions directes">
+      <FilterBlock title="Vendeurs de confiance">
         <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
         <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" logos={['WAVE', 'ORANGE_MONEY']} onChange={() => setMobileMoneyOnly(v => !v)} />
         <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> 0 % de commission, paiement à la remise</div>

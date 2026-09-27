@@ -16,12 +16,12 @@ export function BuyerTabs({ active, onNavigate }: { active: string; onNavigate: 
       {BUYER_TABS.map(t => {
         const on = t.match.includes(active)
         return (
-          <button key={t.key} onClick={() => onNavigate(t.key)} className={`flex cursor-pointer items-center gap-1.5 rounded-xl border-none px-3 py-2 text-label-md ${on ? 'bg-surface-container-high text-on-surface' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
+          <button key={t.key} onClick={() => onNavigate(t.key)} className={`flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none px-3 py-2 text-label-md ${on ? 'bg-surface-container-high text-on-surface' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
             <Icon name={t.icon} size={17} /> {t.label}
           </button>
         )
       })}
-      <span className="ml-auto flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified_user" size={15} /> Protection acheteur</span>
+      <span className="ml-auto hidden items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-3 py-1 text-label-sm uppercase text-tertiary xl:flex"><Icon name="verified_user" size={15} /> Protection acheteur</span>
     </div>
   )
 }

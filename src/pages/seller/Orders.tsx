@@ -163,7 +163,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                           </div>
                         </div>
                       </div>
-                      <button onClick={() => onOpenConversation(o.buyer.id, o.listing.id)} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-lowest py-2 text-label-md text-on-surface hover:bg-surface-container"><MessageSquare size={15} /> Ouvrir le chat direct Dilchap</button>
+                      <button onClick={() => onOpenConversation(o.buyer.id, o.listing.id)} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-lowest py-2 text-label-md text-on-surface hover:bg-surface-container"><MessageSquare size={15} /> Ouvrir le chat</button>
                     </div>
 
                     <div className="flex flex-col gap-3">

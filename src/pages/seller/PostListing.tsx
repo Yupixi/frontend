@@ -477,7 +477,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           ))}
         </div>
 
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className={`flex min-w-0 flex-col gap-5 ${step === 4 ? 'max-lg:hidden' : ''}`}>
             {/* Photos */}
             <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${MAX_PHOTOS} photos gratuites. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
@@ -715,7 +715,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
               <div className="mt-4">
                 <span className="mb-1.5 block text-label-md text-on-surface">Moyens de règlement acceptés lors de la rencontre</span>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {PAYMENT_GROUPS.map(g => {
                     const on = g.codes.every(c => form.paymentMethods.includes(c))
                     return (
@@ -755,7 +755,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           </div>
 
           {/* Sticky column */}
-          <aside className={`flex flex-col gap-4 lg:sticky lg:top-2 ${only(4)}`}>
+          <aside className={`flex flex-col gap-4 xl:sticky xl:top-2 ${only(4)}`}>
             {/* Nothing to earn on a priceless category (job offers). */}
             {requiresPrice && <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <div className="flex items-center justify-between">
