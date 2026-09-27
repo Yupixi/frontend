@@ -555,6 +555,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 .ms-x { visibility: hidden; }
+/* Iconsax glyphs (Icon / icons.tsx): sit in text like the font icons did. */
+.isx { display: inline-block; flex-shrink: 0; vertical-align: middle; overflow: visible; }
 
 /* Home hero slider progress (duration set inline). */
 /* transform, not width: animating width re-lays out the hero every frame. */
@@ -575,7 +577,9 @@ h1, h2, h3, h4, h5, h6, .font-brand {
   .cat-tile:hover .cat-tile-icon { transform: translateY(-2px); }
   .cat-tile:active .cat-tile-icon { transform: scale(0.92); }
   .cat-tile:hover .cat-tile-icon > .ms,
-  .cat-tile:active .cat-tile-icon > .ms { animation: cat-wiggle 0.5s ease; }
+  .cat-tile:active .cat-tile-icon > .ms,
+  .cat-tile:hover .cat-tile-icon > .isx,
+  .cat-tile:active .cat-tile-icon > .isx { animation: cat-wiggle 0.5s ease; }
 }
 @keyframes cat-tile-in { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { transform: none; } }
 @keyframes cat-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg) scale(1.08); } 60% { transform: rotate(8deg); } }
