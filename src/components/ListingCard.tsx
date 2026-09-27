@@ -20,7 +20,6 @@ import {
   type ArchetypeKey,
 } from '../lib/listingArchetype'
 import SellerBadge from '../components/SellerBadge'
-import { BADGE_LABEL } from '../graphql/badges'
 
 // Visitors are sent to the login screen by the favourite toggle; tell it why.
 const favWithReason = (toggle: () => void) => { if (!getAccessToken()) setAuthReason('favorite'); toggle() }
@@ -210,26 +209,25 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <div className="flex h-full w-full items-center justify-center text-outline"><Tag size={40} /></div>
           )}
 
-          <div className="absolute left-2 right-10 top-2 flex flex-col items-start gap-1 md:left-3 md:right-12 md:top-3">
-            {isActivelyBoosted(listing) && (
-              <span className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2.5 md:py-1 md:text-label-sm">
-                <Icon name="rocket_launch" size={14}/> Boosté
-              </span>
-            )}
-            <PromoBadge listing={listing} />
-            {isUrgent(listing) && <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2 md:text-label-sm">Urgent</span>}
-            {/* Phone: size or category tag. Desktop: the condition. */}
+          {/* The photo carries two tags at most: one hook at the top (the
+              strongest of promo > urgent > boosted) and one neutral fact at
+              the bottom. Everything else (seller badge, stock) is in the
+              card body or on the listing page. */}
+          <div className="absolute left-2 right-10 top-2 flex items-start md:left-3 md:right-12 md:top-3">
+            {listing.activeCampaignDiscount ? <PromoBadge listing={listing} />
+              : isUrgent(listing) ? <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2 md:text-label-sm">Urgent</span>
+              : isActivelyBoosted(listing) && (
+                <span className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2.5 md:py-1 md:text-label-sm">
+                  <Icon name="rocket_launch" size={14}/> Boosté
+                </span>
+              )}
+          </div>
+
+          {/* Phone: size, condition or category. Desktop: the condition. */}
+          <div className="absolute bottom-2 left-2 right-2 flex md:bottom-3 md:left-3 md:right-3">
             <span className="max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface md:hidden">{phoneTag}</span>
             {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface md:inline">{condition}</span>}
           </div>
-
-          <StockTag listing={listing} />
-
-          {featured && verified && !shop && (
-            <span className={`absolute bottom-2 left-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-white md:hidden ${badge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}>
-              <Icon name="verified" size={12} fill /> {BADGE_LABEL[badge!]}
-            </span>
-          )}
 
           <button
             onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
@@ -311,15 +309,6 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       )}
     </div>
   )
-}
-
-// Stock of official shops ("3 en stock", "Dernier exemplaire"). Members sell
-// single items: nothing to show for them.
-export function StockTag({ listing, className = 'absolute bottom-2 left-2 md:bottom-3 md:left-3' }: { listing: RemoteListing, className?: string }) {
-  const q = listing.quantity ?? 1
-  if (q > 1) return <span className={`${className} whitespace-nowrap rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold text-on-surface md:rounded-md md:px-2 md:text-label-sm`}>{q} en stock</span>
-  if (listing.seller.shop && listing.status !== 'SOLD') return <span className={`${className} whitespace-nowrap rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white md:rounded-md md:px-2 md:text-label-sm`}>Dernier exemplaire</span>
-  return null
 }
 
 export function ListingListCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {
