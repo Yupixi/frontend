@@ -9,7 +9,7 @@ const SHOP_FIELDS = `
   city commune address phone whatsapp email website facebook instagram tiktok
   openingHours { day open close }
   legalIdType legalIdMasked approvedAt isOfficial
-  owner { id fullName avatarUrl isVerified badge createdAt }
+  owner { id fullName avatarUrl badge createdAt }
   followersCount isFollowedByMe listingsCount salesCount averageRating reviewsCount
   responseTimeMinutes
   aisles { id name position listingsCount }
@@ -119,7 +119,7 @@ export type Shop = {
   legalIdMasked: string
   approvedAt: string | null
   isOfficial: boolean
-  owner: { id: string; fullName: string; avatarUrl: string | null; isVerified: boolean; badge?: BadgeTier | null; createdAt: string }
+  owner: { id: string; fullName: string; avatarUrl: string | null; badge?: BadgeTier | null; createdAt: string }
   followersCount: number
   isFollowedByMe: boolean
   listingsCount: number
