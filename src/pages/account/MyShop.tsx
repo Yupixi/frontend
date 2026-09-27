@@ -4,7 +4,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import Select from '../../components/Select'
 import ConfirmSheet from '../../components/ConfirmSheet'
-import PaymentSheet from '../../components/PaymentSheet'
+import WalletPaySheet from '../../components/WalletPaySheet'
 import { PaymentLogos } from '../../components/PaymentLogo'
 import { AccountLayout } from './AccountLayout'
 import { CATEGORIES_QUERY } from '../../graphql/categories'
@@ -268,7 +268,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
   if (!me || !plan) return layout(<p className="text-body-md text-on-surface-variant">Impossible de charger votre boutique. Réessayez plus tard.</p>)
 
   const pay = (
-    <PaymentSheet
+    <WalletPaySheet
       open={paying}
       title="Abonnement Boutique officielle"
       amount={plan.price}
@@ -527,7 +527,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
         </ul>
       </div>
       <button onClick={() => setPaying(true)} className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white shadow-md"><Icon name="payments" size={20} /> Activer l’abonnement — <Price amount={plan.price} /></button>
-      <p className="m-0 mt-2 flex items-center justify-center gap-1.5 text-center text-body-sm text-on-surface-variant"><Icon name="lock" size={15} /> Paiement Mobile Money. Sans engagement : aucun renouvellement automatique.</p>
+      <p className="m-0 mt-2 flex items-center justify-center gap-1.5 text-center text-body-sm text-on-surface-variant"><Icon name="lock" size={15} /> Payé avec le solde du porte-monnaie. Sans engagement : aucun renouvellement automatique.</p>
       {pay}
     </>)
   }

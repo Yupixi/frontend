@@ -13,6 +13,13 @@ type BottomSheetProps = {
   footer?: React.ReactNode
 }
 
+// A sheet closed by X/backdrop/Escape pops its own history marker, but only
+// after the current render: when another sheet opens in the same commit (a
+// sheet chaining to its next step, or React StrictMode re-running the
+// effect) it takes over the marker instead — a back() plus a pushState in
+// the same tick would leave the app on the wrong history entry.
+let pendingPop: ReturnType<typeof setTimeout> | null = null
+
 export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh', maxWidth = '640px', footer }: BottomSheetProps) {
   const closedByBackRef = useRef(false)
   const onCloseRef = useRef(onClose)
@@ -26,7 +33,12 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
     closedByBackRef.current = false
 
     // Push a history marker so the system/browser back button closes the sheet first
-    window.history.pushState({ __yupixiSheetMarker: true }, '')
+    if (pendingPop && window.history.state?.__yupixiSheetMarker) {
+      clearTimeout(pendingPop)
+      pendingPop = null
+    } else {
+      window.history.pushState({ __yupixiSheetMarker: true }, '')
+    }
     window.dispatchEvent(new CustomEvent('yupixi:sheet-open'))
 
     const onPop = () => {
@@ -52,7 +64,11 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
       if (!closedByBackRef.current) {
         const st = window.history.state
         if (st && st.__yupixiSheetMarker) {
-          window.history.back()
+          if (pendingPop) clearTimeout(pendingPop)
+          pendingPop = setTimeout(() => {
+            pendingPop = null
+            if (window.history.state?.__yupixiSheetMarker) window.history.back()
+          }, 0)
         }
       }
     }

@@ -8,7 +8,7 @@ import {
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import ConfirmSheet from '../../components/ConfirmSheet'
-import PaymentSheet from '../../components/PaymentSheet'
+import WalletPaySheet from '../../components/WalletPaySheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { MY_LISTINGS_QUERY, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
 import { BOOST_PACKS_QUERY, MY_BOOSTS_QUERY, type BoostPack, type BoostPackInfo, type RemoteBoost } from '../../graphql/promotions'
@@ -27,8 +27,8 @@ function formatDate(iso: string) {
 }
 
 // "Booster mes annonces & Remontées en tête" mockup. Packs and prices come
-// from the backend (boostPacks); packs are paid by Mobile Money (Paytic,
-// PaymentSheet) and activated by the server once the payment is confirmed.
+// from the backend (boostPacks); packs are paid with the wallet balance
+// (WalletPaySheet) and activated by the server at once.
 export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const { data: listingsData, refetch: refetchListings } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 100 } })
   const live = (listingsData?.myListings.items ?? []).filter(l => l.status === 'APPROVED')
@@ -410,7 +410,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
       >
         {listing && <p className="m-0">« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">1 crédit</b> sera utilisé.</p>}
       </ConfirmSheet>
-      <PaymentSheet
+      <WalletPaySheet
         open={!!confirmPack}
         title="Payer le boost"
         amount={pack(confirmPack ?? 'BUMP_FLASH')?.price ?? 0}
@@ -424,7 +424,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
             <span className="line-clamp-1">« {listing.title} »</span>
           </>
         )}
-      </PaymentSheet>
+      </WalletPaySheet>
     </AccountLayout>
   )
 }

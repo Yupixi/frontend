@@ -15,7 +15,9 @@ import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import BottomSheet from '../../components/BottomSheet'
 import ConfirmSheet from '../../components/ConfirmSheet'
-import PaymentSheet from '../../components/PaymentSheet'
+import WalletPaySheet from '../../components/WalletPaySheet'
+import { BOOST_PACKS_QUERY } from '../../graphql/promotions'
+import { formatNumber } from '../../lib/format'
 import { BADGE_LABEL } from '../../graphql/badges'
 
 type Props = {
@@ -61,6 +63,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const { data, loading, refetch } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 200 } })
   const all = data?.myListings.items ?? []
   const { data: repData } = useQuery<{ myReputation: Reputation }>(MY_REPUTATION_QUERY)
+  // Prices from "Tarifs & abonnements" (BO).
+  const flashPrice = useQuery<{ boostPacks: { pack: string; price: number }[] }>(BOOST_PACKS_QUERY).data?.boostPacks.find(p => p.pack === 'BUMP_FLASH')?.price
   const rep = repData?.myReputation
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
   const credits = walletData?.myWallet.credits ?? 0
@@ -213,8 +217,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:h-12 lg:w-12"><Rocket size={22} /></span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Vendez plus vite</span><span className="hidden lg:inline">Besoin de vendre plus vite ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Flash 48h</span></div>
-            <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant dès 500 F</p>
-            <p className="m-0 hidden text-body-sm text-white/90 lg:block">Les annonces boostées passent en tête des résultats et dans les pépites de l'accueil. Remontées dès <b className="underline">500 F CFA</b>.</p>
+            <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant{flashPrice ? ` dès ${formatNumber(flashPrice)} F` : ''}</p>
+            <p className="m-0 hidden text-body-sm text-white/90 lg:block">Les annonces boostées passent en tête des résultats et dans les pépites de l'accueil. {flashPrice ? <>Remontées dès <b className="underline">{formatNumber(flashPrice)} F CFA</b>.</> : null}</p>
           </div>
           <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-white px-3 py-2 text-label-md text-primary lg:px-4 lg:py-2.5"><Rocket size={16} /> <span className="lg:hidden">Booster</span><span className="hidden lg:inline">Booster une annonce</span></button>
         </section>
@@ -296,7 +300,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                     ) : credits > 0 ? (
                       <button onClick={() => setConfirm({ kind: 'bump', l })} className={`${mainBtn} bg-primary text-white`}><Rocket size={16} /> Remonter (1 crédit)</button>
                     ) : (
-                      <button onClick={() => setConfirm({ kind: 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Booster (500 F)</button>
+                      <button onClick={() => setConfirm({ kind: 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Booster{flashPrice ? ` (${formatNumber(flashPrice)} F)` : ''}</button>
                     ))}
                     {l.status === 'EXPIRED' && <button onClick={() => republish(l)} className={`${mainBtn} bg-primary text-white`}><Archive size={16} /> Remettre en ligne</button>}
                     {l.status === 'DRAFT' && <button onClick={() => onEditListing(l.id)} className={`${mainBtn} bg-primary text-white`}><Edit3 size={16} /> Compléter</button>}
@@ -330,7 +334,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         >
           « {confirm?.l.title} » sera définitivement supprimée. Cette action est irréversible.
         </ConfirmSheet>
-        <PaymentSheet
+        <WalletPaySheet
           open={confirm?.kind === 'boost'}
           title="Remontée flash"
           amount={500}
@@ -340,7 +344,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         >
           <b className="block text-label-lg text-on-surface">Remontée en tête</b>
           <span className="line-clamp-1">« {confirm?.l.title} »</span>
-        </PaymentSheet>
+        </WalletPaySheet>
 
         <ConfirmSheet
           open={confirm?.kind === 'bump'}

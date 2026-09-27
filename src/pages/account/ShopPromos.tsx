@@ -4,7 +4,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import Select from '../../components/Select'
 import ConfirmSheet from '../../components/ConfirmSheet'
-import PaymentSheet from '../../components/PaymentSheet'
+import WalletPaySheet from '../../components/WalletPaySheet'
 import { AccountLayout } from './AccountLayout'
 import {
   CREATE_SHOP_POST_MUTATION, CREATE_SHOP_SALE_MUTATION, END_SHOP_SALE_MUTATION, JOIN_CAMPAIGN_MUTATION, MY_SHOP_LISTINGS_QUERY,
@@ -455,7 +455,7 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
               <Icon name="percent" size={18} className="mt-0.5 shrink-0 text-primary" />
               <div className="min-w-0"><div className="text-label-md text-on-surface">Conditions de participation</div><div className="text-on-surface-variant">{c.minDiscountPercent ? `Remise minimale demandée : ${c.minDiscountPercent} % sur chaque article inscrit.` : 'Pas de remise minimale.'} Chaque article est vérifié par l’équipe Dilchap.</div></div>
             </div>
-            <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">À régler seulement pour les articles acceptés, par Mobile Money.</span>}</span></p>
+            <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">À régler seulement pour les articles acceptés, avec le solde du porte-monnaie.</span>}</span></p>
             {c.description && <p className="m-0 mt-2 text-body-sm text-on-surface">{c.description}</p>}
             <div className="mt-auto pt-3">
               {c.myItems.length > 0 ? (
@@ -510,7 +510,7 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
           <button onClick={() => onJoin(detail)} className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add_circle" size={18} /> Inscrire un article supplémentaire</button>
         </section>
       )}
-      <PaymentSheet
+      <WalletPaySheet
         open={!!paying}
         title={paying ? `Participation « ${paying.name} »` : ''}
         amount={paying?.amountDue ?? 0}
