@@ -26,7 +26,7 @@ type Props = {
 const LABELS: Record<NotificationKind, string> = {
   MESSAGE: 'Message', OFFER_RECEIVED: 'Négociation directe', OFFER_ACCEPTED: 'Offre acceptée', OFFER_REJECTED: 'Offre refusée',
   LISTING_APPROVED: 'Annonce en ligne', LISTING_REJECTED: 'Annonce refusée', LISTING_STATUS_CHANGED: 'Annonce',
-  ANNOUNCEMENT: 'Sécurité Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité', SHOP: 'Boutique officielle', SHOP_POST: 'Actualité boutique', CAMPAIGN_ENTRY: 'Campagne Dilchap',
+  ANNOUNCEMENT: 'Info Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité', SHOP: 'Boutique officielle', SHOP_POST: 'Actualité boutique', CAMPAIGN_ENTRY: 'Campagne Dilchap',
 }
 // `short` labels keep the chips on one line on a phone.
 const FILTERS: { key: string; label: string; short?: string; icon?: string; types?: NotificationKind[] }[] = [
@@ -116,9 +116,9 @@ export default function Notifications({ onNavigate, onSelectListing, onOpenPurch
           {!n.readAt && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-solid border-surface-lowest bg-primary" />}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-2 pr-7">
-            <span className={`rounded px-1.5 py-0.5 text-label-sm uppercase ${meta.cls}`}>{LABELS[n.type] ?? 'Notification'}</span>
-            <span className="text-label-sm text-on-surface-variant">{formatRelativeDate(n.createdAt)}</span>
+          <div className="flex items-center justify-between gap-2 pr-7">
+            <span className={`min-w-0 truncate rounded px-1.5 py-0.5 text-label-sm uppercase ${meta.cls}`}>{LABELS[n.type] ?? 'Notification'}</span>
+            <span className="shrink-0 whitespace-nowrap text-label-sm text-on-surface-variant">{formatRelativeDate(n.createdAt)}</span>
           </div>
           <h3 className={`m-0 mt-1.5 text-label-lg ${n.readAt ? 'text-on-surface' : 'font-extrabold text-on-surface'}`}>{n.title}</h3>
           <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">{n.body}</p>
