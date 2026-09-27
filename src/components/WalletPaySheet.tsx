@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import BottomSheet from './BottomSheet'
 import BuyCreditsSheet from './BuyCreditsSheet'
@@ -29,16 +29,21 @@ export default function WalletPaySheet({ open, onClose, title, amount, request, 
   const [buy, { loading }] = useMutation<{ purchaseWithWallet: PurchaseResult }>(PURCHASE_WITH_WALLET_MUTATION)
   const [error, setError] = useState('')
   const [topUp, setTopUp] = useState(false)
+  // Set synchronously: a double tap lands before `loading` re-renders the
+  // button disabled, and each purchase call is charged.
+  const paying = useRef(false)
   const balance = data?.myWallet.credits ?? 0
   const missing = Math.max(0, amount - balance)
 
   const close = () => { setError(''); onClose() }
   const pay = () => {
-    if (!request) return
+    if (!request || paying.current) return
+    paying.current = true
     setError('')
     void buy({ variables: { input: { kind: request.kind, product: request.product, listingId: request.listingId } } })
       .then(r => { if (r.data) { onPaid(r.data.purchaseWithWallet); onClose() } })
       .catch((e: Error) => { setError(e.message); void refetch() })
+      .finally(() => { paying.current = false })
   }
 
   if (topUp) return <BuyCreditsSheet open={open} suggested={missing} onClose={() => setTopUp(false)} onDone={() => { setTopUp(false); void refetch() }} />
