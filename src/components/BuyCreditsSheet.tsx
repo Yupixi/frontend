@@ -5,7 +5,7 @@ import Credits from './Credits'
 import Icon from './Icon'
 import Price from './Price'
 import PaymentSheet from './PaymentSheet'
-import { WALLET_BALANCE_QUERY, type PaymentIntent, type WalletBalance } from '../graphql/payments'
+import { PAYMENT_SETTINGS_QUERY, WALLET_BALANCE_QUERY, type PaymentIntent, type PaymentSettings, type WalletBalance } from '../graphql/payments'
 import { CREDIT_PACKS_QUERY, type CreditPack } from '../graphql/sellerHub'
 
 // "Acheter des crédits": a pack (credits offered on the bigger ones) or a
@@ -21,6 +21,7 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
 }) {
   const settings = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { skip: !open }).data?.walletSettings
   const packs = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY, { skip: !open }).data?.creditPacks ?? []
+  const paymentsOff = useQuery<PaymentSettings>(PAYMENT_SETTINGS_QUERY, { skip: !open }).data?.paymentSettings.environment === 'disabled'
   const value = settings?.creditValue ?? 0
   const min = settings?.topupMin ?? 1
   const max = settings?.topupMax ?? 100_000
@@ -37,7 +38,7 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   const picked = packs.find((p) => p.pack === choice)
   const credits = picked ? picked.credits + picked.bonusCredits : choice === 'FREE' && freeOk ? n : 0
   const amount = picked ? picked.price : choice === 'FREE' && freeOk ? n * value : 0
-  const ok = credits > 0 && amount > 0
+  const ok = credits > 0 && amount > 0 && !paymentsOff
 
   if (pay) return (
     <PaymentSheet open={open} onClose={() => { setPay(false); onClose() }} title="Acheter des crédits" amount={amount}
@@ -51,8 +52,9 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   const radio = (on: boolean) => `flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 border-solid p-3 text-left ${on ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant/70 bg-surface-lowest'}`
   return (
     <BottomSheet open={open} onClose={onClose} title="Acheter des crédits" maxWidth="480px"
-      footer={<div className="border-0 border-t border-solid border-outline-variant px-4 pb-3 pt-3"><button type="button" disabled={!ok} onClick={() => setPay(true)} className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-45"><Icon name="lock" size={18} /> {ok ? <>Payer <Price amount={amount} /></> : 'Choisissez vos crédits'}</button></div>}>
+      footer={<div className="border-0 border-t border-solid border-outline-variant px-4 pb-3 pt-3"><button type="button" disabled={!ok} onClick={() => setPay(true)} className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-45"><Icon name="lock" size={18} /> {paymentsOff ? 'Bientôt disponible' : ok ? <>Payer <Price amount={amount} /></> : 'Choisissez vos crédits'}</button></div>}>
       <p className="m-0 text-body-sm text-on-surface-variant">Les crédits paient boosts, badges, abonnement boutique et campagnes. Paiement par Wave, Orange Money, MTN ou Moov.</p>
+      {paymentsOff && <p className="m-0 mt-3 flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface"><Icon name="schedule" size={18} className="shrink-0 text-primary" /> L’achat de crédits par Mobile Money arrive bientôt. En attendant, vous pouvez utiliser les crédits déjà sur votre compte.</p>}
       <div className="mt-3 flex flex-col gap-2">
         {packs.map((p) => {
           const total = p.credits + p.bonusCredits

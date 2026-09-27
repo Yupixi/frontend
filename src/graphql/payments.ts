@@ -47,6 +47,12 @@ export const WALLET_BALANCE_QUERY = gql`
 // purchase, in credits (all set in the back-office).
 export type WalletSettings = { creditValue: number; topupMin: number; topupMax: number }
 export type WalletBalance = { myWallet: { credits: number }; walletSettings: WalletSettings }
+// environment "disabled": Mobile Money is switched off in the back-end
+// (PAYTIC_ENVIRONMENT) — credits can't be bought for now.
+export const PAYMENT_SETTINGS_QUERY = gql`
+  query PaymentSettings { paymentSettings { live environment } }
+`
+export type PaymentSettings = { paymentSettings: { live: boolean; environment: string } }
 
 // `label` fits the tile; `name` is the full name read by screen readers
 // (it contains the label, so voice control still matches what's shown).
