@@ -33,7 +33,7 @@ const formatPhone = (v: string) => {
 }
 
 // Mobile Money checkout (Paytic) for Dilchap services: operator → number
-// (+ Orange Money code) → confirmation on the phone or in Wave → the pack is
+// (+ Orange Money code) → confirmation on the phone or in Wave → the credits are
 // applied by the server once the payment is confirmed.
 export default function PaymentSheet({ open, onClose, title, amount, request, children, onPaid }: Props) {
   const client = useApolloClient()
@@ -243,7 +243,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           <ol className="m-0 flex w-full max-w-xs list-none flex-col gap-2.5 rounded-2xl bg-surface-container-low p-4 text-left text-body-sm">
             <li className="flex items-center gap-2.5 text-on-surface"><Icon name="check_circle" size={20} fill className="text-tertiary" /> Demande envoyée à {paidWith.label}</li>
             <li className="flex items-center gap-2.5 text-on-surface"><Icon name="progress_activity" size={20} className="animate-spin text-primary" /> Confirmation de l’opérateur</li>
-            <li className="flex items-center gap-2.5 text-on-surface-variant"><Icon name="radio_button_unchecked" size={20} /> Activation de votre pack</li>
+            <li className="flex items-center gap-2.5 text-on-surface-variant"><Icon name="radio_button_unchecked" size={20} /> Ajout de vos crédits</li>
           </ol>
           <button onClick={() => copyRef(intent.reference)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-transparent text-label-sm normal-case tracking-normal text-on-surface-variant">
             Réf. {intent.reference} <Icon name={copied ? 'check' : 'content_copy'} size={14} />
@@ -255,7 +255,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
         <div className="flex flex-col items-center gap-2 py-5 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={48} fill /></span>
           <p className="m-0 mt-1 text-headline-sm text-on-surface">Paiement confirmé</p>
-          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.simulated ? 'Mode test : paiement simulé (Paytic non configuré).' : <>Votre pack est activé. Réf. {intent.reference}</>}</p>
+          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.simulated ? 'Mode test : paiement simulé (Paytic non configuré).' : <>{intent.credits ? `${intent.credits} crédits ajoutés.` : 'Vos crédits sont ajoutés.'} Réf. {intent.reference}</>}</p>
         </div>
       )}
 
@@ -263,7 +263,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
         <div className="flex flex-col items-center gap-2 py-5 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={48} /></span>
           <p className="m-0 mt-1 text-headline-sm text-on-surface">{intent.status === 'FAILED' ? 'Paiement non abouti' : 'Paiement reçu, activation en attente'}</p>
-          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.status === 'FAILED' ? intent.failedReason ?? 'L’opérateur a refusé ou annulé la transaction. Aucun montant n’a été débité.' : `Notre équipe a été alertée et activera votre pack. Réf. ${intent.reference}`}</p>
+          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.status === 'FAILED' ? intent.failedReason ?? 'L’opérateur a refusé ou annulé la transaction. Aucun montant n’a été débité.' : `Notre équipe a été alertée et ajoutera vos crédits. Réf. ${intent.reference}`}</p>
         </div>
       )}
     </BottomSheet>

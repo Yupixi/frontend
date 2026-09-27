@@ -23,7 +23,7 @@ export const SELLER_STATS_QUERY = gql`
         views boostedViews clicks messages boosted pendingOffer soldInHours
         listing { id title price currency status condition coverImageUrl publishedAt createdAt category { name } }
       }
-      boost { acceleration investment boostActions unlockedSales roi }
+      boost { acceleration investment investmentCredits boostActions unlockedSales roi }
       advice { categoryName lift weekday startHour endHour nextSlot topCities }
     }
   }
@@ -47,7 +47,7 @@ export type SellerStats = {
   favoritePlace: string | null; favoritePlaceShare: number | null
   funnel: { impressions: number; views: number; favorites: number; contacts: number; sales: number }
   listings: ListingPerformance[]
-  boost: { acceleration: number | null; investment: number; boostActions: number; unlockedSales: number; roi: number | null }
+  boost: { acceleration: number | null; investment: number; investmentCredits: number; boostActions: number; unlockedSales: number; roi: number | null }
   advice: { categoryName: string; lift: number; weekday: number; startHour: number; endHour: number; nextSlot: string; topCities: string[] } | null
 }
 

@@ -495,7 +495,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                   <Icon name="add_photo_alternate" size={22} /> Publier une annonce gratuite
                 </button>
                 <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-bold text-on-surface underline hover:text-primary">
-                  Découvrir nos options de boost dès 500 F <ChevronRight size={18} />
+                  Découvrir nos options de boost <ChevronRight size={18} />
                 </button>
               </div>
             </div>

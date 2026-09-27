@@ -10,6 +10,7 @@ import CertifiedLock from '../../components/CertifiedLock'
 import { MY_MARKET_POSITIONS_QUERY, SELLER_STATS_QUERY, type ListingPerformance, type MarketPosition, type SellerStats } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
+import Credits from '../../components/Credits'
 import { PaymentLogos } from '../../components/PaymentLogo'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
@@ -80,7 +81,7 @@ function StatusChip({ p }: { p: ListingPerformance }) {
 function RowAction({ p, onNavigate }: { p: ListingPerformance; onNavigate: (x: any) => void }) {
   if (p.listing.status === 'SOLD') return <span className="text-body-sm text-on-surface-variant">Clôturé</span>
   if (p.boosted) return <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface hover:bg-surface-container-low">Optimiser</button>
-  return <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white hover:bg-primary-dark">Booster dès 500 F</button>
+  return <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white hover:bg-primary-dark">Booster</button>
 }
 
 // "Statistiques de vente & Visibilité" mockup — every figure comes from
@@ -347,8 +348,8 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               </div>
               <div className="rounded-xl bg-surface-container-low p-3">
                 <div className="text-label-sm text-on-surface-variant">Investissement</div>
-                <div className="text-headline-md font-extrabold text-on-surface"><Price amount={s?.boost.investment ?? 0} /></div>
-                <div className="text-body-sm text-on-surface-variant">{s?.boost.boostActions ?? 0} remise{(s?.boost.boostActions ?? 0) > 1 ? 's' : ''} en tête</div>
+                <div className="whitespace-nowrap text-headline-md font-extrabold text-on-surface"><Credits n={s?.boost.investmentCredits ?? 0} /></div>
+                <div className="text-body-sm text-on-surface-variant">≈ <Price amount={s?.boost.investment ?? 0} /> • {s?.boost.boostActions ?? 0} boost{(s?.boost.boostActions ?? 0) > 1 ? 's' : ''}</div>
               </div>
               <div className="rounded-xl bg-surface-container-low p-3">
                 <div className="text-label-sm text-on-surface-variant">Ventes débloquées</div>
@@ -357,7 +358,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="m-0 flex max-w-xs flex-wrap items-center gap-1.5 text-body-sm text-on-surface-variant">Paiement direct sécurisé <PaymentLogos size={18} /> ou Porte-monnaie</p>
+              <p className="m-0 flex max-w-xs flex-wrap items-center gap-1.5 text-body-sm text-on-surface-variant">Crédits achetés par <PaymentLogos size={18} /></p>
               <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white hover:bg-primary-dark"><Icon name="bolt" size={18} /> Booster une nouvelle annonce</button>
             </div>
           </div>

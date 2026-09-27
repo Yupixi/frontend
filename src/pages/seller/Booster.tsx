@@ -16,6 +16,8 @@ import type { AuthUser } from '../../graphql/auth'
 import { MY_WALLET_QUERY, type WalletSummary } from '../../graphql/sellerHub'
 import Select from '../../components/Select'
 import BoosterMobile from './BoosterMobile'
+import Credits, { creditsLabel } from '../../components/Credits'
+import { useBumpCost } from '../../lib/useBumpCost'
 import PaymentLogo from '../../components/PaymentLogo'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
@@ -38,6 +40,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const history = boostsData?.myBoosts ?? []
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
   const credits = walletData?.myWallet.credits ?? 0
+  // A bump costs the "Remontée instantanée" price, in credits (BO).
+  const bumpCost = useBumpCost()
 
   const [listingId, setListingId] = useState('')
   useEffect(() => { if (!listingId && live[0]) setListingId(live[0].id) }, [live, listingId])
@@ -84,11 +88,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
     return (
       <label key={p} className={`flex cursor-pointer items-center gap-2.5 rounded-xl border-[1.5px] border-solid p-3 ${active ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-lowest'}`}>
         <input type="radio" checked={active} onChange={() => set(p)} className="m-0 h-5 w-5 shrink-0 accent-[var(--primary)]" />
-        <span className="flex-1 text-body-sm">
+        {/* Price under the label: the cards are narrow in the 4-column grid. */}
+        <span className="min-w-0 flex-1 text-body-sm">
           <span className="block font-semibold text-on-surface">{info.label}</span>
-          {sub && <span className="text-[11px] text-on-surface-variant">{sub}</span>}
+          <span className="block whitespace-nowrap text-[11px] text-on-surface-variant"><b className="text-label-md text-on-surface"><Credits n={info.price} /></b>{sub && <> · {sub}</>}</span>
         </span>
-        <span className="text-label-md font-bold text-on-surface"><Price amount={info.price} /></span>
       </label>
     )
   }
@@ -128,8 +132,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               <div className="mt-3 flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-fixed text-primary"><ArrowUp size={20} /></span>
                 <div>
-                  <div className="text-label-sm uppercase text-on-surface-variant">Solde de visibilité</div>
-                  <div className="text-headline-sm text-on-surface">{credits} crédit{credits > 1 ? 's' : ''} restant{credits > 1 ? 's' : ''}</div>
+                  <div className="text-label-sm uppercase text-on-surface-variant">Vos crédits</div>
+                  <div className="text-headline-sm text-on-surface">{creditsLabel(credits)} restant{credits > 1 ? 's' : ''}</div>
                 </div>
               </div>
               <div className="mt-3 flex items-start gap-2 text-body-sm text-on-surface-variant">
@@ -138,7 +142,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                   ? <span>Prochaine remontée planifiée : <b className="text-on-surface">chaque jour à 18h00</b> jusqu'au {formatDate(listing!.autoBumpUntil!)}</span>
                   : <span>Aucune remontée automatique planifiée</span>}
               </div>
-              <button onClick={() => onNavigate('seller-wallet')} className="mt-3 h-11 w-full cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container-low text-label-md text-on-surface hover:bg-surface-container">Recharger des crédits</button>
+              <button onClick={() => onNavigate('seller-wallet')} className="mt-3 h-11 w-full cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container-low text-label-md text-on-surface hover:bg-surface-container">Acheter des crédits</button>
             </div>
           </div>
         </section>
@@ -193,10 +197,10 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               </div>
             </div>
           ) : null}
-          {/* Spending a credit acts on the listing picked just above, so it lives in step 1. */}
-          {!!listing && credits > 0 && (
+          {/* Spending credits acts on the listing picked just above, so it lives in step 1. */}
+          {!!listing && bumpCost !== undefined && credits >= bumpCost && (
             <button disabled={bumping} onClick={() => setConfirmBump(true)} className="mt-3 flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-60 md:w-auto">
-              <ArrowUp size={16} /> Remonter cette annonce · 1 crédit
+              <ArrowUp size={16} /> Remonter cette annonce · {creditsLabel(bumpCost ?? 0)}
             </button>
           )}
           {!listing && (
@@ -260,7 +264,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 <div className="mt-4 rounded-xl bg-surface-container-low p-3">
                   <div className="text-label-sm uppercase text-on-surface-variant">Tarif spécial tout-inclus</div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-headline-md font-extrabold text-primary"><Price amount={turbo.price} /></span>
+                    <span className="whitespace-nowrap text-headline-md font-extrabold text-primary"><Credits n={turbo.price} /></span>
                     <span className="text-label-sm text-tertiary">pour 7 jours</span>
                   </div>
                 </div>
@@ -278,11 +282,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{urgent.description}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm">
                   <span className="text-on-surface-variant">Validité continue</span><span className="text-right font-semibold text-on-surface">{urgent.durationHours} heures</span>
-                  <span className="text-on-surface-variant">Tarif unique</span><span className="text-right font-extrabold text-primary"><Price amount={urgent.price} /></span>
+                  <span className="text-on-surface-variant">Tarif unique</span><span className="whitespace-nowrap text-right font-extrabold text-primary"><Credits n={urgent.price} /></span>
                 </div>
                 <button disabled={!listing} onClick={() => activate('URGENT_72H')} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                   {/* One text node: flex gap would otherwise space out "(", amount, "F" and ")". */}
-                  <span>Prendre le badge (<Price amount={urgent.price} />)</span> <ArrowRight size={16} />
+                  <span>Prendre le badge (<Credits n={urgent.price} />)</span> <ArrowRight size={16} />
                 </button>
               </div>
             )}
@@ -345,8 +349,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{active ? 'Actif' : 'Terminé'}</span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span>
-                    <span className="text-label-md font-bold text-on-surface"><Price amount={b.price} /></span>
+                    <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span>
+                    <span className="whitespace-nowrap text-label-md font-bold text-on-surface"><Credits n={b.price} /></span>
                   </div>
                   <div className="mt-1.5 flex items-center gap-1 text-body-sm text-tertiary"><TrendingUp size={14} /> +{b.viewsGained ?? 0} vues • +{b.contactsGained ?? 0} contacts</div>
                 </div>
@@ -373,8 +377,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                           <span className="max-w-[180px] truncate text-on-surface">{b.listing?.title ?? '—'}</span>
                         </span>
                       </td>
-                      <td className="px-4 py-3"><span className="rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span></td>
-                      <td className="px-4 py-3 font-semibold text-on-surface"><Price amount={b.price} /></td>
+                      <td className="px-4 py-3"><span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span></td>
+                      <td className="whitespace-nowrap px-4 py-3 font-semibold text-on-surface"><Credits n={b.price} /></td>
                       <td className="px-4 py-3 text-tertiary"><span className="flex items-center gap-1"><TrendingUp size={14} /> +{b.viewsGained ?? 0} vues • +{b.contactsGained ?? 0} contacts</span></td>
                       <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{active ? 'Actif' : 'Terminé'}</span></td>
                     </tr>
@@ -403,12 +407,12 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
       <ConfirmSheet
         open={confirmBump}
         title="Remonter l'annonce"
-        confirmLabel="Utiliser 1 crédit"
+        confirmLabel={`Utiliser ${creditsLabel(bumpCost ?? 0)}`}
         loading={bumping}
         onClose={() => setConfirmBump(false)}
         onConfirm={() => void spendCredit()}
       >
-        {listing && <p className="m-0">« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">1 crédit</b> sera utilisé.</p>}
+        {listing && <p className="m-0">« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">{creditsLabel(bumpCost ?? 0)}</b> {(bumpCost ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.</p>}
       </ConfirmSheet>
       <WalletPaySheet
         open={!!confirmPack}

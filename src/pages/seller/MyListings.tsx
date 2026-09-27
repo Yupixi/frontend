@@ -17,7 +17,7 @@ import BottomSheet from '../../components/BottomSheet'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import WalletPaySheet from '../../components/WalletPaySheet'
 import { BOOST_PACKS_QUERY } from '../../graphql/promotions'
-import { formatNumber } from '../../lib/format'
+import { creditsLabel } from '../../components/Credits'
 import { BADGE_LABEL } from '../../graphql/badges'
 
 type Props = {
@@ -133,7 +133,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
     </>
   )
   const spendCredit = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } })
-    .then(() => { setFlash(`« ${l.title} » est remontée en tête (1 crédit utilisé).`); void refetch(); void refetchWallet() })
+    .then(() => { setFlash(`« ${l.title} » est remontée en tête (${creditsLabel(flashPrice ?? 0)} utilisés).`); void refetch(); void refetchWallet() })
     .catch((e: Error) => setFlash(e.message))
   const republish = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } }).then(() => { setFlash('Annonce remise en ligne.'); void refetch() })
 
@@ -217,8 +217,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:h-12 lg:w-12"><Rocket size={22} /></span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Vendez plus vite</span><span className="hidden lg:inline">Besoin de vendre plus vite ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Flash 48h</span></div>
-            <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant{flashPrice ? ` dès ${formatNumber(flashPrice)} F` : ''}</p>
-            <p className="m-0 hidden text-body-sm text-white/90 lg:block">Les annonces boostées passent en tête des résultats et dans les pépites de l'accueil. {flashPrice ? <>Remontées dès <b className="underline">{formatNumber(flashPrice)} F CFA</b>.</> : null}</p>
+            <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant{flashPrice ? ` dès ${creditsLabel(flashPrice)}` : ''}</p>
+            <p className="m-0 hidden text-body-sm text-white/90 lg:block">Les annonces boostées passent en tête des résultats et dans les pépites de l'accueil. {flashPrice ? <>Remontées dès <b className="underline">{creditsLabel(flashPrice)}</b>.</> : null}</p>
           </div>
           <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-white px-3 py-2 text-label-md text-primary lg:px-4 lg:py-2.5"><Rocket size={16} /> <span className="lg:hidden">Booster</span><span className="hidden lg:inline">Booster une annonce</span></button>
         </section>
@@ -284,7 +284,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                     <div className="text-headline-sm font-extrabold text-on-surface"><Price amount={l.price} currency={l.currency} /></div>
                     <div className="flex items-center gap-1 text-[11px] text-tertiary lg:justify-end"><CheckCircle2 size={12} /> 0 F commission pour vous</div>
                   </div>
-                  <div className="grid shrink-0 grid-cols-4 gap-1 rounded-xl bg-surface-container-low p-2 text-center lg:w-64">
+                  {/* Hidden between lg and 2xl: the title would be squeezed next to the actions. */}
+                  <div className="grid shrink-0 grid-cols-4 gap-1 rounded-xl bg-surface-container-low p-2 text-center lg:hidden 2xl:grid 2xl:w-64">
                     {[
                       { v: l.viewsCount, label: 'Vues' },
                       { v: `+${l.views24h ?? 0}`, label: '24h', cls: 'text-tertiary' },
@@ -297,10 +298,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                       <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className={`${mainBtn} bg-tertiary text-white`}><MessageSquare size={16} /> Voir l'offre (Chat)</button>
                     ) : boosted ? (
                       <button onClick={() => onNavigate('seller-premium')} className={`${mainBtn} bg-primary text-white lg:bg-primary-fixed lg:text-primary`}><Rocket size={16} /> Prolonger le boost</button>
-                    ) : credits > 0 ? (
-                      <button onClick={() => setConfirm({ kind: 'bump', l })} className={`${mainBtn} bg-primary text-white`}><Rocket size={16} /> Remonter (1 crédit)</button>
                     ) : (
-                      <button onClick={() => setConfirm({ kind: 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Booster{flashPrice ? ` (${formatNumber(flashPrice)} F)` : ''}</button>
+                      // Enough credits: spend them at once; otherwise the pay sheet offers to buy some.
+                      <button disabled={flashPrice === undefined} onClick={() => setConfirm({ kind: credits >= (flashPrice ?? 0) ? 'bump' : 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Remonter{flashPrice ? ` (${creditsLabel(flashPrice)})` : ''}</button>
                     ))}
                     {l.status === 'EXPIRED' && <button onClick={() => republish(l)} className={`${mainBtn} bg-primary text-white`}><Archive size={16} /> Remettre en ligne</button>}
                     {l.status === 'DRAFT' && <button onClick={() => onEditListing(l.id)} className={`${mainBtn} bg-primary text-white`}><Edit3 size={16} /> Compléter</button>}
@@ -337,7 +337,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <WalletPaySheet
           open={confirm?.kind === 'boost'}
           title="Remontée flash"
-          amount={500}
+          amount={flashPrice ?? 0}
           request={confirm?.kind === 'boost' ? { kind: 'BOOST_PACK', product: 'BUMP_FLASH', listingId: confirm.l.id } : null}
           onClose={() => setConfirm(null)}
           onPaid={() => { if (confirm) setFlash(`« ${confirm.l.title} » est remontée en tête.`); void refetch() }}
@@ -349,12 +349,12 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <ConfirmSheet
           open={confirm?.kind === 'bump'}
           title="Remonter l'annonce"
-          confirmLabel="Utiliser 1 crédit"
+          confirmLabel={`Utiliser ${creditsLabel(flashPrice ?? 0)}`}
           loading={bumping}
           onConfirm={() => { if (confirm) { spendCredit(confirm.l); setConfirm(null) } }}
           onClose={() => setConfirm(null)}
         >
-          « {confirm?.l.title} » repasse en tête du catalogue. <b className="text-on-surface">1 crédit</b> sera utilisé.
+          « {confirm?.l.title} » repasse en tête du catalogue. <b className="text-on-surface">{creditsLabel(flashPrice ?? 0)}</b> {(flashPrice ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.
         </ConfirmSheet>
 
         {rows.length > 0 && (
