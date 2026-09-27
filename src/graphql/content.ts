@@ -47,7 +47,7 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
             id
             fullName
             avatarUrl
-            isVerified badge
+            badge
           }
           brand
           size

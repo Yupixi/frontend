@@ -14,7 +14,7 @@ export const SELLER_PROFILE_QUERY = gql`
       reviewsCount
       canReview
       hasReviewed
-      isVerified badge
+      badge
       bio
       coverUrl
       website facebook instagram tiktok
@@ -71,7 +71,7 @@ export type RemoteSellerProfile = {
   listingsCount: number
   averageRating: number
   reviewsCount: number
-  isVerified: boolean; badge?: BadgeTier | null
+  badge?: BadgeTier | null
   bio: string | null
   coverUrl: string | null
   salesCount: number
