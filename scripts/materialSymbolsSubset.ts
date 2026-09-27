@@ -19,6 +19,9 @@ export const ICON_FONT_FAMILY = 'Material+Symbols+Outlined'
 export const ICON_FONT_AXES = 'opsz,wght,FILL,GRAD@24,400..600,0..1,0'
 
 const NAMES_FILE = path.resolve(__dirname, 'material-symbols-names.txt')
+// Names drawn as Iconsax SVG instead (see src/components/Icon.tsx) don't
+// need the font at all.
+const ICONSAX_MAP_FILE = path.resolve(__dirname, 'iconsax-map.txt')
 
 // Icons of the seeded categories (Backend prisma/seed-data/categories.ts):
 // they're on every page (nav, category tiles), so they ship in the subset
@@ -39,13 +42,14 @@ function walk(dir: string, out: string[] = []): string[] {
 
 export function collectIconNames(srcDir: string): string[] {
   const known = new Set(fs.readFileSync(NAMES_FILE, 'utf-8').split(/\r?\n/).filter(Boolean))
+  const iconsax = new Set(fs.readFileSync(ICONSAX_MAP_FILE, 'utf-8').split(/\r?\n/).filter(l => l && !l.startsWith('#')).map(l => l.split(/\s+/)[0]))
   const used = new Set<string>(CATEGORY_ICONS)
   const literal = /['"`]([a-z0-9][a-z0-9_]*)['"`]/g
   for (const file of walk(srcDir)) {
     const code = fs.readFileSync(file, 'utf-8')
     for (const m of code.matchAll(literal)) if (known.has(m[1])) used.add(m[1])
   }
-  return [...used].sort()
+  return [...used].filter(n => !iconsax.has(n)).sort()
 }
 
 export function iconFontCssUrl(names: string[]): string {

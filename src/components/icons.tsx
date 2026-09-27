@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react'
+import { IconsaxSvg, iconsaxGlyph } from './Icon'
 
-// Storefront icon set = Material Symbols Outlined (the Stitch mockups' icon
-// font, loaded in index.css). Components keep familiar names so call sites
-// read naturally (<Heart size={18} />); each maps to its Material ligature.
+// Storefront icon set: components keep familiar names so call sites read
+// naturally (<Heart size={18} />); each maps to a Material Symbols name,
+// drawn as Iconsax when it has a counterpart (see Icon), else by the font.
 
 export type IconProps = {
   size?: number | string
@@ -23,6 +24,11 @@ function make(name: string, alwaysFilled = false): AppIcon {
     const px = typeof size === 'number' ? size : parseInt(size, 10) || 20
     const filled = alwaysFilled || (!!fill && fill !== 'none')
     const weight = strokeWidth && strokeWidth >= 2.4 ? 600 : 400
+    const tint = color ?? (filled && fill && fill !== 'currentColor' ? fill : undefined)
+    const glyph = iconsaxGlyph(name, filled)
+    if (glyph) {
+      return <IconsaxSvg glyph={glyph} size={px} className={className} style={{ color: tint, ...style }} title={rest['aria-label']} onClick={onClick} />
+    }
     return (
       <span
         className={`ms${className ? ` ${className}` : ''}`}
@@ -31,7 +37,7 @@ function make(name: string, alwaysFilled = false): AppIcon {
         aria-label={rest['aria-label']}
         style={{
           fontSize: px, width: px, height: px,
-          color: color ?? (filled && fill && fill !== 'currentColor' ? fill : undefined),
+          color: tint,
           fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' ${weight}, 'GRAD' 0, 'opsz' 24`,
           ...style,
         }}
