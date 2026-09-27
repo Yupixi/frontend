@@ -4,7 +4,8 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import BottomSheet from './BottomSheet'
 import Icon from './Icon'
 import { BUMP_LISTING_MUTATION } from '../graphql/listings'
-import { MY_WALLET_QUERY } from '../graphql/sellerHub'
+import { CREDIT_PACKS_QUERY, MY_WALLET_QUERY } from '../graphql/sellerHub'
+import { formatNumber } from '../lib/format'
 import { requestNavigate } from '../lib/navigation'
 
 type Props = {
@@ -18,6 +19,8 @@ type Props = {
 // the top of the catalogue, or sends the seller to the wallet to top up.
 export default function BoostSheet({ open, onClose, listing, onBumped }: Props) {
   const { data, loading } = useQuery<{ myWallet: { credits: number } }>(MY_WALLET_QUERY, { skip: !open, fetchPolicy: 'cache-and-network' })
+  // Cheapest credit pack, from "Tarifs & abonnements" (BO).
+  const cheapest = useQuery<{ creditPacks: { price: number; credits: number; bonusCredits: number }[] }>(CREDIT_PACKS_QUERY, { skip: !open }).data?.creditPacks.slice().sort((a, b) => a.price - b.price)[0]
   const [bump, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION, { refetchQueries: [MY_WALLET_QUERY] })
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +80,7 @@ export default function BoostSheet({ open, onClose, listing, onBumped }: Props) 
           <p className="m-0 mt-4 text-body-md text-on-surface-variant">
             {hasCredit
               ? <>« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">1 crédit</b> sera utilisé.</>
-              : <>Votre porte-monnaie est vide. Rechargez des crédits (dès 1 000 F les 2 remontées) pour booster vos annonces en un clic.</>}
+              : <>Vous n’avez plus de crédit de remontée. Achetez un pack depuis votre porte-monnaie{cheapest ? ` (dès ${formatNumber(cheapest.price)} F les ${cheapest.credits + cheapest.bonusCredits} remontées)` : ''} pour booster vos annonces en un clic.</>}
           </p>
           {error && <p className="m-0 mt-3 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
         </>

@@ -1,11 +1,12 @@
 import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { CheckCircle2, ArrowRight, ShieldCheck, Zap, Star, Flame, ChevronLeft, ChevronRight } from '../../components/icons'
+import { CheckCircle2, ArrowRight, ShieldCheck, Star, Flame, ChevronLeft, ChevronRight } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import PaymentSheet from '../../components/PaymentSheet'
-import PaymentLogo, { PAYMENT_BRANDS, PaymentLogos } from '../../components/PaymentLogo'
+import WalletPaySheet from '../../components/WalletPaySheet'
+import TopUpSheet from '../../components/TopUpSheet'
+import PaymentLogo, { PAYMENT_BRANDS } from '../../components/PaymentLogo'
 import { AccountLayout } from '../account/AccountLayout'
 import {
   CREDIT_PACKS_QUERY, MY_WALLET_QUERY, MY_WALLET_TRANSACTIONS_QUERY,
@@ -18,21 +19,28 @@ type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLo
 const PAGE_SIZE = 5
 const FILTERS: { key: string, label: string, types?: WalletTxType[] }[] = [
   { key: 'all', label: 'Tous' },
-  { key: 'boost', label: 'Achats de boost', types: ['BOOST_PURCHASE', 'CREDIT_SPENT'] },
+  { key: 'topup', label: 'Recharges', types: ['WALLET_TOPUP', 'WALLET_ADJUSTMENT'] },
+  { key: 'buy', label: 'Achats', types: ['CREDIT_PURCHASE', 'BOOST_PURCHASE', 'SHOP_SUBSCRIPTION', 'BADGE_SUBSCRIPTION', 'CAMPAIGN_ENTRY'] },
+  { key: 'boost', label: 'Remontées', types: ['CREDIT_SPENT'] },
   { key: 'sales', label: 'Ventes déclarées', types: ['SALE'] },
-  { key: 'topup', label: 'Recharges', types: ['CREDIT_PURCHASE'] },
 ]
-const METHOD_LABEL: Record<string, string> = { WAVE: 'Wave', ORANGE_MONEY: 'Orange Money', MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', CASH: 'Espèces en main propre', CREDITS: 'Crédit déduit', DIRECT: 'Remise directe' }
+const METHOD_LABEL: Record<string, string> = { WAVE: 'Wave', ORANGE_MONEY: 'Orange Money', MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', CASH: 'Espèces en main propre', CREDITS: 'Crédit déduit', DIRECT: 'Remise directe', WALLET: 'Solde', DILCHAP: 'Équipe Dilchap' }
 const TX_META: Record<WalletTxType, { icon: string, box: string, status: string, statusCls: string }> = {
   BOOST_PURCHASE: { icon: 'rocket_launch', box: 'bg-primary-fixed text-primary', status: 'Actif', statusCls: 'bg-tertiary-soft text-tertiary' },
   CREDIT_SPENT: { icon: 'bolt', box: 'bg-surface-container text-on-surface', status: 'Validé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
-  CREDIT_PURCHASE: { icon: 'account_balance_wallet', box: 'bg-primary-fixed text-primary', status: 'Crédité', statusCls: 'bg-tertiary-soft text-tertiary' },
+  CREDIT_PURCHASE: { icon: 'account_balance_wallet', box: 'bg-primary-fixed text-primary', status: 'Payé', statusCls: 'bg-tertiary-soft text-tertiary' },
   SALE: { icon: 'handshake', box: 'bg-tertiary-soft text-tertiary', status: 'Encaissé', statusCls: 'bg-tertiary-soft text-tertiary' },
+  SHOP_SUBSCRIPTION: { icon: 'storefront', box: 'bg-primary-fixed text-primary', status: 'Payé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
+  BADGE_SUBSCRIPTION: { icon: 'verified', box: 'bg-verified-soft text-verified', status: 'Payé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
+  CAMPAIGN_ENTRY: { icon: 'campaign', box: 'bg-primary-fixed text-primary', status: 'Payé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
+  WALLET_TOPUP: { icon: 'add_card', box: 'bg-tertiary-soft text-tertiary', status: 'Crédité', statusCls: 'bg-tertiary-soft text-tertiary' },
+  WALLET_ADJUSTMENT: { icon: 'tune', box: 'bg-surface-container text-on-surface', status: 'Ajusté', statusCls: 'bg-surface-container-high text-on-surface-variant' },
 }
 
 // "Porte-monnaie & Solde publicitaire" mockup. Dilchap never holds sale
-// funds: sales are declarative (deals concluded in chat); credits buy
-// visibility, paid by Mobile Money through Paytic (PaymentSheet).
+// funds: sales are declarative (deals concluded in chat). The balance
+// (topped up by Mobile Money) pays every purchase of the app; credits buy
+// visibility.
 export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
   const wallet = walletData?.myWallet
@@ -47,9 +55,10 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const [checkout, setCheckout] = useState<CreditPack | null>(null)
+  const [topUp, setTopUp] = useState(false)
+  const balance = wallet?.balance ?? 0
   const [done, setDone] = useState<string | null>(null)
   const recommended = packs[1]?.pack
-  const toRecharge = () => document.getElementById('recharge')?.scrollIntoView({ behavior: 'smooth' })
   const credits = wallet?.credits ?? 0
   const salesCount = wallet?.salesCount ?? 0
 
@@ -61,11 +70,11 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
         <div className="mb-6 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
             <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Porte-monnaie &amp; Solde publicitaire</h1>
-            <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">Gérez vos crédits de visibilité, suivez vos gains de vente directe et rechargez vos options de boost pour placer vos annonces en tête de liste.</p>
+            <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">Rechargez votre solde par Mobile Money : il paie tous vos achats Dilchap (boosts, crédits, badges, boutique, campagnes). Suivez aussi vos ventes directes.</p>
           </div>
           <div className="flex gap-2">
             <span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-tertiary-soft px-3 py-2.5 text-label-md text-tertiary"><CheckCircle2 size={16} /> Commission 0% active</span>
-            <button onClick={toRecharge} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark"><Zap size={16} /> Acheter des crédits</button>
+            <button onClick={() => setTopUp(true)} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark"><Icon name="add_card" size={16} /> Recharger mon solde</button>
           </div>
         </div>
 
@@ -74,12 +83,12 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
         {/* Mobile: balance card first, then two mini KPIs */}
         <section className="md:hidden">
           <div className="rounded-2xl bg-gradient-to-br from-primary to-primary-container p-4 text-white shadow-float">
-            <div className="text-label-md text-white/85">Solde de visibilité</div>
+            <div className="text-label-md text-white/85">Solde du porte-monnaie</div>
             <div className="mt-1 flex items-center justify-between gap-3">
-              <div className="flex items-baseline gap-1.5"><span className="text-[40px] font-extrabold leading-none">{credits}</span><span className="text-headline-sm">crédit{credits > 1 ? 's' : ''}</span></div>
-              <button onClick={toRecharge} className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-white px-4 text-label-lg text-primary"><Icon name="add_circle" size={18} /> Recharger</button>
+              <div className="min-w-0 truncate text-[34px] font-extrabold leading-none"><Price amount={balance} /></div>
+              <button onClick={() => setTopUp(true)} className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-white px-4 text-label-lg text-primary"><Icon name="add_circle" size={18} /> Recharger</button>
             </div>
-            <p className="m-0 mt-2 border-0 border-t border-solid border-white/20 pt-2 text-body-sm text-white/85">1 crédit = 1 remontée immédiate en tête du catalogue.</p>
+            <p className="m-0 mt-2 flex items-center justify-between gap-2 border-0 border-t border-solid border-white/20 pt-2 text-body-sm text-white/85"><span>Crédits de remontée</span><b className="text-white">{credits} crédit{credits > 1 ? 's' : ''}</b></p>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
@@ -99,13 +108,13 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
         <section className="hidden gap-4 md:grid md:grid-cols-3">
           <div className="relative overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest">
             <div className="p-5">
-              <div className="flex items-center justify-between text-label-md text-on-surface">Solde crédits de boost <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Zap size={17} /></span></div>
-              <div className="mt-2 flex items-baseline gap-2"><span className="text-[44px] font-extrabold leading-none text-primary">{credits}</span><span className="text-headline-sm text-on-surface">crédit{credits > 1 ? 's' : ''}</span></div>
-              <p className="m-0 mt-2 text-body-sm text-on-surface-variant">1 crédit = 1 remontée immédiate d'une annonce en haut du catalogue.</p>
+              <div className="flex items-center justify-between text-label-md text-on-surface">Solde du porte-monnaie <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="account_balance_wallet" size={17} /></span></div>
+              <div className="mt-2 truncate text-[40px] font-extrabold leading-none text-primary"><Price amount={balance} /></div>
+              <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Paie vos boosts, crédits, badges, abonnement boutique et campagnes.</p>
             </div>
-            <div className="flex items-center justify-between bg-surface-container-low px-5 py-3 text-body-sm text-on-surface-variant">
-              Utilisable sur toutes vos annonces
-              <button onClick={toRecharge} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-md border-none bg-primary px-2.5 py-1 text-label-sm text-white">Recharger <ArrowRight size={13} /></button>
+            <div className="flex items-center justify-between gap-2 bg-surface-container-low px-5 py-3 text-body-sm text-on-surface-variant">
+              <span className="truncate">{credits} crédit{credits > 1 ? 's' : ''}<span className="hidden xl:inline"> de remontée</span></span>
+              <button onClick={() => setTopUp(true)} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md border-none bg-primary px-2.5 py-1 text-label-sm text-white">Recharger <ArrowRight size={13} /></button>
             </div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest">
@@ -145,12 +154,11 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
         <section id="recharge" className="mt-6 scroll-mt-4 md:mt-8">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2 md:mb-4 md:gap-3">
             <div>
-              <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Recharger des crédits<span className="hidden md:inline"> de visibilité</span></h2>
+              <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Acheter des crédits<span className="hidden md:inline"> de visibilité</span></h2>
               <p className="m-0 text-body-sm text-on-surface-variant">1 crédit = 1 remontée immédiate en haut de catalogue.</p>
             </div>
             <div className="hidden items-center gap-2 text-label-sm text-on-surface-variant md:flex">
-              Paiement mobile :
-              <PaymentLogos size={26} />
+              <Icon name="account_balance_wallet" size={18} className="text-primary" /> Payé avec votre solde
             </div>
           </div>
           {/* Mobile: compact pack rows, as in the mockup */}
@@ -163,11 +171,8 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
                   {top && <span className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Flame size={11} /> Le plus populaire</span>}
                   <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${top ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface'}`}><Icon name={top ? 'rocket_launch' : 'bolt'} size={20} /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="truncate text-label-lg text-on-surface">{p.label}</span>
-                      {p.bonusCredits > 0 && <span className="shrink-0 rounded-full bg-tertiary-soft px-1.5 text-[11px] font-bold text-tertiary">+{p.bonusCredits} offert{p.bonusCredits > 1 ? 's' : ''}</span>}
-                    </span>
-                    <span className="block text-body-sm text-on-surface-variant">{total} crédit{total > 1 ? 's' : ''} au total</span>
+                    <span className="block truncate text-label-lg text-on-surface">{p.label}</span>
+                    <span className="block truncate text-body-sm text-on-surface-variant">{total} crédit{total > 1 ? 's' : ''}{p.bonusCredits > 0 && <> dont <b className="font-semibold text-tertiary">{p.bonusCredits} offert{p.bonusCredits > 1 ? 's' : ''}</b></>}</span>
                   </span>
                   <span className="shrink-0 text-right">
                     <span className={`block whitespace-nowrap text-label-lg font-extrabold ${top ? 'text-primary' : 'text-on-surface'}`}><Price amount={p.price} /></span>
@@ -198,7 +203,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
                   </ul>
                   <button onClick={() => setCheckout(p)} className={`mt-5 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none py-2.5 text-label-md ${top ? 'bg-primary text-white hover:bg-primary-dark' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
                     {/* Single text run: the flex gap would otherwise pad the amount and its unit. */}
-                    {top ? <><span>Payer <Price amount={p.price} /> via Mobile</span> <Icon name="bolt" size={16} /></> : <>Choisir ce pack <ArrowRight size={15} /></>}
+                    {top ? <><Icon name="account_balance_wallet" size={16} /> <span>Payer <Price amount={p.price} /></span></> : <>Choisir ce pack <ArrowRight size={15} /></>}
                   </button>
                 </div>
               )
@@ -230,7 +235,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-label-md text-on-surface">{t.label}</div>
                     {t.listing?.title && <div className="truncate text-body-sm text-on-surface-variant">{t.listing.title}</div>}
-                    <div className="text-[11px] text-on-surface-variant">
+                    <div className="truncate text-[11px] text-on-surface-variant">
                       {new Date(t.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       {t.method && <> • {METHOD_LABEL[t.method] ?? t.method}</>}
                     </div>
@@ -262,10 +267,10 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
                       <td className="px-5 py-4"><span className="flex items-center gap-2 text-on-surface"><span className={`flex h-7 w-7 items-center justify-center rounded-lg ${meta.box}`}><Icon name={meta.icon} size={16} /></span>{t.label}</span></td>
                       <td className="px-5 py-4 text-on-surface">{t.listing?.title ?? '—'}{t.type === 'SALE' && <div className="text-[11px] text-tertiary">0 F commission prélevée</div>}</td>
                       <td className="px-5 py-4 text-on-surface-variant">{t.method ? <span className="flex items-center gap-2">{PAYMENT_BRANDS[t.method] && <PaymentLogo method={t.method} size={22} />}{METHOD_LABEL[t.method] ?? t.method}</span> : '—'}</td>
-                      <td className={`px-5 py-4 text-label-lg ${t.amount > 0 ? 'text-tertiary' : 'text-on-surface'}`}>
+                      <td className={`whitespace-nowrap px-5 py-4 text-label-lg ${t.amount > 0 ? 'text-tertiary' : 'text-on-surface'}`}>
                         {t.amount !== 0 ? <>{t.amount > 0 ? '+' : '−'}<Price amount={Math.abs(t.amount)} /></> : `${t.credits > 0 ? '+' : ''}${t.credits} crédit`}
                       </td>
-                      <td className="px-5 py-4"><span className={`rounded-full px-2 py-0.5 text-label-sm ${meta.statusCls}`}>✓ {meta.status}</span></td>
+                      <td className="px-5 py-4"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${meta.statusCls}`}>✓ {meta.status}</span></td>
                     </tr>
                   )
                 })}
@@ -283,10 +288,11 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
         </section>
       </div>
 
-      {/* Checkout: Mobile Money payment (Paytic); credits are added once the operator confirms. */}
-      <PaymentSheet
+      {/* Top-up by Mobile Money (Paytic); purchases are debited from the balance. */}
+      {topUp && <TopUpSheet open onClose={() => setTopUp(false)} onDone={() => { setTopUp(false); setDone('Recharge confirmée : votre solde est à jour.'); void refetchWallet(); void refetchTx() }} />}
+      <WalletPaySheet
         open={!!checkout}
-        title={checkout ? `Recharge · ${checkout.label}` : 'Recharge'}
+        title={checkout ? `Crédits · ${checkout.label}` : 'Crédits'}
         amount={checkout?.price ?? 0}
         request={checkout ? { kind: 'CREDIT_PACK', product: checkout.pack } : null}
         onClose={() => setCheckout(null)}
@@ -299,7 +305,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           <b className="block text-label-lg text-on-surface">{checkout.label}</b>
           {checkout.credits + checkout.bonusCredits} crédits de remontée
         </>}
-      </PaymentSheet>
+      </WalletPaySheet>
     </AccountLayout>
   )
 }

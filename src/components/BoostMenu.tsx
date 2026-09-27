@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import PaymentSheet from './PaymentSheet'
+import WalletPaySheet from './WalletPaySheet'
 import Price from './Price'
 import { BOOST_PACKS_QUERY, type BoostPackInfo } from '../graphql/promotions'
 
@@ -12,7 +12,7 @@ type BoostMenuProps = {
 }
 
 // Quick picker over the backend's boost packs; the chosen pack is paid by
-// Mobile Money (PaymentSheet) and activated once the payment is confirmed.
+// the wallet balance (WalletPaySheet) and activated at once.
 export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: BoostMenuProps) {
   const { data } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY)
   const [picked, setPicked] = useState<BoostPackInfo | null>(null)
@@ -27,7 +27,7 @@ export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: B
           <span className="shrink-0 text-primary"><Price amount={p.price} /></span>
         </button>
       ))}
-      <PaymentSheet
+      <WalletPaySheet
         open={!!picked}
         title="Payer le boost"
         amount={picked?.price ?? 0}
@@ -36,7 +36,7 @@ export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: B
         onPaid={onDone}
       >
         {picked && <><b className="block text-label-lg text-on-surface">{picked.label}</b>Démarre dès la confirmation du paiement</>}
-      </PaymentSheet>
+      </WalletPaySheet>
     </div>
   )
 }

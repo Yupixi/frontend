@@ -132,11 +132,11 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           <h2 className="m-0 text-headline-sm text-on-surface">Activité en direct</h2>
           <span className="flex items-center gap-1 text-label-sm text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Synchronisé</span>
         </div>
-        <section className="grid grid-cols-2 gap-3 md:mt-4 md:grid-cols-3 lg:grid-cols-6">
+        <section className="grid grid-cols-2 gap-3 md:mt-4 md:grid-cols-3 2xl:grid-cols-6">
           <Kpi label="Ventes en cours" short="Ventes" icon="storefront" value={`${activeSales.length} active${activeSales.length > 1 ? 's' : ''}`} sub={<><Price amount={activeSales.reduce((n, o) => n + (o.agreedPrice ?? 0), 0)} /> en attente</>} onClick={() => onNavigate('seller-orders')} />
           <Kpi label="RDV du jour" className="hidden md:flex" icon="event_available" accent="text-primary" value={upcoming && upcomingIsToday ? time(upcoming.at) : '—'} sub={upcoming && upcomingIsToday ? upcoming.place : 'Aucun rendez-vous'} onClick={() => (upcoming ? (upcoming.role === 'BUYER' ? onOpenPurchase(upcoming.id) : onOpenHandover(upcoming.id)) : onNavigate('seller-orders'))} />
           <Kpi label="Achats en cours" short="Achats" icon="shopping_bag" animated="cart" value={`${activePurchases.length} achat${activePurchases.length > 1 ? 's' : ''}`} sub={<span className="text-tertiary">{codePurchase ? 'Code de remise prêt' : 'Voir mes achats'}</span>} onClick={() => onNavigate('buyer-purchases')} />
-          <Kpi label="Crédits boost" short="Visibilité" icon="bolt" value={<>{wallet?.credits ?? 0} <span className="text-body-sm font-normal text-on-surface-variant">crédits</span></>} sub={<span className="text-primary">+ Recharger</span>} onClick={() => onNavigate('seller-wallet')} />
+          <Kpi label="Porte-monnaie" short="Solde" icon="account_balance_wallet" value={<Price amount={wallet?.balance ?? 0} />} sub={<span className="text-primary">{wallet?.credits ?? 0} crédit{(wallet?.credits ?? 0) > 1 ? 's' : ''} boost</span>} onClick={() => onNavigate('seller-wallet')} />
           <Kpi label="Discussions" short="Échanges" icon="forum" value={<>{unreadConvs} {unreadConvs > 0 && <span className="inline-block h-2 w-2 rounded-full bg-primary align-middle" />}</>} sub={unreadConvs ? `${unreadConvs} conversation${unreadConvs > 1 ? 's' : ''} en attente` : 'Tout est lu'} onClick={() => onNavigate('buyer-messages')} />
           <Kpi label="Garantie Dilchap" className="hidden md:flex" icon="verified_user" accent={activeDisputes ? 'text-primary' : 'text-tertiary'} value={`${activeDisputes} litige${activeDisputes > 1 ? 's' : ''}`} sub={activeDisputes ? 'Dossier en cours' : 'Aucun incident'} onClick={() => onNavigate(sellerOpenDisputes && !buyerOpenDisputes ? 'seller-disputes' : 'buyer-disputes')} />
         </section>
@@ -260,7 +260,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
               <div className="mt-3 flex flex-col gap-1">
                 {[
                   { icon: 'add_photo_alternate', title: 'Déposer une nouvelle annonce', sub: 'Photos, prix et point de remise', go: () => onNavigate('seller-post') },
-                  { icon: 'account_balance_wallet', title: 'Recharger mes crédits boost', sub: 'Via Wave, Orange Money ou MTN', go: () => onNavigate('seller-wallet') },
+                  { icon: 'account_balance_wallet', title: 'Recharger mon solde', sub: 'Via Wave, Orange Money ou MTN', go: () => onNavigate('seller-wallet') },
                   { icon: 'receipt_long', title: "Consulter mes reçus d'achat", sub: 'Remises effectuées et reçus', go: () => onNavigate('buyer-receipts') },
                   ...(support ? [{ icon: 'support_agent', title: 'Support WhatsApp Dilchap', sub: `Assistance directe • ${support}`, go: () => window.open(`https://wa.me/${support.replace(/[^\d]/g, '')}`, '_blank') }] : []),
                 ].map(s => (

@@ -204,13 +204,13 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         </section>
       )}
 
-      {/* Mobile Money operators accepted by the Paytic checkout */}
+      {/* Boosts are paid with the wallet balance, topped up by Mobile Money (Paytic) */}
       <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
         <div className="flex items-start justify-between gap-2">
-          <span className="flex min-w-0 items-center gap-1.5 text-label-md text-on-surface"><Icon name="security" size={18} className="text-tertiary" /> Paiement Mobile Instantané</span>
-          <span className="shrink-0 whitespace-nowrap text-label-sm text-on-surface-variant">0 frais • 2 min chrono</span>
+          <span className="flex min-w-0 items-center gap-1.5 text-label-md text-on-surface"><Icon name="security" size={18} className="text-tertiary" /> Payé avec votre solde</span>
+          <span className="shrink-0 whitespace-nowrap text-label-sm text-on-surface-variant">Activation immédiate</span>
         </div>
-        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Activez votre visibilité directement sans carte bancaire via votre portefeuille mobile favori.</p>
+        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Vos boosts sont prélevés sur votre porte-monnaie, rechargeable sans carte bancaire via votre portefeuille mobile favori.</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {[
             { code: 'WAVE', name: 'Wave', sub: 'Confirmation dans l’app' },
