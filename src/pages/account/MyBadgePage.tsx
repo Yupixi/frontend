@@ -15,11 +15,11 @@ const card = 'rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5'
 const TIERS: { tier: BadgeTier, tone: string, soft: string, perks: string[] }[] = [
   {
     tier: 'VERIFIED', tone: 'text-verified', soft: 'bg-verified-soft',
-    perks: ['Coche bleue à côté de votre nom', 'Sur votre profil, vos annonces et la messagerie', 'Visible avec le filtre « Vendeurs vérifiés »'],
+    perks: ['Coche bleue sur votre profil, annonces et messages', 'Support prioritaire : réponse en moins de 24 h', 'Examen renforcé des signalements vous visant'],
   },
   {
     tier: 'CERTIFIED', tone: 'text-tertiary', soft: 'bg-tertiary-soft',
-    perks: ['Coche verte « Vendeur certifié »', 'Sur votre profil, vos annonces et la messagerie', 'Visible avec le filtre « Vendeurs vérifiés »', 'Réservé aux vendeurs au bon historique'],
+    perks: ['Coche verte « Vendeur certifié » partout', 'Support ultra-prioritaire : moins de 2 h', 'Boosts offerts chaque mois', 'Statistiques avancées et prix du marché', 'Mise en avant et page vendeur personnalisée'],
   },
 ]
 
@@ -64,6 +64,24 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
     return { label, disabled: false, action: () => setPaying(plan(tier)) }
   }
 
+  const PERKS: [string, string | boolean, string | boolean][] = [
+            ['Badge public', 'Bleu', 'Vert'],
+            ['Identité vérifiée', true, true],
+            ['Badge sur annonces, messages et profil', true, true],
+            ['Carte de confiance', true, true],
+            ['Avis & réputation', true, true],
+            ['Statistiques annonces', 'Basiques', 'Avancées'],
+            ['Support', 'Prioritaire', 'Ultra-prioritaire'],
+            ['Délai cible du support', '< 24 h', '< 2 h'],
+            ['Assistance litiges', 'Standard', 'Prioritaire'],
+            ['Récupération de compte', 'Prioritaire', 'Prioritaire+'],
+            ['Protection contre les faux signalements', 'Examen renforcé', 'Examen prioritaire'],
+            ['Boosts offerts', false, `${b.monthlyCredits} / mois`],
+            ['Statistiques marché / prix', false, true],
+            ['Page vendeur personnalisée', false, true],
+            ['Mise en avant vendeur certifié', false, true],
+            ['Accès anticipé aux campagnes', false, `${b.earlyAccessHours} h avant`],
+          ]
   return layout(<>
     <h1 className="m-0 text-headline-lg text-on-surface">Badges Dilchap</h1>
     <p className="m-0 mt-1 text-body-md text-on-surface-variant">Affichez une coche à côté de votre nom pour rassurer les acheteurs. La vérification d’identité est le prérequis ; le badge s’active par abonnement.</p>
@@ -120,6 +138,48 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
         )
       })}
     </div>
+
+    {/* Perks, side by side */}
+    <section className={`${card} mt-4 overflow-hidden p-0`}>
+      <h2 className="m-0 px-4 pt-4 text-headline-sm text-on-surface md:px-5 md:pt-5">Ce que comprend chaque badge</h2>
+      <table className="mt-3 hidden w-full table-fixed border-collapse text-body-sm md:table">
+        <thead>
+          <tr className="bg-surface-container-low text-label-md text-on-surface">
+            <th className="w-[44%] px-3 py-2.5 text-left font-semibold md:px-5">Avantage</th>
+            <th className="px-2 py-2.5 text-left font-semibold"><span className="flex items-center gap-1"><Icon name="verified" size={16} fill className="shrink-0 text-verified" /> <span className="truncate">Vérifié</span></span></th>
+            <th className="px-2 py-2.5 text-left font-semibold md:pr-5"><span className="flex items-center gap-1"><Icon name="verified" size={16} fill className="shrink-0 text-tertiary" /> <span className="truncate">Certifié</span></span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {PERKS.map(([label, v, c]) => (
+            <tr key={label} className="border-0 border-t border-solid border-outline-variant/60 align-top">
+              <td className="px-3 py-2.5 text-on-surface md:px-5">{label}</td>
+              {[v, c].map((x, i) => (
+                <td key={i} className={`px-2 py-2.5 ${i ? 'md:pr-5' : ''}`}>
+                  {x === true ? <Icon name="check" size={18} className={i ? 'text-tertiary' : 'text-verified'} /> : x === false ? <span className="text-outline">—</span> : <span className={`font-semibold ${i ? 'text-tertiary' : 'text-on-surface'}`}>{x}</span>}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {/* Phones: one perk per block, the two values side by side. */}
+      <ul className="m-0 mt-3 list-none p-0 md:hidden">
+        {PERKS.map(([label, v, c]) => (
+          <li key={label} className="border-0 border-t border-solid border-outline-variant/60 px-4 py-2.5">
+            <div className="text-label-md text-on-surface">{label}</div>
+            <div className="mt-1 grid grid-cols-2 gap-2 text-body-sm">
+              {[v, c].map((x, i) => (
+                <span key={i} className="flex min-w-0 items-center gap-1 whitespace-nowrap">
+                  <Icon name="verified" size={14} fill className={`shrink-0 ${i ? 'text-tertiary' : 'text-verified'}`} />
+                  {x === true ? <Icon name="check" size={17} className={i ? 'text-tertiary' : 'text-verified'} /> : x === false ? <span className="text-outline">—</span> : <span className={`truncate font-semibold ${i ? 'text-tertiary' : 'text-on-surface'}`}>{x}</span>}
+                </span>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
 
     {/* Certified requirements */}
     <section className={`${card} mt-4`}>

@@ -2,10 +2,18 @@ import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 // ─── Statistiques & Performances ────────────────────────────────────────────
+// "Statistiques marché / prix" ("Vendeur certifié").
+export const MY_MARKET_POSITIONS_QUERY = gql`
+  query MyMarketPositions {
+    myMarketPositions { categoryName low median high sampleSize gapPct listing { id title price currency coverImageUrl } }
+  }
+`
+export type MarketPosition = { categoryName: string; low: number; median: number; high: number; sampleSize: number; gapPct: number; listing: { id: string; title: string; price: number | null; currency: string; coverImageUrl: string | null } }
+
 export const SELLER_STATS_QUERY = gql`
   query SellerStats($days: Int) {
     sellerStats(days: $days) {
-      days views viewsPrev contacts contactsPrev conversionRate conversionRatePrev
+      advanced days views viewsPrev contacts contactsPrev conversionRate conversionRatePrev
       revenue revenuePrev savedCommission avgSaleDays avgSaleDaysBoosted
       series { day views boostedViews contacts }
       origins { city share sales }
@@ -29,6 +37,8 @@ export type ListingPerformance = {
   listing: { id: string; title: string; price: number | null; currency: string; status: string; condition: string | null; coverImageUrl: string | null; publishedAt: string | null; createdAt: string; category: { name: string } }
 }
 export type SellerStats = {
+  // Full report ("Vendeur certifié"); basic otherwise.
+  advanced: boolean
   days: number; views: number; viewsPrev: number; contacts: number; contactsPrev: number
   conversionRate: number | null; conversionRatePrev: number | null
   revenue: number; revenuePrev: number; savedCommission: number; avgSaleDays: number | null; avgSaleDaysBoosted: number | null
@@ -162,6 +172,7 @@ export const SELLER_SETTINGS_QUERY = gql`
   query SellerSettings {
     me {
       id email phone fullName avatarUrl city bio isVerified badge verifiedAt meetupSpots paymentMethods vacationMode notificationPreferences createdAt
+      coverUrl website facebook instagram tiktok
     }
     myReputation {
       averageRating reviewsCount satisfactionRate salesCount responseTimeMinutes trustScore reactivity reactivityPrev activeListings isVerified hasPhone verifiedAt

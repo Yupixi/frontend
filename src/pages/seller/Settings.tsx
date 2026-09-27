@@ -25,7 +25,8 @@ type Channel = 'push' | 'whatsapp' | 'email'
 type Alerts = Record<string, Record<Channel, boolean>>
 type Quiet = { enabled: boolean; start: string; end: string }
 type SettingsData = {
-  me: AuthUser & { email: string; verifiedAt: string | null; meetupSpots: string[]; paymentMethods: string[]; vacationMode: boolean; notificationPreferences: Record<string, any>; createdAt: string }
+  me: AuthUser & { email: string; verifiedAt: string | null; meetupSpots: string[]; paymentMethods: string[]; vacationMode: boolean; notificationPreferences: Record<string, any>; createdAt: string
+    coverUrl?: string | null; website?: string | null; facebook?: string | null; instagram?: string | null; tiktok?: string | null }
   myReputation: {
     averageRating: number; reviewsCount: number; satisfactionRate: number | null; salesCount: number; responseTimeMinutes: number | null
     trustScore: number; reactivity: number | null; reactivityPrev: number | null; activeListings: number; isVerified: boolean; hasPhone: boolean; verifiedAt: string | null
@@ -98,6 +99,54 @@ const deviceLabel = (ua: string | null) => {
   const os = /iPhone|iPad/.test(ua) ? 'iPhone / iPad' : /Android/.test(ua) ? 'Android' : /Mac OS/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Appareil'
   const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Navigateur'
   return { icon: mobile ? 'smartphone' : 'laptop_mac', name: `${os} • ${browser}` }
+}
+
+// "Page vendeur personnalisée" ("Vendeur certifié"): cover photo and links
+// shown on the public seller page. Saved on its own.
+function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
+  me: { coverUrl?: string | null; website?: string | null; facebook?: string | null; instagram?: string | null; tiktok?: string | null }
+  certified: boolean
+  onSaved: () => void
+  onUpgrade: () => void
+}) {
+  const [v, setV] = useState({ coverUrl: me.coverUrl ?? '', website: me.website ?? '', facebook: me.facebook ?? '', instagram: me.instagram ?? '', tiktok: me.tiktok ?? '' })
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const input = useRef<HTMLInputElement>(null)
+  const [update, { loading }] = useMutation(UPDATE_SELLER_PROFILE_MUTATION)
+  const field = 'h-11 w-full min-w-0 rounded-xl border-none bg-surface-container-low px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary disabled:opacity-60'
+  const pick = async (files: FileList | null) => {
+    if (!files?.[0]) return
+    setBusy(true)
+    try { const [url] = await uploadImages([files[0]]); setV(x => ({ ...x, coverUrl: url })) } finally { setBusy(false) }
+  }
+  const save = () => {
+    setMsg(null)
+    void update({ variables: { input: v } }).then(() => { setMsg({ ok: true, text: 'Page vendeur mise à jour.' }); onSaved() }).catch((e: Error) => setMsg({ ok: false, text: e.message }))
+  }
+  return (
+    <Card id="page" icon="palette" iconCls="bg-tertiary-soft text-tertiary" title="Page vendeur personnalisée" sub="Photo de couverture et liens vers votre site et vos réseaux, affichés sur votre profil public."
+      aside={certified ? undefined : <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="lock" size={14} /> Vendeur certifié</span>}>
+      <input ref={input} type="file" accept="image/*" hidden onChange={e => { void pick(e.target.files); e.target.value = '' }} />
+      <div className="relative h-28 overflow-hidden rounded-xl bg-surface-container">
+        {v.coverUrl && <img src={v.coverUrl} alt="" className="h-full w-full object-cover" />}
+        <button type="button" disabled={!certified || busy} onClick={() => input.current?.click()} className="absolute bottom-2 right-2 flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface shadow-sm disabled:opacity-60"><Icon name={busy ? 'progress_activity' : 'photo_camera'} size={17} className={busy ? 'animate-spin' : ''} /> {v.coverUrl ? 'Changer la couverture' : 'Ajouter une couverture'}</button>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        {([['website', 'language', 'Site web', 'www.maboutique.ci'], ['facebook', 'thumb_up', 'Facebook', 'facebook.com/maboutique'], ['instagram', 'photo_camera', 'Instagram', 'instagram.com/maboutique'], ['tiktok', 'music_note', 'TikTok', 'tiktok.com/@maboutique']] as const).map(([k, icon, label, ph]) => (
+          <label key={k} className="block"><span className="mb-1.5 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name={icon} size={16} className="text-on-surface-variant" /> {label}</span>
+            <input value={v[k]} disabled={!certified} onChange={e => setV(x => ({ ...x, [k]: e.target.value.slice(0, 200) }))} placeholder={ph} className={field} />
+          </label>
+        ))}
+      </div>
+      {msg && <p className={`m-0 mt-3 text-body-sm ${msg.ok ? 'text-tertiary' : 'text-primary'}`}>{msg.text}</p>}
+      <div className="mt-3 flex justify-end">
+        {certified
+          ? <button type="button" disabled={loading || busy} onClick={save} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50"><Icon name="save" size={17} /> Enregistrer la page</button>
+          : <button type="button" onClick={onUpgrade} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-tertiary px-4 text-label-md text-white"><Icon name="verified" size={17} fill /> Devenir Vendeur certifié</button>}
+      </div>
+    </Card>
+  )
 }
 
 // "Paramètres & Notifications" mockup — one form saved at once ("Enregistrer
@@ -289,6 +338,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </label>
                 </div>
               </Card>
+
+              {me && <SellerPageCard key={me.id} me={me} certified={currentUser?.badge === 'CERTIFIED'} onSaved={() => void refetch()} onUpgrade={() => onNavigate('seller-badge')} />}
 
               {/* Alertes */}
               <Card id="alertes" icon="notifications_active" title="Gestion des Notifications & Alertes" sub="Choisissez comment et quand vous souhaitez être prévenu des opportunités de vente."

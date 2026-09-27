@@ -17,6 +17,7 @@ export const SELLER_PROFILE_QUERY = gql`
       isVerified badge
       bio
       coverUrl
+      website facebook instagram tiktok
       salesCount
       followersCount
       isFollowedByMe
@@ -60,6 +61,8 @@ export const CREATE_REVIEW_MUTATION = gql`
 `
 
 export type RemoteSellerProfile = {
+  // "Page vendeur personnalisée" (Vendeur certifié).
+  website?: string | null; facebook?: string | null; instagram?: string | null; tiktok?: string | null
   id: string
   fullName: string
   avatarUrl: string | null

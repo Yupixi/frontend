@@ -448,7 +448,7 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {campaigns.map(c => (
           <section key={c.id} className={`${card} flex min-w-0 flex-col`}>
-            <div className="flex flex-wrap items-center justify-between gap-2"><span className="whitespace-nowrap rounded-md bg-surface-container px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">Campagne Dilchap</span><StatePill state={c.state} /></div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><span className="whitespace-nowrap rounded-md bg-surface-container px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">Campagne Dilchap</span><span className="flex flex-wrap items-center gap-1.5">{c.earlyAccessUntil && <span className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified" size={13} fill /> Avant-première</span>}<StatePill state={c.state} /></span></div>
             <h3 className="m-0 mt-2 text-headline-sm text-on-surface">{c.name}</h3>
             <p className="m-0 mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="calendar_month" size={15} /> Du {fdate(c.startsAt)} au {fdate(c.endsAt)}</p>
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm">
@@ -470,7 +470,9 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
               ) : (
                 <>
                   <p className="m-0 mb-2 flex items-center gap-1.5 rounded-xl bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant"><Icon name="radio_button_unchecked" size={16} className="shrink-0" /> Vous n’êtes pas encore inscrit</p>
-                  <button onClick={() => onJoin(c)} className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary text-label-md text-white"><Icon name="add_circle" size={18} /> Participer à cette campagne</button>
+                  {c.canJoin
+                    ? <button onClick={() => onJoin(c)} className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary text-label-md text-white"><Icon name="add_circle" size={18} /> Participer à cette campagne</button>
+                    : <p className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft px-3 py-2.5 text-body-sm text-on-surface"><Icon name="lock_clock" size={18} className="mt-0.5 shrink-0 text-tertiary" /> <span>Avant-première réservée aux Vendeurs certifiés. Ouverture à tous les vendeurs le {c.earlyAccessUntil ? new Date(c.earlyAccessUntil).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—'}.</span></p>}
                 </>
               )}
             </div>

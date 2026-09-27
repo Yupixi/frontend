@@ -193,6 +193,12 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const marketFilter = location?.countryCode ? { countryCode: location.countryCode } : undefined
   const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter: marketFilter }, skip: locationPending })
   const cities = (facetsData?.listingFacets.cities ?? []).map(c => c.value)
+  // "Vendeurs certifiés" rail (perk of the paid badge).
+  const { data: certifiedData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+    variables: { page: 1, pageSize: 8, filter: { ...marketFilter, certifiedSellersOnly: true } },
+    skip: locationPending,
+  })
+  const certified = certifiedData?.listings.items ?? []
 
   // Dernières annonces — scoped to the market (and city chip), grown in place:
   // "Charger plus" fetches only the next page and appends it (it used to
@@ -467,6 +473,17 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             </section>
           )}
 
+          {/* Certified sellers */}
+          {certified.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Vendeurs certifiés</h3>
+                <span className="rounded-full bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">Historique vérifié</span>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-6">{certified.slice(0, 4).map(l => card(l))}</div>
+            </section>
+          )}
+
           {/* 5. Seller incentive */}
           <section className="relative mt-10 overflow-hidden rounded-3xl bg-surface-container-low p-10 shadow-sm">
             <div className="relative z-10 max-w-2xl">
@@ -652,6 +669,15 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {shops.map(s => <div key={s.id} className="flex w-[250px] shrink-0 snap-start">{<ShopCard shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />}</div>)}
+            </div>
+          </section>
+        )}
+
+        {certified.length > 0 && (
+          <section className="mb-8">
+            <SectionHeading title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Vendeurs certifiés</>} />
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
+              {certified.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
             </div>
           </section>
         )}

@@ -6,7 +6,8 @@ import { formatNumber } from '../../lib/format'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import StatsMobile from './StatsMobile'
-import { SELLER_STATS_QUERY, type ListingPerformance, type SellerStats } from '../../graphql/sellerTools'
+import CertifiedLock from '../../components/CertifiedLock'
+import { MY_MARKET_POSITIONS_QUERY, SELLER_STATS_QUERY, type ListingPerformance, type MarketPosition, type SellerStats } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import { PaymentLogos } from '../../components/PaymentLogo'
@@ -91,6 +92,11 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
   const days = PERIODS.find(p => p.key === period)!.days()
   const { data, loading } = useQuery<{ sellerStats: SellerStats }>(SELLER_STATS_QUERY, { variables: { days } })
   const s = data?.sellerStats
+  // Advanced report and market prices: "Vendeur certifié" (the server
+  // enforces it too).
+  const advanced = currentUser?.badge === 'CERTIFIED'
+  const market = useQuery<{ myMarketPositions: MarketPosition[] }>(MY_MARKET_POSITIONS_QUERY, { skip: !advanced }).data?.myMarketPositions
+  const upgrade = () => onNavigate('seller-badge')
 
   const chart = useMemo(() => (s?.series ?? []).map(d => ({
     day: new Date(d.day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
@@ -107,7 +113,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
   return (
     <AccountLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="md:hidden">
-        <StatsMobile s={s} period={period} periods={PERIODS} onPeriod={setPeriod} badge={currentUser?.badge} onNavigate={onNavigate} onSelectListing={onSelectListing} />
+        <StatsMobile s={s} period={period} periods={PERIODS} onPeriod={setPeriod} badge={currentUser?.badge} onNavigate={onNavigate} onSelectListing={onSelectListing} advanced={advanced} />
       </div>
       <div className="mx-auto hidden max-w-[1180px] pb-8 md:block">
         <nav className="mb-2 hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
@@ -125,12 +131,12 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             <label className="flex items-center gap-2 rounded-xl bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm">
               <Icon name="calendar_month" size={18} className="text-primary" />
               <Select value={period} onChange={e => setPeriod(e.target.value)} className="cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
-                {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                {PERIODS.map(p => <option key={p.key} value={p.key} disabled={!advanced && p.key === '90'}>{p.label}{!advanced && p.key === '90' ? ' (Certifié)' : ''}</option>)}
               </Select>
             </label>
             <div className="relative">
-              <button onClick={() => setExportOpen(o => !o)} disabled={!s} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container-low">
-                <Icon name="download" size={18} /> Exporter (.PDF / .CSV)
+              <button onClick={() => (advanced ? setExportOpen(o => !o) : upgrade())} disabled={!s} title={advanced ? undefined : 'Réservé aux Vendeurs certifiés'} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container-low">
+                <Icon name={advanced ? 'download' : 'lock'} size={18} /> Exporter (.PDF / .CSV)
               </button>
               {exportOpen && s && (
                 <div className="absolute right-0 top-full z-50 mt-1 w-full min-w-[180px] rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-float">
@@ -189,6 +195,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             </div>
           </div>
 
+          {advanced ? (
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <h2 className="m-0 text-headline-sm text-on-surface">Origine du trafic</h2>
@@ -219,8 +226,10 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               </div>
             )}
           </div>
+          ) : <CertifiedLock title="Origine du trafic" text="Les communes de vos acheteurs et votre point de remise favori." onUpgrade={upgrade} />}
         </section>
 
+        {advanced ? (<>
         {/* Funnel */}
         <section className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -380,6 +389,45 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             )}
           </div>
         </section>
+
+        {/* Market prices */}
+        <section className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="m-0 text-headline-sm text-on-surface">Prix du marché</h2>
+              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vos annonces en ligne comparées aux prix des annonces similaires sur Dilchap</p>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-col gap-2">
+            {(market ?? []).length === 0 && <p className="m-0 text-body-sm text-on-surface-variant">Pas encore assez d’annonces comparables dans vos catégories.</p>}
+            {(market ?? []).map(m => {
+              const tone = m.gapPct > 15 ? 'bg-primary-fixed text-primary' : m.gapPct < -15 ? 'bg-verified-soft text-verified' : 'bg-tertiary-soft text-tertiary'
+              const label = m.gapPct > 15 ? 'Au-dessus du marché' : m.gapPct < -15 ? 'Sous le marché' : 'Dans le marché'
+              return (
+                <button key={m.listing.id} onClick={() => onSelectListing(m.listing.id)} className="flex cursor-pointer flex-col gap-2 rounded-xl border-none bg-surface-container-low p-3 text-left sm:flex-row sm:items-center">
+                  <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{m.listing.coverImageUrl && <img src={m.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
+                    <span className="min-w-0"><span className="block truncate text-label-md text-on-surface">{m.listing.title}</span><span className="block truncate text-body-sm text-on-surface-variant">{m.categoryName} • {m.sampleSize} annonces comparées</span></span>
+                  </span>
+                  <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
+                    <span className="whitespace-nowrap text-on-surface-variant">Médiane <b className="text-on-surface"><Price amount={m.median} /></b></span>
+                    <span className="whitespace-nowrap text-on-surface-variant"><Price amount={m.low} /> – <Price amount={m.high} /></span>
+                    <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${tone}`}>{label} ({m.gapPct > 0 ? '+' : ''}{formatNumber(m.gapPct)} %)</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+        </>) : (
+        <CertifiedLock
+          className="mt-5"
+          title="Statistiques avancées"
+          text="Allez plus loin que les chiffres clés : comprenez où vos acheteurs décrochent et quand publier."
+          items={['Entonnoir de conversion', 'Performances par annonce', 'Rentabilité des boosts', 'Conseils de publication', 'Prix du marché par annonce', 'Historique 90 jours et export']}
+          onUpgrade={upgrade}
+        />
+        )}
       </div>
     </AccountLayout>
   )
