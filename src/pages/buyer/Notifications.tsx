@@ -6,14 +6,13 @@ import { AccountLayout } from '../account/AccountLayout'
 import { formatRelativeDate } from '../../lib/format'
 import {
   DELETE_NOTIFICATION_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, MARK_NOTIFICATION_READ_MUTATION, MY_NOTIFICATIONS_QUERY,
-  NOTIFICATION_META, notificationConversation, notificationTarget, type NotificationKind, type RemoteNotification,
+  NOTIFICATION_META, openNotificationTarget, type NotificationKind, type RemoteNotification,
 } from '../../graphql/account'
 import { RESPOND_TO_OFFER_MUTATION } from '../../graphql/offers'
 import { MY_PURCHASE_ORDERS_QUERY, disputeIsOpen, type PurchaseOrder } from '../../graphql/sellerTools'
 import { MY_SALES_ORDERS_QUERY, type SalesOrder } from '../../graphql/sellerHub'
 import { getPushAvailability } from '../../lib/pushNotifications'
 import type { AuthUser } from '../../graphql/auth'
-import { requestOpenConversation, requestOpenShop, shopFromUrl } from '../../lib/navigation'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -26,7 +25,7 @@ type Props = {
 const LABELS: Record<NotificationKind, string> = {
   MESSAGE: 'Message', OFFER_RECEIVED: 'Négociation directe', OFFER_ACCEPTED: 'Offre acceptée', OFFER_REJECTED: 'Offre refusée',
   LISTING_APPROVED: 'Annonce en ligne', LISTING_REJECTED: 'Annonce refusée', LISTING_STATUS_CHANGED: 'Annonce',
-  ANNOUNCEMENT: 'Info Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité', SHOP: 'Boutique officielle', SHOP_POST: 'Actualité boutique', CAMPAIGN_ENTRY: 'Campagne Dilchap',
+  ANNOUNCEMENT: 'Info Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité', SHOP: 'Boutique officielle', SHOP_POST: 'Actualité boutique', CAMPAIGN_ENTRY: 'Campagne Dilchap', BADGE: 'Badge Dilchap', SUPPORT: 'Support Dilchap',
 }
 // `short` labels keep the chips on one line on a phone.
 const FILTERS: { key: string; label: string; short?: string; icon?: string; types?: NotificationKind[] }[] = [
@@ -41,7 +40,7 @@ const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString()
 
 // "Centre de notifications" (Stitch desktop + mobile).
-export default function Notifications({ onNavigate, onSelectListing, onOpenPurchase, currentUser, onLogout }: Props) {
+export default function Notifications({ onNavigate, onOpenPurchase, currentUser, onLogout }: Props) {
   const { data, loading, refetch } = useQuery<{ myNotifications: RemoteNotification[] }>(MY_NOTIFICATIONS_QUERY, { fetchPolicy: 'cache-and-network' }) // polled by AccountLayout
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY)
   const { data: salesData } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
@@ -76,13 +75,8 @@ export default function Notifications({ onNavigate, onSelectListing, onOpenPurch
 
   const open = (n: RemoteNotification) => {
     if (!n.readAt) void markRead({ variables: { id: n.id } }).then(() => refetch())
-    const conversationId = notificationConversation(n)
-    const target = notificationTarget(n)
-    const shopSlug = shopFromUrl(n.link)
-    if (conversationId) requestOpenConversation(conversationId)
-    else if (shopSlug) requestOpenShop(shopSlug)
-    else if (target) onNavigate(target)
-    else if (n.listingId) onSelectListing(n.listingId)
+    // Already on the notifications page: nothing else to open.
+    openNotificationTarget(n, () => {})
   }
   const accept = (n: RemoteNotification) => void respond({ variables: { offerId: n.offerId, accept: true } })
     .then(() => { setDone(d => ({ ...d, [n.id]: 'Offre acceptée' })); if (!n.readAt) void markRead({ variables: { id: n.id } }).then(() => refetch()) })
