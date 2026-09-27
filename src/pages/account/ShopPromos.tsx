@@ -14,6 +14,7 @@ import {
 } from '../../graphql/shops'
 import { uploadImages } from '../../lib/upload'
 import { formatNumber } from '../../lib/format'
+import Credits, { creditsLabel } from '../../components/Credits'
 import type { AuthUser } from '../../graphql/auth'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onOpenShop: (slug: string) => void }
@@ -415,9 +416,9 @@ function SaleEditor({ listings, aisles, onDone, onCancel, followers, sale, relau
 
 // ─── Dilchap campaigns ────────────────────────────────────────────────────
 
-// "Gratuite", "2 000 F de participation + 500 F par article accepté"…
+// "Gratuite", "20 crédits de participation + 5 crédits par article accepté"…
 export const feeText = (c: OpenCampaign) => {
-  const f = (n: number) => `${formatNumber(n)} F`
+  const f = creditsLabel
   if (c.entryFee && c.listingFee) return `${f(c.entryFee)} de participation + ${f(c.listingFee)} par article accepté`
   if (c.entryFee) return `${f(c.entryFee)} de participation (forfait)`
   if (c.listingFee) return `${f(c.listingFee)} par article accepté`
@@ -429,8 +430,8 @@ function DueBox({ c, onPay }: { c: OpenCampaign, onPay: () => void }) {
   const n = c.myItems.filter(i => i.status === 'AWAITING_PAYMENT').length
   return (
     <div className="mb-2 flex flex-col gap-2 rounded-xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10">
-      <div className="min-w-0 flex-1 text-body-sm"><div className="text-label-md text-on-surface">À régler : <Price amount={c.amountDue} /></div><div className="text-on-surface-variant">{n} article{n > 1 ? 's' : ''} accepté{n > 1 ? 's' : ''}{!c.entryFeePaid && c.entryFee > 0 ? ', participation incluse' : ''}. La remise s’active après le paiement.</div></div>
-      <button onClick={onPay} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="payments" size={18} /> Régler <Price amount={c.amountDue} /></button>
+      <div className="min-w-0 flex-1 text-body-sm"><div className="text-label-md text-on-surface">À régler : <Credits n={c.amountDue} /></div><div className="text-on-surface-variant">{n} article{n > 1 ? 's' : ''} accepté{n > 1 ? 's' : ''}{!c.entryFeePaid && c.entryFee > 0 ? ', participation incluse' : ''}. La remise s’active après le paiement.</div></div>
+      <button onClick={onPay} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="toll" size={18} /> Régler <Credits n={c.amountDue} /></button>
     </div>
   )
 }
@@ -455,7 +456,7 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
               <Icon name="percent" size={18} className="mt-0.5 shrink-0 text-primary" />
               <div className="min-w-0"><div className="text-label-md text-on-surface">Conditions de participation</div><div className="text-on-surface-variant">{c.minDiscountPercent ? `Remise minimale demandée : ${c.minDiscountPercent} % sur chaque article inscrit.` : 'Pas de remise minimale.'} Chaque article est vérifié par l’équipe Dilchap.</div></div>
             </div>
-            <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">À régler seulement pour les articles acceptés, avec le solde du porte-monnaie.</span>}</span></p>
+            <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">À régler en crédits, seulement pour les articles acceptés.</span>}</span></p>
             {c.description && <p className="m-0 mt-2 text-body-sm text-on-surface">{c.description}</p>}
             <div className="mt-auto pt-3">
               {c.myItems.length > 0 ? (

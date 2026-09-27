@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useApolloClient, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
-import Price from '../../components/Price'
 import WalletPaySheet from '../../components/WalletPaySheet'
 import { AccountLayout } from './AccountLayout'
 import { ME_QUERY, type AuthUser } from '../../graphql/auth'
+import Credits from '../../components/Credits'
 import { BADGE_LABEL, MY_BADGE_QUERY, type BadgePlan, type BadgeTier, type MyBadge } from '../../graphql/badges'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onProfileUpdated: (u: AuthUser) => void }
@@ -19,12 +19,12 @@ const TIERS: { tier: BadgeTier, tone: string, soft: string, perks: string[] }[] 
   },
   {
     tier: 'CERTIFIED', tone: 'text-tertiary', soft: 'bg-tertiary-soft',
-    perks: ['Coche verte « Vendeur certifié » partout', 'Support ultra-prioritaire : moins de 2 h', 'Boosts offerts chaque mois', 'Statistiques avancées et prix du marché', 'Mise en avant et page vendeur personnalisée'],
+    perks: ['Coche verte « Vendeur certifié » partout', 'Support ultra-prioritaire : moins de 2 h', 'Crédits offerts chaque mois', 'Statistiques avancées et prix du marché', 'Mise en avant et page vendeur personnalisée'],
   },
 ]
 
 // Paid badges, "like Facebook": identity check first, then a monthly or
-// yearly subscription paid from the wallet balance.
+// yearly subscription paid in credits.
 export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfileUpdated }: Props) {
   const client = useApolloClient()
   const { data, refetch } = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY, { fetchPolicy: 'cache-and-network' })
@@ -76,7 +76,7 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
             ['Assistance litiges', 'Standard', 'Prioritaire'],
             ['Récupération de compte', 'Prioritaire', 'Prioritaire+'],
             ['Protection contre les faux signalements', 'Examen renforcé', 'Examen prioritaire'],
-            ['Boosts offerts', false, `${b.monthlyCredits} / mois`],
+            ['Crédits offerts', false, `${b.monthlyCredits} / mois`],
             ['Statistiques marché / prix', false, true],
             ['Page vendeur personnalisée', false, true],
             ['Mise en avant vendeur certifié', false, true],
@@ -126,10 +126,10 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
               {current && <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${t.soft} ${t.tone}`}>{b.trial ? 'Offert' : 'Actif'}</span>}
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
-              <span className="text-headline-lg font-extrabold text-on-surface"><Price amount={p.price} /></span>
+              <span className="whitespace-nowrap text-headline-lg font-extrabold text-on-surface"><Credits n={p.price} /></span>
               <span className="text-body-sm text-on-surface-variant">/ {period === 'MONTHLY' ? 'mois' : 'an'}</span>
             </div>
-            {period === 'YEARLY' && <div className="text-body-sm text-on-surface-variant">soit <Price amount={Math.round(p.price / 12)} /> par mois</div>}
+            {period === 'YEARLY' && <div className="text-body-sm text-on-surface-variant">soit <Credits n={Math.round(p.price / 12)} /> par mois</div>}
             <ul className="m-0 mt-4 flex flex-1 list-none flex-col gap-2 p-0">
               {t.perks.map(x => <li key={x} className="flex items-start gap-2 text-body-sm text-on-surface"><Icon name="check" size={18} className={`shrink-0 ${t.tone}`} /> {x}</li>)}
             </ul>
@@ -196,7 +196,7 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
       </ul>
     </section>
 
-    <p className="m-0 mt-4 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" /> Payé avec le solde de votre porte-monnaie (rechargeable par Wave, Orange, MTN, Moov). Sans renouvellement, le badge disparaît à la date de fin ; votre identité reste vérifiée.</p>
+    <p className="m-0 mt-4 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" /> Payé en crédits (achetés par Wave, Orange, MTN, Moov). Sans renouvellement, le badge disparaît à la date de fin ; votre identité reste vérifiée.</p>
 
     <WalletPaySheet
       open={!!paying}

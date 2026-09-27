@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import WalletPaySheet from './WalletPaySheet'
-import Price from './Price'
+import Credits from './Credits'
 import { BOOST_PACKS_QUERY, type BoostPackInfo } from '../graphql/promotions'
 
 type BoostMenuProps = {
@@ -11,8 +11,8 @@ type BoostMenuProps = {
   variant?: 'dropdown' | 'inline'
 }
 
-// Quick picker over the backend's boost packs; the chosen pack is paid by
-// the wallet balance (WalletPaySheet) and activated at once.
+// Quick picker over the backend's boost packs; the chosen pack is paid in
+// credits (WalletPaySheet) and activated at once.
 export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: BoostMenuProps) {
   const { data } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY)
   const [picked, setPicked] = useState<BoostPackInfo | null>(null)
@@ -24,7 +24,7 @@ export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: B
       {(data?.boostPacks ?? []).map(p => (
         <button key={p.pack} onClick={() => setPicked(p)} className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-none bg-transparent px-2.5 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low disabled:opacity-60">
           <span className="truncate">{p.label}</span>
-          <span className="shrink-0 text-primary"><Price amount={p.price} /></span>
+          <span className="shrink-0 whitespace-nowrap text-primary"><Credits n={p.price} /></span>
         </button>
       ))}
       <WalletPaySheet
@@ -35,7 +35,7 @@ export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: B
         onClose={() => setPicked(null)}
         onPaid={onDone}
       >
-        {picked && <><b className="block text-label-lg text-on-surface">{picked.label}</b>Démarre dès la confirmation du paiement</>}
+        {picked && <><b className="block text-label-lg text-on-surface">{picked.label}</b>Démarre dès le paiement</>}
       </WalletPaySheet>
     </div>
   )

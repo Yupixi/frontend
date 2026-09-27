@@ -118,7 +118,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
                 </span>
               </span>
               {!p.boosted && p.listing.status !== 'SOLD' && (
-                <span onClick={e => { e.stopPropagation(); onNavigate('seller-premium') }} className="flex items-center justify-between rounded-lg bg-primary-fixed/60 px-3 py-2 text-label-md text-primary"><span className="flex items-center gap-1"><Icon name="bolt" size={16} /> Booster la visibilité</span><span className="rounded bg-primary px-1.5 text-label-sm text-white">dès 500 F</span></span>
+                <span onClick={e => { e.stopPropagation(); onNavigate('seller-premium') }} className="flex items-center justify-between rounded-lg bg-primary-fixed/60 px-3 py-2 text-label-md text-primary"><span className="flex items-center gap-1"><Icon name="bolt" size={16} /> Booster la visibilité</span><Icon name="chevron_right" size={18} /></span>
               )}
             </button>
           ))}

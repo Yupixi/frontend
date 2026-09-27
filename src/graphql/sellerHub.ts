@@ -6,7 +6,7 @@ export const CREDIT_PACKS_QUERY = gql`
   query CreditPacks { creditPacks { pack label tagline price credits bonusCredits perks } }
 `
 export const MY_WALLET_QUERY = gql`
-  query MyWallet { myWallet { balance credits totalSales salesCount confirmationRate averageRating reviewsCount } }
+  query MyWallet { myWallet { credits totalSales salesCount confirmationRate averageRating reviewsCount } walletSettings }
 `
 export const MY_WALLET_TRANSACTIONS_QUERY = gql`
   query MyWalletTransactions($types: [WalletTransactionType!], $page: Int, $pageSize: Int) {
@@ -16,15 +16,10 @@ export const MY_WALLET_TRANSACTIONS_QUERY = gql`
     }
   }
 `
-export const BUY_CREDITS_MUTATION = gql`
-  mutation BuyCredits($pack: String!, $method: String!) {
-    buyCredits(pack: $pack, method: $method) { credits }
-  }
-`
 
 export type CreditPack = { pack: string; label: string; tagline: string; price: number; credits: number; bonusCredits: number; perks: string[] }
-export type WalletSummary = { balance: number; credits: number; totalSales: number; salesCount: number; confirmationRate: number | null; averageRating: number; reviewsCount: number }
-export type WalletTxType = 'CREDIT_PURCHASE' | 'CREDIT_SPENT' | 'BOOST_PURCHASE' | 'SALE' | 'SHOP_SUBSCRIPTION' | 'BADGE_SUBSCRIPTION' | 'CAMPAIGN_ENTRY' | 'WALLET_TOPUP' | 'WALLET_ADJUSTMENT'
+export type WalletSummary = { credits: number; totalSales: number; salesCount: number; confirmationRate: number | null; averageRating: number; reviewsCount: number }
+export type WalletTxType = 'CREDIT_PURCHASE' | 'CREDIT_SPENT' | 'BOOST_PURCHASE' | 'SALE' | 'SHOP_SUBSCRIPTION' | 'BADGE_SUBSCRIPTION' | 'CAMPAIGN_ENTRY' | 'WALLET_TOPUP' | 'WALLET_ADJUSTMENT' | 'CREDIT_GRANT'
 export type WalletTx = { id: string; type: WalletTxType; amount: number; credits: number; label: string; method: string | null; createdAt: string; listing: { id: string; title: string } | null }
 
 // ─── Commandes & Envois ─────────────────────────────────────────────────────
