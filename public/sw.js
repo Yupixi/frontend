@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v14'
+const VERSION = 'v15'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -133,21 +133,45 @@ self.addEventListener('push', (event) => {
   )
 })
 
+// Same-origin check on the parsed URL: a prefix test would accept
+// `https://<our-host>.other.tld`.
+function isSameOrigin(url) {
+  try {
+    return new URL(url, self.location.origin).origin === self.location.origin
+  } catch {
+    return false
+  }
+}
+
+// Absolute http(s) URL a notification click may open. Anything else
+// (protocol-relative `//host`, other schemes, unparsable) falls back to the
+// home page.
+function notificationTarget(raw) {
+  if (typeof raw !== 'string' || !raw || /^[/\\]{2}/.test(raw)) return new URL('/', self.location.origin).href
+  try {
+    const target = new URL(raw, self.location.origin)
+    if (target.protocol === 'https:' || target.protocol === 'http:') return target.href
+  } catch {
+    // fall through
+  }
+  return new URL('/', self.location.origin).href
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const data = event.notification.data || {}
   // A button opens its own page; the notification body opens `url`.
-  const url = (event.action && data.actionUrls?.[event.action]) || data.url || '/'
+  const url = notificationTarget((event.action && data.actionUrls?.[event.action]) || data.url)
   event.waitUntil(
     (async () => {
       await track(data, 'clicked', event.action || 'open')
       // External links (https://…) open in a new window.
-      if (!url.startsWith('/') && !url.startsWith(self.location.origin)) {
+      if (!isSameOrigin(url)) {
         return self.clients.openWindow?.(url)
       }
       const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       for (const client of windowClients) {
-        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+        if (isSameOrigin(client.url) && 'focus' in client) {
           // The running app opens the page itself, without a reload (App
           // routes every notification link: conversation, listing, shop,
           // shortcut page + dispute / ticket…).
