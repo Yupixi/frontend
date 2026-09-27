@@ -1,4 +1,5 @@
 import EmptyState from '../components/EmptyState'
+import Icon from '../components/Icon'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
@@ -147,7 +148,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       <nav className="mb-3 hidden items-center md:flex gap-1 text-label-md text-on-surface-variant">
         <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
         <ChevronRight size={14} className="text-outline-variant" />
-        <span>{seller.badge ? `${BADGE_LABEL[seller.badge]}s Dilchap`.replace('Compte vérifiés', 'Comptes vérifiés') : 'Vendeurs'}</span>
+        <span>{seller.badge === 'CERTIFIED' ? 'Vendeurs certifiés Dilchap' : seller.badge ? 'Comptes vérifiés Dilchap' : 'Vendeurs'}</span>
         <ChevronRight size={14} className="text-outline-variant" />
         <span className="font-semibold text-on-surface">{seller.fullName}</span>
       </nav>
@@ -198,6 +199,13 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           <div className="mt-5 grid gap-5 md:grid-cols-[1.4fr_1fr]">
             <div>
               <p className="m-0 text-body-md text-on-surface">{seller.bio || `${seller.fullName} vend sur Dilchap en direct, sans intermédiaire. Contactez-le pour poser vos questions et convenir d'une remise en main propre.`}</p>
+              {([['website', 'language', 'Site web'], ['facebook', 'thumb_up', 'Facebook'], ['instagram', 'photo_camera', 'Instagram'], ['tiktok', 'music_note', 'TikTok']] as const).some(([k]) => seller[k]) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {([['website', 'language', 'Site web'], ['facebook', 'thumb_up', 'Facebook'], ['instagram', 'photo_camera', 'Instagram'], ['tiktok', 'music_note', 'TikTok']] as const).filter(([k]) => seller[k]).map(([k, icon, label]) => (
+                    <a key={k} href={seller[k]!} target="_blank" rel="noopener noreferrer nofollow" className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-container-low px-3 text-label-md text-on-surface no-underline hover:bg-surface-container"><Icon name={icon} size={16} className="text-primary" /> {label}</a>
+                  ))}
+                </div>
+              )}
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="flex items-center gap-1 rounded-lg bg-tertiary-soft px-2 py-1 text-label-sm text-tertiary"><Handshake size={13} /> Remise en main propre privilégiée{meetupSpots[0] ? ` (${meetupSpots[0]})` : seller.city ? ` (${seller.city})` : ''}</span>
                 {paymentMethods.length > 0 && (

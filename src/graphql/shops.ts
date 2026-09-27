@@ -210,7 +210,7 @@ export type ShopListing = {
 
 const PROMO_ITEM = 'entryId listingId title coverUrl price discountPercent salePrice promoPrice status rejectReason'
 const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt salesCount salesVolume items { ${PROMO_ITEM} }`
-const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt minDiscountPercent state entryFee listingFee entryFeePaid amountDue myItems { ${PROMO_ITEM} }`
+const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt minDiscountPercent state entryFee listingFee entryFeePaid amountDue earlyAccessUntil canJoin myItems { ${PROMO_ITEM} }`
 const BUNDLE_FIELDS = 'id name tiers { minQty percent } scope aisleId aisleName listingIds startsAt endsAt active state listingsCount'
 const POST_FIELDS = 'id title body imageUrl listings { id title price coverUrl } recipients views createdAt'
 
@@ -247,7 +247,9 @@ export type PromoItem = {
 export type ShopSale = { id: string; name: string; slug: string; startsAt: string; endsAt: string; state: PromoState; notifyFollowers: boolean; followersNotifiedAt: string | null; salesCount: number; salesVolume: number; items: PromoItem[] }
 export type OpenCampaign = { id: string; name: string; slug: string; description: string | null; themeColor: string | null; startsAt: string; endsAt: string; minDiscountPercent: number | null; state: PromoState; myItems: PromoItem[]
   // Paid participation (F CFA), charged once items are accepted.
-  entryFee: number; listingFee: number; entryFeePaid: boolean; amountDue: number }
+  entryFee: number; listingFee: number; entryFeePaid: boolean; amountDue: number
+  // Early access of certified sellers: others can join from this date.
+  earlyAccessUntil: string | null; canJoin: boolean }
 export type BundleTier = { minQty: number; percent: number }
 export type ShopBundle = { id: string; name: string; tiers: BundleTier[]; scope: 'ALL' | 'AISLE' | 'LISTINGS'; aisleId: string | null; aisleName: string | null; listingIds: string[]; startsAt: string | null; endsAt: string | null; active: boolean; state: PromoState; listingsCount: number }
 export type ShopPost = { id: string; title: string; body: string; imageUrl: string | null; listings: { id: string; title: string; price: number | null; coverUrl: string | null }[]; recipients: number; views: number; createdAt: string }

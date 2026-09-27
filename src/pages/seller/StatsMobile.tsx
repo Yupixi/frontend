@@ -1,6 +1,7 @@
 import { useQuery } from '@apollo/client/react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import Icon from '../../components/Icon'
+import CertifiedLock from '../../components/CertifiedLock'
 import Price from '../../components/Price'
 import { formatNumber } from '../../lib/format'
 import { MY_REPUTATION_QUERY } from '../../graphql/sellerHub'
@@ -14,6 +15,7 @@ type Props = {
   periods: { key: string; label: string }[]
   onPeriod: (key: string) => void
   badge?: BadgeTier | null
+  advanced?: boolean
   onNavigate: (p: any) => void
   onSelectListing: (id: string) => void
 }
@@ -28,7 +30,7 @@ function Delta({ v }: { v: number | null }) {
 
 // "Statistiques Vendeur" (Stitch mobile): revenue hero, 4 KPIs, views vs
 // contacts curve, recent listings and the boost comparison.
-export default function StatsMobile({ s, period, periods, onPeriod, badge, onNavigate, onSelectListing }: Props) {
+export default function StatsMobile({ s, period, periods, onPeriod, badge, onNavigate, onSelectListing, advanced }: Props) {
   const { data: repData } = useQuery<{ myReputation: { averageRating: number; reviewsCount: number } }>(MY_REPUTATION_QUERY)
   const rep = repData?.myReputation
   const chart = (s?.series ?? []).map(d => ({ day: new Date(d.day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }), Vues: d.views, Contacts: d.contacts }))
@@ -50,7 +52,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
         <label className="flex items-center gap-1.5 rounded-xl bg-surface-container-high px-2.5 py-2 text-label-md text-on-surface">
           <Icon name="calendar_month" size={17} />
           <Select value={period} onChange={e => onPeriod(e.target.value)} className="border-none bg-transparent text-label-md text-on-surface outline-none">
-            {periods.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+            {periods.map(p => <option key={p.key} value={p.key} disabled={!advanced && p.key === '90'}>{p.label}{!advanced && p.key === '90' ? ' (Certifié)' : ''}</option>)}
           </Select>
         </label>
       </div>
@@ -101,6 +103,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
         <p className="m-0 mt-1 text-[11px] text-on-surface-variant">Échelles distinctes pour les vues et les contacts.</p>
       </section>
 
+      {advanced ? (<>
       <section>
         <div className="mb-2 flex items-center justify-between"><h2 className="m-0 text-headline-sm text-on-surface">Annonces actives &amp; récentes</h2><button onClick={() => onNavigate('seller-listings')} className="shrink-0 cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md text-primary">Voir tout ({s?.listings.length ?? 0})</button></div>
         <div className="flex flex-col gap-2">
@@ -142,6 +145,9 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
         {s?.avgSaleDaysBoosted != null && <p className="m-0 mt-3 flex gap-2 rounded-xl bg-surface-lowest p-3 text-body-sm text-on-surface"><Icon name="lightbulb" size={18} className="shrink-0 text-tertiary" /> Vos annonces boostées se vendent en moyenne en {formatNumber(s.avgSaleDaysBoosted)} jours.</p>}
         <button onClick={() => onNavigate('seller-premium')} className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white"><Icon name="bolt" size={19} /> <span className="max-[380px]:hidden">Booster une annonce maintenant</span><span className="min-[380px]:hidden">Booster une annonce</span></button>
       </section>
+      </>) : (
+        <CertifiedLock title="Statistiques avancées" text="Performances par annonce, rentabilité des boosts, prix du marché et historique 90 jours." onUpgrade={() => onNavigate('seller-badge')} />
+      )}
     </div>
   )
 }

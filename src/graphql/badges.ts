@@ -23,6 +23,9 @@ export type MyBadge = {
   penalties: number
   criteria: { minSales: number; minReviews: number; minRating: number }
   plans: BadgePlan[]
+  // "Vendeur certifié": free boosts per 30 days, campaign early access.
+  monthlyCredits: number
+  earlyAccessHours: number
 }
 
 export const MY_BADGE_QUERY = gql`
@@ -31,6 +34,7 @@ export const MY_BADGE_QUERY = gql`
       tier until trial lastTier identityVerified certifiedEligible sales reviews rating penalties
       criteria { minSales minReviews minRating }
       plans { product tier period days price }
+      monthlyCredits earlyAccessHours
     }
   }
 `
