@@ -37,6 +37,7 @@ export const GUEST_LOGIN_MUTATION = gql`
     guestLogin(input: $input) {
       accessToken
       refreshToken
+      guestSecret
       user {
         id
         email
@@ -99,5 +100,6 @@ export type AuthUser = {
 export type AuthPayload = {
   accessToken: string
   refreshToken: string
+  guestSecret?: string | null
   user: AuthUser
 }

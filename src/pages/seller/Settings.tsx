@@ -8,6 +8,7 @@ import {
   UPDATE_PREFERENCES_JSON_MUTATION, UPDATE_SELLER_PROFILE_MUTATION, type UserSession,
 } from '../../graphql/sellerTools'
 import { getRefreshToken } from '../../lib/auth'
+import { refreshAccessToken } from '../../lib/apollo'
 import { uploadImages } from '../../lib/upload'
 import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } from '../../lib/pushNotifications'
 import type { AuthUser } from '../../graphql/auth'
@@ -184,6 +185,9 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
   const [revokeSession] = useMutation(REVOKE_SESSION_MUTATION)
   const [revokeOthers, { loading: revokingOthers }] = useMutation(REVOKE_OTHER_SESSIONS_MUTATION)
 
+  // Changing the login e-mail asks for the current password.
+  const [emailPw, setEmailPw] = useState('')
+  const emailChanged = !!form && !!me && form.email.trim() !== me.email
   const [pwOpen, setPwOpen] = useState(false)
   const [pw, setPw] = useState({ current: '', next: '' })
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -208,7 +212,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
         variables: {
           input: {
             fullName: form.fullName.trim(), city: form.city || null, bio: form.bio.trim() || null, phone: form.phone.trim() || null,
-            email: form.email.trim() !== me.email ? form.email.trim() : undefined, avatarUrl: form.avatarUrl || null,
+            email: emailChanged ? form.email.trim() : undefined, currentPassword: emailChanged ? emailPw : undefined, avatarUrl: form.avatarUrl || null,
             meetupSpots: form.meetupSpots, paymentMethods: form.paymentMethods,
           },
         },
@@ -216,6 +220,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
       await updatePrefs({ variables: { preferences: { alerts: form.alerts, quietHours: form.quiet } } })
       if (res?.updateProfile && currentUser) onProfileUpdated({ ...currentUser, ...res.updateProfile })
       await refetch()
+      setEmailPw('')
       setSaveMsg({ ok: true, text: 'Paramètres enregistrés.' })
     } catch (e) {
       setSaveMsg({ ok: false, text: e instanceof Error ? e.message : "L'enregistrement a échoué." })
@@ -336,6 +341,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <label className="text-label-md text-on-surface">Adresse e-mail transactionnelle
                     <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="mail" size={18} className="text-on-surface-variant" /><input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
                   </label>
+                  {emailChanged && (
+                    <label className="text-label-md text-on-surface">Mot de passe actuel
+                      <input type="password" autoComplete="current-password" value={emailPw} onChange={e => setEmailPw(e.target.value)} placeholder="Requis pour changer d’adresse e-mail" className={`${field} mt-1`} />
+                    </label>
+                  )}
                 </div>
               </Card>
 
@@ -474,7 +484,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     <div className="flex w-full flex-col gap-2 sm:flex-row">
                       <input type="password" placeholder="Mot de passe actuel" value={pw.current} onChange={e => setPw({ ...pw, current: e.target.value })} className={field} />
                       <input type="password" placeholder="Nouveau (8 caractères min.)" value={pw.next} onChange={e => setPw({ ...pw, next: e.target.value })} className={field} />
-                      <button disabled={changingPw || !pw.current || pw.next.length < 8} onClick={() => void changePassword({ variables: { input: { currentPassword: pw.current, newPassword: pw.next } } }).then(() => { setPwMsg({ ok: true, text: 'Mot de passe mis à jour.' }); setPwOpen(false); setPw({ current: '', next: '' }) }).catch(e => setPwMsg({ ok: false, text: e.message }))} className="shrink-0 cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50">Confirmer</button>
+                      <button disabled={changingPw || !pw.current || pw.next.length < 8} onClick={() => void changePassword({ variables: { input: { currentPassword: pw.current, newPassword: pw.next, refreshToken: getRefreshToken() ?? undefined } } }).then(() => refreshAccessToken()).then(() => { void refetchSessions(); setPwMsg({ ok: true, text: 'Mot de passe mis à jour.' }); setPwOpen(false); setPw({ current: '', next: '' }) }).catch(e => setPwMsg({ ok: false, text: e.message }))} className="shrink-0 cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50">Confirmer</button>
                     </div>
                   )}
                   {pwMsg && <p className={`m-0 w-full text-body-sm ${pwMsg.ok ? 'text-tertiary' : 'text-primary'}`}>{pwMsg.text}</p>}

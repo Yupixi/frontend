@@ -6,7 +6,7 @@ import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import { setContext } from '@apollo/client/link/context'
 import { createClient } from 'graphql-ws'
 import { Observable } from 'rxjs'
-import { clearTokens, getAccessToken, getRefreshToken, storeTokens, SESSION_EXPIRED_EVENT } from './auth'
+import { clearTokens, getAccessToken, getRefreshToken, storeGuestSecret, storeTokens, tokenExpiry, SESSION_EXPIRED_EVENT } from './auth'
 
 // A deployed browser must never call its own `localhost`; only local
 // development uses the separate Nest server. In production the API is served
@@ -19,14 +19,28 @@ const GRAPHQL_WS_URL = GRAPHQL_URL.replace(/^http/, 'ws')
 
 const httpLink = new HttpLink({ uri: GRAPHQL_URL })
 
-// The token can be refreshed mid-connection, so this reads localStorage
-// fresh on every WS (re)connect rather than capturing it once at import time.
+// The server closes a socket (4403) once its token expires or is revoked;
+// the client then reconnects, so connectionParams reads localStorage fresh
+// on every (re)connect and refreshes the access token first when it is
+// expired or was just refused.
+let wsTokenRefused = false
 const wsLink = new GraphQLWsLink(
   createClient({
     url: GRAPHQL_WS_URL,
-    connectionParams: () => {
-      const token = getAccessToken()
+    connectionParams: async () => {
+      let token = getAccessToken()
+      const exp = token ? tokenExpiry(token) : null
+      if (token && (wsTokenRefused || (exp != null && exp * 1000 < Date.now() + 10_000))) {
+        refreshPromise = refreshPromise ?? refreshAccessToken()
+        token = await refreshPromise.finally(() => { refreshPromise = null })
+      }
+      wsTokenRefused = false
       return token ? { authorization: `Bearer ${token}` } : {}
+    },
+    on: {
+      closed: (event) => {
+        if ((event as { code?: number }).code === 4403) wsTokenRefused = true
+      },
     },
   }),
 )
@@ -45,7 +59,7 @@ const authLink = setContext((_, { headers }) => {
 // fires several queries at once doesn't spend multiple refresh tokens.
 let refreshPromise: Promise<string | null> | null = null
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return null
 
@@ -54,7 +68,7 @@ async function refreshAccessToken(): Promise<string | null> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        query: `mutation($rt: String!) { refreshToken(refreshToken: $rt) { accessToken refreshToken } }`,
+        query: `mutation($rt: String!) { refreshToken(refreshToken: $rt) { accessToken refreshToken guestSecret } }`,
         variables: { rt: refreshToken },
       }),
     })
@@ -66,6 +80,7 @@ async function refreshAccessToken(): Promise<string | null> {
       return null
     }
     storeTokens(tokens.accessToken, tokens.refreshToken)
+    storeGuestSecret(tokens.guestSecret)
     return tokens.accessToken as string
   } catch {
     return null
