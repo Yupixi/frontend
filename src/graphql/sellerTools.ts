@@ -2,13 +2,15 @@ import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 // ─── Statistiques & Performances ────────────────────────────────────────────
-// "Statistiques marché / prix" ("Vendeur certifié").
+// "Statistiques marché / prix" ("Vendeur certifié"). categoryName is the
+// scope actually compared (subcategory, else category); listings with too
+// few comparables come back with insufficientSample and no range.
 export const MY_MARKET_POSITIONS_QUERY = gql`
   query MyMarketPositions {
-    myMarketPositions { categoryName low median high sampleSize gapPct listing { id title price currency coverImageUrl } }
+    myMarketPositions(includeInsufficient: true) { categoryName insufficientSample low median high sampleSize gapPct listing { id title price currency coverImageUrl } }
   }
 `
-export type MarketPosition = { categoryName: string; low: number; median: number; high: number; sampleSize: number; gapPct: number; listing: { id: string; title: string; price: number | null; currency: string; coverImageUrl: string | null } }
+export type MarketPosition = { categoryName: string; insufficientSample: boolean; low: number | null; median: number | null; high: number | null; sampleSize: number; gapPct: number | null; listing: { id: string; title: string; price: number | null; currency: string; coverImageUrl: string | null } }
 
 export const SELLER_STATS_QUERY = gql`
   query SellerStats($days: Int) {

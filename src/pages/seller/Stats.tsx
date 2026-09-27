@@ -400,21 +400,27 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-2">
-            {(market ?? []).length === 0 && <p className="m-0 text-body-sm text-on-surface-variant">Pas encore assez d’annonces comparables dans vos catégories.</p>}
+            {(market ?? []).length === 0 && <p className="m-0 text-body-sm text-on-surface-variant">Aucune annonce en ligne à comparer pour le moment.</p>}
             {(market ?? []).map(m => {
-              const tone = m.gapPct > 15 ? 'bg-primary-fixed text-primary' : m.gapPct < -15 ? 'bg-verified-soft text-verified' : 'bg-tertiary-soft text-tertiary'
-              const label = m.gapPct > 15 ? 'Au-dessus du marché' : m.gapPct < -15 ? 'Sous le marché' : 'Dans le marché'
+              const gap = m.gapPct ?? 0
+              const tone = gap > 15 ? 'bg-primary-fixed text-primary' : gap < -15 ? 'bg-verified-soft text-verified' : 'bg-tertiary-soft text-tertiary'
+              const label = gap > 15 ? 'Au-dessus du marché' : gap < -15 ? 'Sous le marché' : 'Dans le marché'
+              const compared = m.sampleSize === 0 ? 'aucune annonce comparable' : `${m.sampleSize} annonce${m.sampleSize > 1 ? 's' : ''} comparée${m.sampleSize > 1 ? 's' : ''}`
               return (
                 <button key={m.listing.id} onClick={() => onSelectListing(m.listing.id)} className="flex cursor-pointer flex-col gap-2 rounded-xl border-none bg-surface-container-low p-3 text-left sm:flex-row sm:items-center">
                   <span className="flex min-w-0 flex-1 items-center gap-3">
                     <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{m.listing.coverImageUrl && <img src={m.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
-                    <span className="min-w-0"><span className="block truncate text-label-md text-on-surface">{m.listing.title}</span><span className="block truncate text-body-sm text-on-surface-variant">{m.categoryName} • {m.sampleSize} annonces comparées</span></span>
+                    <span className="min-w-0"><span className="block truncate text-label-md text-on-surface">{m.listing.title}</span><span className="block truncate text-body-sm text-on-surface-variant">{m.categoryName} • {compared}</span></span>
                   </span>
-                  <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
-                    <span className="whitespace-nowrap text-on-surface-variant">Médiane <b className="text-on-surface"><Price amount={m.median} /></b></span>
-                    <span className="whitespace-nowrap text-on-surface-variant"><Price amount={m.low} /> – <Price amount={m.high} /></span>
-                    <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${tone}`}>{label} ({m.gapPct > 0 ? '+' : ''}{formatNumber(m.gapPct)} %)</span>
-                  </span>
+                  {m.insufficientSample || m.median == null || m.low == null || m.high == null ? (
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">Échantillon insuffisant</span>
+                  ) : (
+                    <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
+                      <span className="whitespace-nowrap text-on-surface-variant">Médiane <b className="text-on-surface"><Price amount={m.median} /></b></span>
+                      <span className="whitespace-nowrap text-on-surface-variant"><Price amount={m.low} /> – <Price amount={m.high} /></span>
+                      <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${tone}`}>{label} ({gap > 0 ? '+' : ''}{formatNumber(gap)} %)</span>
+                    </span>
+                  )}
                 </button>
               )
             })}
