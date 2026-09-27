@@ -100,7 +100,7 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   if (isActivelyBoosted(listing) || (done && !open)) return null
   return (
     <div className="mt-2" onClick={e => e.stopPropagation()}>
-      <button onClick={() => setOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary px-2 py-2 text-label-md text-white hover:bg-primary-dark">
+      <button onClick={() => setOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary px-2 py-2 text-label-md text-white hover:bg-primary-dark">
         <Icon name="rocket_launch" size={16} /> <span className="whitespace-nowrap">Booster<span className="hidden md:inline"> cette annonce</span></span>
       </button>
       <BoostSheet open={open} onClose={() => setOpen(false)} listing={listing} onBumped={() => setDone(true)} />
@@ -191,7 +191,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
 
   return (
     <div
-      className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-xl bg-surface-lowest shadow-sm transition-[transform,box-shadow] duration-300 active:scale-[0.98] hover:shadow-card-hover md:rounded-2xl md:active:scale-100"
+      className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-[12px] bg-surface-lowest shadow-sm transition-[transform,box-shadow] duration-300 active:scale-[0.98] hover:shadow-card-hover md:rounded-2xl md:active:scale-100"
       onClick={onSelect}
       {...prefetchOnIntent(listing.id)}
     >
@@ -280,10 +280,10 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
           <div className="px-2.5 pb-2.5 md:hidden">
             {featured ? (
               <div className="flex gap-2">
-                <button onClick={contact} className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
+                <button onClick={contact} className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
                   <Icon name="chat" size={16} /> Discuter
                 </button>
-                <button onClick={e => { e.stopPropagation(); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container text-on-surface">
+                <button onClick={e => { e.stopPropagation(); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border-none bg-surface-container text-on-surface">
                   <Icon name="call" size={18} />
                 </button>
                 <div onClick={e => e.stopPropagation()}>
@@ -296,7 +296,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
                 </div>
               </div>
             ) : (
-              <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border-none bg-surface-container py-1.5 text-label-sm font-bold text-on-surface transition-colors hover:bg-primary hover:text-white">
+              <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-[8px] border-none bg-surface-container py-1.5 text-label-sm font-bold text-on-surface transition-colors hover:bg-primary hover:text-white">
                 <Icon name="chat_bubble" size={14} /> Contacter
               </button>
             )}
