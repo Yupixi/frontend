@@ -114,7 +114,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
               )}
               <div className="flex-1" />
               <button onClick={() => onCategorySelect?.(cat.slug)} className="mt-4 flex w-full cursor-pointer items-center justify-between rounded-xl border-none bg-surface-container-low px-3 py-2.5 text-label-sm text-tertiary hover:bg-surface-container">
-                <span className="flex items-center gap-1.5"><Icon name="verified" size={15} /> {cat.highlight ?? 'Remise en main propre sécurisée'}</span>
+                <span title={cat.highlight ?? undefined} className="flex min-w-0 items-center gap-1.5"><Icon name="verified" size={15} className="shrink-0" /> <span className="truncate">{cat.highlight ?? 'Remise en main propre sécurisée'}</span></span>
                 <Icon name="arrow_forward" size={17} className="text-on-surface-variant" />
               </button>
             </article>

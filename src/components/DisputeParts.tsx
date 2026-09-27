@@ -22,8 +22,8 @@ export const DISPUTE_STATUS_META: Record<DisputeStatus, { label: string; cls: st
 export function DisputeStatusChip({ d }: { d: Dispute }) {
   const meta = DISPUTE_STATUS_META[d.status]
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-label-sm ${meta.cls}`}>
-      <Icon name={meta.icon} size={14} /> {d.verdict ?? meta.label}
+    <span title={d.verdict ?? meta.label} className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-label-sm ${meta.cls}`}>
+      <Icon name={meta.icon} size={14} className="shrink-0" /> <span className="truncate">{d.verdict ?? meta.label}</span>
     </span>
   )
 }
@@ -109,7 +109,7 @@ export function MediationCard({ whatsapp, compact }: { whatsapp: string | null; 
   const digits = whatsapp?.replace(/[^\d]/g, '')
   return (
     <div className="rounded-2xl bg-inverse-surface p-5 text-white">
-      <span className="inline-flex items-center gap-1 rounded-full bg-tertiary/25 px-2.5 py-1 text-label-sm text-[#6ee7b7]"><Icon name="support_agent" size={14} /> Permanence Modération 7j/7 • 08h - 22h</span>
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary/25 px-2.5 py-1 text-label-sm text-[#6ee7b7]"><Icon name="support_agent" size={14} /> Modération 7j/7 • 08h-22h</span>
       <h3 className="m-0 mt-3 text-headline-sm text-white">Ligne Prioritaire d'Urgence &amp; Médiation P2P</h3>
       {!compact && <p className="m-0 mt-1 text-body-sm text-white/70">En cas d'incident critique sur votre point de rendez-vous, notre équipe de modération intervient par WhatsApp.</p>}
       {whatsapp ? (
@@ -122,7 +122,7 @@ export function MediationCard({ whatsapp, compact }: { whatsapp: string | null; 
             </div>
           </div>
           <a href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-tertiary px-4 py-3 text-label-md text-white no-underline hover:opacity-90">
-            <Icon name="call" size={18} /> <span className="max-[380px]:hidden">Joindre un médiateur d'astreinte</span><span className="min-[380px]:hidden">Joindre un médiateur</span>
+            <Icon name="call" size={18} /> <span className="whitespace-nowrap">Joindre un médiateur</span>
           </a>
         </>
       ) : (

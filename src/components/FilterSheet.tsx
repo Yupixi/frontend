@@ -188,7 +188,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
             </Section>
           )}
 
-          <Section icon="shield" title="Confiance & Transactions directes">
+          <Section icon="shield" title="Vendeurs de confiance">
             {([
               ['verifiedOnly', 'verified_user', 'Vendeurs vérifiés uniquement', 'Badge Compte vérifié ou Vendeur certifié'],
               ['shopsOnly', 'storefront', 'Boutiques officielles uniquement', 'Entreprises vérifiées (RCCM / NCC)'],

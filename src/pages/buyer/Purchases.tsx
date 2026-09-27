@@ -69,7 +69,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
       if (!confirm) onOpenConversation(o.seller.id, o.listing.id)
     })
   }
-  const btn = 'flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none px-3 py-2.5 text-label-md'
+  const btn = 'flex w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border-none px-3 py-2.5 text-label-md'
 
   return (
     <AccountLayout active={active} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
@@ -196,7 +196,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
                         <button onClick={() => answer(o, false)} disabled={answering} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant"><Icon name="close" size={14} /> Proposer un autre horaire</button>
                       </>
                     ) : (
-                      <button onClick={() => onOpenConversation(o.seller.id, o.listing.id)} className={`${btn} bg-surface-container-high text-on-surface`}><Icon name="forum" size={18} /> {m ? 'En attente du vendeur — ouvrir le chat' : 'Ouvrir le chat pour fixer le lieu'}</button>
+                      <button onClick={() => onOpenConversation(o.seller.id, o.listing.id)} className={`${btn} bg-surface-container-high text-on-surface`}><Icon name="forum" size={18} /> {m ? 'Ouvrir le chat' : 'Fixer le lieu par chat'}</button>
                     )}
                   </div>
                 </div>
