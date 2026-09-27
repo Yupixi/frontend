@@ -146,7 +146,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           <div className="mb-2 flex items-center gap-2 text-label-md text-on-surface">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">1</span> Moyen de paiement
           </div>
-          <div role="radiogroup" className="grid grid-cols-4 gap-2">
+          <div role="radiogroup" aria-label="Moyen de paiement" className="grid grid-cols-4 gap-2">
             {PROVIDERS.map((p) => {
               const on = provider === p.key
               return (
@@ -155,6 +155,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
                   type="button"
                   role="radio"
                   aria-checked={on}
+                  aria-label={p.name}
                   onClick={() => { if (!on) { setProvider(p.key); setPhone(savedPhone(p.key)); setOtp(''); setTouched(false); setError(null) } }}
                   className={`relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-solid p-1 transition-all duration-200 ${on ? 'border-primary bg-primary-fixed/25' : 'border-outline-variant/70 bg-surface-lowest hover:border-outline active:scale-95'}`}
                 >

@@ -29,8 +29,11 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   const [count, setCount] = useState(suggested ? String(Math.max(min, suggested)) : '')
   const [pay, setPay] = useState(false)
 
-  const n = Number(count)
-  const freeOk = Number.isInteger(n) && n >= min && n <= max
+  // Whole credits only: "2.5" or "2,5" is refused with a message instead of
+  // silently becoming 25.
+  const whole = /^\d+$/.test(count)
+  const n = whole ? Number(count) : NaN
+  const freeOk = whole && n >= min && n <= max
   const picked = packs.find((p) => p.pack === choice)
   const credits = picked ? picked.credits + picked.bonusCredits : choice === 'FREE' && freeOk ? n : 0
   const amount = picked ? picked.price : choice === 'FREE' && freeOk ? n * value : 0
@@ -71,12 +74,12 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
             <span className="block truncate text-body-sm text-on-surface-variant">{value ? <><Price amount={value} /> le crédit</> : '…'}</span>
           </span>
           <label className="flex h-10 w-32 shrink-0 items-center gap-1 rounded-lg bg-surface-container-low pr-2">
-            <input value={count} onFocus={() => setChoice('FREE')} onChange={(e) => { setChoice('FREE'); setCount(e.target.value.replace(/\D/g, '').slice(0, 7)) }} inputMode="numeric" aria-label="Nombre de crédits" placeholder={String(min)} className="h-10 w-full min-w-0 border-none bg-transparent px-2 text-right text-body-md text-on-surface outline-none" />
+            <input value={count} onFocus={() => setChoice('FREE')} onChange={(e) => { setChoice('FREE'); setCount(e.target.value.replace(/[^\d.,]/g, '').slice(0, 7)) }} inputMode="numeric" aria-label="Nombre de crédits" aria-invalid={!!count && !freeOk} placeholder={String(min)} className="h-10 w-full min-w-0 border-none bg-transparent px-2 text-right text-body-md text-on-surface outline-none" />
             <span className="text-body-sm text-on-surface-variant">crédits</span>
           </label>
         </div>
       </div>
-      {choice === 'FREE' && count && !freeOk && <p className="m-0 mt-2 text-body-sm text-primary">Entre {min} et {max.toLocaleString('fr-FR')} crédits.</p>}
+      {choice === 'FREE' && count && !freeOk && <p role="alert" className="m-0 mt-2 text-body-sm text-primary">{whole ? <>Entre {min} et {max.toLocaleString('fr-FR')} crédits.</> : 'Nombre entier de crédits uniquement, sans virgule.'}</p>}
       {choice === 'FREE' && freeOk && value > 0 && <p className="m-0 mt-2 text-body-sm text-on-surface-variant"><Credits n={n} /> = <b className="text-on-surface"><Price amount={n * value} /></b></p>}
     </BottomSheet>
   )

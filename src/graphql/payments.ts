@@ -48,11 +48,13 @@ export const WALLET_BALANCE_QUERY = gql`
 export type WalletSettings = { creditValue: number; topupMin: number; topupMax: number }
 export type WalletBalance = { myWallet: { credits: number }; walletSettings: WalletSettings }
 
-export const PROVIDERS: { key: PaymentProvider; method: string; label: string }[] = [
-  { key: 'wave', method: 'WAVE', label: 'Wave' },
-  { key: 'orange', method: 'ORANGE_MONEY', label: 'Orange' },
-  { key: 'mtn', method: 'MTN_MOMO', label: 'MoMo' },
-  { key: 'moov', method: 'MOOV_MONEY', label: 'Flooz' },
+// `label` fits the tile; `name` is the full name read by screen readers
+// (it contains the label, so voice control still matches what's shown).
+export const PROVIDERS: { key: PaymentProvider; method: string; label: string; name: string }[] = [
+  { key: 'wave', method: 'WAVE', label: 'Wave', name: 'Wave' },
+  { key: 'orange', method: 'ORANGE_MONEY', label: 'Orange', name: 'Orange Money' },
+  { key: 'mtn', method: 'MTN_MOMO', label: 'MoMo', name: 'MTN MoMo' },
+  { key: 'moov', method: 'MOOV_MONEY', label: 'Flooz', name: 'Moov Money Flooz' },
 ]
 
 // Pending payment kept across the Wave redirect.
