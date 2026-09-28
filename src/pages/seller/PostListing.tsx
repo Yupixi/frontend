@@ -162,7 +162,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [error, setError] = useState<string | null>(null)
   // campaign: joined on publishing, or why it failed (the listing is
   // published either way).
-  const [result, setResult] = useState<{ id: string, submitted: boolean, campaign?: { name: string, credits: number } | { name: string, error: string } } | null>(null)
+  const [result, setResult] = useState<{ id: string, submitted: boolean, live?: boolean, campaign?: { name: string, credits: number } | { name: string, error: string } } | null>(null)
   const [boosted, setBoosted] = useState(false)
   const [campaignChoice, setCampaignChoice] = useState<CampaignChoice | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -186,7 +186,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [updateListing, { loading: updating }] = useMutation(UPDATE_LISTING_MUTATION)
   const [attachMedia, { loading: attaching }] = useMutation(ATTACH_LISTING_MEDIA_MUTATION)
   const [deleteMedia] = useMutation(DELETE_LISTING_MEDIA_MUTATION)
-  const [submitForReview, { loading: submitting }] = useMutation(SUBMIT_LISTING_FOR_REVIEW_MUTATION)
+  const [submitForReview, { loading: submitting }] = useMutation<{ submitListingForReview: { id: string; status: string } }>(SUBMIT_LISTING_FOR_REVIEW_MUTATION)
   const [joinCampaign] = useMutation(JOIN_CAMPAIGN_WITH_LISTING_MUTATION)
   const busy = creating || updating || attaching || submitting || uploading
 
@@ -409,7 +409,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         setUploading(false)
         await attachMedia({ variables: { listingId: id, urls } })
       }
-      if (submit && !isEditing) await submitForReview({ variables: { id } })
+      // "Publication directe" (BO): the listing comes back already live.
+      let live = false
+      if (submit && !isEditing) live = (await submitForReview({ variables: { id } })).data?.submitListingForReview.status === 'APPROVED'
       if (!isEditing) { try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ } }
       let campaign: NonNullable<typeof result>['campaign']
       if (joining) {
@@ -421,7 +423,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           campaign = { name: c.name, error: err instanceof Error ? err.message : 'La participation a échoué.' }
         }
       }
-      setResult({ id, submitted: submit, campaign })
+      setResult({ id, submitted: submit, live, campaign })
     } catch (err) {
       setUploading(false)
       setError(err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.')
@@ -467,9 +469,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
         <div className="mx-auto max-w-lg py-10 text-center">
           <span className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><CheckCircle2 size={40} /></span>
-          <h1 className="m-0 text-headline-lg text-on-surface">{isEditing ? 'Annonce mise à jour !' : result.submitted ? 'Annonce envoyée !' : 'Brouillon enregistré'}</h1>
+          <h1 className="m-0 text-headline-lg text-on-surface">{isEditing ? 'Annonce mise à jour !' : result.live ? 'Annonce publiée !' : result.submitted ? 'Annonce envoyée !' : 'Brouillon enregistré'}</h1>
           <p className="m-0 mt-2 text-body-md text-on-surface-variant">
-            {isEditing ? 'Vos modifications sont enregistrées.' : result.submitted
+            {isEditing ? 'Vos modifications sont enregistrées.' : result.live
+              ? 'Elle est déjà visible des acheteurs.'
+              : result.submitted
               ? 'Notre équipe la vérifie : elle sera visible des acheteurs dès son approbation.'
               : 'Retrouvez-le dans « Mes annonces » pour le compléter et le publier.'}
           </p>
@@ -481,13 +485,13 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           ) : (
             <div className="mt-6 flex items-start gap-2 rounded-2xl bg-tertiary-soft p-4 text-left text-body-sm text-on-surface">
               <Icon name="campaign" size={20} className="shrink-0 text-tertiary" />
-              <span>Inscrite à « {result.campaign.name} »{result.campaign.credits > 0 ? ` — ${result.campaign.credits} crédit${result.campaign.credits > 1 ? 's' : ''} débité${result.campaign.credits > 1 ? 's' : ''}` : ''}. Elle apparaîtra dans la campagne dès son approbation (remboursé si elle est refusée).</span>
+              <span>Inscrite à « {result.campaign.name} »{result.campaign.credits > 0 ? ` — ${result.campaign.credits} crédit${result.campaign.credits > 1 ? 's' : ''} débité${result.campaign.credits > 1 ? 's' : ''}` : ''}. {result.live ? 'Elle apparaît dans la campagne.' : 'Elle apparaîtra dans la campagne dès son approbation (remboursé si elle est refusée).'}</span>
             </div>
           ))}
           {result.submitted && !isEditing && (
             <div className="mt-6 rounded-2xl border border-outline-variant bg-surface-lowest p-5 text-left">
               {boosted ? (
-                <p className="m-0 flex items-center gap-2 text-label-md text-tertiary"><CheckCircle2 size={18} /> Boost enregistré — actif dès l'approbation.</p>
+                <p className="m-0 flex items-center gap-2 text-label-md text-tertiary"><CheckCircle2 size={18} /> {result.live ? 'Boost enregistré — actif dès maintenant.' : "Boost enregistré — actif dès l'approbation."}</p>
               ) : (
                 <>
                   <div className="mb-1 flex items-center gap-2 text-headline-sm text-on-surface"><Rocket size={20} className="text-primary" /> Boostez votre annonce</div>
