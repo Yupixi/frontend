@@ -8,6 +8,8 @@ import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { thumbnailUrl } from '../lib/media'
 import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
 import { useReveal } from '../lib/reveal'
+import { ListingCard } from '../components/ListingCard'
+import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 
 type FlashOffersProps = {
   onNavigate: (page: any) => void
@@ -89,7 +91,7 @@ function salePrice(entry: ActiveCampaignListing): number | null {
 function discountOf(entry: ActiveCampaignListing): number {
   if (entry.discountPercent != null) return entry.discountPercent
   const sale = salePrice(entry)
-  return sale != null && entry.listing.price ? Math.round((1 - sale / entry.listing.price) * 100) : 0
+  return sale != null && entry.listing.price ? Math.min(99, Math.round((1 - sale / entry.listing.price) * 100)) : 0
 }
 // Thumbnails: every picture on this page is card-sized.
 const imageOf = (e: ActiveCampaignListing) => thumbnailUrl(e.listing.coverImageUrl ?? e.listing.media[0]?.url ?? '')
@@ -122,8 +124,17 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
   const iconFor = (slug: string) => categoriesData?.categories.find(c => c.slug === slug)?.icon ?? 'category'
   const contact = (e: ActiveCampaignListing) => () =>
     isLoggedIn && onContactSeller ? onContactSeller(e.listing.seller.id, e.listing.id) : onSelectListing(e.listing.id)
-  const heroImages = useMemo(() => [...new Set(entries.map(imageOf).filter(Boolean))].slice(0, 16), [entries])
-  const grid = useReveal<HTMLDivElement>(flash.map(e => e.id).join())
+  // No listing in the campaign yet (the team picks them in the BO): the
+  // page shows the shops' own promotions meanwhile.
+  const { data: promoData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+    variables: { filter: { promoOnly: true }, sort: 'RECENT', page: 1, pageSize: 12 },
+    skip: !campaign || entries.length > 0,
+  })
+  const promos = entries.length ? [] : promoData?.listings.items ?? []
+  const heroImages = useMemo(() => [...new Set(
+    entries.length ? entries.map(imageOf) : promos.map(l => thumbnailUrl(l.coverImageUrl ?? '')),
+  )].filter(Boolean).slice(0, 16), [entries, promos])
+  const grid = useReveal<HTMLDivElement>(flash.map(e => e.id).join() + promos.map(l => l.id).join())
   const endsIn = countdown ? `${countdown.days ? `${countdown.days}j ` : ''}${pad(countdown.hours)}h ${pad(countdown.minutes)}m` : ''
 
   if (loading) return <p className="p-12 text-center text-on-surface-variant">Chargement…</p>
@@ -174,9 +185,9 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               <div className="flex items-center gap-1 text-label-sm uppercase text-primary"><Timer size={14} /> Chrono expiration imminente</div>
               <h2 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Ventes Flash &amp; Pépites Uniques</h2>
             </div>
-            <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {entries.length} article{entries.length > 1 ? 's' : ''} à prix cassé</span>
+            {entries.length > 0 && <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {entries.length} article{entries.length > 1 ? 's' : ''} à prix cassé</span>}
           </div>
-          <div ref={grid} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+          <div ref={entries.length ? grid : undefined} className={`grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 ${entries.length ? '' : 'hidden'}`}>
             {flash.map((e, i) => {
               const sale = salePrice(e)
               const d = discountOf(e)
@@ -218,6 +229,26 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               )
             })}
           </div>
+          {entries.length === 0 && (
+            promos.length ? (
+              <>
+                <p className="m-0 mb-3 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="storefront" size={16} className="text-primary" /> Les articles de la campagne arrivent. En attendant, profitez des promotions des boutiques :</p>
+                <div ref={grid} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+                  {promos.map((l, i) => (
+                    <div key={l.id} className="reveal" style={{ '--i': i % 8 } as React.CSSProperties}>
+                      <ListingCard listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)}
+                        onContact={() => (isLoggedIn && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id))} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl bg-surface-container-low p-8 text-center">
+                <p className="m-0 text-label-lg text-on-surface">Les articles de la campagne arrivent très bientôt.</p>
+                <button onClick={() => onNavigate('search')} className="mt-3 cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-md text-white">Explorer le catalogue</button>
+              </div>
+            )
+          )}
         </section>
 
         {/* Reassurance */}
