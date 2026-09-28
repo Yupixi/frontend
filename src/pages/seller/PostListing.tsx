@@ -883,7 +883,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <span className="text-on-surface-variant">Aperçu en ligne</span><span className="text-primary">Vue acheteur</span>
               </div>
               <div className="overflow-hidden rounded-xl border border-outline-variant">
-                <div className="relative aspect-[4/3] bg-surface-container-low">
+                <div className="relative aspect-[4/3] overflow-hidden bg-surface-container-low">
                   {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Icon name="image" size={40} /></div>}
                   {form.condition && <span className="absolute left-2 top-2 rounded-md bg-tertiary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{form.condition}</span>}
                   {form.city && <span className="absolute right-2 top-2 flex items-center gap-0.5 rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-semibold text-on-surface"><MapPin size={11} /> {form.city}</span>}
