@@ -6,6 +6,8 @@ import {
 import Icon, { CategoryIcon } from '../../components/Icon'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
+import { AssistButton, ListingAdvicePanel } from '../../components/ListingAssist'
+import type { ListingDraftSuggestion } from '../../graphql/listingAssist'
 import BoostMenu from '../../components/BoostMenu'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
@@ -201,6 +203,37 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     }, 800)
     return () => clearTimeout(t)
   }, [form, isEditing, result])
+
+  // "Rédiger avec l'IA": fills the form, the seller can undo. The editor
+  // only reads its content on mount, hence the key.
+  const [editorKey, setEditorKey] = useState(0)
+  const [beforeAssist, setBeforeAssist] = useState<Form | null>(null)
+  const applySuggestion = (s: ListingDraftSuggestion) => {
+    setBeforeAssist(form)
+    const paragraphs = s.description.split(/\n+/).map(l => l.trim()).filter(Boolean)
+    const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    setForm(f => {
+      const categoryId = s.categoryId ?? f.categoryId
+      const sameCategory = categoryId === f.categoryId
+      return {
+        ...f,
+        title: s.title ? s.title.slice(0, TITLE_MAX) : f.title,
+        description: paragraphs.length ? paragraphs.map(l => `<p>${esc(l)}</p>`).join('') : f.description,
+        categoryId,
+        subcategoryId: s.categoryId ? (s.subcategoryId ?? (sameCategory ? f.subcategoryId : '')) : f.subcategoryId,
+        attributes: sameCategory ? f.attributes : {},
+        brand: s.brand ?? f.brand,
+        condition: s.condition ?? f.condition,
+      }
+    })
+    setEditorKey(k => k + 1)
+  }
+  const undoAssist = () => {
+    if (!beforeAssist) return
+    setForm(beforeAssist)
+    setBeforeAssist(null)
+    setEditorKey(k => k + 1)
+  }
 
   const photoCount = existingMedia.length + imageFiles.length
   const addFiles = (files: FileList | null) => {
@@ -510,6 +543,13 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             {/* Infos */}
             <Card className={only(1)} icon="edit_note" title="Informations sur l'article" subtitle="Donnez un maximum de précisions pour remonter dans les résultats de recherche.">
               <div className="flex flex-col gap-4">
+                <AssistButton cover={existingMedia.length ? null : imageFiles[0] ?? null} title={form.title} description={form.description} onApply={applySuggestion} />
+                {beforeAssist && (
+                  <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-tertiary-soft px-3 py-2 text-body-sm text-tertiary">
+                    <span className="flex min-w-0 flex-1 basis-52 items-center gap-1.5"><Icon name="auto_awesome" size={16} className="shrink-0" /> Proposition de l’IA appliquée : relisez et corrigez si besoin.</span>
+                    <button type="button" onClick={undoAssist} className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-md text-on-surface"><Icon name="undo" size={16} /> Annuler</button>
+                  </p>
+                )}
                 <Field label="Titre de l'annonce" required right={<span className="text-body-sm text-on-surface-variant">{form.title.length} / {TITLE_MAX} car.</span>} hint={bad('title') ? undefined : 'Mentionnez la marque, le modèle précis et la particularité majeure.'}>
                   <input data-field="title" aria-invalid={bad('title')} className={bad('title') ? inputBad : inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ex : Appareil photo argentique Olympus OM-1 + Zuiko 50mm" />
                   <FieldError show={bad('title')}>Indiquez un titre.</FieldError>
@@ -596,10 +636,12 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     <span className="flex items-center gap-1 text-body-sm text-tertiary"><Lightbulb size={14} /> Conseil : une description détaillée (20 mots et plus) rassure les acheteurs</span>
                   </span>
                   <div className={bad('description') ? 'rounded-xl outline outline-[1.5px] outline-primary' : ''}>
-                    <RichTextEditor content={form.description} onChange={v => set('description', v)} placeholder="État esthétique, fonctionnement, accessoires fournis, raison de la vente…" />
+                    <RichTextEditor key={editorKey} content={form.description} onChange={v => set('description', v)} placeholder="État esthétique, fonctionnement, accessoires fournis, raison de la vente…" />
                   </div>
                   <FieldError show={bad('description')}>Décrivez votre article.</FieldError>
                 </div>
+                <ListingAdvicePanel title={form.title} description={form.description} price={requiresPrice ? priceNum || null : null} currency={form.currency}
+                  categoryId={form.categoryId} subcategoryId={form.subcategoryId} photoCount={photoCount} listingId={listingId} />
               </div>
             </Card>
 
