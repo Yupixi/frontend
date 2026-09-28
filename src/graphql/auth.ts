@@ -5,7 +5,6 @@ export const REGISTER_MUTATION = gql`
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
       accessToken
-      refreshToken
       user {
         id
         email
@@ -19,7 +18,6 @@ export const LOGIN_MUTATION = gql`
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       accessToken
-      refreshToken
       user {
         id
         email
@@ -36,7 +34,6 @@ export const GUEST_LOGIN_MUTATION = gql`
   mutation GuestLogin($input: GuestLoginInput!) {
     guestLogin(input: $input) {
       accessToken
-      refreshToken
       guestSecret
       user {
         id
@@ -67,17 +64,9 @@ export const ME_QUERY = gql`
   }
 `
 
-export const REFRESH_TOKEN_MUTATION = gql`
-  mutation RefreshToken($refreshToken: String!) {
-    refreshToken(refreshToken: $refreshToken) {
-      accessToken
-      refreshToken
-    }
-  }
-`
-
+// Revokes the session behind the refresh cookie (or a pre-cookie token).
 export const LOGOUT_MUTATION = gql`
-  mutation Logout($refreshToken: String!) {
+  mutation Logout($refreshToken: String) {
     logout(refreshToken: $refreshToken)
   }
 `
@@ -99,7 +88,6 @@ export type AuthUser = {
 
 export type AuthPayload = {
   accessToken: string
-  refreshToken: string
   guestSecret?: string | null
   user: AuthUser
 }

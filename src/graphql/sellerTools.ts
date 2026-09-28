@@ -194,13 +194,13 @@ export const UPDATE_PREFERENCES_JSON_MUTATION = gql`
   }
 `
 export const MY_SESSIONS_QUERY = gql`
-  query MySessions($currentRefreshToken: String) { mySessions(currentRefreshToken: $currentRefreshToken) { id userAgent createdAt current } }
+  query MySessions { mySessions { id userAgent createdAt current } }
 `
 export const REVOKE_SESSION_MUTATION = gql`
   mutation RevokeSession($sessionId: String!) { revokeSession(sessionId: $sessionId) }
 `
 export const REVOKE_OTHER_SESSIONS_MUTATION = gql`
-  mutation RevokeOtherSessions($currentRefreshToken: String!) { revokeOtherSessions(currentRefreshToken: $currentRefreshToken) }
+  mutation RevokeOtherSessions { revokeOtherSessions }
 `
 export const DELETE_MY_ACCOUNT_MUTATION = gql`
   mutation DeleteMyAccount($password: String!) { deleteMyAccount(password: $password) }

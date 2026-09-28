@@ -5,7 +5,7 @@ import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, type AuthPayload } from '../graphql/auth'
 import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 import { REQUEST_RECOVERY_MUTATION } from '../graphql/support'
-import { storeTokens } from '../lib/auth'
+import { storeAccessToken } from '../lib/auth'
 import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
@@ -186,7 +186,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
   const { data: footerData } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
   const supportPhone = footerData?.footerSettings?.supportPhone
   const success = (payload: AuthPayload) => {
-    storeTokens(payload.accessToken, payload.refreshToken)
+    storeAccessToken(payload.accessToken)
     onLogin()
   }
 
