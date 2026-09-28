@@ -323,14 +323,16 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
   const isOwn = !!currentUserId && listing.seller.id === currentUserId
 
   return (
-    <div onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer gap-4 overflow-hidden rounded-2xl bg-surface-lowest p-3 shadow-sm transition-shadow hover:shadow-card-hover">
-      <div className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-32 md:w-40">
+    // Phones: big picture on top, text below (YouTube-style feed); from
+    // sm up: thumbnail on the left.
+    <div onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm transition-shadow hover:shadow-card-hover sm:flex-row sm:gap-4 sm:p-3">
+      <div className="aspect-video w-full shrink-0 overflow-hidden bg-surface-container sm:aspect-auto sm:h-28 sm:w-28 sm:rounded-xl md:h-32 md:w-40">
         {image.src
           ? <img loading="lazy" decoding="async" src={image.src} alt={listing.title} onError={image.onError} className="h-full w-full object-cover" />
           : <span className="flex h-full items-center justify-center text-on-surface-variant"><Tag size={28} /></span>}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 p-3 sm:p-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             {(listing.activeCampaignDiscount || listing.negotiable) && (

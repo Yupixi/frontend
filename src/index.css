@@ -611,3 +611,23 @@ h1, h2, h3, h4, h5, h6, .font-brand {
    pages' scrolling <main> and makes the whole document scroll too, which
    cuts the content off above the bottom tabs on phones. */
 label:has(> input.sr-only) { position: relative; }
+
+/* Motion kit (after the 7bet web project): reveal-on-scroll with a stagger,
+   marquee rows of pictures behind a hero, drifting halos and a light sweep
+   on badges. Everything stays still when the visitor asks for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal { transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); transition-delay: calc(var(--i, 0) * 60ms); }
+  .reveal:not([data-shown]) { opacity: 0; transform: translateY(12px); }
+  .reveal .reveal-img { transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), scale 0.5s ease; }
+  .reveal:not([data-shown]) .reveal-img { transform: scale(1.08) translateY(8px); }
+  .marquee-row { animation: marquee var(--marquee-speed, 60s) linear infinite; will-change: transform; }
+  .marquee-row.reverse { animation-direction: reverse; }
+  .drift { animation: drift 9s ease-in-out infinite alternate; }
+  .drift.slow { animation-duration: 11s; animation-direction: alternate-reverse; }
+  .shine::after { animation: shine 4s ease-in-out infinite; }
+}
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes drift { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(18px, -14px) scale(1.15); } 100% { transform: translate(-12px, 10px) scale(0.95); } }
+@keyframes shine { 0%, 60% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(220%) skewX(-18deg); } }
+.shine { position: relative; overflow: hidden; }
+.shine::after { content: ''; position: absolute; inset: 0; width: 40%; pointer-events: none; transform: translateX(-120%) skewX(-18deg); background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent); }
