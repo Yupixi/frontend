@@ -6,6 +6,7 @@ import Price from '../components/Price'
 import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign, type ActiveCampaignListing } from '../graphql/content'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { thumbnailUrl } from '../lib/media'
+import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
 
 type FlashOffersProps = {
   onNavigate: (page: any) => void
@@ -288,7 +289,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               </div>
             </div>
             <div className="flex shrink-0 flex-col gap-2">
-              <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-inverse-surface px-5 py-3 text-label-lg text-white hover:opacity-90"><Icon name="add_photo_alternate" size={19} /> Vendre pour {campaign.name}</button>
+              <button onClick={() => { try { sessionStorage.setItem(POST_CAMPAIGN_KEY, campaign.id) } catch { /* private mode */ } onNavigate('seller-post') }} className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-inverse-surface px-5 py-3 text-label-lg text-white hover:opacity-90"><Icon name="add_photo_alternate" size={19} /> Vendre pour {campaign.name}</button>
               <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer rounded-lg border-none bg-white/15 px-5 py-2.5 text-label-md text-white hover:bg-white/25">Booster mes annonces</button>
             </div>
           </div>

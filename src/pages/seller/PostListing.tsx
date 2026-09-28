@@ -7,6 +7,8 @@ import Icon, { CategoryIcon } from '../../components/Icon'
 import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import BoostMenu from '../../components/BoostMenu'
+import CampaignOptIn, { campaignCost, type CampaignChoice } from '../../components/CampaignOptIn'
+import { JOIN_CAMPAIGN_WITH_LISTING_MUTATION } from '../../graphql/shops'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { MARKETS, marketForCountry } from '../../data/markets'
@@ -79,6 +81,17 @@ function loadDraft(): { form: Form, savedAt: string } | null {
   } catch { return null }
 }
 
+// The opt-in card, rendered only when the seller has a campaign to join.
+function CampaignSection({ className, ...props }: { className: string } & React.ComponentProps<typeof CampaignOptIn>) {
+  return (
+    <div className={`empty:hidden ${className}`}>
+      <CampaignOptIn {...props} render={(body) => (
+        <Card icon="campaign" title="Campagnes Dilchap" subtitle="Mettez votre article en avant pendant une campagne : les frais sont débités de vos crédits à la publication.">{body}</Card>
+      )} />
+    </div>
+  )
+}
+
 function Card({ icon, title, subtitle, children, aside, className = '' }: { icon: string, title: string, subtitle?: string, children: React.ReactNode, aside?: React.ReactNode, className?: string }) {
   return (
     <section className={`rounded-2xl border border-outline-variant bg-surface-lowest p-4 md:p-6 ${className}`}>
@@ -145,8 +158,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [prefilled, setPrefilled] = useState(false)
   const initialForm = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ id: string, submitted: boolean } | null>(null)
+  // campaign: joined on publishing, or why it failed (the listing is
+  // published either way).
+  const [result, setResult] = useState<{ id: string, submitted: boolean, campaign?: { name: string, credits: number } | { name: string, error: string } } | null>(null)
   const [boosted, setBoosted] = useState(false)
+  const [campaignChoice, setCampaignChoice] = useState<CampaignChoice | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -169,6 +185,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [attachMedia, { loading: attaching }] = useMutation(ATTACH_LISTING_MEDIA_MUTATION)
   const [deleteMedia] = useMutation(DELETE_LISTING_MEDIA_MUTATION)
   const [submitForReview, { loading: submitting }] = useMutation(SUBMIT_LISTING_FOR_REVIEW_MUTATION)
+  const [joinCampaign] = useMutation(JOIN_CAMPAIGN_WITH_LISTING_MUTATION)
   const busy = creating || updating || attaching || submitting || uploading
 
   useEffect(() => {
@@ -317,6 +334,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       return
     }
     if (!category) { setError('Choisissez une catégorie.'); return }
+    const joining = submit && !isEditing && campaignChoice
+    if (joining) {
+      const min = campaignChoice.campaign.minDiscountPercent ?? 1
+      if (campaignChoice.discountPercent < min) { setError(`Campagne « ${campaignChoice.campaign.name} » : remise minimale de ${min} %.`); return }
+    }
     try {
       const input = {
         categoryId: form.categoryId,
@@ -356,7 +378,17 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       }
       if (submit && !isEditing) await submitForReview({ variables: { id } })
       if (!isEditing) { try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ } }
-      setResult({ id, submitted: submit })
+      let campaign: NonNullable<typeof result>['campaign']
+      if (joining) {
+        const { campaign: c, discountPercent } = campaignChoice
+        try {
+          await joinCampaign({ variables: { input: { campaignId: c.id, listingId: id, discountPercent } } })
+          campaign = { name: c.name, credits: campaignCost(c) }
+        } catch (err) {
+          campaign = { name: c.name, error: err instanceof Error ? err.message : 'La participation a échoué.' }
+        }
+      }
+      setResult({ id, submitted: submit, campaign })
     } catch (err) {
       setUploading(false)
       setError(err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.')
@@ -383,7 +415,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   }
 
   const reset = () => {
-    setForm(EMPTY); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false)
+    setForm(EMPTY); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false); setCampaignChoice(null)
   }
 
   const cover = allPhotos[0]?.url
@@ -405,6 +437,17 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               ? 'Notre équipe la vérifie : elle sera visible des acheteurs dès son approbation.'
               : 'Retrouvez-le dans « Mes annonces » pour le compléter et le publier.'}
           </p>
+          {result.campaign && ('error' in result.campaign ? (
+            <div className="mt-6 flex items-start gap-2 rounded-2xl bg-primary-fixed p-4 text-left text-body-sm text-primary">
+              <Icon name="error" size={20} className="shrink-0" />
+              <span>Votre annonce est publiée, mais la participation à « {result.campaign.name} » n’a pas abouti : {result.campaign.error} Vous pouvez la rejoindre depuis <button type="button" onClick={() => onNavigate('seller-campaigns')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Campagnes Dilchap</button>.</span>
+            </div>
+          ) : (
+            <div className="mt-6 flex items-start gap-2 rounded-2xl bg-tertiary-soft p-4 text-left text-body-sm text-on-surface">
+              <Icon name="campaign" size={20} className="shrink-0 text-tertiary" />
+              <span>Inscrite à « {result.campaign.name} »{result.campaign.credits > 0 ? ` — ${result.campaign.credits} crédit${result.campaign.credits > 1 ? 's' : ''} débité${result.campaign.credits > 1 ? 's' : ''}` : ''}. Elle apparaîtra dans la campagne dès son approbation (remboursé si elle est refusée).</span>
+            </div>
+          ))}
           {result.submitted && !isEditing && (
             <div className="mt-6 rounded-2xl border border-outline-variant bg-surface-lowest p-5 text-left">
               {boosted ? (
@@ -675,6 +718,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 </span>
               </div>
             </Card>
+
+            {/* Dilchap campaign, joined and paid on publishing */}
+            {!isEditing && requiresPrice && (
+              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} value={campaignChoice} onChange={setCampaignChoice} />
+            )}
 
             {/* Exchange */}
             <Card className={only(3)} icon="handshake" title="Modalités d'échange et de rencontre" subtitle="Aucun transporteur obligatoire : convenez directement du lieu de remise et du mode de règlement avec l'acheteur.">
