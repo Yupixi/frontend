@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Icon from './Icon'
+import BuyCreditsSheet from './BuyCreditsSheet'
+import { creditsLabel } from './Credits'
 import {
   ASSIST_LISTING_MUTATION, LISTING_ADVICE_QUERY, LISTING_ASSIST_AVAILABLE_QUERY,
-  type ListingAdvice, type ListingDraftSuggestion,
+  type ListingAdvice, type ListingAssistOffer, type ListingDraftSuggestion,
 } from '../graphql/listingAssist'
+import { WALLET_BALANCE_QUERY, type WalletBalance } from '../graphql/payments'
 
 const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
 
@@ -27,24 +30,32 @@ async function thumbnail(file: File): Promise<string | null> {
   return null
 }
 
-// "Rédiger avec l'IA": a free open model (Hugging Face) drafts the title,
-// description, category, brand and condition from the cover photo. The
-// seller reviews and can undo.
+// "Rédiger avec l'IA": an open model (Hugging Face) drafts the title,
+// description, category, brand and condition from the cover photo. Paid in
+// credits (price set in the back-office, given back if no draft comes
+// out); a short balance opens the credit purchase. The seller reviews and
+// can undo.
 export function AssistButton({ cover, title, description, onApply }: {
   cover: File | null
   title: string
   description: string
   onApply: (s: ListingDraftSuggestion) => void
 }) {
-  const { data } = useQuery<{ listingAssistAvailable: boolean }>(LISTING_ASSIST_AVAILABLE_QUERY, { fetchPolicy: 'cache-first' })
+  const { data } = useQuery<ListingAssistOffer>(LISTING_ASSIST_AVAILABLE_QUERY, { fetchPolicy: 'cache-and-network' })
+  const cost = data?.listingAssistPrice ?? 0
+  const { data: wallet, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { skip: !data?.listingAssistAvailable || !cost, fetchPolicy: 'cache-and-network' })
   const [assist, { loading }] = useMutation<{ assistListing: ListingDraftSuggestion }>(ASSIST_LISTING_MUTATION)
   const [error, setError] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(false)
+  const [topUp, setTopUp] = useState(false)
   if (!data?.listingAssistAvailable) return null
   const canRun = !!cover || !!title.trim() || !!plain(description)
+  const balance = wallet?.myWallet.credits
+  const missing = cost && balance != null ? Math.max(0, cost - balance) : 0
 
   const run = async () => {
     setError(null)
+    if (missing) { setTopUp(true); return }
     setPreparing(true)
     const photo = cover ? await thumbnail(cover) : null
     setPreparing(false)
@@ -54,6 +65,7 @@ export function AssistButton({ cover, title, description, onApply }: {
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : 'L’assistant est indisponible pour le moment.')
     }
+    if (cost) void refetch()
   }
 
   const busy = loading || preparing
@@ -66,10 +78,18 @@ export function AssistButton({ cover, title, description, onApply }: {
         <button type="button" disabled={busy || !canRun} onClick={() => void run()}
           className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-on-surface px-3.5 py-2.5 text-label-md text-surface-lowest disabled:cursor-default disabled:opacity-50">
           <Icon name={busy ? 'progress_activity' : 'auto_awesome'} size={17} className={busy ? 'animate-spin' : ''} /> {busy ? 'Rédaction…' : 'Rédiger avec l’IA'}
+          {!busy && cost > 0 && <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-label-sm">{creditsLabel(cost)}</span>}
         </button>
       </div>
+      {cost > 0 && balance != null && (
+        <p className="m-0 mt-1 text-body-sm text-on-surface-variant">
+          {missing ? <>Solde : {creditsLabel(balance)}. <button type="button" onClick={() => setTopUp(true)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">Acheter des crédits</button></>
+            : <>Solde : {creditsLabel(balance)} • remboursé si l’IA ne propose rien.</>}
+        </p>
+      )}
       {!canRun && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Ajoutez d’abord une photo ou quelques mots.</p>}
       {error && <p role="alert" className="m-0 mt-1 text-body-sm text-primary">{error}</p>}
+      <BuyCreditsSheet open={topUp} suggested={missing || undefined} onClose={() => setTopUp(false)} onDone={() => { setTopUp(false); void refetch() }} />
     </div>
   )
 }
