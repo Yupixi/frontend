@@ -7,6 +7,7 @@ import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign, type ActiveCampaignListing 
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { thumbnailUrl } from '../lib/media'
 import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
+import { useReveal } from '../lib/reveal'
 
 type FlashOffersProps = {
   onNavigate: (page: any) => void
@@ -49,6 +50,29 @@ function HeroCountdown({ endsAt }: { endsAt: string }) {
             <div className={`text-headline-lg font-extrabold tabular-nums md:text-[40px] ${i === 3 ? 'text-primary-container' : ''}`}>{pad(v as number)}</div>
             <div className="text-[10px] uppercase tracking-wider text-white/60">{label as string}</div>
           </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Behind the hero: two rows of the campaign's pictures scrolling in
+// opposite directions (still for visitors who ask for less motion).
+function HeroMarquee({ images }: { images: string[] }) {
+  if (images.length < 3) return null
+  const fill = (from: string[]) => {
+    const row: string[] = []
+    while (row.length < 12) row.push(...from)
+    return row.slice(0, Math.max(12, from.length))
+  }
+  const rows = [fill(images), fill([...images].reverse())]
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 flex -rotate-6 scale-125 flex-col justify-center gap-4 opacity-35 [mask-image:linear-gradient(90deg,transparent,black_15%,black_85%,transparent)]">
+      {rows.map((row, r) => (
+        <div key={r} className={`marquee-row flex w-max gap-4 ${r ? 'reverse' : ''}`} style={{ '--marquee-speed': r ? '75s' : '60s' } as React.CSSProperties}>
+          {[...row, ...row].map((src, i) => (
+            <img key={i} src={src} alt="" loading="lazy" decoding="async" className="h-24 w-24 shrink-0 rounded-2xl object-cover md:h-36 md:w-36" />
+          ))}
         </div>
       ))}
     </div>
@@ -98,6 +122,8 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
   const iconFor = (slug: string) => categoriesData?.categories.find(c => c.slug === slug)?.icon ?? 'category'
   const contact = (e: ActiveCampaignListing) => () =>
     isLoggedIn && onContactSeller ? onContactSeller(e.listing.seller.id, e.listing.id) : onSelectListing(e.listing.id)
+  const heroImages = useMemo(() => [...new Set(entries.map(imageOf).filter(Boolean))].slice(0, 16), [entries])
+  const grid = useReveal<HTMLDivElement>(flash.map(e => e.id).join())
   const endsIn = countdown ? `${countdown.days ? `${countdown.days}j ` : ''}${pad(countdown.hours)}h ${pad(countdown.minutes)}m` : ''
 
   if (loading) return <p className="p-12 text-center text-on-surface-variant">Chargement…</p>
@@ -117,13 +143,15 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
     <div className="pb-4">
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#1c1b1b] via-[#2b2626] to-[#1c1b1b] px-4 py-12 text-center text-white md:py-16">
-        <div className="pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: color }} />
-        <div className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+        <HeroMarquee images={heroImages} />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1c1b1b]/60 via-[#1c1b1b]/35 to-[#1c1b1b]/80" />
+        <div className="drift pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: color }} />
+        <div className="drift slow pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
         <div className="relative mx-auto max-w-3xl">
           <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label-sm uppercase" style={{ background: color }}><Icon name="bolt" size={14} /> Événement exclusif marketplace</span>
           <h1 className="m-0 mt-4 text-[34px] font-extrabold uppercase leading-tight tracking-tight md:text-display">{campaign.name}</h1>
           <p className="m-0 mx-auto mt-3 max-w-xl text-body-lg text-white/85">
-            {bestDiscount > 0 && <>Jusqu'à <b className="text-emerald-300 underline">-{bestDiscount}%</b> sur la seconde main. </>}
+            {bestDiscount > 0 && <>Jusqu'à <b className="text-emerald-300 underline">-{bestDiscount}%</b> sur une sélection d’articles. </>}
             {campaign.description || 'Des articles uniques à prix cassés, prêts pour une remise en main propre immédiate.'}
           </p>
           {campaign.endsAt && <HeroCountdown endsAt={campaign.endsAt} />}
@@ -139,8 +167,61 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
       </section>
 
       <div className="mx-auto max-w-[1320px] px-4 md:px-8 lg:px-12">
+        {/* Flash grid */}
+        <section className="mt-8">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1 text-label-sm uppercase text-primary"><Timer size={14} /> Chrono expiration imminente</div>
+              <h2 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Ventes Flash &amp; Pépites Uniques</h2>
+            </div>
+            <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {entries.length} article{entries.length > 1 ? 's' : ''} à prix cassé</span>
+          </div>
+          <div ref={grid} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+            {flash.map((e, i) => {
+              const sale = salePrice(e)
+              const d = discountOf(e)
+              const fav = favorites.includes(e.listing.id)
+              return (
+                <div key={e.id} className="reveal" style={{ '--i': i % 8 } as React.CSSProperties}>
+                  <div onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-card-hover">
+                    <div className="relative aspect-square bg-surface-container-low">
+                      {imageOf(e) ? <img loading="lazy" decoding="async" src={imageOf(e)} alt={e.listing.title} className="reveal-img h-full w-full object-cover group-hover:scale-110" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
+                      {d > 0 && <span className="shine absolute left-2 top-2 rounded-md px-2 py-0.5 text-label-sm uppercase text-white" style={{ background: color }}>-{d}% Flash</span>}
+                      <button onClick={ev => { ev.stopPropagation(); onToggleFavorite(e.listing.id) }} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm" aria-label="Favori">
+                        <Heart size={17} fill={fav ? 'var(--primary)' : 'none'} color={fav ? 'var(--primary)' : 'var(--fg)'} />
+                      </button>
+                      {endsIn && (
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/70 px-2 py-1 text-[11px] text-white">
+                          <span className="flex items-center gap-1"><Timer size={12} className="text-primary-container" /> Fin dans {endsIn}</span>
+                          <span>Pièce unique</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col p-3">
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-on-surface-variant">
+                        <span className="truncate">{e.listing.brand || e.listing.category.name}</span>
+                        {e.listing.condition && e.listing.condition !== 'N/A' && <span className="flex shrink-0 items-center gap-0.5"><CheckCircle2 size={12} className="text-tertiary" /> {e.listing.condition}</span>}
+                      </div>
+                      <div className="mt-0.5 line-clamp-1 text-label-lg text-on-surface">{e.listing.title}</div>
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-headline-sm font-extrabold text-primary"><Price amount={sale ?? e.listing.price} currency={e.listing.currency} /></span>
+                        {sale != null && <span className="text-body-sm text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></span>}
+                      </div>
+                      {d > 0 && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full" style={{ width: `${Math.min(100, d)}%`, background: color }} /></div>}
+                      <div className="mt-2 flex items-center gap-1 text-[11px] text-tertiary"><Handshake size={13} /> Remise en main propre gratuite</div>
+                      <button onClick={ev => { ev.stopPropagation(); contact(e)() }} className="mt-2 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-2 text-label-md text-on-surface hover:bg-primary hover:text-white">
+                        <MessageSquare size={15} /> Discuter avec le vendeur
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
         {/* Reassurance */}
-        <section className="-mt-6 grid gap-3 md:grid-cols-3">
+        <section className="mt-10 grid gap-3 md:grid-cols-3">
           {[
             { icon: <Percent size={19} />, box: 'bg-tertiary-soft text-tertiary', title: '0% frais marketplace', text: 'Zéro commission, même en période de rabais extrêmes.' },
             { icon: <MessageSquare size={19} />, box: 'bg-primary-fixed text-primary', title: 'Négociation en direct', text: 'Proposez une offre instantanée au vendeur par messagerie.' },
@@ -151,57 +232,6 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               <div><div className="text-label-lg text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
             </div>
           ))}
-        </section>
-
-        {/* Flash grid */}
-        <section className="mt-10">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-1 text-label-sm uppercase text-primary"><Timer size={14} /> Chrono expiration imminente</div>
-              <h2 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Ventes Flash &amp; Pépites Uniques</h2>
-            </div>
-            <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {entries.length} article{entries.length > 1 ? 's' : ''} à prix cassé</span>
-          </div>
-          <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
-            {flash.map(e => {
-              const sale = salePrice(e)
-              const d = discountOf(e)
-              const fav = favorites.includes(e.listing.id)
-              return (
-                <div key={e.id} onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-card-hover">
-                  <div className="relative aspect-square bg-surface-container-low">
-                    {imageOf(e) ? <img loading="lazy" decoding="async" src={imageOf(e)} alt={e.listing.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
-                    {d > 0 && <span className="absolute left-2 top-2 rounded-md px-2 py-0.5 text-label-sm uppercase text-white" style={{ background: color }}>-{d}% Flash</span>}
-                    <button onClick={ev => { ev.stopPropagation(); onToggleFavorite(e.listing.id) }} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm" aria-label="Favori">
-                      <Heart size={17} fill={fav ? 'var(--primary)' : 'none'} color={fav ? 'var(--primary)' : 'var(--fg)'} />
-                    </button>
-                    {endsIn && (
-                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/70 px-2 py-1 text-[11px] text-white">
-                        <span className="flex items-center gap-1"><Timer size={12} className="text-primary-container" /> Fin dans {endsIn}</span>
-                        <span>Pièce unique</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col p-3">
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-on-surface-variant">
-                      <span className="truncate">{e.listing.brand || e.listing.category.name}</span>
-                      {e.listing.condition && e.listing.condition !== 'N/A' && <span className="flex shrink-0 items-center gap-0.5"><CheckCircle2 size={12} className="text-tertiary" /> {e.listing.condition}</span>}
-                    </div>
-                    <div className="mt-0.5 line-clamp-1 text-label-lg text-on-surface">{e.listing.title}</div>
-                    <div className="mt-1 flex items-baseline gap-2">
-                      <span className="text-headline-sm font-extrabold text-primary"><Price amount={sale ?? e.listing.price} currency={e.listing.currency} /></span>
-                      {sale != null && <span className="text-body-sm text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></span>}
-                    </div>
-                    {d > 0 && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full" style={{ width: `${Math.min(100, d)}%`, background: color }} /></div>}
-                    <div className="mt-2 flex items-center gap-1 text-[11px] text-tertiary"><Handshake size={13} /> Remise en main propre gratuite</div>
-                    <button onClick={ev => { ev.stopPropagation(); contact(e)() }} className="mt-2 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-2 text-label-md text-on-surface hover:bg-primary hover:text-white">
-                      <MessageSquare size={15} /> Discuter avec le vendeur
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
         </section>
 
         {/* Thematic selections */}
