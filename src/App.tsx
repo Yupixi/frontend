@@ -715,7 +715,7 @@ export default function App() {
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
         <PaymentReturn isLoggedIn={isLoggedIn} />
-        <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+        <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
   }
@@ -741,7 +741,7 @@ export default function App() {
       >
         <Suspense fallback={<PageFallback />}>{renderPage()}</Suspense>
       </Layout>
-      <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}
       {isLoggedIn && pushStatus && !showUpdateBanner && !showInstallBanner && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
