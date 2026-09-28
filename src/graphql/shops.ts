@@ -227,6 +227,8 @@ export const CREATE_SHOP_SALE_MUTATION = gql`mutation CreateShopSale($input: Sho
 export const UPDATE_SHOP_SALE_MUTATION = gql`mutation UpdateShopSale($id: ID!, $input: ShopSaleInput!) { updateShopSale(id: $id, input: $input) { ${SALE_FIELDS} } }`
 export const END_SHOP_SALE_MUTATION = gql`mutation EndShopSale($id: ID!) { endShopSale(id: $id) { ${SALE_FIELDS} } }`
 export const JOIN_CAMPAIGN_MUTATION = gql`mutation JoinCampaign($input: JoinCampaignInput!) { joinCampaign(input: $input) { ${CAMPAIGN_FIELDS} } }`
+// From the listing wizard: one listing, paid in credits at once.
+export const JOIN_CAMPAIGN_WITH_LISTING_MUTATION = gql`mutation JoinCampaignWithListing($input: JoinCampaignWithListingInput!) { joinCampaignWithListing(input: $input) { ${CAMPAIGN_FIELDS} } }`
 // Dilchap campaigns open to shops and badge holders ("Campagnes Dilchap" page).
 export const OPEN_CAMPAIGNS_QUERY = gql`query OpenCampaigns { openShopCampaigns { ${CAMPAIGN_FIELDS} } }`
 export const WITHDRAW_CAMPAIGN_ENTRY_MUTATION = gql`mutation WithdrawCampaignEntry($entryId: ID!) { withdrawCampaignEntry(entryId: $entryId) }`
