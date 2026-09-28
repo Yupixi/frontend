@@ -25,17 +25,12 @@ import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
+import { useLists } from '../../lib/lists'
 
 const MAX_PHOTOS = 8
 const TITLE_MAX = 80
 const DRAFT_KEY = 'dilchap_listing_draft'
 
-const CONDITIONS = [
-  { value: 'Neuf', hint: 'Jamais utilisé, avec emballage d’origine', icon: 'new_releases' },
-  { value: 'Très bon état', hint: 'Peu utilisé, micro-traces éventuelles', icon: 'thumb_up' },
-  { value: 'Bon état', hint: 'Traces d’usage normales, fonctionnel', icon: 'check' },
-  { value: 'Pour pièces', hint: 'Défaut technique ou à restaurer', icon: 'build' },
-]
 
 // Mockup groups mobile wallets; each group maps to backend payment codes.
 const PAYMENT_GROUPS = [
@@ -140,13 +135,14 @@ const FIELD_LABELS: Record<FieldKey, string> = {
 // Mobile wizard step -> required fields it holds, in on-screen order.
 const STEP_FIELDS: Record<number, FieldKey[]> = { 1: ['title', 'category', 'condition', 'description'], 2: ['price'], 3: ['city'] }
 
-// Abidjan quick picks for the mockup's "Zone de remise" chips.
-const ABIDJAN_ZONES = ['Cocody', 'Marcory', 'Plateau', 'Yopougon', 'Treichville', 'Koumassi']
-const ABIDJAN_SPOTS = ['Playce Marcory', 'Cap Sud', 'Sococé Deux-Plateaux']
+// Abidjan quick picks for the "Zone de remise" chips: the first communes
+// and meetup spots of « Listes de référence ».
+const QUICK_PICKS = 6
 
 // "Déposer une annonce" mockup: one guided form (photos → infos → prix →
 // modalités d'échange) with a sticky earnings/preview column.
 export default function PostListing({ onNavigate, currentUser, onLogout, listingId }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string }) {
+  const lists = useLists()
   const isEditing = !!listingId
   const noCommission = useNoCommissionClaims()
   useEffect(() => { if (!getAccessToken()) onNavigate('auth') }, [onNavigate])
@@ -653,11 +649,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 {needsCondition && <div data-field="condition">
                   <span className="mb-1.5 block text-label-md text-on-surface">État de l'objet <span className="text-primary">*</span></span>
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4" role="radiogroup" aria-label="État de l'objet">
-                    {CONDITIONS.map(c => {
+                    {lists.conditions.map(c => {
                       const on = form.condition === c.value
                       return (
                         <button key={c.value} type="button" role="radio" aria-checked={on} onClick={() => set('condition', c.value)} className={`cursor-pointer rounded-xl border-[1.5px] border-solid p-3 text-left ${on ? 'border-primary bg-primary-fixed/40' : bad('condition') ? 'border-primary bg-surface-container-low' : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'}`}>
-                          <span className="flex items-center justify-between text-label-md text-on-surface">{c.value} <Icon name={c.icon} size={17} className={on ? 'text-primary' : 'text-on-surface-variant'} /></span>
+                          <span className="flex items-center justify-between text-label-md text-on-surface">{c.value} <CategoryIcon icon={c.icon} size={17} className={on ? 'text-primary' : 'text-on-surface-variant'} /></span>
                           <span className="mt-1 block text-body-sm text-on-surface-variant">{c.hint}</span>
                         </button>
                       )
@@ -790,7 +786,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   <div className="relative"><MapPin size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.locationLabel} onChange={e => set('locationLabel', e.target.value)} placeholder="Cocody (Angré 8e Tranche)" /></div>
                   {isAbidjan && (
                     <span className="mt-2 flex flex-wrap gap-1.5">
-                      {ABIDJAN_ZONES.map(z => {
+                      {lists.communes.slice(0, QUICK_PICKS).map(z => {
                         const on = form.locationLabel.trim() === z
                         return <button key={z} type="button" aria-pressed={on} onClick={() => set('locationLabel', on ? '' : z)} className={`h-9 cursor-pointer rounded-lg border border-solid px-3 text-label-md ${on ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>{z}</button>
                       })}
@@ -805,9 +801,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     <div className="mt-2 rounded-xl bg-tertiary-soft/60 p-3">
                       <span className="mb-2 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={14} /> Lieux publics et fréquentés</span>
                       <span className="flex flex-wrap gap-1.5">
-                        {ABIDJAN_SPOTS.map(p => (
-                          <button key={p} type="button" aria-pressed={form.meetupSpot === p} onClick={() => set('meetupSpot', form.meetupSpot === p ? '' : p)} className={`flex h-9 cursor-pointer items-center gap-1 rounded-lg border border-solid px-2.5 text-label-md ${form.meetupSpot === p ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
-                            <Icon name="storefront" size={15} /> {p}
+                        {lists.meetupSpots.slice(0, QUICK_PICKS).map(s => s.name).map(p => (
+                          <button key={p} type="button" aria-pressed={form.meetupSpot === p} onClick={() => set('meetupSpot', form.meetupSpot === p ? '' : p)} className={`flex h-9 min-w-0 max-w-full cursor-pointer items-center gap-1 rounded-lg border border-solid px-2.5 text-label-md ${form.meetupSpot === p ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
+                            <Icon name="storefront" size={15} className="shrink-0" /> <span className="truncate">{p}</span>
                           </button>
                         ))}
                       </span>

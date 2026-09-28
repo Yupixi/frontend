@@ -4,6 +4,7 @@ import { formatNumber } from '../lib/format'
 import type { ListingFacets, ListingSort } from '../graphql/listings'
 import type { RemoteCategory } from '../graphql/categories'
 import PaymentLogo from './PaymentLogo'
+import { useLists } from '../lib/lists'
 
 // "Filtres de recherche" mobile bottom sheet (Stitch mockup). Filters
 // apply live, the result count comes from the search query.
@@ -19,13 +20,6 @@ const BUDGETS = [
   { label: '50 000 F - 150 000 F', min: 50_000, max: 150_000 },
   { label: 'Plus de 150 000 F', min: 150_000 },
 ]
-const CONDITION_HINTS: Record<string, string> = {
-  Neuf: 'Jamais utilisé, emballage d’origine',
-  'Comme neuf': 'Impeccable, sans aucun défaut visible',
-  'Très bon état': 'Légères marques d’usage minimes',
-  'Bon état': 'Fonctionnel avec traces visibles d’utilisation',
-  'Pour pièces': 'Défaut technique ou à restaurer',
-}
 
 export type SheetState = {
   sort: ListingSort
@@ -67,6 +61,8 @@ function Section({ icon, title, sub, children }: { icon: string; title: string; 
 }
 
 export default function FilterSheet({ open, state, onChange, onReset, onClose, facets, categories, total, nearCity }: Props) {
+  const lists = useLists()
+  const conditionHint = (v: string) => lists.conditions.find(c => c.value === v)?.hint
   const hist = facets?.priceHistogram ?? []
   const maxCount = Math.max(1, ...hist.map(b => b.count))
   const min = state.minPrice ? Number(state.minPrice) : null
@@ -180,7 +176,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
                       <input type="checkbox" checked={on} onChange={() => onChange({ conditions: toggle(state.conditions, c.value) })} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
                       <span>
                         <span className="block text-label-md text-on-surface">{c.label} <span className="text-label-sm text-on-surface-variant">({c.count})</span></span>
-                        {CONDITION_HINTS[c.value] && <span className="block text-body-sm text-on-surface-variant">{CONDITION_HINTS[c.value]}</span>}
+                        {conditionHint(c.value) && <span className="block text-body-sm text-on-surface-variant">{conditionHint(c.value)}</span>}
                       </span>
                     </label>
                   )

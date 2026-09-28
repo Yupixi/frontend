@@ -17,6 +17,7 @@ import {
 import { uploadImages, uploadShopDocument } from '../../lib/upload'
 import Credits from '../../components/Credits'
 import type { AuthUser } from '../../graphql/auth'
+import { useLists } from '../../lib/lists'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -25,8 +26,6 @@ type Props = {
   onOpenShop: (slug: string) => void
 }
 
-const CITIES = ['Abidjan', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Korhogo', 'Man', 'Gagnoa']
-const COMMUNES = ['Abobo', 'Adjamé', 'Attécoubé', 'Cocody', 'Koumassi', 'Marcory', 'Plateau', 'Port-Bouët', 'Treichville', 'Yopougon', 'Bingerville', 'Songon', 'Anyama']
 const fdate = (iso: string, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }) => new Date(iso).toLocaleDateString('fr-FR', opts)
 const ref = (id: string) => `BTQ-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
 const DOC_REASONS: ShopRejectReason[] = ['DOC_UNREADABLE', 'DOC_INVALID', 'NUMBER_MISMATCH', 'OWNER_MISMATCH']
@@ -132,6 +131,7 @@ function HoursEditor({ hours, onChange }: { hours: (OpeningHours | null)[], onCh
 }
 
 function IdentityFields({ form, set, categories, withName }: { form: Form, set: (p: Partial<Form>) => void, categories: { id: string, name: string }[], withName: boolean }) {
+  const lists = useLists()
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -161,14 +161,14 @@ function IdentityFields({ form, set, categories, withName }: { form: Form, set: 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Ville" required>
           <Select value={form.city} onChange={e => set({ city: e.target.value, commune: e.target.value === 'Abidjan' ? form.commune : '' })} className={`${inputCls} cursor-pointer`}>
-            {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            {[...new Set([form.city, ...lists.cities].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
         </Field>
         <Field label={form.city === 'Abidjan' ? 'Commune' : 'Quartier'}>
           {form.city === 'Abidjan' ? (
             <Select value={form.commune} onChange={e => set({ commune: e.target.value })} className={`${inputCls} cursor-pointer`}>
               <option value="">Choisir</option>
-              {COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+              {[...new Set([form.commune, ...lists.communes].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
             </Select>
           ) : <input value={form.commune} onChange={e => set({ commune: e.target.value })} className={inputCls} maxLength={60} />}
         </Field>

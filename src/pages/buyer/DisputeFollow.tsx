@@ -8,11 +8,12 @@ import { AccountLayout } from '../account/AccountLayout'
 import { DisputeStatusChip, DisputeTimeline, MediationCard, hoursLeft } from '../../components/DisputeParts'
 import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
 import {
-  ANSWER_DISPUTE_PROPOSAL_MUTATION, DISPUTE_REASON_LABELS, MY_BUYER_DISPUTES_QUERY, MY_DISPUTE_STATS_QUERY, disputeIsOpen,
+  ANSWER_DISPUTE_PROPOSAL_MUTATION, MY_BUYER_DISPUTES_QUERY, MY_DISPUTE_STATS_QUERY, disputeIsOpen,
   type Dispute, type DisputeStats,
 } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
+import { useDisputeLabel } from '../../lib/lists'
 
 type Props = {
   focusDisputeId?: string
@@ -131,6 +132,7 @@ function Decision({ d, onDone }: { d: Dispute; onDone: () => void }) {
 
 // "Suivi & médiation de litige" (desktop) / "Suivi des litiges" (mobile).
 export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDispute, onOpenConversation, currentUser, onLogout }: Props) {
+  const reasonLabel = useDisputeLabel()
   const { data, loading, refetch } = useQuery<{ myBuyerDisputes: Dispute[] }>(MY_BUYER_DISPUTES_QUERY, { fetchPolicy: 'cache-and-network', pollInterval: 30_000 })
   const { data: statsData } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)
   const all = data?.myBuyerDisputes ?? []
@@ -175,7 +177,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                 <Decision key={d.id + d.status} d={d} onDone={() => void refetch()} />
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:order-3 md:p-5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface"><span className="md:hidden">Historique du litige</span><span className="max-md:hidden">Journal des événements &amp; échanges</span></h2><p className="m-0 text-body-sm text-on-surface-variant">Motif : {DISPUTE_REASON_LABELS[d.reason]}</p></div>
+                    <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface"><span className="md:hidden">Historique du litige</span><span className="max-md:hidden">Journal des événements &amp; échanges</span></h2><p className="m-0 text-body-sm text-on-surface-variant">Motif : {reasonLabel(d.reason)}</p></div>
                     <span className="shrink-0 whitespace-nowrap rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">{d.events.length} entrée{d.events.length > 1 ? 's' : ''}</span>
                   </div>
                   <div className="mt-4"><DisputeTimeline d={d} perspective="BUYER" /></div>

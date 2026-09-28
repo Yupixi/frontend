@@ -7,7 +7,7 @@ import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import { ANTI_FRAUD_RULES, DisputeStatusChip, DisputeTimeline, MediationCard, PhotoPicker, hoursLeft } from '../../components/DisputeParts'
 import {
-  DISPUTE_REASON_ICONS, DISPUTE_REASON_LABELS, MY_DISPUTE_STATS_QUERY, MY_SELLER_DISPUTES_QUERY, RESPOND_TO_DISPUTE_MUTATION, disputeIsOpen,
+  DISPUTE_REASON_ICONS, DISPUTE_REASONS, MY_DISPUTE_STATS_QUERY, MY_SELLER_DISPUTES_QUERY, RESPOND_TO_DISPUTE_MUTATION, disputeIsOpen,
   type Dispute, type DisputeProposal, type DisputeReason, type DisputeStats, type DisputeStatus,
 } from '../../graphql/sellerTools'
 import { MY_SALES_ORDERS_QUERY, type SalesOrder } from '../../graphql/sellerHub'
@@ -18,6 +18,7 @@ import Select from '../../components/Select'
 import BottomSheet from '../../components/BottomSheet'
 import SellerBadge from '../../components/SellerBadge'
 import { BADGE_LABEL } from '../../graphql/badges'
+import { useDisputeLabel } from '../../lib/lists'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; focusDisputeId?: string; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -33,10 +34,10 @@ const PAGE = 5
 const commune = (d: Dispute) => d.meetupPlace ?? d.listing?.city ?? '—'
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-function exportCsv(rows: Dispute[]) {
+function exportCsv(rows: Dispute[], reasonLabel: (r: DisputeReason) => string) {
   const data = [
     ['Référence', 'Date', 'Article', 'Montant', 'Motif', 'Lieu', 'Statut'],
-    ...rows.map(d => [d.reference, d.createdAt.slice(0, 16).replace('T', ' '), d.listing?.title ?? '', d.amount, DISPUTE_REASON_LABELS[d.reason], commune(d), d.verdict ?? d.status]),
+    ...rows.map(d => [d.reference, d.createdAt.slice(0, 16).replace('T', ' '), d.listing?.title ?? '', d.amount, reasonLabel(d.reason), commune(d), d.verdict ?? d.status]),
   ]
   const csv = data.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
   const a = document.createElement('a')
@@ -113,6 +114,7 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
 }
 
 function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectListing: (id: string) => void; onDone: () => void }) {
+  const reasonLabel = useDisputeLabel()
   const left = hoursLeft(d.deadlineAt)
   const open = disputeIsOpen(d.status)
   return (
@@ -167,7 +169,7 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
             </div>
             <div className="rounded-xl border border-outline-variant p-3">
               <div className="text-label-sm uppercase text-on-surface-variant">Motif déclaré</div>
-              <div className="mt-2 flex items-center gap-1 text-label-md text-primary"><Icon name={DISPUTE_REASON_ICONS[d.reason]} size={16} /> {DISPUTE_REASON_LABELS[d.reason]}</div>
+              <div className="mt-2 flex items-center gap-1 text-label-md text-primary"><Icon name={DISPUTE_REASON_ICONS[d.reason]} size={16} /> {reasonLabel(d.reason)}</div>
               <p className="m-0 mt-1 line-clamp-3 text-body-sm italic text-on-surface-variant">« {d.description} »</p>
             </div>
           </div>
@@ -183,6 +185,7 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
 }
 
 function ReportModal({ onClose }: { onClose: () => void }) {
+  const reasonLabel = useDisputeLabel()
   const { data } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const buyers = useMemo(() => {
     const seen = new Map<string, SalesOrder['buyer']>()
@@ -212,12 +215,12 @@ function ReportModal({ onClose }: { onClose: () => void }) {
             </label>
             <label className="mt-3 block text-label-md text-on-surface">Motif
               <Select value={reason} onChange={e => setReason(e.target.value as DisputeReason)} className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-body-md text-on-surface">
-                {(Object.keys(DISPUTE_REASON_LABELS) as DisputeReason[]).map(r => <option key={r} value={r}>{DISPUTE_REASON_LABELS[r]}</option>)}
+                {DISPUTE_REASONS.map(r => <option key={r} value={r}>{reasonLabel(r)}</option>)}
               </Select>
             </label>
             <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="Décrivez ce qui s'est passé…" className="mt-3 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
             {error && <p className="m-0 mt-1 text-body-sm text-primary">{error.message}</p>}
-            <button disabled={!userId || loading} onClick={() => void report({ variables: { targetType: 'USER', targetUserId: userId, reason: DISPUTE_REASON_LABELS[reason], message: message.trim() || undefined } })} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white disabled:opacity-60">
+            <button disabled={!userId || loading} onClick={() => void report({ variables: { targetType: 'USER', targetUserId: userId, reason: reasonLabel(reason), message: message.trim() || undefined } })} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white disabled:opacity-60">
               <Icon name="flag" size={18} /> Envoyer le signalement
             </button>
           </>
@@ -230,6 +233,7 @@ function ReportModal({ onClose }: { onClose: () => void }) {
 // "Gestion des Litiges & Signalements" (desktop + mobile "Dispute Detail
 // Room"): the seller answers disputes opened on their hand-overs.
 export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, currentUser, onLogout }: Props) {
+  const reasonLabel = useDisputeLabel()
   const { data, refetch } = useQuery<{ mySellerDisputes: Dispute[] }>(MY_SELLER_DISPUTES_QUERY)
   const { data: statsData, refetch: refetchStats } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)
   const all = data?.mySellerDisputes ?? []
@@ -364,7 +368,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
             </label>
             <Select value={reason} onChange={e => { setReason(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
               <option value="">Tous les motifs de litige</option>
-              {(Object.keys(DISPUTE_REASON_LABELS) as DisputeReason[]).map(r => <option key={r} value={r}>{DISPUTE_REASON_LABELS[r]}</option>)}
+              {DISPUTE_REASONS.map(r => <option key={r} value={r}>{reasonLabel(r)}</option>)}
             </Select>
             <Select value={place} onChange={e => { setPlace(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
               <option value="">Tous les lieux de remise</option>
@@ -382,7 +386,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
           <div className="flex flex-col gap-3">
             <Select value={reason} onChange={e => { setReason(e.target.value); setPage(1) }} className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface">
               <option value="">Tous les motifs de litige</option>
-              {(Object.keys(DISPUTE_REASON_LABELS) as DisputeReason[]).map(r => <option key={r} value={r}>{DISPUTE_REASON_LABELS[r]}</option>)}
+              {DISPUTE_REASONS.map(r => <option key={r} value={r}>{reasonLabel(r)}</option>)}
             </Select>
             <Select value={place} onChange={e => { setPlace(e.target.value); setPage(1) }} className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface">
               <option value="">Tous les lieux de remise</option>
@@ -406,7 +410,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
               <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Historique<span className="hidden md:inline"> des litiges &amp; signalements</span></h2>
               <p className="m-0 mt-1 hidden text-body-sm text-on-surface-variant md:block">Historique consolidé de vos contestations traitées avec l'équipe de modération Dilchap.</p>
             </div>
-            <button onClick={() => exportCsv(filtered)} disabled={!filtered.length} className="hidden cursor-pointer md:flex items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface hover:text-primary"><Icon name="download" size={17} /> Exporter le registre de conformité (.CSV)</button>
+            <button onClick={() => exportCsv(filtered, reasonLabel)} disabled={!filtered.length} className="hidden cursor-pointer md:flex items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface hover:text-primary"><Icon name="download" size={17} /> Exporter le registre de conformité (.CSV)</button>
           </div>
           <div className="overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
             <div className="hidden overflow-x-auto md:block">
@@ -426,7 +430,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
                           <div className="min-w-0"><div className="max-w-[200px] truncate text-label-md text-on-surface">{d.listing?.title ?? 'Annonce supprimée'}</div><div className="text-label-sm text-primary"><Price amount={d.amount} /></div></div>
                         </div>
                       </td>
-                      <td className="max-w-[240px] px-4 py-3"><div className="flex items-center gap-1 text-label-sm text-primary"><Icon name={DISPUTE_REASON_ICONS[d.reason]} size={14} /> {DISPUTE_REASON_LABELS[d.reason]}</div><div className="truncate text-body-sm text-on-surface-variant">{d.description}</div></td>
+                      <td className="max-w-[240px] px-4 py-3"><div className="flex items-center gap-1 text-label-sm text-primary"><Icon name={DISPUTE_REASON_ICONS[d.reason]} size={14} /> {reasonLabel(d.reason)}</div><div className="truncate text-body-sm text-on-surface-variant">{d.description}</div></td>
                       <td className="px-4 py-3 text-body-sm text-on-surface"><span className="flex items-center gap-1"><Icon name="location_on" size={14} className="text-on-surface-variant" /> {commune(d)}</span></td>
                       <td className="px-4 py-3"><DisputeStatusChip d={d} /></td>
                       <td className="px-4 py-3"><button onClick={() => focus(d.id)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant hover:text-primary" aria-label="Voir le dossier"><Icon name="visibility" size={20} /></button></td>
@@ -446,7 +450,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">
-                    <span className="truncate">{DISPUTE_REASON_LABELS[d.reason]}</span><DisputeStatusChip d={d} />
+                    <span className="truncate">{reasonLabel(d.reason)}</span><DisputeStatusChip d={d} />
                   </div>
                 </button>
               ))}

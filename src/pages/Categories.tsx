@@ -11,6 +11,7 @@ import Select from '../components/Select'
 import { thumbnailUrl } from '../lib/media'
 import PaymentLogo from '../components/PaymentLogo'
 import { Claim, useNoCommissionClaims } from '../lib/site'
+import { useLists } from '../lib/lists'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -18,7 +19,6 @@ type CategoriesProps = {
   onSearch?: (term: string, preset?: SearchPreset) => void
 }
 
-const CITIES = ['Abidjan', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Korhogo']
 // Tile accents cycle like the mockup (red / neutral / green).
 const TONES = ['bg-primary-fixed text-primary', 'bg-primary-fixed/60 text-primary', 'bg-tertiary-soft text-tertiary', 'bg-surface-container text-on-surface', 'bg-primary-fixed text-primary', 'bg-tertiary-soft text-tertiary']
 const TRUST = [
@@ -29,6 +29,7 @@ const TRUST = [
 
 // "Toutes les catégories" (Stitch desktop mockup; stacks on mobile).
 export default function Categories({ onNavigate, onCategorySelect, onSearch }: CategoriesProps) {
+  const lists = useLists()
   const noCommission = useNoCommissionClaims()
   const { data, loading } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 10 } })
@@ -68,7 +69,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
             <Icon name="location_on" size={18} className="text-primary" />
             <Select value={city} onChange={e => setCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-body-md text-on-surface outline-none">
               <option value="">Toute la Côte d'Ivoire</option>
-              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {lists.cities.map(c => <option key={c} value={c}>{c}</option>)}
             </Select>
           </label>
           <button type="submit" className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white hover:bg-primary-dark"><Icon name="tune" size={18} /> Explorer</button>
