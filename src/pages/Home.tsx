@@ -1,15 +1,16 @@
 import EmptyState from '../components/EmptyState'
-import { useState, useEffect, useMemo } from 'react'
+import { Fragment, useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   ArrowLeft, ArrowRight, ChevronRight, Search, Timer, Flame, Loader2,
-  Percent, MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
+  MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
 import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type ListingSort, type RemoteListing } from '../graphql/listings'
 import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign } from '../graphql/content'
+import { DEFAULT_HOME, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
 import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
 import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
@@ -84,35 +85,11 @@ function Accent({ children }: { children: React.ReactNode }) {
   return <span className="bg-gradient-to-r from-red-500 to-amber-400 bg-clip-text font-extrabold text-transparent">{children}</span>
 }
 
-// Desktop hero slides — imagery from the Stitch mockup (public/stitch).
-const SLIDES = [
-  {
-    image: '/stitch/hero-0.webp', badge: 'Plateforme N°1 à Abidjan', badgeIcon: 'local_fire_department', badgeClass: 'bg-primary/25 border-primary/40', iconClass: 'text-amber-400',
-    title: <>Achetez et vendez vos <Accent>pépites mode &amp; sneakers</Accent> à Abidjan</>,
-    text: "Zéro frais, zéro commission. Des milliers de pièces uniques entre particuliers à Cocody, Marcory, Plateau et partout en Côte d'Ivoire.",
-    tags: ['✨ #ModeVintage', '👟 #SneakersRares', '👗 #WaxContemporain', '⚡ #VenteFlash'],
-  },
-  {
-    image: '/stitch/hero-1.webp', badge: 'High-Tech & Bons Plans', badgeIcon: 'smartphone', badgeClass: 'bg-blue-500/25 border-blue-400/40', iconClass: 'text-blue-300',
-    title: <>Donnez une seconde vie à votre <Accent>High-Tech &amp; Audio</Accent> au meilleur prix</>,
-    text: 'Smartphones, casques, consoles et accessoires sans intermédiaire. Négociez directement sur le chat.',
-    tags: ['🎧 #CasquesSansFil', '📱 #iPhonesReconditionnés', '💻 #LaptopsPro', '🎮 #GamingAbidjan'],
-  },
-  {
-    image: '/stitch/hero-2.webp', badge: 'Affaires en or', badgeIcon: 'diamond', badgeClass: 'bg-tertiary/30 border-white/30', iconClass: 'text-emerald-300',
-    title: <>Trouvez les <Accent>meilleures affaires directes</Accent> 100% P2P</>,
-    text: 'Échangez en direct en lieu sécurisé avec Wave, Orange Money ou espèces. Remise en main propre sans surprise.',
-    tags: ['📍 #RemiseSécurisée', '🤝 #0Commission', '📲 #PaiementWave', '🛡️ #VendeursVérifiés'],
-  },
-]
-const SLIDE_MS = 6000
+// "*mot*" in a back-office title marks the highlighted words.
+function Title({ text }: { text: string }) {
+  return <>{text.split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <Accent key={i}>{part}</Accent> : part))}</>
+}
 
-const TRENDS: { label: string, term?: string, maxPrice?: number }[] = [
-  { label: 'Sneakers authentiques', term: 'sneakers' },
-  { label: 'High-Tech', term: 'iphone' },
-  { label: 'Dressing', term: 'robe' },
-  { label: 'Moins de 20 000 F', maxPrice: 20_000 },
-]
 const MAX_PRICES = [20_000, 50_000, 150_000, 500_000]
 
 // hh:mm:ss (or "Xj hh:mm") until a campaign's end — ticks every second.
@@ -164,6 +141,12 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
+
+  // Content and layout set in the back-office (« Page d'accueil »).
+  const { data: homeData } = useQuery<{ homeConfig: HomeConfig }>(HOME_CONFIG_QUERY, { fetchPolicy: 'cache-and-network' })
+  const home = homeData?.homeConfig ?? DEFAULT_HOME
+  const SLIDES = home.hero.slides
+  const SLIDE_MS = Math.max(3, home.hero.intervalSec) * 1000
 
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const categories = categoriesData?.categories ?? []
@@ -247,7 +230,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   useEffect(() => {
     const t = setTimeout(() => setSlide(s => (s + 1) % SLIDES.length), SLIDE_MS)
     return () => clearTimeout(t)
-  }, [slide])
+  }, [slide, SLIDES.length, SLIDE_MS])
+  // A config with fewer slides than the current index (BO edit).
+  const current = SLIDES[slide % SLIDES.length] ?? SLIDES[0]
   const goSlide = (i: number) => setSlide((i + SLIDES.length) % SLIDES.length)
   // Only the first slide's photo loads with the page; each later one when
   // the slider gets one step away from it (they were all fetched upfront,
@@ -287,41 +272,298 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     </button>
   )
 
+  const visibleOrder = home.sections.filter(x => x.visible).map(x => x.key)
+  // Desktop: the reassurance band sits full width under the header when it
+  // comes first, inline otherwise; the mobile campaign banner has its
+  // desktop twin next to the hero.
+  const bandOnTop = visibleOrder[0] === 'reassurance'
+  const desktopOrder = visibleOrder.filter(k => k !== 'campaign' && !(k === 'reassurance' && bandOnTop))
+  const mobileOrder = visibleOrder.filter(k => k !== 'sellCta' && k !== 'howItWorks')
+  const reassuranceBand = (top: boolean) => (
+    <section className={top ? 'bg-surface-lowest shadow-sm' : 'mt-10 rounded-2xl bg-surface-lowest shadow-sm'}>
+              <div className={`mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 py-2.5 ${top ? 'px-12' : 'px-6'}`}>
+                {home.reassurance.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${['bg-primary/10 text-primary', 'bg-tertiary/10 text-tertiary', 'bg-primary-container/15 text-primary', 'bg-surface-container text-on-surface'][i % 4]}`}><CategoryIcon icon={item.icon} size={20} /></span>
+                    <div>
+                      <p className="m-0 text-label-md font-bold text-on-surface">{item.title}</p>
+                      <p className="m-0 text-body-sm text-on-surface-variant">{item.text}</p>
+                      {(item.icon === 'contactless' || item.icon === 'payments') && <PaymentLogos size={18} className="mt-1" />}
+                    </div>
+                  </div>
+                ))}
+                <div className="hidden items-center gap-2 rounded-xl bg-surface-container-low px-4 py-2 2xl:flex">
+                  <Icon name="my_location" size={20} className="text-tertiary" />
+                  <span className="text-label-sm font-extrabold uppercase tracking-wider text-tertiary">Zone active :</span>
+                  <span className="text-label-md text-on-surface">{zone}</span>
+                </div>
+              </div>
+            </section>
+  )
+  const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = {
+    categories: <>
+          {topCategories.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-end justify-between">
+                <div>
+                  <Kicker>Univers d'achats</Kicker>
+                  <h3 className="m-0 mt-1 text-headline-lg text-on-surface">Parcourez par catégorie</h3>
+                </div>
+                <button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">
+                  Voir tout le catalogue <ChevronRight size={18} />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-3">
+                {topCategories.map((cat, i) => (
+                  <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex cursor-pointer flex-col items-center rounded-2xl border-none bg-surface-lowest p-4 text-center shadow-sm transition-all hover:bg-surface-container-low hover:shadow" style={{ '--i': i } as React.CSSProperties}>
+                    <span className="cat-tile-icon mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container text-primary">
+                      <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
+                    </span>
+                    <span className="text-label-md font-bold leading-snug text-on-surface">{cat.name}</span>
+                    <span className="mt-1 text-body-sm text-on-surface-variant">{(cat.listingsCount ?? 0).toLocaleString('fr-FR')} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+    </>,
+    pepites: <>
+          {pepites.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="relative flex h-3 w-3">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+                  </span>
+                  <h3 className="m-0 text-headline-lg text-on-surface">Pépites à la Une{hasBoosted && ' & Annonces Boostées'}</h3>
+                </div>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">Priorité visibilité</span>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div>
+            </section>
+          )}
+    </>,
+    shops: <>
+          {shops.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Boutiques officielles</h3>
+                <button onClick={() => onNavigate('shops')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Voir toutes les boutiques <Icon name="arrow_forward" size={18} /></button>
+              </div>
+              <div className="grid grid-cols-4 gap-6">{shops.slice(0, 4).map(s => <ShopCard key={s.id} shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />)}</div>
+            </section>
+          )}
+    </>,
+    certified: <>
+          {certified.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Vendeurs certifiés</h3>
+                <span className="rounded-full bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">Historique vérifié</span>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-6">{certified.slice(0, 4).map(l => card(l))}</div>
+            </section>
+          )}
+    </>,
+    sellCta: <>
+          <section className="relative mt-10 overflow-hidden rounded-3xl bg-surface-container-low p-10 shadow-sm">
+            <div className="relative z-10 max-w-2xl">
+              {home.sellCta.badge && <span className="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-extrabold uppercase tracking-wider text-primary">{home.sellCta.badge}</span>}
+              <h3 className="m-0 mt-2 text-display leading-tight text-on-surface">{home.sellCta.title}</h3>
+              {home.sellCta.text && <p className="m-0 mt-2 text-body-lg text-on-surface-variant">{home.sellCta.text}</p>}
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-10 py-3.5 text-label-lg font-bold text-white hover:bg-primary-container">
+                  <Icon name="add_photo_alternate" size={22} /> {home.sellCta.button}
+                </button>
+                {home.sellCta.link && <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-bold text-on-surface underline hover:text-primary">
+                  {home.sellCta.link} <ChevronRight size={18} />
+                </button>}
+              </div>
+            </div>
+            <div className="pointer-events-none absolute -right-10 top-1/2 hidden -translate-y-1/2 items-center gap-4 opacity-90 xl:flex">
+              <div className="flex h-72 w-56 rotate-6 flex-col justify-between rounded-2xl bg-surface-lowest p-3 shadow-xl">
+                <div className="flex h-40 w-full items-center justify-center rounded-xl bg-surface-container text-outline"><Smartphone size={48} /></div>
+                <div><div className="mb-1 h-3 w-24 rounded bg-surface-container" /><div className="h-4 w-32 rounded bg-primary/20" /></div>
+              </div>
+              <div className="flex h-80 w-60 -rotate-3 flex-col justify-between rounded-2xl bg-surface-lowest p-4 shadow-2xl">
+                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-tertiary" /><span className="text-label-sm font-bold text-tertiary">Vendu en 45 min</span></div>
+                <div className="flex h-44 w-full items-center justify-center rounded-xl bg-surface-container text-outline"><Shirt size={56} /></div>
+                <div className="flex items-center justify-between"><span className="text-headline-sm font-bold text-on-surface">18 000 F</span><span className="text-label-sm font-bold text-tertiary">0% com.</span></div>
+              </div>
+            </div>
+          </section>
+    </>,
+    latest: <>
+          <section className="mt-10">
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div>
+                <Kicker className="text-tertiary">Fraîchement arrivées</Kicker>
+                <h3 className="m-0 mt-1 text-headline-lg text-on-surface">Dernières annonces publiées</h3>
+              </div>
+              {cities.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {[null, ...cities.slice(0, 5)].map(c => {
+                    const active = feedCity === c
+                    return (
+                      <button key={c ?? 'all'} onClick={() => setFeedCity(c)} className={`cursor-pointer whitespace-nowrap rounded-lg border-none px-3 py-1.5 text-label-md ${active ? 'bg-on-surface font-semibold text-white' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}`}>
+                        {c ?? 'Toutes'}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div>
+            {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
+            <div className="flex justify-center">{loadMore}</div>
+          </section>
+    </>,
+    howItWorks: <>
+          <section className="mb-6 mt-10 rounded-3xl bg-surface-lowest p-10 shadow-sm">
+            <div className="mx-auto mb-10 max-w-xl text-center">
+              {home.howItWorks.kicker && <Kicker>{home.howItWorks.kicker}</Kicker>}
+              <h3 className="m-0 mt-1 text-headline-lg text-on-surface">{home.howItWorks.title}</h3>
+              {home.howItWorks.text && <p className="m-0 mt-2 text-body-md text-on-surface-variant">{home.howItWorks.text}</p>}
+            </div>
+            <div className={`grid gap-6 ${["grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols-4"][home.howItWorks.steps.length - 1] ?? "grid-cols-3"}`}>
+              {home.howItWorks.steps.map((s, i) => ({ n: i + 1, box: ['bg-primary', 'bg-tertiary', 'bg-primary-container', 'bg-inverse-surface'][i % 4], ...s })).map(s => (
+                <div key={s.n} className="flex flex-col items-center rounded-2xl bg-surface-container-low p-4 text-center">
+                  <span className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-headline-md font-bold text-white shadow-md ${s.box}`}>{s.n}</span>
+                  <h4 className="m-0 mb-2 text-headline-sm font-bold text-on-surface">{s.title}</h4>
+                  <p className="m-0 text-body-sm leading-relaxed text-on-surface-variant">{s.text}</p>
+                </div>
+              ))}
+            </div>
+            {home.howItWorks.badges.length > 0 && (
+              <div className="mt-6 flex flex-wrap items-center justify-around gap-4 pt-4 text-label-md text-on-surface-variant">
+                {home.howItWorks.badges.map((b, i) => (
+                  <span key={i} className="flex items-center gap-2">{i % 3 === 0 ? <BadgeCheck size={18} className="text-tertiary" /> : <Icon name={i % 3 === 1 ? 'savings' : 'support_agent'} size={18} className={i % 3 === 1 ? 'text-primary' : 'text-tertiary'} />} {b}</span>
+                ))}
+              </div>
+            )}
+          </section>
+    </>,
+  }
+  const mobileSections: Partial<Record<HomeSectionKey, React.ReactNode>> = {
+    reassurance: <>
+        <div className="mb-6 flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-high p-3 shadow-sm">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
+            <div className="min-w-0 leading-tight">
+              <div className="truncate text-label-sm font-bold text-on-surface">{home.mobileStrip.title}</div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={['WAVE', 'ORANGE_MONEY', 'MTN_MOMO']} /> ou espèces</div>
+            </div>
+          </div>
+          <Icon name="handshake" size={18} className="shrink-0 text-on-surface-variant" />
+        </div>
+    </>,
+    categories: <>
+        {categories.length > 0 && (
+          <section className="mb-8">
+            <SectionHeading
+              title="Explorer par rayon"
+              action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir <ChevronRight size={16} /></button>}
+            />
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none] md:-mx-8 md:px-8">
+              {categories.map((cat, i) => (
+                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0" style={{ '--i': i } as React.CSSProperties}>
+                  <span className={`cat-tile-icon flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm ${TILE_TINTS[i % TILE_TINTS.length]}`}>
+                    <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
+                  </span>
+                  <span title={cat.name} className="w-full truncate text-center text-label-sm font-semibold text-on-surface">{cat.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+    </>,
+    campaign: <>
+        {deals && <section
+          className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary-dark to-primary-container p-4 text-white shadow-md"
+          style={campaign?.themeColor ? { background: campaign.themeColor } : undefined}
+        >
+          <div className="pointer-events-none absolute -bottom-8 right-0 h-36 w-36 rounded-full bg-white/10 blur-xl" />
+          <div className="relative flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate rounded-full bg-white px-2.5 py-0.5 text-label-sm font-extrabold uppercase tracking-wide text-primary" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>{deals.tag}</span>
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-label-sm tabular-nums backdrop-blur-sm">{campaign?.endsAt && <><Icon name="timer" size={14} /> <LiveClock endsAt={campaign.endsAt} /></>}</span>
+            </div>
+            <div className="mt-1 flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="m-0 text-headline-md font-extrabold leading-tight text-white">{deals.title}</h2>
+                {deals.text && <p className="m-0 mt-0.5 text-body-sm text-white/90">{deals.text}</p>}
+              </div>
+              <button onClick={() => onNavigate('flash-offers')} className="shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none bg-white px-4 py-2 text-label-md font-bold text-primary shadow active:scale-95" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>Profiter</button>
+            </div>
+          </div>
+        </section>}
+    </>,
+    pepites: <>
+        {pepites.length > 0 && (
+          <section className="mb-8">
+            <SectionHeading
+              title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
+              action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">Boostées</span> : undefined}
+            />
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
+              {pepites.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
+            </div>
+          </section>
+        )}
+    </>,
+    shops: <>
+        {shops.length > 0 && (
+          <section className="mb-8">
+            <SectionHeading
+              title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Boutiques officielles</>}
+              action={<button onClick={() => onNavigate('shops')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">Tout voir</button>}
+            />
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
+              {shops.map(s => <div key={s.id} className="flex w-[250px] shrink-0 snap-start">{<ShopCard shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />}</div>)}
+            </div>
+          </section>
+        )}
+    </>,
+    certified: <>
+        {certified.length > 0 && (
+          <section className="mb-8">
+            <SectionHeading title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Vendeurs certifiés</>} />
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
+              {certified.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
+            </div>
+          </section>
+        )}
+    </>,
+    latest: <>
+        <section>
+          <SectionHeading
+            title={<>Dernières annonces <span className="h-2 w-2 rounded-full bg-primary" /></>}
+            action={
+              <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} aria-label="Trier les annonces" className="cursor-pointer whitespace-nowrap border-none bg-transparent px-1 py-1 text-label-md text-on-surface-variant outline-none">
+                {SORTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+            }
+          />
+          <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div>
+          {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
+          {loadMore}
+        </section>
+    </>,
+  }
+
   return (
     <>
       {/* ================= DESKTOP ================= */}
       {isDesktop && <div>
-        {/* 1. Reassurance band */}
-        <section className="bg-surface-lowest shadow-sm">
-          <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 px-12 py-2.5">
-            {[
-              { icon: <Percent size={20} />, box: 'bg-primary/10 text-primary', title: '100% P2P & Gratuit', text: '0% de commission sur toutes vos ventes' },
-              { icon: <Icon name="shield_with_heart" size={20} />, box: 'bg-tertiary/10 text-tertiary', title: 'Remise en main propre', text: 'Vérifiez le produit avant paiement en lieu sécurisé' },
-              { icon: <Icon name="contactless" size={20} />, box: 'bg-primary-container/15 text-primary', title: 'Paiements directs acceptés', text: 'Wave, Orange Money ou espèces sans intermédiaire', logos: true },
-            ].map(item => (
-              <div key={item.title} className="flex items-center gap-3">
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.box}`}>{item.icon}</span>
-                <div>
-                  <p className="m-0 text-label-md font-bold text-on-surface">{item.title}</p>
-                  <p className="m-0 text-body-sm text-on-surface-variant">{item.text}</p>
-                  {'logos' in item && <PaymentLogos size={18} className="mt-1" />}
-                </div>
-              </div>
-            ))}
-            <div className="flex items-center gap-2 rounded-xl bg-surface-container-low px-4 py-2">
-              <Icon name="my_location" size={20} className="text-tertiary" />
-              <span className="text-label-sm font-extrabold uppercase tracking-wider text-tertiary">Zone active :</span>
-              <span className="text-label-md text-on-surface">{zone}</span>
-            </div>
-          </div>
-        </section>
-
+        {/* Reassurance band: full width under the header when it comes first. */}
+        {bandOnTop && reassuranceBand(true)}
         <div className="mx-auto max-w-[1320px] px-12">
           {/* 2. Hero slider + search / flash card */}
           <section className="mt-6 grid grid-cols-12 items-stretch gap-6">
             <div className="relative col-span-8 flex min-h-[500px] flex-col justify-between overflow-hidden rounded-2xl p-10 shadow-md">
               {SLIDES.map((s, i) => (
-                <div key={s.image} className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ${i === slide ? 'opacity-100' : 'opacity-0'}`}>
+                <div key={`${i}-${s.image}`} className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ${i === slide % SLIDES.length ? 'opacity-100' : 'opacity-0'}`}>
                   {i <= slidesReached && <img src={s.image} alt="" fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" className="h-full w-full scale-105 object-cover" />}
                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/45" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
@@ -333,25 +575,27 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
 
               <div className="relative z-20">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className={`inline-flex items-center gap-2 rounded-full border border-solid px-3 py-1.5 text-white backdrop-blur-md ${SLIDES[slide].badgeClass}`}>
-                    <Icon name={SLIDES[slide].badgeIcon} size={16} className={SLIDES[slide].iconClass} />
-                    <span className="text-label-sm font-extrabold uppercase">{SLIDES[slide].badge}</span>
-                  </span>
+                  {current.badge ? (
+                    <span className={`inline-flex items-center gap-2 rounded-full border border-solid px-3 py-1.5 text-white backdrop-blur-md ${SLIDE_TONE[current.tone]?.badge ?? SLIDE_TONE.red.badge}`}>
+                      <CategoryIcon icon={current.badgeIcon} size={16} className={SLIDE_TONE[current.tone]?.icon} />
+                      <span className="text-label-sm font-extrabold uppercase">{current.badge}</span>
+                    </span>
+                  ) : <span />}
                   <div className="flex items-center gap-2 rounded-full border border-solid border-white/10 bg-black/40 px-2.5 py-1.5 backdrop-blur-md">
                     <button onClick={() => goSlide(slide - 1)} aria-label="Diapositive précédente" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-white/80 hover:bg-white/10 hover:text-white"><ArrowLeft size={18} /></button>
                     <div className="flex items-center gap-1.5 px-1">
                       {SLIDES.map((_, i) => (
-                        <button key={i} onClick={() => goSlide(i)} aria-label={`Aller au slide ${i + 1}`} className={`h-2 cursor-pointer rounded-full border-none p-0 transition-all duration-300 ${i === slide ? 'w-6 bg-primary' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
+                        <button key={i} onClick={() => goSlide(i)} aria-label={`Aller au slide ${i + 1}`} className={`h-2 cursor-pointer rounded-full border-none p-0 transition-all duration-300 ${i === slide % SLIDES.length ? 'w-6 bg-primary' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
                       ))}
                     </div>
                     <button onClick={() => goSlide(slide + 1)} aria-label="Diapositive suivante" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-white/80 hover:bg-white/10 hover:text-white"><ArrowRight size={18} /></button>
                   </div>
                 </div>
                 <div className="min-h-[155px]">
-                  <h1 className="m-0 max-w-2xl text-display font-extrabold leading-tight tracking-tight text-white">{SLIDES[slide].title}</h1>
-                  <p className="m-0 mt-2 max-w-xl text-body-lg text-white/90">{SLIDES[slide].text}</p>
+                  <h1 className="m-0 max-w-2xl text-display font-extrabold leading-tight tracking-tight text-white"><Title text={current.title} /></h1>
+                  {current.text && <p className="m-0 mt-2 max-w-xl text-body-lg text-white/90">{current.text}</p>}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {SLIDES[slide].tags.map(t => (
+                    {current.tags.map(t => (
                       <span key={t} className="rounded-full border border-solid border-white/20 bg-white/15 px-2.5 py-0.5 text-label-sm text-white backdrop-blur-sm">{t}</span>
                     ))}
                   </div>
@@ -384,7 +628,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 </form>
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-0 border-t border-solid border-surface-container-high px-2 pt-2">
                   <span className="text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">Tendances :</span>
-                  {TRENDS.map(t => (
+                  {home.trends.map(t => (
                     <button key={t.label} onClick={() => onSearch?.(t.term ?? '', t.maxPrice ? { maxPrice: t.maxPrice } : undefined)} className="cursor-pointer rounded-full border-none bg-surface-container-low px-2.5 py-1 text-label-sm text-on-surface-variant shadow-sm transition-all hover:bg-primary hover:text-white">
                       {t.label}
                     </button>
@@ -407,9 +651,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                     <Countdown endsAt={campaign.endsAt} iconSize={16} className="flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1 text-label-sm tabular-nums text-primary-fixed backdrop-blur-sm" />
                   )}
                 </div>
-                <h2 className="m-0 mt-2 text-headline-lg font-bold leading-tight">{campaign?.name ?? 'Bons plans du moment'}</h2>
-                <p className="m-0 mt-1 text-headline-md font-black text-primary-fixed">{bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Prix doux entre particuliers'}</p>
-                <p className="m-0 mt-2 text-body-sm text-white/80">{campaign?.description || 'Ventes flash et fins de dressing express, en direct des particuliers.'}</p>
+                <h2 className="m-0 mt-2 text-headline-lg font-bold leading-tight">{campaign?.name ?? home.flashFallback.title}</h2>
+                <p className="m-0 mt-1 text-headline-md font-black text-primary-fixed">{bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : campaign ? 'Prix doux entre particuliers' : home.flashFallback.subtitle}</p>
+                <p className="m-0 mt-2 text-body-sm text-white/80">{campaign?.description || home.flashFallback.text}</p>
               </div>
               <div className="relative z-10 mt-6 rounded-xl bg-white/10 p-4 backdrop-blur-md">
                 {campaign && (
@@ -425,150 +669,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             </div>
           </section>
 
-          {/* 3. Categories */}
-          {topCategories.length > 0 && (
-            <section className="mt-10">
-              <div className="mb-4 flex items-end justify-between">
-                <div>
-                  <Kicker>Univers d'achats</Kicker>
-                  <h3 className="m-0 mt-1 text-headline-lg text-on-surface">Parcourez par catégorie</h3>
-                </div>
-                <button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">
-                  Voir tout le catalogue <ChevronRight size={18} />
-                </button>
-              </div>
-              <div className="grid grid-cols-7 gap-3">
-                {topCategories.map((cat, i) => (
-                  <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex cursor-pointer flex-col items-center rounded-2xl border-none bg-surface-lowest p-4 text-center shadow-sm transition-all hover:bg-surface-container-low hover:shadow" style={{ '--i': i } as React.CSSProperties}>
-                    <span className="cat-tile-icon mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container text-primary">
-                      <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
-                    </span>
-                    <span className="text-label-md font-bold leading-snug text-on-surface">{cat.name}</span>
-                    <span className="mt-1 text-body-sm text-on-surface-variant">{(cat.listingsCount ?? 0).toLocaleString('fr-FR')} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* 4. Pépites & boosted */}
-          {pepites.length > 0 && (
-            <section className="mt-10">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="relative flex h-3 w-3">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                    <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
-                  </span>
-                  <h3 className="m-0 text-headline-lg text-on-surface">Pépites à la Une{hasBoosted && ' & Annonces Boostées'}</h3>
-                </div>
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">Priorité visibilité</span>
-              </div>
-              <div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div>
-            </section>
-          )}
-
-          {/* Official shops */}
-          {shops.length > 0 && (
-            <section className="mt-10">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Boutiques officielles</h3>
-                <button onClick={() => onNavigate('shops')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Voir toutes les boutiques <Icon name="arrow_forward" size={18} /></button>
-              </div>
-              <div className="grid grid-cols-4 gap-6">{shops.slice(0, 4).map(s => <ShopCard key={s.id} shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />)}</div>
-            </section>
-          )}
-
-          {/* Certified sellers */}
-          {certified.length > 0 && (
-            <section className="mt-10">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Vendeurs certifiés</h3>
-                <span className="rounded-full bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">Historique vérifié</span>
-              </div>
-              <div className="grid grid-cols-4 items-start gap-6">{certified.slice(0, 4).map(l => card(l))}</div>
-            </section>
-          )}
-
-          {/* 5. Seller incentive */}
-          <section className="relative mt-10 overflow-hidden rounded-3xl bg-surface-container-low p-10 shadow-sm">
-            <div className="relative z-10 max-w-2xl">
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-extrabold uppercase tracking-wider text-primary">Vente éclair</span>
-              <h3 className="m-0 mt-2 text-display leading-tight text-on-surface">Vendez en 2 minutes chrono et gardez 100% de votre argent</h3>
-              <p className="m-0 mt-2 text-body-lg text-on-surface-variant">Prenez une photo, fixez votre prix en F, et convenez d'un lieu de rendez-vous sécurisé (centres commerciaux, stations-service…).</p>
-              <div className="mt-6 flex flex-wrap items-center gap-4">
-                <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-10 py-3.5 text-label-lg font-bold text-white hover:bg-primary-container">
-                  <Icon name="add_photo_alternate" size={22} /> Publier une annonce gratuite
-                </button>
-                <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-bold text-on-surface underline hover:text-primary">
-                  Découvrir nos options de boost <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-            <div className="pointer-events-none absolute -right-10 top-1/2 hidden -translate-y-1/2 items-center gap-4 opacity-90 xl:flex">
-              <div className="flex h-72 w-56 rotate-6 flex-col justify-between rounded-2xl bg-surface-lowest p-3 shadow-xl">
-                <div className="flex h-40 w-full items-center justify-center rounded-xl bg-surface-container text-outline"><Smartphone size={48} /></div>
-                <div><div className="mb-1 h-3 w-24 rounded bg-surface-container" /><div className="h-4 w-32 rounded bg-primary/20" /></div>
-              </div>
-              <div className="flex h-80 w-60 -rotate-3 flex-col justify-between rounded-2xl bg-surface-lowest p-4 shadow-2xl">
-                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-tertiary" /><span className="text-label-sm font-bold text-tertiary">Vendu en 45 min</span></div>
-                <div className="flex h-44 w-full items-center justify-center rounded-xl bg-surface-container text-outline"><Shirt size={56} /></div>
-                <div className="flex items-center justify-between"><span className="text-headline-sm font-bold text-on-surface">18 000 F</span><span className="text-label-sm font-bold text-tertiary">0% com.</span></div>
-              </div>
-            </div>
-          </section>
-
-          {/* 6. Latest */}
-          <section className="mt-10">
-            <div className="mb-6 flex items-end justify-between gap-4">
-              <div>
-                <Kicker className="text-tertiary">Fraîchement arrivées</Kicker>
-                <h3 className="m-0 mt-1 text-headline-lg text-on-surface">Dernières annonces publiées</h3>
-              </div>
-              {cities.length > 1 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  {[null, ...cities.slice(0, 5)].map(c => {
-                    const active = feedCity === c
-                    return (
-                      <button key={c ?? 'all'} onClick={() => setFeedCity(c)} className={`cursor-pointer whitespace-nowrap rounded-lg border-none px-3 py-1.5 text-label-md ${active ? 'bg-on-surface font-semibold text-white' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}`}>
-                        {c ?? 'Toutes'}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div>
-            {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
-            <div className="flex justify-center">{loadMore}</div>
-          </section>
-
-          {/* 7. How it works */}
-          <section className="mb-6 mt-10 rounded-3xl bg-surface-lowest p-10 shadow-sm">
-            <div className="mx-auto mb-10 max-w-xl text-center">
-              <Kicker>Simplicité &amp; Sécurité</Kicker>
-              <h3 className="m-0 mt-1 text-headline-lg text-on-surface">Comment fonctionne Dilchap ?</h3>
-              <p className="m-0 mt-2 text-body-md text-on-surface-variant">Le circuit court : sans intermédiaire coûteux, en toute confiance.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-6">
-              {[
-                { n: 1, box: 'bg-primary', title: 'Dénichez votre pépite', text: 'Parcourez des centaines de pièces uniques publiées chaque jour à proximité de votre commune ou de votre lieu de travail.' },
-                { n: 2, box: 'bg-tertiary', title: 'Négociez en direct sur le chat', text: 'Échangez avec le vendeur via la messagerie instantanée, posez vos questions et fixez un prix équitable sans intermédiaire.' },
-                { n: 3, box: 'bg-primary-container', title: 'Payez en main propre sécurisé', text: "Rendez-vous dans un lieu public. Testez l'article puis payez directement via Wave, Orange Money ou espèces." },
-              ].map(s => (
-                <div key={s.n} className="flex flex-col items-center rounded-2xl bg-surface-container-low p-4 text-center">
-                  <span className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-headline-md font-bold text-white shadow-md ${s.box}`}>{s.n}</span>
-                  <h4 className="m-0 mb-2 text-headline-sm font-bold text-on-surface">{s.title}</h4>
-                  <p className="m-0 text-body-sm leading-relaxed text-on-surface-variant">{s.text}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex flex-wrap items-center justify-around gap-4 pt-4 text-label-md text-on-surface-variant">
-              <span className="flex items-center gap-2"><BadgeCheck size={18} className="text-tertiary" /> Profils et avis certifiés</span>
-              <span className="flex items-center gap-2"><Icon name="savings" size={18} className="text-primary" /> 0 F de frais de plateforme</span>
-              <span className="flex items-center gap-2"><Icon name="support_agent" size={18} className="text-tertiary" /> Équipe de modération active 7j/7</span>
-            </div>
-          </section>
+          {/* The other sections, in the order set in the back-office. */}
+          {desktopOrder.map(k => <Fragment key={k}>{k === 'reassurance' ? reassuranceBand(false) : desktopSections[k]}</Fragment>)}
         </div>
       </div>}
 
@@ -604,102 +706,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             </button>
           </div>
         </div>
-        <div className="mb-6 flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-high p-3 shadow-sm">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-label-sm font-bold text-on-surface">100% P2P • 0% Commission</div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant">Remise directe <PaymentLogos size={16} methods={['WAVE', 'ORANGE_MONEY', 'MTN_MOMO']} /> ou espèces</div>
-            </div>
-          </div>
-          <Icon name="handshake" size={18} className="shrink-0 text-on-surface-variant" />
-        </div>
-
-        {categories.length > 0 && (
-          <section className="mb-8">
-            <SectionHeading
-              title="Explorer par rayon"
-              action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir <ChevronRight size={16} /></button>}
-            />
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none] md:-mx-8 md:px-8">
-              {categories.map((cat, i) => (
-                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0" style={{ '--i': i } as React.CSSProperties}>
-                  <span className={`cat-tile-icon flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm ${TILE_TINTS[i % TILE_TINTS.length]}`}>
-                    <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
-                  </span>
-                  <span title={cat.name} className="w-full truncate text-center text-label-sm font-semibold text-on-surface">{cat.name}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {deals && <section
-          className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary-dark to-primary-container p-4 text-white shadow-md"
-          style={campaign?.themeColor ? { background: campaign.themeColor } : undefined}
-        >
-          <div className="pointer-events-none absolute -bottom-8 right-0 h-36 w-36 rounded-full bg-white/10 blur-xl" />
-          <div className="relative flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate rounded-full bg-white px-2.5 py-0.5 text-label-sm font-extrabold uppercase tracking-wide text-primary" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>{deals.tag}</span>
-              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-label-sm tabular-nums backdrop-blur-sm">{campaign?.endsAt && <><Icon name="timer" size={14} /> <LiveClock endsAt={campaign.endsAt} /></>}</span>
-            </div>
-            <div className="mt-1 flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="m-0 text-headline-md font-extrabold leading-tight text-white">{deals.title}</h2>
-                {deals.text && <p className="m-0 mt-0.5 text-body-sm text-white/90">{deals.text}</p>}
-              </div>
-              <button onClick={() => onNavigate('flash-offers')} className="shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none bg-white px-4 py-2 text-label-md font-bold text-primary shadow active:scale-95" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>Profiter</button>
-            </div>
-          </div>
-        </section>}
-
-        {pepites.length > 0 && (
-          <section className="mb-8">
-            <SectionHeading
-              title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
-              action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">Boostées</span> : undefined}
-            />
-            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
-              {pepites.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
-            </div>
-          </section>
-        )}
-
-        {shops.length > 0 && (
-          <section className="mb-8">
-            <SectionHeading
-              title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Boutiques officielles</>}
-              action={<button onClick={() => onNavigate('shops')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">Tout voir</button>}
-            />
-            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
-              {shops.map(s => <div key={s.id} className="flex w-[250px] shrink-0 snap-start">{<ShopCard shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />}</div>)}
-            </div>
-          </section>
-        )}
-
-        {certified.length > 0 && (
-          <section className="mb-8">
-            <SectionHeading title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Vendeurs certifiés</>} />
-            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
-              {certified.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
-            </div>
-          </section>
-        )}
-
-        <section>
-          <SectionHeading
-            title={<>Dernières annonces <span className="h-2 w-2 rounded-full bg-primary" /></>}
-            action={
-              <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} aria-label="Trier les annonces" className="cursor-pointer whitespace-nowrap border-none bg-transparent px-1 py-1 text-label-md text-on-surface-variant outline-none">
-                {SORTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </Select>
-            }
-          />
-          <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div>
-          {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
-          {loadMore}
-        </section>
+        {/* Sections in the order set in the back-office. */}
+        {mobileOrder.map(k => <Fragment key={k}>{mobileSections[k]}</Fragment>)}
       </div>}
     </>
   )
