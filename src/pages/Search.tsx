@@ -43,6 +43,8 @@ type SearchProps = {
   onSearchTermChange?: (term: string) => void
   selectedCity?: string
   initialMaxPrice?: number
+  // "Promos" shortcut: open on the items on sale.
+  initialPromoOnly?: boolean
   onCityChange?: (city: string) => void
   currentUserId?: string | null
   isLoggedIn?: boolean
@@ -128,7 +130,7 @@ function DebouncedSearchInput({ value, onCommit }: { value: string, onCommit: (t
 
 export default function SearchPage({
   onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, onCategorySelect,
-  searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, currentUserId, isLoggedIn, onContactSeller,
+  searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, initialPromoOnly, currentUserId, isLoggedIn, onContactSeller,
 }: SearchProps) {
   const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
   const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
@@ -139,6 +141,8 @@ export default function SearchPage({
   const [shopsOnly, setShopsOnly] = useState(false)
   const [handoverOnly, setHandoverOnly] = useState(false)
   const [mobileMoneyOnly, setMobileMoneyOnly] = useState(false)
+  const [promoOnly, setPromoOnly] = useState(!!initialPromoOnly)
+  useEffect(() => { if (initialPromoOnly) setPromoOnly(true) }, [initialPromoOnly])
   const [categorySlugs, setCategorySlugs] = useState<string[]>([])
   const [subcategories, setSubcategories] = useState<string[]>([])
   const [conditions, setConditions] = useState<string[]>([])
@@ -179,10 +183,11 @@ export default function SearchPage({
     ...(shopsOnly ? { officialShopsOnly: true } : {}),
     ...(handoverOnly ? { handoverOnly: true } : {}),
     ...(mobileMoneyOnly ? { mobileMoneyOnly: true } : {}),
+    ...(promoOnly ? { promoOnly: true } : {}),
     ...(categorySlugs.length ? { categorySlugs } : {}),
     ...(appliedPrice.min ? { minPrice: Number(appliedPrice.min) } : {}),
     ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
-  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, categorySlugs, appliedPrice])
+  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
@@ -215,7 +220,7 @@ export default function SearchPage({
 
   const resetAll = () => {
     setVerifiedOnly(false); setShopsOnly(false); setSubcategories([]); setConditions([]); setBrands([]); setSizes([]); setCities([])
-    setHandoverOnly(false); setMobileMoneyOnly(false); setCategorySlugs([])
+    setHandoverOnly(false); setMobileMoneyOnly(false); setPromoOnly(false); setCategorySlugs([])
     applyPrice('', '')
     onClearCategoryFilter?.()
     onSearchTermChange?.('')
@@ -223,6 +228,7 @@ export default function SearchPage({
 
   const chips: { key: string, label: string, near?: boolean, clear: () => void }[] = [
     ...(search ? [{ key: 'q', label: `« ${search} »`, clear: () => onSearchTermChange?.('') }] : []),
+    ...(promoOnly ? [{ key: 'promo', label: 'En promotion', clear: () => setPromoOnly(false) }] : []),
     ...(category ? [{ key: 'cat', label: category.name, clear: () => onClearCategoryFilter?.() }] : []),
     ...subcategories.map(v => ({ key: `sub-${v}`, label: facets?.subcategories.find(f => f.value === v)?.label ?? v, clear: () => setSubcategories(s => s.filter(x => x !== v)) })),
     ...cities.map(v => ({ key: `city-${v}`, label: v === nearCity ? `Près de vous : ${v}` : v, near: v === nearCity, clear: () => setCities(s => s.filter(x => x !== v)) })),
@@ -358,6 +364,10 @@ export default function SearchPage({
         </FilterBlock>
       )}
 
+      <FilterBlock title="Bonnes affaires">
+        <CheckRow checked={promoOnly} label="En promotion (soldes & campagnes)" onChange={() => setPromoOnly(v => !v)} />
+      </FilterBlock>
+
       <FilterBlock title="Vendeurs de confiance">
         <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
         <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" logos={['WAVE', 'ORANGE_MONEY']} onChange={() => setMobileMoneyOnly(v => !v)} />
@@ -370,7 +380,7 @@ export default function SearchPage({
     </div>
   )
 
-  const title = search ? `Résultats pour « ${search} »` : category ? category.name : 'Toutes les annonces'
+  const title = search ? `Résultats pour « ${search} »` : category ? category.name : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const to = Math.min(page * PAGE_SIZE, total)
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
@@ -387,6 +397,13 @@ export default function SearchPage({
         <button onClick={() => setFiltersOpen(true)} aria-label="Filtres" className="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-inverse-surface text-white">
           <SlidersHorizontal size={20} />
           {chosenCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] text-white">{chosenCount}</span>}
+        </button>
+      </div>
+      {/* Mobile: one tap to the items on sale. */}
+      <div className="-mt-2 mb-4 lg:hidden">
+        <button type="button" aria-pressed={promoOnly} onClick={() => setPromoOnly(v => !v)}
+          className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-solid px-3 py-1.5 text-label-md ${promoOnly ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
+          <Icon name="percent" size={16} /> En promotion
         </button>
       </div>
 
@@ -508,7 +525,7 @@ export default function SearchPage({
 
       <FilterSheet
           open={filtersOpen}
-          state={{ sort, cities, minPrice, maxPrice, categorySlugs, conditions, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly }}
+          state={{ sort, cities, minPrice, maxPrice, categorySlugs, conditions, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly }}
           onChange={patch => {
             if (patch.sort) setSort(patch.sort)
             if (patch.cities) setCities(patch.cities)
@@ -520,6 +537,7 @@ export default function SearchPage({
             if (patch.shopsOnly !== undefined) setShopsOnly(patch.shopsOnly)
             if (patch.handoverOnly !== undefined) setHandoverOnly(patch.handoverOnly)
             if (patch.mobileMoneyOnly !== undefined) setMobileMoneyOnly(patch.mobileMoneyOnly)
+            if (patch.promoOnly !== undefined) setPromoOnly(patch.promoOnly)
           }}
           onReset={resetAll}
           onClose={() => setFiltersOpen(false)}
