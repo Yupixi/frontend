@@ -11,12 +11,13 @@ export const LISTING_ADVICE_QUERY = gql`
 export type ListingAdvice = { code: string; level: 'BLOCKING' | 'WARNING' | 'TIP'; message: string }
 
 export const LISTING_ASSIST_AVAILABLE_QUERY = gql`
-  query ListingAssistAvailable { listingAssistAvailable }
+  query ListingAssistAvailable { listingAssistAvailable listingAssistPrice }
 `
+export type ListingAssistOffer = { listingAssistAvailable: boolean; listingAssistPrice: number }
 
 export const ASSIST_LISTING_MUTATION = gql`
   mutation AssistListing($input: ListingAssistInput!) {
-    assistListing(input: $input) { title description categoryId subcategoryId brand condition }
+    assistListing(input: $input) { title description categoryId subcategoryId brand condition creditsSpent balance }
   }
 `
 export type ListingDraftSuggestion = {
@@ -26,4 +27,6 @@ export type ListingDraftSuggestion = {
   subcategoryId: string | null
   brand: string | null
   condition: string | null
+  creditsSpent: number
+  balance: number
 }
