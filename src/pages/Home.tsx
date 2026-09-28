@@ -248,6 +248,11 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     return () => clearTimeout(t)
   }, [slide])
   const goSlide = (i: number) => setSlide((i + SLIDES.length) % SLIDES.length)
+  // Only the first slide's photo loads with the page; each later one when
+  // the slider gets one step away from it (they were all fetched upfront,
+  // competing with the first paint).
+  const [slidesReached, setSlidesReached] = useState(1)
+  if (slide + 1 > slidesReached) setSlidesReached(Math.min(SLIDES.length - 1, slide + 1))
 
   // Hero search form
   const [q, setQ] = useState('')
@@ -316,7 +321,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             <div className="relative col-span-8 flex min-h-[500px] flex-col justify-between overflow-hidden rounded-2xl p-10 shadow-md">
               {SLIDES.map((s, i) => (
                 <div key={s.image} className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ${i === slide ? 'opacity-100' : 'opacity-0'}`}>
-                  <img src={s.image} alt="" fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" className="h-full w-full scale-105 object-cover" />
+                  {i <= slidesReached && <img src={s.image} alt="" fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" className="h-full w-full scale-105 object-cover" />}
                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/45" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
                 </div>

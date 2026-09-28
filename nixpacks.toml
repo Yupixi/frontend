@@ -1,0 +1,4 @@
+# Nixpacks serves the built SPA with Caddy; start it on the repository's
+# Caddyfile (cache + security headers) instead of the built-in one.
+[start]
+cmd = "exec caddy run --config /app/Caddyfile --adapter caddyfile 2>&1"
