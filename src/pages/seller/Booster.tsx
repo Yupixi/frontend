@@ -18,6 +18,7 @@ import Select from '../../components/Select'
 import BoosterMobile from './BoosterMobile'
 import Credits, { creditsLabel } from '../../components/Credits'
 import { useBumpCost } from '../../lib/useBumpCost'
+import { Claim, useNoCommissionClaims } from '../../lib/site'
 import PaymentLogo from '../../components/PaymentLogo'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
@@ -32,6 +33,7 @@ function formatDate(iso: string) {
 // from the backend (boostPacks); packs are paid with the wallet balance
 // (WalletPaySheet) and activated by the server at once.
 export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data: listingsData, refetch: refetchListings } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 100 } })
   const live = (listingsData?.myListings.items ?? []).filter(l => l.status === 'APPROVED')
   const { data: packsData } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY)
@@ -122,7 +124,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-fixed px-3 py-1 text-label-sm uppercase text-primary"><Rocket size={14} /> Accélérateur de ventes P2P</span>
               <h1 className="m-0 mt-3 text-headline-lg-mobile text-on-surface md:text-[40px] md:font-extrabold md:leading-[48px]">Boostez vos ventes &amp; dominez le fil d'affichage</h1>
-              <p className="m-0 mt-2 text-body-md text-on-surface-variant">Vendez plus vite grâce aux options de visibilité ciblées. <b className="text-tertiary">100% du produit de la vente reste pour vous</b> (0% de commission Dilchap).</p>
+              <p className="m-0 mt-2 text-body-md text-on-surface-variant">Vendez plus vite grâce aux options de visibilité ciblées.<Claim> <b className="text-tertiary">100% du produit de la vente reste pour vous</b> (0% de commission Dilchap).</Claim></p>
             </div>
             <div className="rounded-2xl bg-surface-lowest p-4 border border-outline-variant">
               <div className="flex items-center justify-between">
@@ -392,7 +394,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
         {/* Reassurance */}
         <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            { icon: <Percent size={19} />, title: '0% Commission', text: 'Vendez gratuitement sans frais cachés' },
+            ...(noCommission ? [{ icon: <Percent size={19} />, title: '0% Commission', text: 'Vendez gratuitement sans frais cachés' }] : []),
             { icon: <Handshake size={19} />, title: 'Remise en main propre', text: 'Vérification directe de l’article' },
             { icon: <span className="flex -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={26} className="ring-2 ring-surface-lowest" />)}</span>, title: 'Paiement direct Wave / OM', text: 'Transactions entre particuliers', bare: true },
             { icon: <ShieldCheck size={19} />, title: 'Mise en relation sécurisée', text: 'Profils vérifiés et signalement' },

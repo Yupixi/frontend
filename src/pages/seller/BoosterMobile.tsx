@@ -9,6 +9,7 @@ import type { MyListingRow } from '../../graphql/listings'
 import type { BoostPack, BoostPackInfo } from '../../graphql/promotions'
 import Credits, { creditsLabel } from '../../components/Credits'
 import PaymentLogo from '../../components/PaymentLogo'
+import { Claim } from '../../lib/site'
 
 type Props = {
   live: MyListingRow[]
@@ -224,13 +225,13 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         </div>
       </section>
 
-      <section className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4">
+      <Claim><section className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="savings" size={22} /></span>
         <div className="min-w-0">
           <p className="m-0 text-label-md text-on-surface">100% du prix de vente reste pour vous</p>
           <p className="m-0 text-body-sm text-on-surface-variant">Dilchap applique 0% de commission sur toutes vos transactions entre particuliers.</p>
         </div>
-      </section>
+      </section></Claim>
 
       <BottomSheet open={picking} onClose={() => setPicking(false)} title="Choisir l'annonce à booster">
         <div className="flex flex-col gap-2 px-4 pb-4">

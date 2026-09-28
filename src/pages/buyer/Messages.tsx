@@ -30,6 +30,7 @@ import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
 import { dateFormat } from '../../lib/intl'
 import SellerBadge from '../../components/SellerBadge'
+import { Claim } from '../../lib/site'
 
 const BUYER_SUGGESTIONS = [
   'L’article est-il toujours disponible ?',
@@ -338,7 +339,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
         <div className="hidden items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-6 py-3 md:flex">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><ShieldCheck size={19} /></span>
           <p className="m-0 flex-1 text-body-sm text-on-surface-variant">
-            <b className="text-on-surface">Règle d'or Dilchap : remise en main propre &amp; 0 F de frais</b> <span className="font-semibold text-tertiary">• 100% gratuit.</span> Rencontrez-vous dans un lieu public et testez l'article avant tout paiement (espèces, Wave ou Orange Money).
+            <b className="text-on-surface">Règle d'or Dilchap : remise en main propre<Claim> &amp; 0 F de frais</Claim></b> <Claim><span className="font-semibold text-tertiary">• 100% gratuit.</span> </Claim>Rencontrez-vous dans un lieu public et testez l'article avant tout paiement (espèces, Wave ou Orange Money).
           </p>
           <span className="flex shrink-0 items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1 text-label-sm text-tertiary"><Lock size={13} /> Échanges protégés</span>
         </div>
@@ -421,7 +422,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                     )}
                     <div className="flex items-start gap-2 rounded-xl bg-surface-container-high p-2.5 md:hidden">
                       <Icon name="shield" size={20} fill className="mt-0.5 shrink-0 text-tertiary" />
-                      <p className="m-0 text-body-sm text-on-surface-variant"><b className="block text-on-surface">Sécurité &amp; Confiance Dilchap</b>Rappelez-vous : testez toujours l'objet avant tout règlement en main propre. 0 F de commission appliquée.</p>
+                      <p className="m-0 text-body-sm text-on-surface-variant"><b className="block text-on-surface">Sécurité &amp; Confiance Dilchap</b>Rappelez-vous : testez toujours l'objet avant tout règlement en main propre.<Claim> 0 F de commission appliquée.</Claim></p>
                     </div>
                     {messages.length === 0 && !closed && (
                       <div className="m-auto max-w-md text-center">
@@ -603,8 +604,8 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   <dl className="m-0 flex flex-col gap-2 text-body-sm">
                     <div className="flex justify-between"><dt className="text-on-surface-variant">Prix de l'article</dt><dd className="m-0 text-on-surface"><Price amount={conv.listing.price} currency={conv.listing.currency} /></dd></div>
                     {acceptedOffer && <div className="flex justify-between"><dt className="text-on-surface-variant">Offre acceptée</dt><dd className="m-0 text-on-surface"><Price amount={acceptedOffer.amount} currency={conv.listing.currency} /></dd></div>}
-                    <div className="flex justify-between"><dt className="flex items-center gap-1 text-tertiary">Commission Dilchap <Info size={13} /></dt><dd className="m-0 font-bold text-tertiary">0 F (0%)</dd></div>
-                    <div className="flex justify-between"><dt className="text-on-surface-variant">Frais de réservation</dt><dd className="m-0 text-on-surface">0 F</dd></div>
+                    <Claim><div className="flex justify-between"><dt className="flex items-center gap-1 text-tertiary">Commission Dilchap <Info size={13} /></dt><dd className="m-0 font-bold text-tertiary">0 F (0%)</dd></div>
+                    <div className="flex justify-between"><dt className="text-on-surface-variant">Frais de réservation</dt><dd className="m-0 text-on-surface">0 F</dd></div></Claim>
                   </dl>
                   <div className="mt-3 flex items-center justify-between border-0 border-t border-solid border-outline-variant pt-3">
                     <span className="text-label-md text-on-surface">Montant à régler au vendeur</span>

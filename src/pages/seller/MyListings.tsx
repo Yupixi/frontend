@@ -21,6 +21,7 @@ import WalletPaySheet from '../../components/WalletPaySheet'
 import { BOOST_PACKS_QUERY } from '../../graphql/promotions'
 import { creditsLabel } from '../../components/Credits'
 import { BADGE_LABEL } from '../../graphql/badges'
+import { useNoCommissionClaims } from '../../lib/site'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -63,6 +64,7 @@ function toCsv(rows: MyListingRow[]) {
 
 // "Mes annonces" (Seller Hub) mockup.
 export default function MyListings({ onNavigate, onSelectListing, onEditListing, currentUser, onLogout }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data, loading, refetch } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 200 } })
   const all = data?.myListings.items ?? []
   const { data: repData } = useQuery<{ myReputation: Reputation }>(MY_REPUTATION_QUERY)
@@ -229,7 +231,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         {/* KPIs (desktop) */}
         <div className="mb-5 hidden grid-cols-4 gap-3 lg:grid">
           {[
-            { label: 'Valeur du stock actif', value: <><Price amount={stock} /></>, sub: <span className="flex items-center gap-1 text-tertiary"><CheckCircle2 size={13} /> 0 F de frais cachés</span> },
+            { label: 'Valeur du stock actif', value: <><Price amount={stock} /></>, sub: noCommission ? <span className="flex items-center gap-1 text-tertiary"><CheckCircle2 size={13} /> 0 F de frais cachés</span> : null },
             { label: 'Vues totales', value: views.toLocaleString('fr-FR'), sub: <span className="text-tertiary">+{views24} sur 24h</span> },
             { label: 'Discussions en cours', value: <>{discussions} <span className="text-body-sm font-normal">acheteur{discussions > 1 ? 's' : ''}</span></>, sub: <span className="flex items-center gap-1"><Tag size={13} /> {pendingOffers} offre{pendingOffers > 1 ? 's' : ''} en attente</span> },
             { label: 'Indice de réputation', value: rep?.reviewsCount ? <span className="text-tertiary">{rep.averageRating.toFixed(1)} / 5 <span className="text-body-sm font-normal text-on-surface-variant">({rep.reviewsCount} avis)</span></span> : '—', sub: <span className="flex items-center gap-1"><Star size={13} /> {currentUser?.badge ? BADGE_LABEL[currentUser.badge] : 'Avis des acheteurs'}</span> },

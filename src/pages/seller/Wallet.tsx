@@ -14,6 +14,7 @@ import {
 } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
 import type { WalletSettings } from '../../graphql/payments'
+import { Claim, useNoCommissionClaims } from '../../lib/site'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -43,6 +44,7 @@ const TX_META: Record<WalletTxType, { icon: string, box: string, status: string,
 // by Mobile Money, are the only currency of the app: they pay boosts,
 // badges, the shop plan and campaign fees.
 export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary; walletSettings: WalletSettings }>(MY_WALLET_QUERY)
   const wallet = walletData?.myWallet
   const { data: packsData } = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY)
@@ -74,7 +76,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
             <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">Achetez des crédits par Mobile Money : ils paient tous vos achats Dilchap (boosts, badges, boutique, campagnes). Suivez aussi vos ventes directes.</p>
           </div>
           <div className="flex gap-2">
-            <span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-tertiary-soft px-3 py-2.5 text-label-md text-tertiary"><CheckCircle2 size={16} /> Commission 0% active</span>
+            <Claim><span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-tertiary-soft px-3 py-2.5 text-label-md text-tertiary"><CheckCircle2 size={16} /> Commission 0% active</span></Claim>
             <button onClick={() => setBuying('')} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark"><Icon name="add_card" size={16} /> Acheter des crédits</button>
           </div>
         </div>
@@ -95,7 +97,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
             <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
               <div className="text-label-sm text-on-surface-variant">Ventes générées</div>
               <div className="mt-0.5 text-headline-sm font-extrabold text-on-surface"><Price amount={wallet?.totalSales ?? 0} /></div>
-              <div className="text-[11px] text-tertiary">0 F de commission</div>
+              <Claim><div className="text-[11px] text-tertiary">0 F de commission</div></Claim>
             </div>
             <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
               <div className="text-label-sm text-on-surface-variant">Ventes conclues</div>
@@ -122,7 +124,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
             <div className="p-5">
               <div className="flex items-center justify-between text-label-md text-on-surface">Total des ventes générées <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary text-white"><Icon name="payments" size={17} /></span></div>
               <div className="mt-2 text-[36px] font-extrabold leading-none text-on-surface"><Price amount={wallet?.totalSales ?? 0} /></div>
-              <p className="m-0 mt-2 flex items-center gap-1 text-body-sm text-tertiary"><CheckCircle2 size={14} /> 100% perçu par vous • 0 F de commission</p>
+              <Claim><p className="m-0 mt-2 flex items-center gap-1 text-body-sm text-tertiary"><CheckCircle2 size={14} /> 100% perçu par vous • 0 F de commission</p></Claim>
             </div>
             <div className="flex items-center justify-between bg-surface-container-low px-5 py-3 text-body-sm text-on-surface-variant">Paiements reçus en direct <span className="font-semibold text-on-surface">Direct vendeur</span></div>
           </div>
@@ -141,14 +143,14 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary text-white md:h-12 md:w-12"><ShieldCheck size={22} /></span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-label-lg text-on-surface md:text-headline-sm">
-              <span className="md:hidden">0% de commission sur vos ventes</span>
+              <span className="md:hidden">{noCommission ? '0% de commission sur vos ventes' : 'Engagement Transparence Dilchap'}</span>
               <span className="hidden md:inline">Engagement Transparence Dilchap</span>
-              <span className="hidden rounded bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary md:inline">Garanti sans frais cachés</span>
+              <Claim><span className="hidden rounded bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary md:inline">Garanti sans frais cachés</span></Claim>
             </div>
             <p className="m-0 mt-1 text-body-sm text-on-surface-variant md:hidden">Vos acheteurs vous payent directement (main à la main, Wave, Orange Money). Dilchap ne retient pas vos fonds.</p>
-            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Dilchap ne retient pas vos fonds. Vos acheteurs vous payent directement de la main à la main ou via votre portefeuille mobile habituel (Wave, Orange Money, Moov). Vos gains restent intégralement vôtres.</p>
+            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Dilchap ne retient pas vos fonds. Vos acheteurs vous payent directement de la main à la main ou via votre portefeuille mobile habituel (Wave, Orange Money, Moov).<Claim> Vos gains restent intégralement vôtres.</Claim></p>
           </div>
-          <span className="hidden shrink-0 items-center gap-1.5 rounded-lg bg-surface-lowest px-3 py-2.5 text-label-md text-on-surface md:flex"><CheckCircle2 size={16} className="text-tertiary" /> 0% commission sur chaque vente</span>
+          <Claim><span className="hidden shrink-0 items-center gap-1.5 rounded-lg bg-surface-lowest px-3 py-2.5 text-label-md text-on-surface md:flex"><CheckCircle2 size={16} className="text-tertiary" /> 0% commission sur chaque vente</span></Claim>
         </section>
 
         {/* Packs */}
@@ -264,7 +266,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
                     <tr key={t.id} className="border-0 border-t border-solid border-outline-variant">
                       <td className="px-5 py-4 text-on-surface-variant">{new Date(t.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                       <td className="px-5 py-4"><span className="flex items-center gap-2 text-on-surface"><span className={`flex h-7 w-7 items-center justify-center rounded-lg ${meta.box}`}><Icon name={meta.icon} size={16} /></span>{t.label}</span></td>
-                      <td className="px-5 py-4 text-on-surface">{t.listing?.title ?? '—'}{t.type === 'SALE' && <div className="text-[11px] text-tertiary">0 F commission prélevée</div>}</td>
+                      <td className="px-5 py-4 text-on-surface">{t.listing?.title ?? '—'}{t.type === 'SALE' && <Claim><div className="text-[11px] text-tertiary">0 F commission prélevée</div></Claim>}</td>
                       <td className="px-5 py-4 text-on-surface-variant">{t.method ? <span className="flex items-center gap-2">{PAYMENT_BRANDS[t.method] && <PaymentLogo method={t.method} size={22} />}{METHOD_LABEL[t.method] ?? t.method}</span> : '—'}</td>
                       <td className="px-5 py-4"><TxAmount t={t} /></td>
                       <td className="px-5 py-4"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${meta.statusCls}`}>✓ {meta.status}</span></td>

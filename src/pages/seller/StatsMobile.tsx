@@ -8,6 +8,7 @@ import { MY_REPUTATION_QUERY } from '../../graphql/sellerHub'
 import type { SellerStats } from '../../graphql/sellerTools'
 import Select from '../../components/Select'
 import { BADGE_LABEL, type BadgeTier } from '../../graphql/badges'
+import { useNoCommissionClaims } from '../../lib/site'
 
 type Props = {
   s?: SellerStats
@@ -31,6 +32,7 @@ function Delta({ v }: { v: number | null }) {
 // "Statistiques Vendeur" (Stitch mobile): revenue hero, 4 KPIs, views vs
 // contacts curve, recent listings and the boost comparison.
 export default function StatsMobile({ s, period, periods, onPeriod, badge, onNavigate, onSelectListing, advanced }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data: repData } = useQuery<{ myReputation: { averageRating: number; reviewsCount: number } }>(MY_REPUTATION_QUERY)
   const rep = repData?.myReputation
   const chart = (s?.series ?? []).map(d => ({ day: new Date(d.day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }), Vues: d.views, Contacts: d.contacts }))
@@ -61,7 +63,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
         <div className="flex items-center justify-between"><span className="text-label-md text-white/85">Chiffre d'affaires de la période</span><Delta v={growth(s?.revenue, s?.revenuePrev)} /></div>
         <div className="mt-1 text-headline-lg font-extrabold"><Price amount={s?.revenue ?? 0} /></div>
         <div className="mt-2 flex items-center justify-between text-label-sm text-white/85">
-          <span className="flex items-center gap-1"><Icon name="verified_user" size={15} /> 0% de commission Dilchap</span>
+          {noCommission ? <span className="flex items-center gap-1"><Icon name="verified_user" size={15} /> 0% de commission Dilchap</span> : <span />}
           <button onClick={() => onNavigate('seller-wallet')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-white underline">Détails</button>
         </div>
       </section>

@@ -12,6 +12,7 @@ import type { AuthUser } from '../../graphql/auth'
 import PaymentLogo from '../../components/PaymentLogo'
 import SellerBadge from '../../components/SellerBadge'
 import { BADGE_LABEL } from '../../graphql/badges'
+import { Claim } from '../../lib/site'
 
 type Props = { orderId: string; onNavigate: (p: any) => void; onOpenDispute: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -193,7 +194,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="m-0 text-headline-sm text-on-surface">Règlement du vendeur</h2>
-                    <span className="rounded-full border border-outline-variant px-2 py-0.5 text-label-sm text-on-surface-variant">0 F de frais Dilchap</span>
+                    <Claim><span className="rounded-full border border-outline-variant px-2 py-0.5 text-label-sm text-on-surface-variant">0 F de frais Dilchap</span></Claim>
                   </div>
                   <div className="mt-3 flex flex-col gap-2">
                     {methods.map(m => (

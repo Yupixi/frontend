@@ -10,6 +10,7 @@ import { MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, disputeIsOpen, type D
 import { RESPOND_TO_MEETUP_MUTATION } from '../../graphql/messaging'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
+import { useNoCommissionClaims } from '../../lib/site'
 
 type Props = {
   mode: 'purchases' | 'receipts'
@@ -46,6 +47,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 // "Mes Achats & Remises en main propre" (Stitch desktop + mobile).
 export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute, onOpenConversation, currentUser, onLogout }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data, loading, refetch } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY, { fetchPolicy: 'cache-and-network' })
   const { data: statsData } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)
   const [respondToMeetup, { loading: answering }] = useMutation(RESPOND_TO_MEETUP_MUTATION)
@@ -79,7 +81,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
           <div className="min-w-0 max-w-2xl">
             <div className="hidden items-center gap-1 text-label-sm uppercase text-tertiary md:flex"><Icon name="verified" size={15} /> Sécurisation peer-to-peer Côte d'Ivoire</div>
             <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface md:text-headline-lg">Mes achats &amp; remises<span className="hidden md:inline"> en main propre</span></h1>
-            <p className="m-0 mt-1 text-body-md text-on-surface-variant"><span className="md:hidden">Suivi sécurisé des remises en main propre</span><span className="max-md:hidden">Suivi de vos achats, code secret de remise et 0 F de commission.</span></p>
+            <p className="m-0 mt-1 text-body-md text-on-surface-variant"><span className="md:hidden">Suivi sécurisé des remises en main propre</span><span className="max-md:hidden">Suivi de vos achats{noCommission ? ', code secret de remise et 0 F de commission.' : ' et code secret de remise.'}</span></p>
           </div>
           <span className="mt-2 flex shrink-0 items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1.5 text-label-sm text-tertiary md:hidden"><Icon name="verified_user" size={16} /> Protection 100%</span>
           <div className="hidden items-center gap-3 rounded-2xl bg-surface-lowest px-4 py-3 shadow-sm md:flex">
@@ -206,7 +208,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
         </div>
 
         <section className="mt-6 hidden gap-4 rounded-2xl bg-surface-container-low p-5 md:grid md:grid-cols-4">
-          {GOLDEN.map(([icon, title, text]) => (
+          {GOLDEN.filter(([icon]) => noCommission || icon !== 'sell').map(([icon, title, text]) => (
             <div key={title} className="flex gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-lowest text-primary"><Icon name={icon} size={20} /></span>
               <div><div className="text-label-md text-on-surface">{title}</div><div className="text-body-sm text-on-surface-variant">{text}</div></div>

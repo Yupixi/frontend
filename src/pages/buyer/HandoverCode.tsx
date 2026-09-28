@@ -11,6 +11,7 @@ import type { AuthUser } from '../../graphql/auth'
 import PaymentLogo from '../../components/PaymentLogo'
 import SellerBadge from '../../components/SellerBadge'
 import { BADGE_LABEL } from '../../graphql/badges'
+import { Claim } from '../../lib/site'
 
 type Props = {
   orderId: string
@@ -145,7 +146,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                     <h2 className="m-0 text-headline-sm text-on-surface">Règlement accepté</h2>
                     <p className="m-0 text-body-sm text-on-surface-variant">Ce vendeur accepte les modalités suivantes sur place :</p>
                   </div>
-                  <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="verified" size={14} /> 0 F de commission</span>
+                  <Claim><span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="verified" size={14} /> 0 F de commission</span></Claim>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
                   {(o.listing.paymentMethods.length ? o.listing.paymentMethods : ['CASH']).map(m => (

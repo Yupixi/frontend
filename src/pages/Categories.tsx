@@ -10,6 +10,7 @@ import type { SearchPreset } from './Home'
 import Select from '../components/Select'
 import { thumbnailUrl } from '../lib/media'
 import PaymentLogo from '../components/PaymentLogo'
+import { Claim, useNoCommissionClaims } from '../lib/site'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -28,6 +29,7 @@ const TRUST = [
 
 // "Toutes les catégories" (Stitch desktop mockup; stacks on mobile).
 export default function Categories({ onNavigate, onCategorySelect, onSearch }: CategoriesProps) {
+  const noCommission = useNoCommissionClaims()
   const { data, loading } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 10 } })
   const { data: campaignsData } = useQuery<{ activeCampaigns: ActiveCampaignTile[] }>(ACTIVE_CAMPAIGNS_QUERY)
@@ -165,13 +167,13 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
       <section className="mt-8 overflow-hidden rounded-3xl bg-inverse-surface p-6 text-white md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-label-sm uppercase"><Icon name="bolt" size={13} /> 0% de commission vendeur</span>
+            <Claim><span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-label-sm uppercase"><Icon name="bolt" size={13} /> 0% de commission vendeur</span></Claim>
             <h2 className="m-0 mt-3 text-headline-md text-white md:text-headline-lg">Vous avez des articles qui dorment chez vous ?</h2>
-            <p className="m-0 mt-2 text-body-md text-white/75">Vendez-les en 2 minutes et <b className="text-white">gardez 100% de votre prix</b>. Dilchap ne prélève rien sur vos gains : l'acheteur vous paie directement par Wave, Orange Money ou en espèces à la remise.</p>
+            <p className="m-0 mt-2 text-body-md text-white/75">Vendez-les en 2 minutes{noCommission ? <> et <b className="text-white">gardez 100% de votre prix</b>. Dilchap ne prélève rien sur vos gains : l'acheteur</> : ". L'acheteur"} vous paie directement par Wave, Orange Money ou en espèces à la remise.</p>
             <div className="mt-3 flex flex-wrap gap-4 text-label-sm text-white/80">
               <span className="flex items-center gap-1"><Icon name="timer" size={15} className="text-[#6ee7b7]" /> En ligne en 2 minutes</span>
               <span className="flex items-center gap-1"><Icon name="chat" size={15} className="text-[#6ee7b7]" /> Messagerie directe</span>
-              <span className="flex items-center gap-1"><Icon name="payments" size={15} className="text-[#6ee7b7]" /> Paiement sans frais</span>
+              <Claim><span className="flex items-center gap-1"><Icon name="payments" size={15} className="text-[#6ee7b7]" /> Paiement sans frais</span></Claim>
             </div>
           </div>
           <div className="flex shrink-0 flex-col gap-2">
@@ -181,8 +183,8 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
         </div>
       </section>
 
-      <section className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
-        {TRUST.map(t => (
+      <section className={`mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 ${noCommission ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+        {TRUST.filter(t => noCommission || t.icon !== 'verified_user').map(t => (
           <div key={t.title} className="flex items-start gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
             {'logos' in t ? <span className="flex shrink-0 -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={32} className="ring-2 ring-surface-lowest" />)}</span> : <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.cls}`}><Icon name={t.icon} size={22} /></span>}
             <div><div className="text-headline-sm text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>

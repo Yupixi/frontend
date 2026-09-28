@@ -12,6 +12,7 @@ import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import Credits from '../../components/Credits'
 import { PaymentLogos } from '../../components/PaymentLogo'
+import { Claim } from '../../lib/site'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -154,7 +155,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           <Kpi label="Vues catalogue" icon="visibility" iconCls="bg-primary-fixed text-primary" value={loading ? '—' : nf(s?.views ?? 0)} foot={<><Trend now={s?.views ?? null} prev={s?.viewsPrev ?? null} /> vs période précédente</>} />
           <Kpi label="Contacts chat" icon="chat_bubble" iconCls="bg-surface-container text-tertiary" value={loading ? '—' : nf(s?.contacts ?? 0)} foot={<><Trend now={s?.contacts ?? null} prev={s?.contactsPrev ?? null} /> échanges initiés</>} />
           <Kpi label="Conversion chat" icon="price_check" iconCls="bg-surface-container text-primary" value={loading ? '—' : pct(s?.conversionRate)} foot={<><Trend now={s?.conversionRate ?? null} prev={s?.conversionRatePrev ?? null} /> conclus en deal</>} />
-          <Kpi label="Volume d'affaires" icon="payments" iconCls="bg-tertiary-soft text-tertiary" value={loading ? '—' : <Price amount={s?.revenue ?? 0} />} foot={<span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="savings" size={14} /> Économisé : <Price amount={s?.savedCommission ?? 0} /></span>} />
+          <Kpi label="Volume d'affaires" icon="payments" iconCls="bg-tertiary-soft text-tertiary" value={loading ? '—' : <Price amount={s?.revenue ?? 0} />} foot={<Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="savings" size={14} /> Économisé : <Price amount={s?.savedCommission ?? 0} /></span></Claim>} />
           <div className="col-span-2 lg:col-span-1">
             <Kpi label="Délai moyen vente" icon="bolt" iconCls="bg-surface-container text-primary" value={loading ? '—' : s?.avgSaleDays != null ? <>{formatNumber(s.avgSaleDays)} <span className="text-headline-sm font-semibold">jours</span></> : '—'} foot={s?.avgSaleDaysBoosted != null ? <span className="rounded bg-primary-fixed px-1.5 text-label-sm text-primary">{formatNumber(s.avgSaleDaysBoosted)} j si boosté</span> : 'publication → vente conclue'} />
           </div>

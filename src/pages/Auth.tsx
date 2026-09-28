@@ -9,6 +9,7 @@ import { storeAccessToken } from '../lib/auth'
 import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
+import { useNoCommissionClaims } from '../lib/site'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -183,6 +184,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [reason] = useState(takeAuthReason)
+  const noCommission = useNoCommissionClaims()
   const { data: footerData } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
   const supportPhone = footerData?.footerSettings?.supportPhone
   const success = (payload: AuthPayload) => {
@@ -230,7 +232,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
 
           {/* Mobile trust strip */}
           <div className="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-surface-container-low p-3 text-center lg:hidden">
-            {[['percent', '0% Commission', 'Vendez sans frais', 'bg-tertiary-soft text-tertiary'], ['handshake', 'Remise directe', 'Lieux publics', 'bg-primary-fixed text-primary'], ['shield', 'Anti-arnaque', 'Code de remise', 'bg-tertiary-soft text-tertiary']].map(([icon, t, s, cls]) => (
+            {[...(noCommission ? [['percent', '0% Commission', 'Vendez sans frais', 'bg-tertiary-soft text-tertiary']] : []), ['handshake', 'Remise directe', 'Lieux publics', 'bg-primary-fixed text-primary'], ['shield', 'Anti-arnaque', 'Code de remise', 'bg-tertiary-soft text-tertiary']].map(([icon, t, s, cls]) => (
               <div key={t}><span className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full ${cls}`}><Icon name={icon} size={18} /></span><div className="mt-1 text-label-sm text-on-surface">{t}</div><div className="text-label-sm text-on-surface-variant">{s}</div></div>
             ))}
           </div>
@@ -252,7 +254,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
             <h2 className="m-0 text-headline-lg text-on-surface">Achetez et vendez en toute clarté.</h2>
             <p className="m-0 mt-3 text-body-lg text-on-surface-variant">Fini les arnaques de livraison et les faux profils. Dilchap réinvente les petites annonces avec des rencontres physiques sûres et des paiements directs sans intermédiaire.</p>
             <div className="mt-6 flex flex-col gap-3">
-              {PERKS.map(p => (
+              {PERKS.filter(p => noCommission || p.icon !== 'percent').map(p => (
                 <div key={p.title} className="flex gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary text-white"><Icon name={p.icon} size={20} /></span>
                   <div><div className="text-label-lg text-on-surface">{p.title}</div><div className="text-body-sm text-on-surface-variant">{p.text}</div></div>

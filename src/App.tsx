@@ -12,6 +12,7 @@ import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
 import Home, { type SearchPreset } from './pages/Home'
 import { lazyPage, preloadPages } from './lib/lazyPage'
+import { useSeo } from './lib/site'
 
 // Home is the landing page and ships in the entry chunk; every other page is
 // its own chunk so a first visit only downloads what it renders (recharts,
@@ -134,6 +135,8 @@ function sharedListingId(): string | null {
 }
 
 export default function App() {
+  // Tab title, description and share tags from « Réglages du site ».
+  useSeo()
   const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration

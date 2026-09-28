@@ -15,6 +15,7 @@ import { SIMILAR_LISTINGS_QUERY, type RemoteListing } from '../../graphql/listin
 import { CREATE_REVIEW_MUTATION, SELLER_PROFILE_QUERY } from '../../graphql/reviews'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
+import { useNoCommissionClaims } from '../../lib/site'
 
 type Props = {
   orderId: string
@@ -32,6 +33,7 @@ const RATING_LABEL = ['', 'Décevant', 'Moyen', 'Correct', 'Très bien', 'Remise
 // "Remise validée par code sécurisé" / "Reçu de remise réussie": receipt
 // of a concluded hand-over + review of the seller + similar items.
 export default function Receipt({ orderId, onNavigate, onSelectListing, favorites, onToggleFavorite, currentUser, onLogout }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data, loading } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId })
   const o = data?.salesOrder
   const { data: profileData, refetch: refetchProfile } = useQuery<{ sellerProfile: { hasReviewed: boolean; canReview: boolean } }>(SELLER_PROFILE_QUERY, { variables: { sellerId: o?.seller.id }, skip: !o })
@@ -154,7 +156,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                       ['location_on', 'Lieu de rendez-vous', o.meetup?.place ?? '—', 'Point de rencontre convenu'],
                       ['schedule', 'Date et horodatage', closedAt ? new Date(closedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', handoverProof(o.meetup)],
                       ['account_balance_wallet', 'Mode de règlement', payment, 'Réglé directement au vendeur'],
-                      ['sell', 'Commission plateforme', '0 F (0% sans frais)', 'Aucun frais pour l’acheteur'],
+                      ...(noCommission ? [['sell', 'Commission plateforme', '0 F (0% sans frais)', 'Aucun frais pour l’acheteur']] : []),
                     ].map(([icon, label, value, sub]) => (
                       <div key={label}>
                         <dt className="text-label-sm uppercase text-on-surface-variant">{label}</dt>

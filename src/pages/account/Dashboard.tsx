@@ -13,6 +13,7 @@ import { FOOTER_SETTINGS_QUERY } from '../../graphql/content'
 import type { AuthUser } from '../../graphql/auth'
 import Credits from '../../components/Credits'
 import PaymentLogo, { paymentLabel } from '../../components/PaymentLogo'
+import { useNoCommissionClaims } from '../../lib/site'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -40,6 +41,7 @@ function Kpi({ label, short, icon, animated, value, sub, onClick, accent, classN
 
 // "Tableau de bord" (Stitch desktop + mobile): buyer and seller overview.
 export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase, onOpenConversation, onOpenHandover, currentUser, onLogout }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data: salesData } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY)
   const { data: walletData } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
@@ -175,7 +177,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                 <h3 className="m-0 mt-1 text-headline-sm text-on-surface">{upcoming.listing.title}</h3>
                 <div className="text-body-sm text-on-surface-variant">{upcoming.role === 'BUYER' ? 'Vendeur' : 'Acheteur'} : {upcoming.other}</div>
                 <div className="mt-2 text-headline-md font-extrabold text-primary"><Price amount={upcoming.amount} currency={upcoming.listing.currency} /></div>
-                <div className="text-label-sm text-tertiary">0 F de frais, payé directement à la remise</div>
+                <div className="text-label-sm text-tertiary">{noCommission ? '0 F de frais, payé directement à la remise' : 'Payé directement à la remise'}</div>
                 <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-surface-container-low p-3">
                   <div className="flex gap-2"><Icon name="storefront" size={20} className="text-primary" /><div><div className="text-label-sm uppercase text-on-surface-variant">Lieu de rencontre</div><div className="text-label-md text-on-surface">{upcoming.place}</div></div></div>
                   <div className="flex gap-2"><Icon name="schedule" size={20} className="text-tertiary" /><div><div className="text-label-sm uppercase text-on-surface-variant">Créneau horaire</div><div className="text-label-md text-on-surface">{new Date(upcoming.at).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div></div></div>

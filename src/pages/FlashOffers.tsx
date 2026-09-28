@@ -10,6 +10,7 @@ import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
 import { useReveal } from '../lib/reveal'
 import { ListingCard } from '../components/ListingCard'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
+import { Claim, useNoCommissionClaims } from '../lib/site'
 
 type FlashOffersProps = {
   onNavigate: (page: any) => void
@@ -99,6 +100,7 @@ const imageOf = (e: ActiveCampaignListing) => thumbnailUrl(e.listing.coverImageU
 // "Campagnes & Black Friday" mockup — everything is driven by the live
 // campaign (name, colour, window, discounted listings) authored in the BO.
 export default function FlashOffers({ onNavigate, onSelectListing, favorites, onToggleFavorite, onContactSeller, isLoggedIn }: FlashOffersProps) {
+  const noCommission = useNoCommissionClaims()
   const { data, loading } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const campaign = data?.activeCampaign
@@ -219,7 +221,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                         {sale != null && <span className="text-body-sm text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></span>}
                       </div>
                       {d > 0 && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full" style={{ width: `${Math.min(100, d)}%`, background: color }} /></div>}
-                      <div className="mt-2 flex items-center gap-1 text-[11px] text-tertiary"><Handshake size={13} /> Remise en main propre gratuite</div>
+                      <div className="mt-2 flex items-center gap-1 text-[11px] text-tertiary"><Handshake size={13} /> Remise en main propre{noCommission && ' gratuite'}</div>
                       <button onClick={ev => { ev.stopPropagation(); contact(e)() }} className="mt-2 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-2 text-label-md text-on-surface hover:bg-primary hover:text-white">
                         <MessageSquare size={15} /> Discuter avec le vendeur
                       </button>
@@ -254,7 +256,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
         {/* Reassurance */}
         <section className="mt-10 grid gap-3 md:grid-cols-3">
           {[
-            { icon: <Percent size={19} />, box: 'bg-tertiary-soft text-tertiary', title: '0% frais marketplace', text: 'Zéro commission, même en période de rabais extrêmes.' },
+            ...(noCommission ? [{ icon: <Percent size={19} />, box: 'bg-tertiary-soft text-tertiary', title: '0% frais marketplace', text: 'Zéro commission, même en période de rabais extrêmes.' }] : []),
             { icon: <MessageSquare size={19} />, box: 'bg-primary-fixed text-primary', title: 'Négociation en direct', text: 'Proposez une offre instantanée au vendeur par messagerie.' },
             { icon: <ShieldCheck size={19} />, box: 'bg-tertiary-soft text-tertiary', title: 'Prix barré réel', text: 'Le prix d’origine de l’annonce est affiché à côté du prix promo.' },
           ].map(t => (
@@ -343,9 +345,9 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-label-sm uppercase"><Icon name="trending_up" size={14} /> Trafic record {campaign.name}</span>
               <h2 className="m-0 mt-3 text-headline-lg text-white md:text-[36px] md:leading-[44px]">Vos placards regorgent de pépites ? Vendez-les aujourd'hui !</h2>
-              <p className="m-0 mt-2 text-body-md text-white/90">Profitez du pic d'acheteurs : déposez votre annonce gratuitement en moins de 2 minutes, fixez votre prix et gardez 100% de vos gains.</p>
+              <p className="m-0 mt-2 text-body-md text-white/90">Profitez du pic d'acheteurs : déposez votre annonce{noCommission && ' gratuitement'} en moins de 2 minutes{noCommission ? ', fixez votre prix et gardez 100% de vos gains.' : ' et fixez votre prix.'}</p>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-white/90">
-                <span className="flex items-center gap-1"><CheckCircle2 size={14} /> 0 F de frais de mise en vente</span>
+                <Claim><span className="flex items-center gap-1"><CheckCircle2 size={14} /> 0 F de frais de mise en vente</span></Claim>
                 <span className="flex items-center gap-1"><CheckCircle2 size={14} /> Paiement en direct sans intermédiaire</span>
               </div>
             </div>
