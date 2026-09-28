@@ -18,7 +18,8 @@ import { PaymentLogos } from '../components/PaymentLogo'
 import { ShopCard } from '../components/ShopCard'
 import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 
-export type SearchPreset = { city?: string, maxPrice?: number }
+// promo: only items on sale (shop sales and Dilchap campaigns).
+export type SearchPreset = { city?: string, maxPrice?: number, promo?: boolean }
 
 type HomeProps = {
   onNavigate: (page: any) => void
@@ -275,7 +276,6 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const deals = campaign
     ? { tag: campaign.name, title: bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Offres à prix cassés', text: campaign.description }
     : null
-  const hasExpress = latest.some(l => !!l.urgentUntil && new Date(l.urgentUntil) > new Date())
 
   const loadMore = canLoadMore && (
     <button
@@ -588,11 +588,10 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                   </Select>
                 </span>
               </div>
-              {(hasExpress || campaign) && (
-                <button onClick={() => onNavigate('flash-offers')} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary-fixed/50 px-2 py-1 text-label-sm text-primary">
-                  <Icon name="bolt" size={16} /> Express
-                </button>
-              )}
+              {/* Always there: every item on sale right now. */}
+              <button onClick={() => onSearch?.('', { promo: true })} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary-fixed/50 px-2 py-1 text-label-sm text-primary">
+                <Icon name="percent" size={16} /> Promos
+              </button>
             </div>
           )}
           <div className="flex h-12 w-full items-center rounded-xl bg-surface-lowest px-3 shadow-sm">

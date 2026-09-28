@@ -38,6 +38,7 @@ export type SheetState = {
   shopsOnly: boolean
   handoverOnly: boolean
   mobileMoneyOnly: boolean
+  promoOnly: boolean
 }
 
 type Props = {
@@ -187,6 +188,15 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
               </div>
             </Section>
           )}
+
+          <Section icon="percent" title="Bonnes affaires">
+            <label className="relative flex cursor-pointer items-center gap-3 py-2">
+              <Icon name="local_offer" size={22} className="shrink-0 text-primary" />
+              <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">En promotion</span><span className="block text-body-sm text-on-surface-variant">Soldes des boutiques et campagnes en cours</span></span>
+              <input type="checkbox" className="peer sr-only" checked={state.promoOnly} onChange={() => onChange({ promoOnly: !state.promoOnly })} />
+              <span className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5" />
+            </label>
+          </Section>
 
           <Section icon="shield" title="Vendeurs de confiance">
             {([
