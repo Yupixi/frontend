@@ -203,7 +203,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
             <button onClick={() => onNavigate('search')} className="flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-on-surface"><Icon name="storefront" size={18} /> <span className="max-[400px]:hidden">Explorer le catalogue</span><span className="min-[400px]:hidden">Catalogue</span></button>
           </div>
           <div className="mt-4 flex flex-col items-center gap-2 lg:hidden">
-            <span className="flex items-center gap-1.5 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="verified" size={15} /> La seconde main de confiance</span>
+            <span className="flex items-center gap-1.5 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="verified" size={15} /> La marketplace de confiance</span>
             <p className="m-0 text-center text-body-md text-on-surface-variant">Achetez, vendez et négociez en toute sécurité.</p>
           </div>
           {reason && mode !== 'forgot' && (

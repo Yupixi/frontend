@@ -37,7 +37,7 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
         <header className="flex items-start justify-between border-0 border-b-2 border-solid border-[#FE0000] pb-4">
           <div>
             <img src="/logo-dilchap.png" alt="Dilchap" className="block h-10 w-auto" />
-            <div className="mt-1 text-[9pt] text-[#6b6363]">Marketplace de seconde main — Côte d’Ivoire</div>
+            <div className="mt-1 text-[9pt] text-[#6b6363]">Marketplace — Côte d’Ivoire</div>
           </div>
           <div className="text-right">
             <div className="text-[16pt] font-extrabold">Reçu de remise</div>
