@@ -2,11 +2,13 @@ import EmptyState from '../../components/EmptyState'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
-  Search, Download, PlusCircle, Rocket, MapPin, CheckCircle2, Edit3, ChevronLeft, ChevronRight, ShieldCheck, ArrowRight,
+  Search, Download, PlusCircle, Rocket, CheckCircle2, Edit3, ChevronLeft, ChevronRight, ShieldCheck, ArrowRight,
   MessageSquare, Tag, Trash2, Eye, Archive, Star,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
+import { formatRelativeDate } from '../../lib/format'
+import { thumbnailUrl } from '../../lib/media'
 import { AccountLayout } from '../account/AccountLayout'
 import ListingOffersPanel from '../../components/ListingOffersPanel'
 import { MY_LISTINGS_QUERY, DELETE_LISTING_MUTATION, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
@@ -41,14 +43,15 @@ const TABS = [
   { key: 'archived', label: 'Archivées', match: (l: MyListingRow) => l.status === 'EXPIRED' || l.status === 'PAUSED' },
 ] as const
 
-const STATUS: Record<string, { label: string, cls: string }> = {
-  APPROVED: { label: 'Actif & en ligne', cls: 'bg-tertiary-soft text-tertiary' },
-  PENDING_REVIEW: { label: 'En validation', cls: 'bg-amber-100 text-amber-800' },
-  REJECTED: { label: 'Refusée', cls: 'bg-primary-fixed text-primary' },
-  DRAFT: { label: 'Brouillon', cls: 'bg-surface-container-high text-on-surface-variant' },
-  SOLD: { label: 'Vendue', cls: 'bg-blue-100 text-blue-800' },
-  EXPIRED: { label: 'Archivée', cls: 'bg-surface-container-high text-on-surface-variant' },
-  PAUSED: { label: 'En pause', cls: 'bg-surface-container-high text-on-surface-variant' },
+// `dot`: colour of the status dot on the phone list line.
+const STATUS: Record<string, { label: string, cls: string, dot: string }> = {
+  APPROVED: { label: 'En ligne', cls: 'bg-tertiary-soft text-tertiary', dot: 'text-tertiary' },
+  PENDING_REVIEW: { label: 'En validation', cls: 'bg-amber-100 text-amber-800', dot: 'text-amber-600' },
+  REJECTED: { label: 'Refusée', cls: 'bg-primary-fixed text-primary', dot: 'text-primary' },
+  DRAFT: { label: 'Brouillon', cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
+  SOLD: { label: 'Vendue', cls: 'bg-blue-100 text-blue-800', dot: 'text-blue-700' },
+  EXPIRED: { label: 'Archivée', cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
+  PAUSED: { label: 'En pause', cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
 }
 
 function toCsv(rows: MyListingRow[]) {
@@ -241,8 +244,23 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
 
         {flash && <p className="mb-3 flex items-center gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} className="shrink-0" /> {flash}</p>}
 
-        {/* Rows */}
-        <div className="flex flex-col gap-3">
+        {/* Rows — a video-list layout (YouTube / YouTube Studio): 16:9
+            thumbnail with the price where the duration sits, two-line title,
+            one line of status + place, one line of stats, ⋮ menu. Wide
+            screens (2xl) add Studio-like columns under a header row. */}
+        {!loading && shown.length > 0 && (
+          <div className="hidden items-center gap-4 border-0 border-b border-solid border-outline-variant px-3 pb-2 text-label-sm uppercase text-on-surface-variant 2xl:flex">
+            <span className="w-40 shrink-0">Annonce</span>
+            <span className="flex-1" />
+            <span className="w-32">Statut</span>
+            <span className="w-28">Date</span>
+            <span className="w-16 text-right">Vues</span>
+            <span className="w-20 text-right">Demandes</span>
+            <span className="w-16 text-right">Favoris</span>
+            <span className="w-[220px]" />
+          </div>
+        )}
+        <div className="flex flex-col 2xl:divide-y 2xl:divide-outline-variant/60">
           {loading && <p className="text-on-surface-variant">Chargement…</p>}
           {!loading && shown.length === 0 && (
             <EmptyState icon="empty-box" fallback="inventory_2" title="Aucune annonce ici" text="Publiez un article en quelques minutes : photos, prix et lieu de remise." action={{ label: 'Publier une annonce', onClick: () => onNavigate('seller-post') }} />
@@ -250,74 +268,75 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           {shown.map(l => {
             const boosted = future(l.boostExpiresAt) || future(l.autoBumpUntil) || future(l.urgentUntil)
             const offers = l.pendingOffersCount ?? 0
-            const accent = boosted ? 'border-l-primary' : offers ? 'border-l-tertiary' : 'border-l-transparent'
             const photos = l.mediaCount?.length ?? (l.coverImageUrl ? 1 : 0)
-            const mainBtn = 'flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none px-3 text-label-md max-lg:flex-1 lg:h-9'
+            const status = STATUS[l.status]
+            const date = l.publishedAt ?? l.createdAt
+            const contacts = l.contactsCount ?? 0
+            const chip = 'flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-none px-3 text-label-md'
+            // The one action that matters for this listing now; the rest is in ⋮.
+            const primary = l.status === 'APPROVED' ? (offers > 0 ? (
+              <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className={`${chip} bg-tertiary text-white`}><MessageSquare size={15} /> Voir l'offre</button>
+            ) : boosted ? (
+              <button onClick={() => onNavigate('seller-premium')} className={`${chip} bg-primary-fixed text-primary`}><Rocket size={15} /> Prolonger le boost</button>
+            ) : (
+              // Enough credits: spend them at once; otherwise the pay sheet offers to buy some.
+              <button disabled={flashPrice === undefined} onClick={() => setConfirm({ kind: credits >= (flashPrice ?? 0) ? 'bump' : 'boost', l })} className={`${chip} bg-primary text-white disabled:opacity-60`}><Rocket size={15} /> Remonter{flashPrice ? <span className="max-sm:hidden 2xl:inline"> · {creditsLabel(flashPrice)}</span> : null}</button>
+            )) : l.status === 'EXPIRED' ? (
+              <button onClick={() => republish(l)} className={`${chip} bg-primary text-white`}><Archive size={15} /> Remettre en ligne</button>
+            ) : l.status === 'DRAFT' ? (
+              <button onClick={() => onEditListing(l.id)} className={`${chip} bg-primary text-white`}><Edit3 size={15} /> Compléter</button>
+            ) : null
+            const item = 'flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md hover:bg-surface-container-low'
+            const menu = (
+              <div className="relative shrink-0">
+                <button onClick={() => setMenuFor(menuFor === l.id ? null : l.id)} title="Plus d'actions" aria-label="Plus d'actions" aria-expanded={menuFor === l.id} className="-mr-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface hover:bg-surface-container-high"><Icon name="more_vert" size={20} /></button>
+                {menuFor === l.id && (
+                  <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-float">
+                    <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className={`${item} text-on-surface`}><Eye size={16} /> Voir l'annonce</button>
+                    <button onClick={() => { setMenuFor(null); onEditListing(l.id) }} className={`${item} text-on-surface`}><Edit3 size={16} /> Modifier</button>
+                    <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className={`${item} text-on-surface`}><Tag size={16} /> Offres reçues</button>
+                    <button onClick={() => { setMenuFor(null); setConfirm({ kind: 'delete', l }) }} className={`${item} text-primary hover:bg-primary-fixed/40`}><Trash2 size={16} /> Supprimer</button>
+                  </div>
+                )}
+              </div>
+            )
             return (
-              <div key={l.id} className={`rounded-2xl border border-l-4 border-solid border-outline-variant bg-surface-lowest ${accent}`}>
-                <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:gap-4 lg:p-4">
-                  <div className="flex min-w-0 flex-1 gap-3 lg:items-center lg:gap-4">
-                    <button onClick={() => onSelectListing(l.id)} aria-label={`Voir « ${l.title} »`} className="relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-none bg-surface-container-low p-0">
-                      {/* Placeholder stays underneath; a broken cover image hides itself. */}
-                      <Icon name="image" size={30} className="text-outline" />
-                      {l.coverImageUrl && <img src={l.coverImageUrl} alt="" onError={e => { e.currentTarget.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />}
-                      {photos > 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 text-[10px] text-white">{photos} photo{photos > 1 ? 's' : ''}</span>}
-                    </button>
+              <div key={l.id}>
+                <div className="flex gap-3 py-2.5 2xl:items-center 2xl:gap-4 2xl:px-3 2xl:py-3 2xl:hover:bg-surface-container-low">
+                  {/* Thumbnail: 16:9, price where a video's duration sits */}
+                  <button onClick={() => onSelectListing(l.id)} aria-label={`Voir « ${l.title} »`} className="relative flex aspect-video w-40 shrink-0 cursor-pointer self-start 2xl:self-center items-center justify-center overflow-hidden rounded-xl border-none bg-surface-container-low p-0 sm:w-48 2xl:w-40">
+                    {/* Placeholder stays underneath; a missing card thumbnail falls back to the photo, a broken one hides itself. */}
+                    <Icon name="image" size={28} className="text-outline" />
+                    {l.coverImageUrl && <img src={thumbnailUrl(l.coverImageUrl)} alt="" loading="lazy" decoding="async" onError={e => { const img = e.currentTarget; if (l.coverImageUrl && !img.src.endsWith(l.coverImageUrl)) img.src = l.coverImageUrl; else img.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />}
+                    <span className="absolute bottom-1 right-1 rounded-md bg-black/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white"><Price amount={l.price} currency={l.currency} /></span>
+                    {photos > 1 && <span className="absolute left-1 top-1 flex items-center gap-0.5 rounded-md bg-black/60 px-1 py-0.5 text-[10px] leading-none text-white"><Icon name="photo_library" size={11} /> {photos}</span>}
+                    {boosted && <span className="absolute bottom-1 left-1 flex items-center rounded-md bg-primary px-1 py-0.5 text-white" title="Boost actif"><Rocket size={11} /></span>}
+                  </button>
+
+                  <div className="flex min-w-0 flex-1 gap-1 2xl:items-center 2xl:gap-4">
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-label-sm ${STATUS[l.status]?.cls ?? ''}`}>● {STATUS[l.status]?.label ?? l.status}</span>
-                        {boosted && <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary"><Rocket size={12} /> Boost actif</span>}
-                        {offers > 0 && <span className="flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-label-sm text-white"><Tag size={12} /> {offers} offre{offers > 1 ? 's' : ''}<span className="max-lg:hidden"> reçue{offers > 1 ? 's' : ''}</span></span>}
-                        <span className="hidden text-label-sm text-on-surface-variant lg:inline">{[l.category?.name, l.subcategory?.name].filter(Boolean).join(' • ')}</span>
-                      </div>
-                      <button onClick={() => onSelectListing(l.id)} className="block max-w-full cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg text-on-surface hover:text-primary lg:text-headline-sm">{l.title}</button>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-body-sm text-on-surface-variant">
-                        <span className="flex min-w-0 items-center gap-1"><MapPin size={13} className="shrink-0" /> <span className="truncate">{l.locationLabel ? `${l.locationLabel}, ` : ''}{l.city}</span></span>
-                        <span className="hidden lg:inline">Publiée le {new Date(l.publishedAt ?? l.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                        {(l.condition && l.condition !== 'N/A') && <span className="hidden lg:inline">{l.condition}</span>}
-                        {l.size && <span className="hidden lg:inline">Taille {l.size}</span>}
-                      </div>
-                      <div className="mt-1 text-headline-sm font-extrabold text-on-surface lg:hidden"><Price amount={l.price} currency={l.currency} /></div>
+                      <button onClick={() => onSelectListing(l.id)} className="line-clamp-2 cursor-pointer border-none bg-transparent p-0 text-left text-label-lg leading-snug text-on-surface hover:text-primary">{l.title}</button>
+                      {/* Phone: status + place, then the stats line */}
+                      <p className="m-0 mt-0.5 truncate text-body-sm text-on-surface-variant 2xl:hidden">
+                        <span className={status?.dot ?? ''}>●</span> {status?.label ?? l.status} · {l.city}
+                      </p>
+                      <p className="m-0 truncate text-body-sm text-on-surface-variant 2xl:hidden">
+                        {l.viewsCount.toLocaleString('fr-FR')} vue{l.viewsCount > 1 ? 's' : ''} · {l.favoritesCount} favori{l.favoritesCount > 1 ? 's' : ''}{contacts ? ` · ${contacts} demande${contacts > 1 ? 's' : ''}` : ''} · {formatRelativeDate(date).toLowerCase()}
+                      </p>
+                      <p className="m-0 mt-0.5 hidden truncate text-body-sm text-on-surface-variant 2xl:block">{[l.category?.name, l.subcategory?.name].filter(Boolean).join(' • ')} · {l.locationLabel ? `${l.locationLabel}, ` : ''}{l.city}</p>
+                      {primary && <div className="mt-2 flex 2xl:hidden">{primary}</div>}
                     </div>
-                  </div>
-                  <div className="hidden shrink-0 lg:block lg:w-36 lg:text-right">
-                    <div className="text-headline-sm font-extrabold text-on-surface"><Price amount={l.price} currency={l.currency} /></div>
-                    <div className="flex items-center gap-1 text-[11px] text-tertiary lg:justify-end"><CheckCircle2 size={12} /> 0 F commission pour vous</div>
-                  </div>
-                  {/* Hidden between lg and 2xl: the title would be squeezed next to the actions. */}
-                  <div className="grid shrink-0 grid-cols-4 gap-1 rounded-xl bg-surface-container-low p-2 text-center lg:hidden 2xl:grid 2xl:w-64">
-                    {[
-                      { v: l.viewsCount, label: 'Vues' },
-                      { v: `+${l.views24h ?? 0}`, label: '24h', cls: 'text-tertiary' },
-                      { v: l.contactsCount ?? 0, label: 'Demandes', cls: 'text-primary' },
-                      { v: l.favoritesCount, label: 'Favoris' },
-                    ].map(s => <div key={s.label}><div className={`text-label-lg ${s.cls ?? 'text-on-surface'}`}>{s.v}</div><div className="text-[10px] text-on-surface-variant">{s.label}</div></div>)}
-                  </div>
-                  <div className="flex shrink-0 items-center justify-end gap-2">
-                    {l.status === 'APPROVED' && (offers > 0 ? (
-                      <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className={`${mainBtn} bg-tertiary text-white`}><MessageSquare size={16} /> Voir l'offre (Chat)</button>
-                    ) : boosted ? (
-                      <button onClick={() => onNavigate('seller-premium')} className={`${mainBtn} bg-primary text-white lg:bg-primary-fixed lg:text-primary`}><Rocket size={16} /> Prolonger le boost</button>
-                    ) : (
-                      // Enough credits: spend them at once; otherwise the pay sheet offers to buy some.
-                      <button disabled={flashPrice === undefined} onClick={() => setConfirm({ kind: credits >= (flashPrice ?? 0) ? 'bump' : 'boost', l })} className={`${mainBtn} bg-primary text-white disabled:opacity-60`}><Rocket size={16} /> Remonter{flashPrice ? ` (${creditsLabel(flashPrice)})` : ''}</button>
-                    ))}
-                    {l.status === 'EXPIRED' && <button onClick={() => republish(l)} className={`${mainBtn} bg-primary text-white`}><Archive size={16} /> Remettre en ligne</button>}
-                    {l.status === 'DRAFT' && <button onClick={() => onEditListing(l.id)} className={`${mainBtn} bg-primary text-white`}><Edit3 size={16} /> Compléter</button>}
-                    <button onClick={() => onEditListing(l.id)} title="Modifier" aria-label="Modifier" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-high text-on-surface lg:h-9 lg:w-9"><Edit3 size={17} /></button>
-                    <div className="relative">
-                      <button onClick={() => setMenuFor(menuFor === l.id ? null : l.id)} title="Plus" aria-label="Plus d'actions" className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-high text-on-surface lg:h-9 lg:w-9"><Icon name="more_vert" size={18} /></button>
-                      {menuFor === l.id && (
-                        <div className="absolute bottom-full right-0 z-20 mb-1 w-48 rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-float lg:bottom-auto lg:top-full lg:mb-0 lg:mt-1">
-                          <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Eye size={16} /> Voir l'annonce</button>
-                          <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Tag size={16} /> Offres reçues</button>
-                          <button onClick={() => { setMenuFor(null); setConfirm({ kind: 'delete', l }) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-primary hover:bg-primary-fixed/40"><Trash2 size={16} /> Supprimer</button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Desktop columns */}
+                    <span className="hidden w-32 2xl:block"><span className={`rounded-full px-2 py-0.5 text-label-sm ${status?.cls ?? ''}`}>● {status?.label ?? l.status}</span></span>
+                    <span className="hidden w-28 text-body-sm text-on-surface-variant 2xl:block">{new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}<span className="block text-[11px]">{l.publishedAt ? 'Publiée' : 'Créée'}</span></span>
+                    <span className="hidden w-16 text-right text-body-md text-on-surface 2xl:block">{l.viewsCount.toLocaleString('fr-FR')}<span className="block text-[11px] text-tertiary">+{l.views24h ?? 0} 24h</span></span>
+                    <span className="hidden w-20 text-right text-body-md text-on-surface 2xl:block">{contacts}{offers > 0 && <span className="block text-[11px] text-tertiary">{offers} offre{offers > 1 ? 's' : ''}</span>}</span>
+                    <span className="hidden w-16 text-right text-body-md text-on-surface 2xl:block">{l.favoritesCount}</span>
+                    <div className="hidden w-[172px] justify-end 2xl:flex">{primary}</div>
+                    {menu}
                   </div>
                 </div>
-                {offersFor === l.id && <div className="border-0 border-t border-solid border-outline-variant"><ListingOffersPanel listingId={l.id} /></div>}
+                {offersFor === l.id && <div className="mb-2 rounded-2xl border border-outline-variant"><ListingOffersPanel listingId={l.id} /></div>}
               </div>
             )
           })}
