@@ -393,7 +393,7 @@ function SaleEditor({ listings, aisles, onDone, onCancel, followers, sale, relau
             <div className="mb-2 flex items-center justify-between gap-2"><span className="flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="visibility" size={18} className="text-primary" /> Aperçu sur Dilchap</span></div>
             {first ? (
               <div className="overflow-hidden rounded-xl bg-surface-container-low">
-                <div className="relative aspect-[4/3] bg-surface-container">{first.coverImageUrl && <img src={first.coverImageUrl} alt="" className="h-full w-full object-cover" />}<span className="absolute left-2 top-2 rounded-md bg-primary px-2 py-0.5 text-label-sm font-bold text-white">-{Math.max(0, Math.round((1 - promo(picks[0]) / (first.price || 1)) * 100))} %</span></div>
+                <div className="relative aspect-[4/3] overflow-hidden bg-surface-container">{first.coverImageUrl && <img src={first.coverImageUrl} alt="" className="h-full w-full object-cover" />}<span className="absolute left-2 top-2 rounded-md bg-primary px-2 py-0.5 text-label-sm font-bold text-white">-{Math.max(0, Math.round((1 - promo(picks[0]) / (first.price || 1)) * 100))} %</span></div>
                 <div className="p-3">
                   <div className="truncate text-label-lg text-on-surface">{first.title}</div>
                   <div className="flex flex-wrap items-baseline gap-2"><span className="text-headline-sm font-extrabold text-primary"><Price amount={promo(picks[0])} /></span><span className="text-body-sm text-outline line-through"><Price amount={first.price} /></span></div>

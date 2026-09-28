@@ -96,8 +96,8 @@ function Decision({ d, onDone }: { d: Dispute; onDone: () => void }) {
           <div className="mt-2 grid grid-cols-2 gap-3">
             {[{ label: 'Photos vendeur', urls: sellerEvent?.photos ?? [], cls: 'bg-inverse-surface' }, { label: 'Votre constat', urls: d.photos, cls: 'bg-primary' }].map(g => (
               <div key={g.label} className="overflow-hidden rounded-xl bg-surface-container-low">
-                <div className="relative aspect-[4/3] bg-surface-container">
-                  {g.urls[0] ? <a href={g.urls[0]} target="_blank" rel="noreferrer"><img src={g.urls[0]} alt="" className="h-full w-full object-cover" /></a> : <span className="flex h-full items-center justify-center text-body-sm text-on-surface-variant">Aucune photo</span>}
+                <div className="relative aspect-[4/3] overflow-hidden bg-surface-container">
+                  {g.urls[0] ? <a href={g.urls[0]} target="_blank" rel="noreferrer" className="block h-full"><img src={g.urls[0]} alt="" className="h-full w-full object-cover" /></a> : <span className="flex h-full items-center justify-center text-body-sm text-on-surface-variant">Aucune photo</span>}
                   <span className={`absolute left-2 top-2 rounded px-2 py-0.5 text-label-sm text-white ${g.cls}`}>{g.label}</span>
                 </div>
                 {g.urls.length > 1 && <div className="px-2 py-1 text-label-sm text-on-surface-variant">+{g.urls.length - 1} autre{g.urls.length > 2 ? 's' : ''}</div>}

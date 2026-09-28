@@ -460,7 +460,7 @@ export default function Kyc({ onNavigate, currentUser, onLogout, onViewShop }: P
     <div className={`grid gap-2 ${desktop ? 'grid-cols-1' : 'grid-cols-3'}`}>
       {parts.map(p => (
         <button key={p} type="button" onClick={() => setStep(desktop ? 'photos' : p === 'FRONT' ? 'front' : p === 'BACK' ? 'back' : 'selfie')} className="cursor-pointer overflow-hidden rounded-xl border-none bg-surface-lowest p-0 text-left shadow-sm">
-          <span className="relative block aspect-[4/3] bg-surface-container">{photos[p]?.preview && <img src={photos[p]!.preview} alt="" className="h-full w-full object-cover" />}<span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="check" size={13} /></span></span>
+          <span className="relative block aspect-[4/3] overflow-hidden bg-surface-container">{photos[p]?.preview && <img src={photos[p]!.preview} alt="" className="h-full w-full object-cover" />}<span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="check" size={13} /></span></span>
           <span className="block px-2 py-1.5 text-center text-label-sm text-on-surface">{PART_LABEL[p]}<span className="block text-[11px] text-primary">Reprendre</span></span>
         </button>
       ))}

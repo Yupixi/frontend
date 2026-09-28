@@ -187,7 +187,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
             </div>
             {entries.length > 0 && <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {entries.length} article{entries.length > 1 ? 's' : ''} à prix cassé</span>}
           </div>
-          <div ref={entries.length ? grid : undefined} className={`grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 ${entries.length ? '' : 'hidden'}`}>
+          <div ref={entries.length ? grid : undefined} className={`grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5 ${entries.length ? '' : 'hidden'}`}>
             {flash.map((e, i) => {
               const sale = salePrice(e)
               const d = discountOf(e)
@@ -195,7 +195,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
               return (
                 <div key={e.id} className="reveal" style={{ '--i': i % 8 } as React.CSSProperties}>
                   <div onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-card-hover">
-                    <div className="relative aspect-square bg-surface-container-low">
+                    <div className="relative aspect-square overflow-hidden bg-surface-container-low">
                       {imageOf(e) ? <img loading="lazy" decoding="async" src={imageOf(e)} alt={e.listing.title} className="reveal-img h-full w-full object-cover group-hover:scale-110" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
                       {d > 0 && <span className="shine absolute left-2 top-2 rounded-md px-2 py-0.5 text-label-sm uppercase text-white" style={{ background: color }}>-{d}% Flash</span>}
                       <button onClick={ev => { ev.stopPropagation(); onToggleFavorite(e.listing.id) }} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm" aria-label="Favori">
@@ -214,7 +214,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
                         {e.listing.condition && e.listing.condition !== 'N/A' && <span className="flex shrink-0 items-center gap-0.5"><CheckCircle2 size={12} className="text-tertiary" /> {e.listing.condition}</span>}
                       </div>
                       <div className="mt-0.5 line-clamp-1 text-label-lg text-on-surface">{e.listing.title}</div>
-                      <div className="mt-1 flex items-baseline gap-2">
+                      <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
                         <span className="text-headline-sm font-extrabold text-primary"><Price amount={sale ?? e.listing.price} currency={e.listing.currency} /></span>
                         {sale != null && <span className="text-body-sm text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></span>}
                       </div>
@@ -233,7 +233,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
             promos.length ? (
               <>
                 <p className="m-0 mb-3 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="storefront" size={16} className="text-primary" /> Les articles de la campagne arrivent. En attendant, profitez des promotions des boutiques :</p>
-                <div ref={grid} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+                <div ref={grid} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5">
                   {promos.map((l, i) => (
                     <div key={l.id} className="reveal" style={{ '--i': i % 8 } as React.CSSProperties}>
                       <ListingCard listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)}
@@ -320,7 +320,7 @@ export default function FlashOffers({ onNavigate, onSelectListing, favorites, on
             <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-6 md:overflow-visible md:px-0">
               {latest.slice(railStart, railStart + 6).map(e => (
                 <button key={e.id} onClick={() => onSelectListing(e.listing.id)} className="w-36 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest p-0 text-left md:w-auto">
-                  <div className="relative aspect-square bg-surface-container-low">
+                  <div className="relative aspect-square overflow-hidden bg-surface-container-low">
                     {imageOf(e) && <img loading="lazy" decoding="async" src={imageOf(e)} alt="" className="h-full w-full object-cover" />}
                     {discountOf(e) > 0 && <span className="absolute left-1.5 top-1.5 rounded px-1.5 text-[10px] font-bold text-white" style={{ background: color }}>-{discountOf(e)}%</span>}
                   </div>

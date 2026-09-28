@@ -803,7 +803,7 @@ function FeaturedTab({ listings, onChanged }: { listings: ShopListing[], onChang
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {featured.map(l => (
           <div key={l.id} className="relative overflow-hidden rounded-xl bg-surface-container-low">
-            <div className="aspect-square bg-surface-container">{l.coverImageUrl && <img src={l.coverImageUrl} alt="" className="h-full w-full object-cover" />}</div>
+            <div className="aspect-square overflow-hidden bg-surface-container">{l.coverImageUrl && <img src={l.coverImageUrl} alt="" className="h-full w-full object-cover" />}</div>
             <span className="absolute left-2 top-2 whitespace-nowrap rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">En vedette</span>
             <button disabled={loading} onClick={() => toggle(l, false)} aria-label={`Retirer ${l.title}`} className="absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 text-on-surface"><Icon name="close" size={16} /></button>
             <div className="p-2"><div className="truncate text-label-md text-on-surface">{l.title}</div><div className="flex items-center justify-between gap-1"><span className="text-label-md text-primary"><Price amount={l.price} /></span><span className="whitespace-nowrap text-[11px] text-on-surface-variant">{l.quantity} dispo</span></div></div>
