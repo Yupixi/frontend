@@ -252,7 +252,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // the slider gets one step away from it (they were all fetched upfront,
   // competing with the first paint).
   const [slidesReached, setSlidesReached] = useState(1)
-  if (slide + 1 > slidesReached) setSlidesReached(Math.min(SLIDES.length - 1, slide + 1))
+  const nextReach = Math.min(SLIDES.length - 1, slide + 1)
+  if (nextReach > slidesReached) setSlidesReached(nextReach)
 
   // Hero search form
   const [q, setQ] = useState('')
