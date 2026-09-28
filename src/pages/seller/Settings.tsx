@@ -7,7 +7,6 @@ import {
   DELETE_MY_ACCOUNT_MUTATION, MY_SESSIONS_QUERY, REVOKE_OTHER_SESSIONS_MUTATION, REVOKE_SESSION_MUTATION, SELLER_SETTINGS_QUERY,
   UPDATE_PREFERENCES_JSON_MUTATION, UPDATE_SELLER_PROFILE_MUTATION, type UserSession,
 } from '../../graphql/sellerTools'
-import { getRefreshToken } from '../../lib/auth'
 import { refreshAccessToken } from '../../lib/apollo'
 import { uploadImages } from '../../lib/upload'
 import { getPushAvailability, subscribeToPush, type PushSubscriptionResult } from '../../lib/pushNotifications'
@@ -180,8 +179,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
   const [pushStatus, setPushStatus] = useState<PushSubscriptionResult | 'available'>(() => getPushAvailability())
   useEffect(() => { if (getPushAvailability() === 'available') void subscribeToPush(false).then(setPushStatus) }, [])
 
-  const refreshToken = getRefreshToken()
-  const { data: sessionsData, refetch: refetchSessions } = useQuery<{ mySessions: UserSession[] }>(MY_SESSIONS_QUERY, { variables: { currentRefreshToken: refreshToken } })
+  const { data: sessionsData, refetch: refetchSessions } = useQuery<{ mySessions: UserSession[] }>(MY_SESSIONS_QUERY)
   const [revokeSession] = useMutation(REVOKE_SESSION_MUTATION)
   const [revokeOthers, { loading: revokingOthers }] = useMutation(REVOKE_OTHER_SESSIONS_MUTATION)
 
@@ -484,14 +482,14 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     <div className="flex w-full flex-col gap-2 sm:flex-row">
                       <input type="password" placeholder="Mot de passe actuel" value={pw.current} onChange={e => setPw({ ...pw, current: e.target.value })} className={field} />
                       <input type="password" placeholder="Nouveau (8 caractères min.)" value={pw.next} onChange={e => setPw({ ...pw, next: e.target.value })} className={field} />
-                      <button disabled={changingPw || !pw.current || pw.next.length < 8} onClick={() => void changePassword({ variables: { input: { currentPassword: pw.current, newPassword: pw.next, refreshToken: getRefreshToken() ?? undefined } } }).then(() => refreshAccessToken()).then(() => { void refetchSessions(); setPwMsg({ ok: true, text: 'Mot de passe mis à jour.' }); setPwOpen(false); setPw({ current: '', next: '' }) }).catch(e => setPwMsg({ ok: false, text: e.message }))} className="shrink-0 cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50">Confirmer</button>
+                      <button disabled={changingPw || !pw.current || pw.next.length < 8} onClick={() => void changePassword({ variables: { input: { currentPassword: pw.current, newPassword: pw.next } } }).then(() => refreshAccessToken()).then(() => { void refetchSessions(); setPwMsg({ ok: true, text: 'Mot de passe mis à jour.' }); setPwOpen(false); setPw({ current: '', next: '' }) }).catch(e => setPwMsg({ ok: false, text: e.message }))} className="shrink-0 cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50">Confirmer</button>
                     </div>
                   )}
                   {pwMsg && <p className={`m-0 w-full text-body-sm ${pwMsg.ok ? 'text-tertiary' : 'text-primary'}`}>{pwMsg.text}</p>}
                 </div>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <div className="text-label-md text-on-surface">Sessions et appareils actuellement connectés</div>
-                  {refreshToken && sessions.length > 1 && <button disabled={revokingOthers} onClick={() => void revokeOthers({ variables: { currentRefreshToken: refreshToken } }).then(() => refetchSessions())} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary"><span className="md:hidden">Déconnecter les autres</span><span className="max-md:hidden">Déconnecter tous les autres appareils</span></button>}
+                  {sessions.some(x => x.current) && sessions.length > 1 && <button disabled={revokingOthers} onClick={() => void revokeOthers().then(() => refetchSessions())} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary"><span className="md:hidden">Déconnecter les autres</span><span className="max-md:hidden">Déconnecter tous les autres appareils</span></button>}
                 </div>
                 <div className="mt-2 flex flex-col gap-2">
                   {sessionGroups.map(g => (

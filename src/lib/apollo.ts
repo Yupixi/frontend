@@ -6,7 +6,7 @@ import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import { setContext } from '@apollo/client/link/context'
 import { createClient } from 'graphql-ws'
 import { Observable } from 'rxjs'
-import { clearTokens, getAccessToken, getRefreshToken, storeGuestSecret, storeTokens, tokenExpiry, SESSION_EXPIRED_EVENT } from './auth'
+import { clearTokens, dropLegacyRefreshToken, getAccessToken, getLegacyRefreshToken, storeAccessToken, storeGuestSecret, tokenExpiry, SESSION_EXPIRED_EVENT } from './auth'
 
 // A deployed browser must never call its own `localhost`; only local
 // development uses the separate Nest server. In production the API is served
@@ -17,7 +17,8 @@ const defaultGraphqlUrl = ['localhost', '127.0.0.1'].includes(window.location.ho
 export const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_API_URL || defaultGraphqlUrl
 const GRAPHQL_WS_URL = GRAPHQL_URL.replace(/^http/, 'ws')
 
-const httpLink = new HttpLink({ uri: GRAPHQL_URL })
+// credentials: the refresh token travels as the API's HttpOnly cookie.
+const httpLink = new HttpLink({ uri: GRAPHQL_URL, credentials: 'include' })
 
 // The server closes a socket (4403) once its token expires or is revoked;
 // the client then reconnects, so connectionParams reads localStorage fresh
@@ -60,16 +61,21 @@ const authLink = setContext((_, { headers }) => {
 let refreshPromise: Promise<string | null> | null = null
 
 export async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) return null
+  // The cookie is invisible from here: the stored (possibly expired) access
+  // token is what says there's a session worth refreshing.
+  const legacy = getLegacyRefreshToken()
+  if (!getAccessToken() && !legacy) return null
 
   try {
     const res = await fetch(GRAPHQL_URL, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        query: `mutation($rt: String!) { refreshToken(refreshToken: $rt) { accessToken refreshToken guestSecret } }`,
-        variables: { rt: refreshToken },
+        // A pre-cookie session sends its stored token once; the server
+        // answers with the cookie from then on.
+        query: `mutation($rt: String) { refreshToken(refreshToken: $rt) { accessToken guestSecret } }`,
+        variables: { rt: legacy },
       }),
     })
     const json = await res.json()
@@ -79,7 +85,8 @@ export async function refreshAccessToken(): Promise<string | null> {
       window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
       return null
     }
-    storeTokens(tokens.accessToken, tokens.refreshToken)
+    storeAccessToken(tokens.accessToken)
+    dropLegacyRefreshToken()
     storeGuestSecret(tokens.guestSecret)
     return tokens.accessToken as string
   } catch {

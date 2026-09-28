@@ -6,7 +6,7 @@ import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT } from './lib/navigation'
-import { clearTokens, getAccessToken, getRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
+import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
 import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
@@ -581,12 +581,9 @@ export default function App() {
   }
 
   const logout = () => {
-    const refreshToken = getRefreshToken()
-    if (refreshToken) {
-      // Best-effort: revoke server-side so the refresh token can't be reused
-      // even if it leaked. Local state is cleared regardless of the result.
-      void logoutMutation({ variables: { refreshToken } }).catch(() => undefined)
-    }
+    // Best-effort: revoke the session server-side and clear the refresh
+    // cookie. Local state is cleared regardless of the result.
+    void logoutMutation({ variables: { refreshToken: getLegacyRefreshToken() } }).catch(() => undefined)
     clearTokens()
     setIsLoggedIn(false)
     setCurrentUser(null)

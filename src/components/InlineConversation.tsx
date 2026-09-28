@@ -13,7 +13,7 @@ import {
 import { GUEST_LOGIN_MUTATION } from '../graphql/auth'
 import type { AuthPayload } from '../graphql/auth'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
-import { storeTokens, getAccessToken, getGuestSecret, storeGuestSecret } from '../lib/auth'
+import { storeAccessToken, getAccessToken, getGuestSecret, storeGuestSecret } from '../lib/auth'
 import { setActiveConversation } from '../lib/activeConversation'
 import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../lib/useMessagingLive'
 import OfferBubble from './OfferBubble'
@@ -111,7 +111,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
     try {
       const { data } = await guestLogin({ variables: { input: { fullName, email: email.trim() || undefined, phone: phone.trim() || undefined, guestSecret: getGuestSecret() ?? undefined } } })
       if (!data) throw new Error()
-      storeTokens(data.guestLogin.accessToken, data.guestLogin.refreshToken)
+      storeAccessToken(data.guestLogin.accessToken)
       storeGuestSecret(data.guestLogin.guestSecret)
 
       const { data: convData } = await startConversation({ variables: { recipientId: sellerId, listingId } })
