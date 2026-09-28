@@ -422,14 +422,17 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const cover = allPhotos[0]?.url
   const hhmm = savedAt ? new Date(savedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h') : null
   const active = isEditing ? 'seller-listings' : 'seller-post'
+  // Editing keeps "Mes annonces" lit in the desktop sidebar, but like a new
+  // listing it's a full-screen wizard on phones: no tab bar over its footer.
+  const shell = { active, hideBottomNav: true, title: isEditing ? "Modifier l'annonce" : undefined }
 
   if (isEditing && loadingExisting && !prefilled) {
-    return <AccountLayout active={active} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}><p className="p-12 text-center text-on-surface-variant">Chargement de l'annonce…</p></AccountLayout>
+    return <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}><p className="p-12 text-center text-on-surface-variant">Chargement de l'annonce…</p></AccountLayout>
   }
 
   if (result) {
     return (
-      <AccountLayout active={active} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+      <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
         <div className="mx-auto max-w-lg py-10 text-center">
           <span className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><CheckCircle2 size={40} /></span>
           <h1 className="m-0 text-headline-lg text-on-surface">{isEditing ? 'Annonce mise à jour !' : result.submitted ? 'Annonce envoyée !' : 'Brouillon enregistré'}</h1>
@@ -461,7 +464,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   }
 
   return (
-    <AccountLayout active={active} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} onBack={shellBack}>
+    <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} onBack={shellBack}>
       <ConfirmSheet open={quitOpen} title="Quitter le dépôt ?" confirmLabel="Quitter" tone="danger" onConfirm={leave} onClose={() => setQuitOpen(false)}>
         {imageFiles.length > 0
           ? <>{imageFiles.length > 1 ? `Vos ${imageFiles.length} photos ne seront pas conservées.` : 'Votre photo ne sera pas conservée.'}{!isEditing && ' Le texte reste enregistré en brouillon sur cet appareil.'}</>
