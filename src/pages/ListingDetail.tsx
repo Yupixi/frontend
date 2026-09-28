@@ -52,6 +52,7 @@ import Icon from '../components/Icon'
 import PaymentLogo from '../components/PaymentLogo'
 import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
+import { Claim } from '../lib/site'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -423,13 +424,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               {stock}
             </div>
             {bundle}
-            <div className="mt-4 flex items-start gap-3 rounded-xl bg-tertiary-soft p-3">
+            <Claim><div className="mt-4 flex items-start gap-3 rounded-xl bg-tertiary-soft p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><Percent size={18} /></span>
               <div className="text-body-sm">
                 <div className="font-bold text-tertiary">Engagement 0 F de commission</div>
                 <div className="text-on-surface-variant">Aucun frais caché. Paiement direct et remise en main propre entre particuliers.</div>
               </div>
-            </div>
+            </div></Claim>
           </div>
 
           {/* Specs grid (mobile mockup "Spécifications vérifiées") */}
@@ -529,7 +530,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </div>
 
             <dl className="m-0 mt-4 flex flex-col gap-2 text-body-sm">
-              <div className="flex justify-between"><dt className="flex items-center gap-1.5 text-on-surface-variant"><ShieldCheck size={14} /> Commission Dilchap</dt><dd className="m-0 font-bold text-tertiary">0 F (0%)</dd></div>
+              <Claim><div className="flex justify-between"><dt className="flex items-center gap-1.5 text-on-surface-variant"><ShieldCheck size={14} /> Commission Dilchap</dt><dd className="m-0 font-bold text-tertiary">0 F (0%)</dd></div></Claim>
               <div className="flex justify-between border-0 border-t border-solid border-outline-variant pt-2"><dt className="font-bold text-on-surface">Montant à régler au vendeur</dt><dd className="m-0 text-label-lg text-on-surface"><Price amount={shownPrice} currency={listing.currency} /></dd></div>
             </dl>
 
@@ -537,7 +538,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <div className="mb-2 text-label-sm uppercase text-on-surface-variant">Modes de remise au choix</div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-xl border-[1.5px] border-solid border-primary bg-primary-fixed/40 p-3">
-                  <div className="flex items-center justify-between text-label-md text-on-surface"><span className="flex items-center gap-1.5"><Handshake size={15} className="text-primary" /> Main propre</span><span className="text-label-sm text-tertiary">Gratuit</span></div>
+                  <div className="flex items-center justify-between text-label-md text-on-surface"><span className="flex items-center gap-1.5"><Handshake size={15} className="text-primary" /> Main propre</span><Claim><span className="text-label-sm text-tertiary">Gratuit</span></Claim></div>
                   <div className="mt-1 text-body-sm text-on-surface-variant">{listing.meetupSpot || location}</div>
                 </div>
                 <div className={`rounded-xl border-[1.5px] border-solid border-outline-variant p-3 ${listing.deliveryAvailable ? '' : 'opacity-50'}`}>

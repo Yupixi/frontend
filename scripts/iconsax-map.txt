@@ -282,3 +282,10 @@ warning Warning2*
 waving_hand EmojiHappy
 work Briefcase
 workspace_premium Crown1
+brand_apple Apple
+brand_facebook Facebook
+brand_googleplay GooglePlay
+brand_instagram Instagram
+brand_tiktok MusicSquare
+brand_whatsapp Whatsapp
+brand_youtube Youtube

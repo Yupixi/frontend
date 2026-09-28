@@ -13,6 +13,7 @@ import Price from '../components/Price'
 import { formatNumber, formatRelativeDate } from '../lib/format'
 import { ShopLogo } from '../components/ShopCard'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
+import { Claim } from '../lib/site'
 
 type Props = {
   shopKey: string
@@ -109,7 +110,7 @@ function ShopInfos({ shop, onReport, canReport }: { shop: Shop, onReport: () => 
           <p className="m-0 mt-1 break-all text-body-sm text-on-surface-variant">{shop.legalIdType} : {shop.legalIdMasked}</p>
           {shop.approvedAt && <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Boutique officielle depuis {since(shop.approvedAt)}</p>}
         </div>
-        <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Ventes en direct, sans commission Dilchap : vérifiez l’article et réglez sur place (espèces ou Mobile Money).</p>
+        <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Ventes en direct<Claim>, sans commission Dilchap</Claim> : vérifiez l’article et réglez sur place (espèces ou Mobile Money).</p>
         {canReport && (
           <button onClick={onReport} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="flag" size={16} /> Signaler un problème</button>
         )}

@@ -16,6 +16,7 @@ import { uploadImages } from '../../lib/upload'
 import { formatNumber } from '../../lib/format'
 import Credits, { creditsLabel } from '../../components/Credits'
 import type { AuthUser } from '../../graphql/auth'
+import { Claim } from '../../lib/site'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onOpenShop: (slug: string) => void }
 type Tab = 'sales' | 'campaigns' | 'bundles' | 'posts'
@@ -184,7 +185,7 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
 
     <div className="mt-4 flex items-start gap-3 rounded-2xl bg-surface-container-low p-4">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-lowest text-primary"><Icon name="info" size={19} /></span>
-      <div className="min-w-0"><div className="text-label-lg text-on-surface">Transactions directes & zéro commission</div><p className="m-0 text-body-sm text-on-surface-variant">Vos remises s’affichent directement sur vos annonces. Les règlements se concluent en direct (espèces ou Mobile Money), sans frais de plateforme ni code promo.</p></div>
+      <div className="min-w-0"><div className="text-label-lg text-on-surface">Transactions directes<Claim> & zéro commission</Claim></div><p className="m-0 text-body-sm text-on-surface-variant">Vos remises s’affichent directement sur vos annonces. Les règlements se concluent en direct (espèces ou Mobile Money), sans <Claim>frais de plateforme ni </Claim>code promo.</p></div>
     </div>
 
     <section className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 md:gap-3">

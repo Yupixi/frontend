@@ -22,6 +22,7 @@ import { SHOP_QUERY, type Shop } from '../graphql/shops'
 import ShopPage from './ShopPage'
 import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
+import { Claim, useNoCommissionClaims } from '../lib/site'
 
 const REPORT_REASONS = ['Tentative d’arnaque', 'Faux profil', 'Comportement inapproprié', 'Article non conforme', 'Autre']
 
@@ -50,6 +51,7 @@ const memberSince = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', {
 
 export default function SellerProfile({ sellerId, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId }: SellerProfileProps) {
   const [tab, setTab] = useState<'listings' | 'reviews' | 'terms'>('listings')
+  const noCommission = useNoCommissionClaims()
   const [q, setQ] = useState('')
   const [cat, setCat] = useState<string | null>(null)
   const [sort, setSort] = useState<ListingSort>('RECENT')
@@ -181,7 +183,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-on-surface-variant">
                   {seller.city && <span className="flex items-center gap-1"><MapPin size={14} /> {seller.city}</span>}
                   <span className="flex items-center gap-1"><Calendar size={14} /> Membre depuis {memberSince(seller.createdAt)}</span>
-                  <span className="flex items-center gap-1 font-semibold text-tertiary"><Percent size={14} /> 0 F de commission</span>
+                  <Claim><span className="flex items-center gap-1 font-semibold text-tertiary"><Percent size={14} /> 0 F de commission</span></Claim>
                 </div>
               </div>
             </div>
@@ -231,7 +233,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           { icon: <ShieldCheck size={20} />, box: 'bg-tertiary-soft text-tertiary', title: seller.badge ? BADGE_LABEL[seller.badge] : 'Profil public', text: seller.badge ? 'Identité contrôlée par Dilchap' : 'Avis et historique visibles de tous' },
           { icon: <MessageSquare size={20} />, box: 'bg-surface-container text-on-surface', title: 'Chat & négociation', text: responseTime ? `Répond en ${responseTime}` : 'Messagerie intégrée' },
           { icon: <Handshake size={20} />, box: 'bg-surface-container text-on-surface', title: 'Remise en main propre', text: 'Testez l’article avant tout paiement' },
-          { icon: <Percent size={20} />, box: 'bg-primary-fixed text-primary', title: '0 F de commission', text: '100% de la somme revient au vendeur' },
+          ...(noCommission ? [{ icon: <Percent size={20} />, box: 'bg-primary-fixed text-primary', title: '0 F de commission', text: '100% de la somme revient au vendeur' }] : []),
         ].map(t => (
           <div key={t.title} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-2.5 sm:p-3">
             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 ${t.box}`}>{t.icon}</span>
@@ -357,13 +359,13 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
         <div className="flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <span className="rounded bg-tertiary px-2 py-0.5 text-label-sm uppercase text-white">Sécurité & confiance Dilchap</span>
-            <span className="text-label-sm text-tertiary">100% direct & gratuit</span>
+            <span className="text-label-sm text-tertiary">100% direct{noCommission && ' & gratuit'}</span>
           </div>
           <h3 className="m-0 text-headline-sm text-on-surface">Les 3 règles d'or pour acheter en toute sérénité</h3>
           <ol className="m-0 mt-1 list-decimal pl-5 text-body-sm text-on-surface-variant">
             <li>Convenez toujours d'un rendez-vous dans un lieu public et fréquenté.</li>
             <li>Inspectez et essayez le produit (écoute, essayage, test) avant tout règlement.</li>
-            <li>Effectuez le paiement direct de la somme convenue (0 F de frais) par Wave, Orange Money ou espèces.</li>
+            <li>Effectuez le paiement direct de la somme convenue<Claim> (0 F de frais)</Claim> par Wave, Orange Money ou espèces.</li>
           </ol>
         </div>
         {reportDone ? (

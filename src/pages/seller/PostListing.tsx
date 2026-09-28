@@ -24,6 +24,7 @@ import { uploadImages } from '../../lib/upload'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
+import { Claim, useNoCommissionClaims } from '../../lib/site'
 
 const MAX_PHOTOS = 8
 const TITLE_MAX = 80
@@ -147,6 +148,7 @@ const ABIDJAN_SPOTS = ['Playce Marcory', 'Cap Sud', 'Sococé Deux-Plateaux']
 // modalités d'échange) with a sticky earnings/preview column.
 export default function PostListing({ onNavigate, currentUser, onLogout, listingId }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string }) {
   const isEditing = !!listingId
+  const noCommission = useNoCommissionClaims()
   useEffect(() => { if (!getAccessToken()) onNavigate('auth') }, [onNavigate])
 
   const draft = useRef(isEditing ? null : loadDraft())
@@ -530,7 +532,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               {!isEditing && <span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Enregistrement auto activé</span>}
             </div>
             <h1 className="m-0 hidden text-headline-lg text-on-surface lg:block">{isEditing ? "Modifier l'annonce" : 'Déposer une annonce'}</h1>
-            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant lg:block">Vendez vos articles rapidement, sans commission cachée, et recevez l'intégralité de vos gains.</p>
+            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant lg:block">Vendez vos articles rapidement{noCommission ? ", sans commission cachée, et recevez l'intégralité de vos gains." : '.'}</p>
           </div>
           {hhmm && !isEditing && (
             <span className="hidden items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface lg:flex"><Icon name="bookmark" size={17} /> Brouillon sauvegardé ({hhmm})</span>
@@ -567,7 +569,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className={`flex min-w-0 flex-col gap-5 ${step === 4 ? 'max-lg:hidden' : ''}`}>
             {/* Photos */}
-            <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${MAX_PHOTOS} photos gratuites. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
+            <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${MAX_PHOTOS} photos${noCommission ? ' gratuites' : ''}. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
               aside={<span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface-variant">{photoCount} / {MAX_PHOTOS} ajoutées</span>}>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {allPhotos.map((p, i) => (
@@ -700,7 +702,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {/* Price */}
-            <Card className={only(2)} icon="sell" title="Fixation du prix & Recommandation Dilchap" subtitle="Fixez votre prix en toute liberté. Vente 100% sans commission entre particuliers.">
+            <Card className={only(2)} icon="sell" title="Fixation du prix & Recommandation Dilchap" subtitle={noCommission ? 'Fixez votre prix en toute liberté. Vente 100% sans commission entre particuliers.' : 'Fixez votre prix en toute liberté.'}>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <Field label={`Votre prix de vente (${form.currency === 'XOF' || form.currency === 'XAF' ? 'F' : form.currency})`} required={requiresPrice}>
@@ -710,7 +712,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     </div>
                     <FieldError show={bad('price')}>Indiquez un prix.</FieldError>
                   </Field>
-                  <p className="m-0 mt-2 flex items-center gap-1 text-body-sm font-semibold text-tertiary"><CheckCircle2 size={14} /> 0 F de commission : 100% du montant vous revient.</p>
+                  <Claim><p className="m-0 mt-2 flex items-center gap-1 text-body-sm font-semibold text-tertiary"><CheckCircle2 size={14} /> 0 F de commission : 100% du montant vous revient.</p></Claim>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Field label="Prix neuf (optionnel)"><input type="number" min={0} className={inputCls} value={form.originalPrice} onChange={e => set('originalPrice', e.target.value)} placeholder="Barré sur l'annonce" /></Field>
                     <Field label="Pays">
@@ -867,13 +869,13 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <div className="text-body-sm text-on-surface-variant">Montant net perçu lors de la vente :</div>
                 <div className="flex items-center justify-between">
                   <span className="text-headline-lg font-extrabold text-tertiary"><Price amount={priceNum} currency={form.currency} /></span>
-                  <span className="flex items-center gap-1 text-label-sm text-tertiary"><CheckCircle2 size={13} /> Zéro frais</span>
+                  <Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><CheckCircle2 size={13} /> Zéro frais</span></Claim>
                 </div>
               </div>
               <dl className="m-0 mt-3 flex flex-col gap-2 text-body-sm">
                 <div className="flex justify-between"><dt className="text-on-surface-variant">Prix de vente affiché</dt><dd className="m-0 font-semibold text-on-surface"><Price amount={priceNum} currency={form.currency} /></dd></div>
-                <div className="flex justify-between"><dt className="text-on-surface-variant">Commission Dilchap</dt><dd className="m-0 font-semibold text-tertiary">0 F (gratuit)</dd></div>
-                <div className="flex justify-between"><dt className="text-on-surface-variant">Frais de mise en relation</dt><dd className="m-0 font-semibold text-on-surface">0 F</dd></div>
+                <Claim><div className="flex justify-between"><dt className="text-on-surface-variant">Commission Dilchap</dt><dd className="m-0 font-semibold text-tertiary">0 F (gratuit)</dd></div>
+                <div className="flex justify-between"><dt className="text-on-surface-variant">Frais de mise en relation</dt><dd className="m-0 font-semibold text-on-surface">0 F</dd></div></Claim>
               </dl>
               <p className="m-0 mt-3 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Handshake size={15} className="mt-0.5 shrink-0 text-primary" /> Paiement direct de la main à la main ou par mobile money entre particuliers.</p>
             </div>}
@@ -904,7 +906,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="verified" size={18} className="text-primary" /> Les engagements Dilchap</div>
               <ul className="m-0 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
                 {[
-                  { icon: <Percent size={15} />, text: 'Plateforme 100% sans commission ni intermédiaire sur le paiement.' },
+                  ...(noCommission ? [{ icon: <Percent size={15} />, text: 'Plateforme 100% sans commission ni intermédiaire sur le paiement.' }] : []),
                   { icon: <MessageSquare size={15} />, text: 'Messagerie instantanée pour poser vos questions et négocier.' },
                   { icon: <Wallet size={15} />, text: 'Remise locale en main propre pour vérifier l’article avant de payer.' },
                 ].map(e => <li key={e.text} className="flex items-start gap-2"><span className="mt-0.5 text-tertiary">{e.icon}</span> {e.text}</li>)}

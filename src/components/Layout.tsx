@@ -38,6 +38,7 @@ import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteCon
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 import { syncAppBadge } from '../lib/pushNotifications'
+import { useSite } from '../lib/site'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
@@ -104,6 +105,11 @@ export default function Layout({
   // unconfigured, same convention as the Banner slots.
   const { data: footerData } = useQuery<{ footerSettings: RemoteFooterSettings | null }>(FOOTER_SETTINGS_QUERY)
   const footer = footerData?.footerSettings
+  // Brand, contacts, social / app links and claims (« Réglages du site »).
+  const site = useSite()
+  const socials = (['facebook', 'instagram', 'tiktok', 'youtube', 'x', 'linkedin', 'whatsapp'] as const)
+    .filter(k => site.socials[k])
+    .map(k => [k, site.socials[k], { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', x: 'X', linkedin: 'LinkedIn', whatsapp: 'WhatsApp' }[k]] as const)
 
   // Site-wide campaign theming — a live campaign's color becomes the accent
   // for the announcement bar below (and anything else that opts into
@@ -246,7 +252,7 @@ export default function Layout({
         {/* Reassurance strip — desktop only */}
         <div className="hidden h-9 items-center justify-between bg-surface-container-low px-4 text-label-sm text-on-surface-variant lg:flex lg:px-12">
           <div className="flex items-center gap-6">
-            <span className="flex items-center gap-1 text-tertiary"><BadgeCheck size={15} /> Mise en relation directe 100% gratuite</span>
+            {site.claims.noCommission && <span className="flex items-center gap-1 text-tertiary"><BadgeCheck size={15} /> Mise en relation directe 100% gratuite</span>}
             <span className="hidden items-center gap-1 lg:flex"><MessageCircle size={15} /> Chat direct &amp; négociation instantanée</span>
             <span className="hidden items-center gap-1 xl:flex"><Handshake size={15} /> Remise en mains propres</span>
           </div>
@@ -533,9 +539,9 @@ export default function Layout({
       {/* Reassurance band + footer — desktop only: the mobile mockups end
           each page on its content, above the bottom nav. */}
       <section className="mt-16 hidden bg-surface-container px-4 py-8 lg:block lg:px-12">
-        <div className="mx-auto grid max-w-[1320px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={`mx-auto grid max-w-[1320px] grid-cols-1 gap-6 sm:grid-cols-2 ${site.claims.noCommission ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {[
-            { icon: Percent, title: '0% Commission', text: 'Publiez et achetez librement, sans frais cachés ni commission prélevée.', accent: true },
+            ...(site.claims.noCommission ? [{ icon: Percent, title: '0% Commission', text: 'Publiez et achetez librement, sans frais cachés ni commission prélevée.', accent: true }] : []),
             { icon: MessageCircle, title: 'Négociation par chat', text: 'Discutez directement avec le vendeur et convenez du meilleur prix.' },
             { icon: Handshake, title: 'Remise en main propre', text: 'Inspectez l\'article en personne avant de payer, dans un lieu public.' },
             { icon: ShieldCheck, title: 'Profils vérifiés', text: 'Vendeurs notés par la communauté pour échanger en toute confiance.' },
@@ -561,8 +567,24 @@ export default function Layout({
               <Logo size="lg" />
               <p className="mt-4 max-w-md text-body-md text-on-surface-variant">
                 {footer?.tagline ||
-                  "Dilchap rend l'achat et la vente entre particuliers simples, fluides et sécurisés en Côte d'Ivoire."}
+                  `${site.brand.name} rend l'achat et la vente entre particuliers simples, fluides et sécurisés en Côte d'Ivoire.`}
               </p>
+              {socials.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {socials.map(([key, url, label]) => (
+                    <a key={key} href={url} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface no-underline hover:bg-primary hover:text-white">
+                      {key === 'x' ? <span className="text-label-lg font-black">X</span> : key === 'linkedin' ? <span className="text-label-md font-black">in</span> : <Icon name={`brand_${key}`} size={20} />}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {(site.apps.android || site.apps.ios) && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {site.apps.android && <a href={site.apps.android} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl bg-on-surface px-3 py-2 text-label-md text-surface-lowest no-underline"><Icon name="brand_googleplay" size={20} /> Google Play</a>}
+                  {site.apps.ios && <a href={site.apps.ios} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl bg-on-surface px-3 py-2 text-label-md text-surface-lowest no-underline"><Icon name="brand_apple" size={20} /> App Store</a>}
+                </div>
+              )}
             </div>
 
             <div>
@@ -608,7 +630,10 @@ export default function Layout({
               <p className="m-0 text-body-sm text-on-surface-variant">
                 {footer?.supportCities || 'Abidjan • Bouaké • Yamoussoukro • San-Pédro • Daloa • Korhogo'}
               </p>
-              <p className="mb-0 mt-3 text-label-md text-primary">Support 7j/7 : {footer?.supportPhone || '+225 07 00 00 00 00'}</p>
+              {footer?.supportPhone && <p className="mb-0 mt-3 text-label-md text-primary">Support{site.contact.hours ? '' : ' 7j/7'} : {footer.supportPhone}</p>}
+              {site.contact.hours && <p className="mb-0 mt-1 text-body-sm text-on-surface-variant">{site.contact.hours}</p>}
+              {site.contact.email && <a href={`mailto:${site.contact.email}`} className="mt-1 block text-body-sm text-primary no-underline hover:underline">{site.contact.email}</a>}
+              {site.contact.address && <p className="mb-0 mt-1 text-body-sm text-on-surface-variant">{site.contact.address}</p>}
               <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
                 {LEGAL_PAGES.map(p => (
                   <li key={p.slug}>
@@ -622,7 +647,7 @@ export default function Layout({
 
           <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant pt-6 text-label-sm text-on-surface-variant">
             <p className="m-0">
-              {footer?.copyrightText || '© 2026 Dilchap. Tous droits réservés.'}
+              {footer?.copyrightText || `© ${new Date().getFullYear()} ${site.brand.name}. Tous droits réservés.`}
             </p>
             <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> Mise en relation sécurisée · Fait en Côte d'Ivoire</span>
           </div>

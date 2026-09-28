@@ -7,6 +7,7 @@ import { SEND_MESSAGE_MUTATION, START_CONVERSATION_MUTATION, type RemoteConversa
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import SellerBadge from '../components/SellerBadge'
 import type { BadgeTier } from '../graphql/badges'
+import { Claim } from '../lib/site'
 
 type Props = {
   listing: {
@@ -125,7 +126,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
 
       <div className="flex gap-3 rounded-xl bg-tertiary-soft p-3">
         <Icon name="shield" size={20} className="shrink-0 text-tertiary" />
-        <p className="m-0 text-body-sm text-on-surface"><b className="text-tertiary">Sécurité Dilchap</b><br />Pas de paiement à l'avance ni de commission. Échangez en main propre dans un lieu public.</p>
+        <p className="m-0 text-body-sm text-on-surface"><b className="text-tertiary">Sécurité Dilchap</b><br />Pas de paiement à l'avance<Claim> ni de commission</Claim>. Échangez en main propre dans un lieu public.</p>
       </div>
 
       {error && <p className="m-0 text-body-sm text-primary">{error}</p>}

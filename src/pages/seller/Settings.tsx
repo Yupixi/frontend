@@ -14,6 +14,7 @@ import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
 import SellerBadge from '../../components/SellerBadge'
+import { Claim } from '../../lib/site'
 
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
@@ -421,7 +422,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
 
               {/* Remise & paiements */}
               <Card id="remise" icon="handshake" iconCls="bg-tertiary-soft text-tertiary" title="Lieux de Remise & Moyens de Paiement" sub="Paramétrez vos points de rendez-vous sécurisés et vos canaux de paiement directs."
-                aside={<span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="savings" size={15} /> 0% Commission Dilchap</span>}>
+                aside={<Claim><span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="savings" size={15} /> 0% Commission Dilchap</span></Claim>}>
                 <div className="text-label-md text-on-surface">Points de remise en main propre favoris</div>
                 <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Proposés aux acheteurs lors de la prise de rendez-vous :</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -452,10 +453,10 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     )
                   })}
                 </div>
-                <div className="mt-4 flex gap-3 rounded-xl bg-tertiary-soft p-3">
+                <Claim><div className="mt-4 flex gap-3 rounded-xl bg-tertiary-soft p-3">
                   <Icon name="shield" size={22} className="shrink-0 text-tertiary" />
                   <p className="m-0 text-body-sm text-on-surface"><b>Dilchap ne prélève aucune commission sur vos transactions directes.</b> 100% du prix convenu vous revient. Nos revenus proviennent uniquement des options de mise en avant (Boosts).</p>
-                </div>
+                </div></Claim>
               </Card>
 
               {/* Sécurité */}

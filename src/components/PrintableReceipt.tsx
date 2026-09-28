@@ -3,6 +3,7 @@ import Icon from './Icon'
 import { thumbnailUrl } from '../lib/media'
 import { handoverProof } from '../lib/format'
 import type { HandoverOrder } from '../graphql/sellerTools'
+import { Claim } from '../lib/site'
 
 type Props = {
   order: HandoverOrder
@@ -92,8 +93,8 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
         {/* Totals */}
         <section className="mt-3 ml-auto w-[80mm] text-[10.5pt]">
           {offer && <div className="flex justify-between py-1"><span className="text-[#6b6363]">Offre acceptée</span><span>{fmtMoney(o.acceptedOffer!.amount, currency)}</span></div>}
-          <div className="flex justify-between py-1"><span className="text-[#6b6363]">Commission Dilchap</span><span>0 F CFA</span></div>
-          <div className="flex justify-between py-1"><span className="text-[#6b6363]">Frais de mise en relation</span><span>0 F CFA</span></div>
+          <Claim><div className="flex justify-between py-1"><span className="text-[#6b6363]">Commission Dilchap</span><span>0 F CFA</span></div></Claim>
+          <Claim><div className="flex justify-between py-1"><span className="text-[#6b6363]">Frais de mise en relation</span><span>0 F CFA</span></div></Claim>
           <div className="mt-1 flex items-baseline justify-between border-0 border-t-2 border-solid border-[#1f1b1b] pt-2">
             <span className="font-bold">Montant réglé</span>
             <span className="text-[16pt] font-extrabold text-[#FE0000]">{fmtMoney(amount, currency)}</span>
@@ -113,7 +114,7 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
 
         {/* Footer */}
         <footer className="mt-8 border-0 border-t border-solid border-[#e3dcdc] pt-3 text-[8.5pt] leading-relaxed text-[#6b6363]">
-          <p className="m-0">Ce reçu atteste d’une remise en main propre enregistrée sur Dilchap. Le paiement a été effectué directement entre l’acheteur et le vendeur : Dilchap n’encaisse aucun fonds et ne prélève aucune commission sur cette vente.</p>
+          <p className="m-0">Ce reçu atteste d’une remise en main propre enregistrée sur Dilchap. Le paiement a été effectué directement entre l’acheteur et le vendeur : Dilchap n’encaisse aucun fonds<Claim> et ne prélève aucune commission sur cette vente</Claim>.</p>
           <p className="m-0 mt-1">Référence de la transaction : <span className="font-mono text-[#1f1b1b]">{ref}</span> — Assistance : via votre espace Dilchap, rubrique « Mes achats ».</p>
         </footer>
       </div>

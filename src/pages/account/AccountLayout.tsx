@@ -14,6 +14,7 @@ import { MY_NOTIFICATIONS_QUERY, type RemoteNotification } from '../../graphql/a
 import type { AuthUser } from '../../graphql/auth'
 import { syncAppBadge } from '../../lib/pushNotifications'
 import { BADGE_LABEL } from '../../graphql/badges'
+import { Claim } from '../../lib/site'
 
 // Every member is both a buyer and a seller — one account, one space. This
 // shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
@@ -194,7 +195,7 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
         {!isGuest && !collapsed && (
           <div className="mx-1 mt-2 rounded-xl bg-tertiary-soft p-3">
             <div className="mb-1 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={15} /> Sécurité Dilchap</div>
-            <p className="m-0 text-body-sm text-on-surface-variant">Vos ventes se règlent de la main à la main, après vérification de l'article. 0 F de commission.</p>
+            <p className="m-0 text-body-sm text-on-surface-variant">Vos ventes se règlent de la main à la main, après vérification de l'article.<Claim> 0 F de commission.</Claim></p>
           </div>
         )}
       </div>

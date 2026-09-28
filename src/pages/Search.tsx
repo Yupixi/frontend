@@ -14,6 +14,7 @@ import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
 import { setAuthReason } from '../lib/authReason'
 import { PaymentLogos } from '../components/PaymentLogo'
+import { useNoCommissionClaims } from '../lib/site'
 
 const PAGE_SIZE = 18
 
@@ -205,6 +206,7 @@ export default function SearchPage({
 
   const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter } })
   const facets = facetsData?.listingFacets
+  const noCommission = useNoCommissionClaims()
 
   const [createSavedSearch, { loading: savingAlert }] = useMutation(CREATE_SAVED_SEARCH_MUTATION)
   const createAlert = async () => {
@@ -371,7 +373,7 @@ export default function SearchPage({
       <FilterBlock title="Vendeurs de confiance">
         <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
         <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" logos={['WAVE', 'ORANGE_MONEY']} onChange={() => setMobileMoneyOnly(v => !v)} />
-        <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> 0 % de commission, paiement à la remise</div>
+        <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> {noCommission ? '0 % de commission, paiement à la remise' : 'Paiement à la remise'}</div>
       </FilterBlock>
 
       <button onClick={resetAll} className="cursor-pointer rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest">

@@ -11,6 +11,7 @@ import { SET_CONVERSATION_DEAL_STATUS_MUTATION } from '../../graphql/messaging'
 import { MY_SALES_ORDERS_QUERY, MY_SALES_ORDERS_STATS_QUERY, type SalesOrder, type SalesStage, type SalesStats } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
+import { Claim, useNoCommissionClaims } from '../../lib/site'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -36,6 +37,7 @@ const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { weekday: '
 // "Commandes & Envois" mockup: every direct deal from agreement in chat to
 // hand-over. Stages come from real offers, meet-ups and deal status.
 export default function Orders({ onNavigate, onSelectListing, onOpenConversation, onOpenHandover, onOpenDispute, currentUser, onLogout }: Props) {
+  const noCommission = useNoCommissionClaims()
   const { data, refetch } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const { data: statsData, refetch: refetchStats } = useQuery<{ mySalesOrdersStats: SalesStats }>(MY_SALES_ORDERS_STATS_QUERY)
   const orders = data?.mySalesOrders ?? []
@@ -59,7 +61,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
   return (
     <AccountLayout active="seller-orders" title="Remises directes" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1120px] pb-6">
-        <div className="mb-1 hidden items-center gap-1 text-label-sm uppercase text-primary lg:flex"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Espace vendeur direct • Zéro commission</div>
+        <div className="mb-1 hidden items-center gap-1 text-label-sm uppercase text-primary lg:flex"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Espace vendeur direct<Claim> • Zéro commission</Claim></div>
         <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
             <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Commandes &amp; Envois</h1>
@@ -69,7 +71,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
         </div>
 
         {/* Mobile: three mini KPIs in one row */}
-        <section className="grid grid-cols-3 gap-2 md:hidden">
+        <section className={`grid gap-2 md:hidden ${noCommission ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <div className="min-w-0 rounded-xl border border-outline-variant bg-surface-lowest p-2.5">
             <div className="truncate text-label-sm text-on-surface-variant">RDV actifs</div>
             <div className="mt-0.5 text-headline-sm font-extrabold text-on-surface">{stats?.activeMeetups ?? 0}</div>
@@ -78,19 +80,19 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
             <div className="truncate text-label-sm text-on-surface-variant">En cours</div>
             <div className="mt-0.5 whitespace-nowrap text-headline-sm font-extrabold text-on-surface">{compact(stats?.volumeInProgress ?? 0)}<span className="price-unit">F</span></div>
           </div>
-          <div className="min-w-0 rounded-xl bg-tertiary-soft p-2.5">
+          <Claim><div className="min-w-0 rounded-xl bg-tertiary-soft p-2.5">
             <div className="truncate text-label-sm text-tertiary">Commission</div>
             <div className="mt-0.5 whitespace-nowrap text-headline-sm font-extrabold text-tertiary">0 F</div>
-          </div>
+          </div></Claim>
         </section>
 
         {/* KPIs */}
-        <section className="hidden grid-cols-2 gap-3 md:grid lg:grid-cols-4">
+        <section className={`hidden grid-cols-2 gap-3 md:grid ${noCommission ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {[
             { label: 'RDV actifs', value: stats?.activeMeetups ?? 0, sub: 'Rendez-vous confirmés', icon: 'handshake', box: 'bg-primary-fixed text-primary' },
             { label: 'Volume en cours', value: <Price amount={stats?.volumeInProgress ?? 0} />, sub: 'Paiements directs à la remise', icon: 'account_balance_wallet', box: 'bg-tertiary-soft text-tertiary' },
             { label: 'Taux de concrétisation', value: stats?.conversionRate != null ? `${stats.conversionRate}%` : '—', sub: <span className="flex items-center gap-1 text-tertiary"><TrendingUp size={13} /> ventes conclues / clôturées</span>, icon: 'verified', box: 'bg-surface-container text-on-surface' },
-            { label: 'Commission prélevée', value: <span className="text-primary">0 F CFA</span>, sub: <span className="text-tertiary">Économie directe : 100%</span>, icon: 'sell', box: 'bg-primary text-white' },
+            ...(noCommission ? [{ label: 'Commission prélevée', value: <span className="text-primary">0 F CFA</span>, sub: <span className="text-tertiary">Économie directe : 100%</span>, icon: 'sell', box: 'bg-primary text-white' }] : []),
           ].map(k => (
             <div key={k.label} className="flex items-start justify-between gap-2 rounded-xl border border-outline-variant bg-surface-lowest p-4">
               <div>

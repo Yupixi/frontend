@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { useSite } from '../lib/site'
 
 type Props = {
   size?: 'sm' | 'md' | 'lg' | 'xl'
@@ -12,6 +13,13 @@ type Props = {
 const LOGO_RATIO = 428 / 147
 
 export default function DilchapLogo({ size = 'md', variant = 'wordmark', colorMode = 'red', className, style }: Props) {
+  const { brand } = useSite()
+  // A logo uploaded in the back-office (« Réglages du site ») replaces the
+  // bundled one wherever the wordmark shows.
+  if (brand.logoUrl && variant === 'wordmark') {
+    const h = { sm: 30, md: 36, lg: 44, xl: 56 }[size]
+    return <img src={brand.logoUrl} alt={brand.name} height={h} className={className} style={{ display: 'block', height: h, width: 'auto', maxWidth: 220, objectFit: 'contain', flexShrink: 0, userSelect: 'none', ...style }} draggable={false} />
+  }
   // The official horizontal logo (red "di" + bell tile and the « dilchap »
   // wordmark, from the brand source files — see scripts/app-icon). The text
   // version only remains for the white variant (logo on a coloured band).
@@ -20,7 +28,7 @@ export default function DilchapLogo({ size = 'md', variant = 'wordmark', colorMo
     return (
       <img
         src="/logo-dilchap.png"
-        alt="Dilchap"
+        alt={brand.name}
         width={Math.round(h * LOGO_RATIO)}
         height={h}
         className={className}
@@ -39,5 +47,5 @@ export default function DilchapLogo({ size = 'md', variant = 'wordmark', colorMo
     )
   }
   const height = { sm: 32, md: 42, lg: 56, xl: 72 }[size]
-  return <img src={variant === 'icon' ? '/icon-192.png' : '/logo-dilchap.png'} alt="Dilchap" className={className} style={{ display: 'block', width: variant === 'icon' ? height : 'auto', height, objectFit: 'contain', flexShrink: 0, userSelect: 'none', ...style }} />
+  return <img src={variant === 'icon' ? '/icon-192.png' : '/logo-dilchap.png'} alt={brand.name} className={className} style={{ display: 'block', width: variant === 'icon' ? height : 'auto', height, objectFit: 'contain', flexShrink: 0, userSelect: 'none', ...style }} />
 }
