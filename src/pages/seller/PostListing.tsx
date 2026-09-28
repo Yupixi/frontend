@@ -162,7 +162,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [error, setError] = useState<string | null>(null)
   // campaign: joined on publishing, or why it failed (the listing is
   // published either way).
-  const [result, setResult] = useState<{ id: string, submitted: boolean, live?: boolean, campaign?: { name: string, credits: number } | { name: string, error: string } } | null>(null)
+  const [result, setResult] = useState<{ id: string, submitted: boolean, live?: boolean, fromDraft?: boolean, campaign?: { name: string, credits: number } | { name: string, error: string } } | null>(null)
   const [boosted, setBoosted] = useState(false)
   const [campaignChoice, setCampaignChoice] = useState<CampaignChoice | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -176,6 +176,10 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const isAbidjan = form.countryCode === 'CI' && /abidjan/i.test(form.city)
 
   const { data: existingData, loading: loadingExisting } = useQuery<{ myListing: MyListingDetail }>(MY_LISTING_QUERY, { variables: { id: listingId }, skip: !isEditing })
+  // A draft saved on the server ("Mes annonces › Compléter") is finished and
+  // published like a new listing; only a submitted listing is merely edited.
+  const editingDraft = existingData?.myListing.status === 'DRAFT'
+  const publishes = !isEditing || editingDraft
   const { data: rangeData } = useQuery<{ priceRange: PriceRange | null }>(PRICE_RANGE_QUERY, {
     variables: { categoryId: form.categoryId, subcategoryId: form.subcategoryId || undefined, countryCode: form.countryCode },
     skip: !form.categoryId,
@@ -367,7 +371,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       return
     }
     if (!category) { setError('Choisissez une catégorie.'); return }
-    const joining = submit && !isEditing && campaignChoice
+    const joining = submit && publishes && campaignChoice
     if (joining) {
       const min = campaignChoice.campaign.minDiscountPercent ?? 1
       if (campaignChoice.discountPercent < min) { setError(`Campagne « ${campaignChoice.campaign.name} » : remise minimale de ${min} %.`); return }
@@ -411,7 +415,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       }
       // "Publication directe" (BO): the listing comes back already live.
       let live = false
-      if (submit && !isEditing) live = (await submitForReview({ variables: { id } })).data?.submitListingForReview.status === 'APPROVED'
+      if (submit && publishes) live = (await submitForReview({ variables: { id } })).data?.submitListingForReview.status === 'APPROVED'
       if (!isEditing) { try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ } }
       let campaign: NonNullable<typeof result>['campaign']
       if (joining) {
@@ -423,7 +427,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           campaign = { name: c.name, error: err instanceof Error ? err.message : 'La participation a échoué.' }
         }
       }
-      setResult({ id, submitted: submit, live, campaign })
+      setResult({ id, submitted: submit, live, fromDraft: editingDraft, campaign })
     } catch (err) {
       setUploading(false)
       setError(err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.')
@@ -469,9 +473,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
         <div className="mx-auto max-w-lg py-10 text-center">
           <span className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><CheckCircle2 size={40} /></span>
-          <h1 className="m-0 text-headline-lg text-on-surface">{isEditing ? 'Annonce mise à jour !' : result.live ? 'Annonce publiée !' : result.submitted ? 'Annonce envoyée !' : 'Brouillon enregistré'}</h1>
+          <h1 className="m-0 text-headline-lg text-on-surface">{isEditing && !result.fromDraft ? 'Annonce mise à jour !' : result.live ? 'Annonce publiée !' : result.submitted ? 'Annonce envoyée !' : 'Brouillon enregistré'}</h1>
           <p className="m-0 mt-2 text-body-md text-on-surface-variant">
-            {isEditing ? 'Vos modifications sont enregistrées.' : result.live
+            {isEditing && !result.fromDraft ? 'Vos modifications sont enregistrées.' : result.live
               ? 'Elle est déjà visible des acheteurs.'
               : result.submitted
               ? 'Notre équipe la vérifie : elle sera visible des acheteurs dès son approbation.'
@@ -488,7 +492,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <span>Inscrite à « {result.campaign.name} »{result.campaign.credits > 0 ? ` — ${result.campaign.credits} crédit${result.campaign.credits > 1 ? 's' : ''} débité${result.campaign.credits > 1 ? 's' : ''}` : ''}. {result.live ? 'Elle apparaît dans la campagne.' : 'Elle apparaîtra dans la campagne dès son approbation (remboursé si elle est refusée).'}</span>
             </div>
           ))}
-          {result.submitted && !isEditing && (
+          {result.submitted && (!isEditing || result.fromDraft) && (
             <div className="mt-6 rounded-2xl border border-outline-variant bg-surface-lowest p-5 text-left">
               {boosted ? (
                 <p className="m-0 flex items-center gap-2 text-label-md text-tertiary"><CheckCircle2 size={18} /> {result.live ? 'Boost enregistré — actif dès maintenant.' : "Boost enregistré — actif dès l'approbation."}</p>
@@ -769,7 +773,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {/* Dilchap campaign, joined and paid on publishing */}
-            {!isEditing && requiresPrice && (
+            {publishes && requiresPrice && (
               <CampaignSection className={only(2)} price={priceNum} currency={form.currency} value={campaignChoice} onChange={setCampaignChoice} />
             )}
 
@@ -840,13 +844,13 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
             {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}</p>}
             <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
-              {!isEditing ? (
+              {publishes ? (
                 <button disabled={busy} onClick={() => void save(false)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-surface-container-high px-5 py-3 text-label-lg text-on-surface hover:bg-surface-container-highest disabled:opacity-60">
                   <Icon name="save" size={19} /> Sauvegarder en brouillon
                 </button>
               ) : <span />}
-              <button disabled={busy} onClick={() => void save(!isEditing)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-8 py-3.5 text-headline-sm text-white hover:bg-primary-dark disabled:opacity-60">
-                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {isEditing ? 'Enregistrer les modifications' : 'Publier mon annonce'}
+              <button disabled={busy} onClick={() => void save(publishes)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-8 py-3.5 text-headline-sm text-white hover:bg-primary-dark disabled:opacity-60">
+                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {!publishes ? 'Enregistrer les modifications' : 'Publier mon annonce'}
               </button>
             </div>
           </div>
@@ -918,7 +922,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <button type="button" onClick={() => backTo(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label="Étape précédente">
                 <Icon name="arrow_back" size={20} />
               </button>
-            ) : !isEditing && form.categoryId && (
+            ) : publishes && form.categoryId && (
               // A server draft needs a category; until then the local auto-save covers it.
               <button type="button" disabled={busy} onClick={() => void save(false)} className="flex h-12 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container-high px-4 text-label-md text-on-surface disabled:opacity-60">
                 <Icon name="save" size={19} /> Brouillon
@@ -929,8 +933,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 Suivant · {MOBILE_STEPS[step + 1]} <Icon name="arrow_forward" size={20} />
               </button>
             ) : (
-              <button type="button" disabled={busy} onClick={() => void save(!isEditing)} className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
-                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {isEditing ? 'Enregistrer' : 'Publier mon annonce'}
+              <button type="button" disabled={busy} onClick={() => void save(publishes)} className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
+                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {!publishes ? 'Enregistrer' : 'Publier mon annonce'}
               </button>
             )}
           </div>
