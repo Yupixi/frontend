@@ -1,9 +1,10 @@
 import { gql } from '@apollo/client'
 import type { RemoteListing } from './listings'
 
+// `country` (both): the visitor's market.
 export const ACTIVE_CAMPAIGN_QUERY = gql`
-  query ActiveCampaign {
-    activeCampaign {
+  query ActiveCampaign($country: String) {
+    activeCampaign(country: $country) {
       id
       name
       slug
@@ -65,8 +66,8 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
 // The site-wide announcement bar only needs the campaign's header — not its
 // full listing showcase (that's ACTIVE_CAMPAIGN_QUERY, Home/Flash Offers).
 export const ACTIVE_CAMPAIGN_BAR_QUERY = gql`
-  query ActiveCampaignBar {
-    activeCampaign {
+  query ActiveCampaignBar($country: String) {
+    activeCampaign(country: $country) {
       id
       name
       slug

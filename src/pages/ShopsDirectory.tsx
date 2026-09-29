@@ -10,7 +10,7 @@ import { setAuthReason } from '../lib/authReason'
 import { formatNumber } from '../lib/format'
 import { ShopCard } from '../components/ShopCard'
 import { useLists } from '../lib/lists'
-import { useMarketCode } from '../lib/countries'
+import { useMarketCode, useMarketVars } from '../lib/countries'
 
 type Props = {
   onNavigate: (page: any) => void
@@ -36,7 +36,7 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
   useEffect(() => setPage(1), [term, category, city, sort, countryCode])
   useEffect(() => setCity(''), [countryCode])
 
-  const { data: cats } = useQuery<{ categories: { id: string, slug: string, name: string }[] }>(CATEGORIES_QUERY)
+  const { data: cats } = useQuery<{ categories: { id: string, slug: string, name: string }[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   const { data, loading, refetch } = useQuery<{ shops: { items: Shop[], total: number } }>(SHOPS_QUERY, {
     variables: { search: term || undefined, categorySlug: category || undefined, countryCode: countryCode ?? undefined, city: city || undefined, sort, page, pageSize: PAGE_SIZE },
   })

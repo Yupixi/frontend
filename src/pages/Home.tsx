@@ -15,7 +15,7 @@ import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 import Select from '../components/Select'
 import { PaymentLogos } from '../components/PaymentLogo'
-import { countryVars, fillPlacesDeep, useMarket, useMarketCode, useMethods } from '../lib/countries'
+import { countryVars, fillPlacesDeep, useMarket, useMarketCode, useMarketVars, useMethods } from '../lib/countries'
 import { ShopCard } from '../components/ShopCard'
 import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 import { HomePromotions } from '../components/campaign/CampaignTiles'
@@ -113,7 +113,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const SLIDES = home.hero.slides
   const SLIDE_MS = Math.max(3, home.hero.intervalSec) * 1000
 
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   const categories = categoriesData?.categories ?? []
   const topCategories = [...categories].sort((a, b) => (b.listingsCount ?? 0) - (a.listingsCount ?? 0)).slice(0, 7)
 

@@ -72,6 +72,10 @@ export const usePriceVars = () => countryVars(usePayerCountryCode())
 // caches each country apart, so a switch loads the other one once.
 export const countryVars = (code: string | null | undefined): { country?: string } => (code ? { country: code } : {})
 
+// `variables` of a browsing query (categories, campaigns, offers shown to
+// visitors): the visitor's market.
+export const useMarketVars = () => countryVars(useMarketCode())
+
 // The visitor's country, undefined for « Tous les pays ».
 export function useMarket(): Country | undefined {
   return useCountry(useMarketCode())

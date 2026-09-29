@@ -18,7 +18,7 @@ import { uploadImages, uploadShopDocument } from '../../lib/upload'
 import OfferCredits from '../../components/OfferCredits'
 import type { AuthUser } from '../../graphql/auth'
 import { useLists } from '../../lib/lists'
-import { useHomeCountry, usePriceVars, type Country } from '../../lib/countries'
+import { countryVars, useHomeCountry, usePriceVars, type Country } from '../../lib/countries'
 import type { ShopLegalIdType } from '../../graphql/shops'
 import { useRules } from '../../lib/rules'
 import RichTextEditor from '../../components/RichTextEditor'
@@ -257,10 +257,11 @@ const BENEFITS: [string, string, string][] = [
 
 export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }: Props) {
   const { data, loading, refetch } = useQuery<MyShopData>(MY_SHOP_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
-  const { data: cats } = useQuery<{ categories: { id: string, name: string }[] }>(CATEGORIES_QUERY)
   const [wizard, setWizard] = useState(false)
   const [step, setStep] = useState(0)
   const owner = useHomeCountry()
+  // Categories offered in the shop's country (the owner's for a new shop).
+  const { data: cats } = useQuery<{ categories: { id: string, name: string }[] }>(CATEGORIES_QUERY, { variables: countryVars(data?.myShop.shop?.countryCode || owner.code) })
   const [form, setForm] = useState<Form>(() => formFrom(null, owner.mainCity))
   const [error, setError] = useState('')
   const [docBusy, setDocBusy] = useState(false)

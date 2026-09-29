@@ -15,7 +15,7 @@ import { JOIN_CAMPAIGN_WITH_LISTING_MUTATION } from '../../graphql/shops'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { marketForCountry } from '../../data/markets'
-import { METHOD_LABELS, useCountries, useHomeCountry, type Country, type PaymentMethodCode } from '../../lib/countries'
+import { countryVars, METHOD_LABELS, useCountries, useHomeCountry, type Country, type PaymentMethodCode } from '../../lib/countries'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
 import {
   ATTACH_LISTING_MEDIA_MUTATION, CREATE_LISTING_MUTATION, DELETE_LISTING_MEDIA_MUTATION, MY_LISTING_QUERY,
@@ -198,12 +198,20 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [uploading, setUploading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
-  const categories = categoriesData?.categories ?? []
+  // Categories open in the listing's country (the BO can limit a category
+  // to some countries); the previous list stays while another one loads.
+  const { data: categoriesData, previousData: previousCategories } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: countryVars(form.countryCode) })
+  const categories = (categoriesData ?? previousCategories)?.categories ?? []
   const offers = usePriceOffers()
   const category = categories.find(c => c.id === form.categoryId)
   const subcategory = category?.subcategories.find(s => s.id === form.subcategoryId)
   const requiresPrice = category?.requiresPrice ?? true
+  // Another country without the chosen category: the choice is dropped.
+  useEffect(() => {
+    const list = categoriesData?.categories
+    if (!form.categoryId || !list?.length || list.some(c => c.id === form.categoryId)) return
+    setForm(f => ({ ...f, categoryId: '', subcategoryId: '', attributes: {} }))
+  }, [categoriesData, form.categoryId])
   // Districts and meetup spots are those of the country's main city.
   const inMainCity = !!lists.mainCity && form.city.trim().toLowerCase() === lists.mainCity.toLowerCase()
 
@@ -478,7 +486,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       setResult({ id, submitted: submit, live, fromDraft: editingDraft, campaign })
     } catch (err) {
       setUploading(false)
-      setError(err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.')
+      const message = err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.'
+      // The category isn't open in the listing's country (changed since, or
+      // limited by the team meanwhile): pick another one.
+      if (/n’est pas disponible/.test(message)) setForm(f => ({ ...f, categoryId: '', subcategoryId: '', attributes: {} }))
+      setError(message)
     }
   }
 
@@ -822,7 +834,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
             {/* Dilchap campaign, joined and paid on publishing */}
             {publishes && requiresPrice && (
-              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} categoryId={form.categoryId} value={campaignChoice} onChange={setCampaignChoice} />
+              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} categoryId={form.categoryId} countryCode={form.countryCode} value={campaignChoice} onChange={setCampaignChoice} />
             )}
 
             {/* Exchange */}

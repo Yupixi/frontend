@@ -24,10 +24,12 @@ const dateFr = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day:
 // "Participer à une campagne" in the listing wizard: the Dilchap campaigns
 // this seller may join, what it costs in credits (taken on publishing), the
 // balance, and a way to buy the missing credits without leaving the form.
-export default function CampaignOptIn({ price, currency, categoryId, value, onChange, render = body => body }: {
+export default function CampaignOptIn({ price, currency, categoryId, countryCode, value, onChange, render = body => body }: {
   price: number
   // Category of the listing: category offers (« Offres & gratuités »).
   categoryId?: string | null
+  // Country of the listing: only the campaigns running there.
+  countryCode?: string | null
   currency: string
   value: CampaignChoice | null
   onChange: (v: CampaignChoice | null) => void
@@ -49,7 +51,12 @@ export default function CampaignOptIn({ price, currency, categoryId, value, onCh
     document.addEventListener('visibilitychange', again)
     return () => { window.removeEventListener('focus', again); document.removeEventListener('visibilitychange', again) }
   }, [refetch])
-  const campaigns = (data?.openShopCampaigns ?? []).filter(c => c.canJoin && c.state !== 'ENDED')
+  const campaigns = (data?.openShopCampaigns ?? []).filter(c => c.canJoin && c.state !== 'ENDED'
+    && (!countryCode || !c.countryCodes?.length || c.countryCodes.includes(countryCode)))
+  // The listing moved to a country the chosen campaign doesn't run in.
+  useEffect(() => {
+    if (data && value && !campaigns.some(c => c.id === value.campaign.id)) onChange(null)
+  }, [data, value, campaigns, onChange])
   const preselect = useRef<string | null>(null)
   if (preselect.current === null) {
     try { preselect.current = sessionStorage.getItem(POST_CAMPAIGN_KEY) ?? ''; sessionStorage.removeItem(POST_CAMPAIGN_KEY) } catch { preselect.current = '' }

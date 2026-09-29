@@ -224,7 +224,7 @@ export type ShopListing = {
 
 const PROMO_ITEM = 'entryId listingId title coverUrl price discountPercent salePrice promoPrice status rejectReason'
 const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt salesCount salesVolume items { ${PROMO_ITEM} }`
-const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt minDiscountPercent state entryFee listingFee entryFeePaid amountDue earlyAccessUntil canJoin myItems { ${PROMO_ITEM} }`
+const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt countryCodes minDiscountPercent state entryFee listingFee entryFeePaid amountDue earlyAccessUntil canJoin myItems { ${PROMO_ITEM} }`
 const BUNDLE_FIELDS = 'id name tiers { minQty percent } scope aisleId aisleName listingIds startsAt endsAt active state listingsCount'
 const POST_FIELDS = 'id title body imageUrl listings { id title price coverUrl } recipients views createdAt'
 
@@ -265,7 +265,9 @@ export type OpenCampaign = { id: string; name: string; slug: string; description
   // Paid participation (F CFA), charged once items are accepted.
   entryFee: number; listingFee: number; entryFeePaid: boolean; amountDue: number
   // Early access of certified sellers: others can join from this date.
-  earlyAccessUntil: string | null; canJoin: boolean }
+  earlyAccessUntil: string | null; canJoin: boolean
+  // Countries it runs in (empty = every country).
+  countryCodes: string[] }
 export type BundleTier = { minQty: number; percent: number }
 export type ShopBundle = { id: string; name: string; tiers: BundleTier[]; scope: 'ALL' | 'AISLE' | 'LISTINGS'; aisleId: string | null; aisleName: string | null; listingIds: string[]; startsAt: string | null; endsAt: string | null; active: boolean; state: PromoState; listingsCount: number }
 export type ShopPost = { id: string; title: string; body: string; imageUrl: string | null; listings: { id: string; title: string; price: number | null; coverUrl: string | null }[]; recipients: number; views: number; createdAt: string }

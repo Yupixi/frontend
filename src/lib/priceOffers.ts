@@ -1,6 +1,7 @@
 import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { getAccessToken } from './auth'
+import { countryVars, useMarketCode, usePayerCountryCode } from './countries'
 
 // Price offers (BO « Offres & gratuités »): a discount or a free period on
 // what members pay in credits. The server applies them to every purchase;
@@ -18,30 +19,46 @@ export type LiveOffer = {
   operations: string[]
   // Category offers: only listings of these categories.
   categoryIds: string[] | null
+  // Countries it applies in (empty = every country).
+  countryCodes?: string[]
 }
 
-export const PRICE_OFFERS_QUERY = gql`query PriceOffers { priceOffers }`
+// `country`: the visitor's market (none = the every-country offers only).
+export const PRICE_OFFERS_QUERY = gql`query PriceOffers($country: String) { priceOffers(country: $country) }`
 export const MY_PRICE_OFFERS_QUERY = gql`query MyPriceOffers { myPriceOffers }`
 
 const LISTING_OPERATIONS: OfferOperation[] = ['BUMP', 'BOOST', 'CAMPAIGN']
 
-// The live offers that concern this visitor: everyone's, or (signed in) also
-// theirs, their shop's and the category ones. Re-read every 5 minutes: an
-// offer can start or end while the page is open.
+// Whether an offer applies in `country` (undefined: not known here, the
+// server already chose; null: « Tous les pays », every-country offers only).
+export const coversCountry = (o: LiveOffer, country: string | null | undefined) =>
+  country === undefined || !o.countryCodes?.length || (!!country && o.countryCodes.includes(country))
+
+// The live offers that concern this visitor: everyone's in their market, or
+// (signed in) also theirs, their shop's and the category ones, in the
+// country they pay in (their account's). Re-read every 5 minutes: an offer
+// can start or end while the page is open.
 export function usePriceOffers(): LiveOffer[] {
   const signedIn = !!getAccessToken()
+  const market = useMarketCode()
+  const payer = usePayerCountryCode()
   const { data } = useQuery<{ priceOffers?: LiveOffer[]; myPriceOffers?: LiveOffer[] }>(
     signedIn ? MY_PRICE_OFFERS_QUERY : PRICE_OFFERS_QUERY,
-    { fetchPolicy: 'cache-and-network', pollInterval: 5 * 60_000 },
+    { variables: signedIn ? {} : countryVars(market), fetchPolicy: 'cache-and-network', pollInterval: 5 * 60_000 },
   )
   const list = (signedIn ? data?.myPriceOffers : data?.priceOffers) ?? []
   const now = Date.now()
-  return list.filter(o => Date.parse(o.endsAt) > now)
+  // A member whose country isn't known here: the server's choice stands.
+  const country = signedIn ? payer ?? undefined : market
+  return list.filter(o => Date.parse(o.endsAt) > now && coversCountry(o, country))
 }
 
-export function bestOffer(offers: LiveOffer[], op: OfferOperation, categoryId?: string | null): LiveOffer | null {
+// `country`: where the purchase is charged (see coversCountry); the lists
+// from usePriceOffers are already limited to the payer's country.
+export function bestOffer(offers: LiveOffer[], op: OfferOperation, categoryId?: string | null, country?: string | null): LiveOffer | null {
   let best: LiveOffer | null = null
   for (const o of offers) {
+    if (!coversCountry(o, country)) continue
     if (o.operations.length && !o.operations.includes(op)) continue
     if (o.categoryIds && !(LISTING_OPERATIONS.includes(op) && categoryId && o.categoryIds.includes(categoryId))) continue
     if (!best || o.percent > best.percent) best = o

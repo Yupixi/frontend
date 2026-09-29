@@ -14,7 +14,7 @@ import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
 import { setAuthReason } from '../lib/authReason'
 import { PaymentLogos, useMobileMethods } from '../components/PaymentLogo'
-import { useMarketCode } from '../lib/countries'
+import { useMarketCode, useMarketVars } from '../lib/countries'
 import { useNoCommissionClaims } from '../lib/site'
 
 const PAGE_SIZE = 18
@@ -197,7 +197,7 @@ export default function SearchPage({
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   const categories = categoriesData?.categories ?? []
   const category = categories.find(c => c.slug === categoryFilter)
 
