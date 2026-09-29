@@ -16,12 +16,12 @@ function HeroCountdown({ endsAt, dark }: { endsAt: string; dark: boolean }) {
   if (!c || c.ended) return null
   const cells: [string, number][] = [['Jours', c.days], ['Heures', c.hours], ['Min', c.minutes], ['Sec', c.seconds]]
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2.5">
+    <div className="flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2.5">
       {cells.map(([label, v], i) => (
-        <div key={label} className="flex items-center gap-1.5 sm:gap-2.5">
+        <div key={label} className="flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2.5">
           {i > 0 && <span className={`text-headline-sm font-bold ${dark ? 'text-on-surface-variant' : 'text-white/60'}`}>:</span>}
-          <div className={`flex min-w-[58px] flex-col items-center rounded-xl px-2.5 py-1.5 backdrop-blur-md sm:min-w-[70px] sm:px-3.5 sm:py-2 ${dark ? 'bg-white/70' : 'bg-white/10'}`}>
-            <span className={`text-headline-md font-extrabold tabular-nums ${i === 3 ? `camp-tick ${dark ? 'text-primary' : 'text-primary-fixed'}` : ''}`}>{pad2(v)}</span>
+          <div className={`flex min-w-[48px] flex-col items-center rounded-xl px-1.5 py-1.5 backdrop-blur-md min-[360px]:min-w-[58px] min-[360px]:px-2.5 sm:min-w-[70px] sm:px-3.5 sm:py-2 ${dark ? 'bg-white/70' : 'bg-white/10'}`}>
+            <span className={`text-headline-md font-extrabold tabular-nums ${i === 3 ? `camp-tick ${dark ? 'text-primary' : 'text-[#ffb4ab]'}` : ''}`}>{pad2(v)}</span>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${dark ? 'text-on-surface-variant' : 'text-white/70'}`}>{label}</span>
           </div>
         </div>
@@ -38,7 +38,7 @@ function PhotoCard({ a, b, label, delay, tilt, className }: { a: string; b?: str
   const style = { '--tilt': `${tilt}deg`, animationDelay: `${delay * 0.7}s` } as React.CSSProperties
   return (
     <div className={`camp-card absolute overflow-hidden rounded-2xl bg-surface-lowest shadow-2xl ${className}`} style={style}>
-      <img src={a} alt="" decoding="async" onError={hideCard} className="camp-kb-a absolute inset-0 h-full w-full object-cover" style={{ animationDelay: `${delay * 1.75}s` }} />
+      <img src={a} alt="" decoding="async" onError={hideCard} className={`${b && b !== a ? 'camp-kb-a ' : ''}absolute inset-0 h-full w-full object-cover`} style={{ animationDelay: `${delay * 1.75}s` }} />
       {b && b !== a && <img src={b} alt="" loading="lazy" decoding="async" onError={e => { e.currentTarget.style.display = 'none' }} className="camp-kb-b absolute inset-0 h-full w-full object-cover" style={{ animationDelay: `${delay * 1.75}s` }} />}
       {label && <span className="absolute bottom-2 left-2 z-10 max-w-[85%] truncate rounded bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-md">{label}</span>}
     </div>
@@ -79,6 +79,10 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
   const photos = [...new Set(campaign.listings.map(e => e.listing.coverImageUrl).filter((u): u is string => !!u).map(u => thumbnailUrl(u)))]
   const titles = campaign.listings.filter(e => e.listing.coverImageUrl).map(e => e.listing.title)
   const photo = (i: number) => photos.length ? photos[i % photos.length] : ''
+  // The photo a card cross-fades to: another one of the campaign's (half a
+  // turn further), none when there is only one — a card never fades to
+  // itself, which would leave it blank half of the time.
+  const next = (i: number) => photos.length > 1 ? photos[(i + Math.max(1, Math.floor(photos.length / 2))) % photos.length] : undefined
   const best = campaign.maxDiscountPercent
   const chip = `flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-md backdrop-blur-sm ${dark ? 'bg-white/70 text-on-surface' : 'bg-white/10 text-white'}`
 
@@ -98,7 +102,7 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
       <div className="relative z-10 grid grid-cols-1 items-center gap-6 p-5 md:p-8 lg:grid-cols-12 lg:gap-10 lg:p-10">
         <div className="flex flex-col items-start gap-3 lg:col-span-7 lg:gap-4">
           <div className="flex w-full flex-wrap items-center justify-between gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-sm uppercase tracking-wider backdrop-blur-md ${dark ? 'bg-white/70 text-tertiary' : 'bg-white/10 text-tertiary-fixed'}`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-sm uppercase tracking-wider backdrop-blur-md ${dark ? 'bg-white/70 text-tertiary' : 'bg-white/10 text-[#6ffbbe]'}`}>
               <Icon name="verified" size={15} /> {HERO_BADGE[campaign.type]}
             </span>
             <span className={`text-label-md lg:hidden ${dark ? 'text-on-surface-variant' : 'text-white/85'}`}>{dateFr(campaign.startsAt)} – {dateFr(campaign.endsAt)}</span>
@@ -106,7 +110,7 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
           <h1 className="m-0 text-[32px] font-extrabold leading-[1.1] tracking-tight md:text-[44px] lg:text-[48px]">{campaign.name}</h1>
           {campaign.description && <p className={`m-0 max-w-xl text-body-md md:text-body-lg ${dark ? 'text-on-surface-variant' : 'text-white/85'}`}>{campaign.description}</p>}
           <div className={`hidden items-center gap-2 text-label-md lg:flex ${dark ? 'text-on-surface-variant' : 'text-white/85'}`}>
-            <Icon name="calendar_month" size={18} className={dark ? 'text-tertiary' : 'text-tertiary-fixed'} />
+            <Icon name="calendar_month" size={18} className={dark ? 'text-tertiary' : 'text-[#6ffbbe]'} />
             Du {dateFr(campaign.startsAt)} au {dateFr(campaign.endsAt, true)}
           </div>
           <div className="w-full lg:w-auto">
@@ -115,7 +119,7 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {campaign.listingsCount > 0 && <span className={chip}><Icon name="inventory_2" size={17} /> {campaign.listingsCount} article{campaign.listingsCount > 1 ? 's' : ''}</span>}
-            {best ? <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-md backdrop-blur-sm ${dark ? 'bg-primary/15 text-primary' : 'bg-primary/25 text-primary-fixed'}`}><Icon name="trending_down" size={17} /> Jusqu’à -{best} %</span> : null}
+            {best ? <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-md backdrop-blur-sm ${dark ? 'bg-primary/15 text-primary' : 'bg-primary/25 text-[#ffb4ab]'}`}><Icon name="trending_down" size={17} /> Jusqu’à -{best} %</span> : null}
             {campaign.sellersCount > 0 && <span className={chip}><Icon name="workspace_premium" size={17} /> {campaign.sellersCount} vendeur{campaign.sellersCount > 1 ? 's' : ''}</span>}
           </div>
         </div>
@@ -130,10 +134,10 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
             {/* Desktop mosaic */}
             <div className="relative hidden min-h-[360px] items-center justify-center lg:col-span-5 lg:flex">
               <div className="relative aspect-square w-full max-w-[420px]">
-                <PhotoCard a={photo(0)} b={photo(4)} label={titles[0]} delay={0} tilt={-3} className="left-2 top-0 h-48 w-48" />
-                <PhotoCard a={photo(1)} b={photo(5)} label={titles[1]} delay={1} tilt={6} className="right-0 top-4 h-40 w-44" />
-                <PhotoCard a={photo(2)} b={photo(6)} label={titles[2]} delay={2} tilt={2} className="bottom-2 left-6 h-40 w-40" />
-                <PhotoCard a={photo(3)} b={photo(7)} label={titles[3]} delay={3} tilt={-6} className="bottom-0 right-4 h-44 w-44" />
+                <PhotoCard a={photo(0)} b={next(0)} label={titles[0]} delay={0} tilt={-3} className="left-2 top-0 h-48 w-48" />
+                <PhotoCard a={photo(1)} b={next(1)} label={titles[1]} delay={1} tilt={6} className="right-0 top-4 h-40 w-44" />
+                <PhotoCard a={photo(2)} b={next(2)} label={titles[2]} delay={2} tilt={2} className="bottom-2 left-6 h-40 w-40" />
+                <PhotoCard a={photo(3)} b={next(3)} label={titles[3]} delay={3} tilt={-6} className="bottom-0 right-4 h-44 w-44" />
                 {best ? <span className="camp-pulse absolute -top-3 right-6 z-20 rounded-full bg-primary px-3 py-1.5 text-headline-sm font-extrabold text-white">-{best}%</span> : null}
               </div>
             </div>
@@ -141,7 +145,7 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
             <div className="relative -mt-1 grid h-28 grid-cols-3 gap-2 lg:hidden">
               {[0, 1, 2].map(i => (
                 <div key={i} className="relative">
-                  <PhotoCard a={photo(i)} b={photo(i + 3)} delay={i} tilt={0} className="inset-0" />
+                  <PhotoCard a={photo(i)} b={next(i)} delay={i} tilt={0} className="inset-0" />
                 </div>
               ))}
               {best ? <span className="camp-pulse absolute -bottom-2 left-1/2 z-20 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-label-md font-extrabold text-white">-{best}%</span> : null}
