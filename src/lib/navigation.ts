@@ -16,6 +16,13 @@ export const conversationFromUrl = (url: string = window.location.href) => {
   try { return new URL(url, window.location.origin).searchParams.get('conversation') } catch { return null }
 }
 
+// Opens a given campaign page (home promotions, category tiles, the
+// announcement bar): '' = the newest live one.
+export const OPEN_CAMPAIGN_EVENT = 'yupixi:open-campaign'
+
+export const requestOpenCampaign = (slug: string) =>
+  window.dispatchEvent(new CustomEvent<string>(OPEN_CAMPAIGN_EVENT, { detail: slug }))
+
 // Opens an official shop (notification of a followed shop: `/?shop=<slug>`).
 export const OPEN_SHOP_EVENT = 'yupixi:open-shop'
 

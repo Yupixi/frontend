@@ -38,6 +38,7 @@ import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteCon
 import { formatRelativeDate } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 import { syncAppBadge } from '../lib/pushNotifications'
+import { requestOpenCampaign } from '../lib/navigation'
 import { useSite } from '../lib/site'
 
 type Page =
@@ -224,7 +225,7 @@ export default function Layout({
           itself; see the Home campaign rail for the matching product grid. */}
       {activeCampaign && (
         <button
-          onClick={() => onNavigate('flash-offers')}
+          onClick={() => requestOpenCampaign(activeCampaign.slug)}
           className="flex w-full cursor-pointer items-center justify-center gap-2 border-none px-4 py-2 text-left text-label-md text-white"
           style={{ background: 'var(--campaign-accent, var(--primary))' }}
         >
@@ -259,7 +260,7 @@ export default function Layout({
           <div className="flex items-center gap-4">
             <button onClick={() => onNavigate('categories')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Toutes les catégories</button>
             <span className="text-outline-variant">•</span>
-            <button onClick={() => onNavigate('flash-offers')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Bonnes affaires</button>
+            <button onClick={() => requestOpenCampaign('')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Bonnes affaires</button>
           </div>
         </div>
 
@@ -507,7 +508,7 @@ export default function Layout({
             ...navCategories.map(c => ({
               key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
             })),
-            { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => onNavigate('flash-offers') },
+            { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => requestOpenCampaign('') },
             { key: 'shops', label: 'Boutiques officielles', icon: true, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
           ].map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: boolean }) => (
             <button

@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { Heart, MessageSquare, Tag, Timer, Handshake, Percent, ShieldCheck, ArrowRight, ChevronLeft, ChevronRight, CheckCircle2, Eye } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
-import Price from '../components/Price'
-import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign, type ActiveCampaignListing } from '../graphql/content'
-import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
-import { thumbnailUrl } from '../lib/media'
-import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
-import { useReveal } from '../lib/reveal'
 import { ListingCard } from '../components/ListingCard'
+import CampaignHero from '../components/campaign/CampaignHero'
+import { CampaignBanner, CampaignCompact } from '../components/campaign/CampaignTiles'
+import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
+import { CAMPAIGN_PAGE_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignPage, type LiveCampaign } from '../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
-import { Claim, useNoCommissionClaims } from '../lib/site'
+import { placeOptions, useLists } from '../lib/lists'
 
 type FlashOffersProps = {
+  // '' = the newest live campaign.
+  campaignSlug?: string
+  onOpenCampaign: (slug: string) => void
   onNavigate: (page: any) => void
   onSelectListing: (id: string) => void
   favorites: string[]
@@ -21,343 +21,198 @@ type FlashOffersProps = {
   isLoggedIn?: boolean
 }
 
-function useCountdown(endsAt?: string, tickMs = 1000) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (!endsAt) return
-    const t = setInterval(() => setNow(Date.now()), tickMs)
-    return () => clearInterval(t)
-  }, [endsAt, tickMs])
-  if (!endsAt) return null
-  const ms = Math.max(0, new Date(endsAt).getTime() - now)
-  return {
-    days: Math.floor(ms / 86_400_000),
-    hours: Math.floor(ms / 3_600_000) % 24,
-    minutes: Math.floor(ms / 60_000) % 60,
-    seconds: Math.floor(ms / 1000) % 60,
-    ended: ms <= 0,
-  }
-}
+type Sort = 'DISCOUNT_DESC' | 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC'
+const SORTS: [Sort, string][] = [['DISCOUNT_DESC', 'Meilleures remises'], ['RECENT', 'Nouveautés'], ['PRICE_ASC', 'Prix croissant'], ['PRICE_DESC', 'Prix décroissant']]
+const DISCOUNTS: [number, string][] = [[0, 'Toutes remises'], [10, '-10 % et +'], [20, '-20 % et +'], [30, '-30 % et +'], [50, '-50 % et +']]
+const PAGE_SIZE = 20
 
-const pad = (n: number) => String(n).padStart(2, '0')
+const select = 'h-10 shrink-0 cursor-pointer rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-label-md text-on-surface outline-none focus:border-primary'
 
-function HeroCountdown({ endsAt }: { endsAt: string }) {
-  const countdown = useCountdown(endsAt)
-  if (!countdown || countdown.ended) return null
-  return (
-    <div className="mt-6 flex items-center justify-center gap-2">
-      {[['Jours', countdown.days], ['Heures', countdown.hours], ['Minutes', countdown.minutes], ['Secondes', countdown.seconds]].map(([label, v], i) => (
-        <div key={label as string} className="flex items-center gap-2">
-          {i > 0 && <span className="text-headline-md text-white/50">:</span>}
-          <div className="w-16 rounded-xl bg-white/10 py-2 backdrop-blur-sm md:w-20">
-            <div className={`text-headline-lg font-extrabold tabular-nums md:text-[40px] ${i === 3 ? 'text-primary-container' : ''}`}>{pad(v as number)}</div>
-            <div className="text-[10px] uppercase tracking-wider text-white/60">{label as string}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
+// One campaign's page (the one clicked on the home, a category tile or the
+// announcement bar): header driven by the BO, search and filters within
+// the campaign, top discounts, every offer, the sellers' invitation, and
+// the other live campaigns.
+export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavigate, onSelectListing, favorites, onToggleFavorite, onContactSeller, isLoggedIn }: FlashOffersProps) {
+  const { data: liveData, loading: liveLoading } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { fetchPolicy: 'cache-and-network' })
+  const live = (liveData?.activeCampaigns ?? []).filter(isLive)
+  const slug = campaignSlug || live[0]?.slug || ''
+  const { data, loading } = useQuery<{ campaign: CampaignPage | null }>(CAMPAIGN_PAGE_QUERY, { variables: { slug }, skip: !slug })
+  const campaign = data?.campaign && isLive(data.campaign) ? data.campaign : null
 
-// Behind the hero: two rows of the campaign's pictures scrolling in
-// opposite directions (still for visitors who ask for less motion).
-function HeroMarquee({ images }: { images: string[] }) {
-  if (images.length < 3) return null
-  const fill = (from: string[]) => {
-    const row: string[] = []
-    while (row.length < 12) row.push(...from)
-    return row.slice(0, Math.max(12, from.length))
-  }
-  const rows = [fill(images), fill([...images].reverse())]
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 flex -rotate-6 scale-125 flex-col justify-center gap-4 opacity-35 [mask-image:linear-gradient(90deg,transparent,black_15%,black_85%,transparent)]">
-      {rows.map((row, r) => (
-        <div key={r} className={`marquee-row flex w-max gap-4 ${r ? 'reverse' : ''}`} style={{ '--marquee-speed': r ? '75s' : '60s' } as React.CSSProperties}>
-          {[...row, ...row].map((src, i) => (
-            <img key={i} src={src} alt="" loading="lazy" decoding="async" className="h-24 w-24 shrink-0 rounded-2xl object-cover md:h-36 md:w-36" />
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
+  const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
+  useEffect(() => { const t = setTimeout(() => setQuery(search.trim()), 350); return () => clearTimeout(t) }, [search])
+  const [category, setCategory] = useState('')
+  const [city, setCity] = useState('')
+  const [minDiscount, setMinDiscount] = useState(0)
+  const [sort, setSort] = useState<Sort>('DISCOUNT_DESC')
+  const [pages, setPages] = useState(1)
+  useEffect(() => setPages(1), [query, category, city, minDiscount, sort])
+  const places = placeOptions(useLists())
 
-function salePrice(entry: ActiveCampaignListing): number | null {
-  const { price } = entry.listing
-  if (price == null) return null
-  if (entry.salePrice != null) return entry.salePrice
-  if (entry.discountPercent != null) return Math.round(price * (1 - entry.discountPercent / 100))
-  return null
-}
-function discountOf(entry: ActiveCampaignListing): number {
-  if (entry.discountPercent != null) return entry.discountPercent
-  const sale = salePrice(entry)
-  return sale != null && entry.listing.price ? Math.min(99, Math.round((1 - sale / entry.listing.price) * 100)) : 0
-}
-// Thumbnails: every picture on this page is card-sized.
-const imageOf = (e: ActiveCampaignListing) => thumbnailUrl(e.listing.coverImageUrl ?? e.listing.media[0]?.url ?? '')
-
-// "Campagnes & Black Friday" mockup — everything is driven by the live
-// campaign (name, colour, window, discounted listings) authored in the BO.
-export default function FlashOffers({ onNavigate, onSelectListing, favorites, onToggleFavorite, onContactSeller, isLoggedIn }: FlashOffersProps) {
-  const noCommission = useNoCommissionClaims()
-  const { data, loading } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
-  const campaign = data?.activeCampaign
-  // Minute precision is all the cards' "Fin dans" needs — the per-second
-  // hero clock is its own component so it doesn't re-render every card.
-  const countdown = useCountdown(campaign?.endsAt, 60_000)
-  const entries = campaign?.listings ?? []
-  const color = campaign?.themeColor || 'var(--primary)'
-  const [cat, setCat] = useState<string | null>(null)
-  const [railStart, setRailStart] = useState(0)
-
-  const groups = useMemo(() => {
-    const m = new Map<string, { slug: string, name: string, entries: ActiveCampaignListing[] }>()
-    entries.forEach(e => {
-      const g = m.get(e.listing.category.slug) ?? { slug: e.listing.category.slug, name: e.listing.category.name, entries: [] }
-      g.entries.push(e); m.set(g.slug, g)
-    })
-    return [...m.values()].sort((a, b) => b.entries.length - a.entries.length)
-  }, [entries])
-  const bestDiscount = Math.max(0, ...entries.map(discountOf))
-  const flash = entries.filter(e => !cat || e.listing.category.slug === cat).sort((a, b) => discountOf(b) - discountOf(a))
-  const latest = [...entries].sort((a, b) => new Date(b.listing.publishedAt ?? b.listing.createdAt).getTime() - new Date(a.listing.publishedAt ?? a.listing.createdAt).getTime())
-  const iconFor = (slug: string) => categoriesData?.categories.find(c => c.slug === slug)?.icon ?? 'category'
-  const contact = (e: ActiveCampaignListing) => () =>
-    isLoggedIn && onContactSeller ? onContactSeller(e.listing.seller.id, e.listing.id) : onSelectListing(e.listing.id)
-  // No listing in the campaign yet (the team picks them in the BO): the
-  // page shows the shops' own promotions meanwhile.
-  const { data: promoData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: { filter: { promoOnly: true }, sort: 'RECENT', page: 1, pageSize: 12 },
-    skip: !campaign || entries.length > 0,
+  const filter = useMemo(() => campaign && ({
+    campaignId: campaign.id,
+    ...(query ? { search: query } : {}),
+    ...(category ? { categorySlug: category } : {}),
+    ...(city ? { city } : {}),
+    ...(minDiscount ? { minDiscountPercent: minDiscount } : {}),
+  }), [campaign, query, category, city, minDiscount])
+  const { data: offersData, loading: offersLoading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number } }>(LISTINGS_QUERY, {
+    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE * pages },
+    skip: !filter,
   })
-  const promos = entries.length ? [] : promoData?.listings.items ?? []
-  const heroImages = useMemo(() => [...new Set(
-    entries.length ? entries.map(imageOf) : promos.map(l => thumbnailUrl(l.coverImageUrl ?? '')),
-  )].filter(Boolean).slice(0, 16), [entries, promos])
-  const grid = useReveal<HTMLDivElement>(flash.map(e => e.id).join() + promos.map(l => l.id).join())
-  const endsIn = countdown ? `${countdown.days ? `${countdown.days}j ` : ''}${pad(countdown.hours)}h ${pad(countdown.minutes)}m` : ''
+  const { data: topData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+    variables: { filter: { campaignId: campaign?.id }, sort: 'DISCOUNT_DESC', page: 1, pageSize: 8 },
+    skip: !campaign,
+  })
+  const offers = offersData?.listings.items ?? []
+  const total = offersData?.listings.totalCount ?? 0
+  const top = topData?.listings.items ?? []
+  const filtered = !!(query || category || city || minDiscount)
 
-  if (loading) return <p className="p-12 text-center text-on-surface-variant">Chargement…</p>
+  const card = (l: RemoteListing) => (
+    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)}
+      onContact={() => (isLoggedIn && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id))} />
+  )
 
+  if ((liveLoading && !liveData) || (loading && !data)) {
+    return <div className="mx-auto max-w-[1320px] px-4 py-6 md:px-8"><div className="h-[420px] animate-pulse rounded-2xl bg-surface-container" /></div>
+  }
   if (!campaign) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
-        <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-fixed text-primary"><Icon name="local_fire_department" size={32} /></span>
-        <h1 className="m-0 text-headline-lg text-on-surface">Pas de campagne en cours</h1>
-        <p className="m-0 mt-2 text-body-md text-on-surface-variant">Les prochaines ventes flash et braderies arrivent bientôt. En attendant, découvrez les dernières pépites.</p>
-        <button onClick={() => onNavigate('search')} className="mt-6 cursor-pointer rounded-lg border-none bg-primary px-6 py-3 text-label-lg text-white">Explorer le catalogue</button>
+      <div className="mx-auto flex max-w-lg flex-col items-center px-6 py-20 text-center">
+        <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-container text-on-surface-variant"><Icon name="local_offer" size={30} /></span>
+        <h1 className="m-0 text-headline-md text-on-surface">{campaignSlug ? 'Cette campagne est terminée' : 'Pas de campagne en cours'}</h1>
+        <p className="m-0 mt-2 text-body-md text-on-surface-variant">Les prochaines promotions Dilchap apparaîtront ici.</p>
+        {live.length > 0 && campaignSlug
+          ? <button onClick={() => onOpenCampaign('')} className="mt-6 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-lg text-white">Voir les promotions en cours</button>
+          : <button onClick={() => onNavigate('home')} className="mt-6 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-lg text-white">Retour à l’accueil</button>}
       </div>
     )
   }
 
+  const others = live.filter(c => c.id !== campaign.id)
+  const cost = campaign.listingFee + campaign.entryFee
+  const share = () => {
+    const url = `${window.location.origin}/?campaign=${campaign.slug}`
+    if (navigator.share) void navigator.share({ title: campaign.name, url }).catch(() => undefined)
+    else void navigator.clipboard?.writeText(url)
+  }
+
   return (
-    <div className="pb-4">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#1c1b1b] via-[#2b2626] to-[#1c1b1b] px-4 py-12 text-center text-white md:py-16">
-        <HeroMarquee images={heroImages} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1c1b1b]/60 via-[#1c1b1b]/35 to-[#1c1b1b]/80" />
-        <div className="drift pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: color }} />
-        <div className="drift slow pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-        <div className="relative mx-auto max-w-3xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label-sm uppercase" style={{ background: color }}><Icon name="bolt" size={14} /> Événement exclusif marketplace</span>
-          <h1 className="m-0 mt-4 text-[34px] font-extrabold uppercase leading-tight tracking-tight md:text-display">{campaign.name}</h1>
-          <p className="m-0 mx-auto mt-3 max-w-xl text-body-lg text-white/85">
-            {bestDiscount > 0 && <>Jusqu'à <b className="text-emerald-300 underline">-{bestDiscount}%</b> sur une sélection d’articles. </>}
-            {campaign.description || 'Des articles uniques à prix cassés, prêts pour une remise en main propre immédiate.'}
-          </p>
-          {campaign.endsAt && <HeroCountdown endsAt={campaign.endsAt} />}
-          {groups.length > 0 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              <button onClick={() => setCat(null)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${cat === null ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>Tout {campaign.name}</button>
-              {groups.map(g => (
-                <button key={g.slug} onClick={() => setCat(g.slug)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${cat === g.slug ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>{g.name}</button>
-              ))}
-            </div>
-          )}
+    <div className="mx-auto max-w-[1320px] px-4 pb-16 pt-4 md:px-8 md:pt-6">
+      <nav className="mb-3 flex items-center justify-between gap-2 text-label-md text-on-surface-variant md:mb-4">
+        <span className="flex min-w-0 items-center gap-1">
+          <button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary">Accueil</button>
+          <Icon name="chevron_right" size={16} />
+          <span className="truncate text-on-surface">{campaign.name}</span>
+        </span>
+        <button onClick={share} aria-label="Partager la campagne" className="flex cursor-pointer items-center gap-1 rounded-full border-none bg-surface-container-low px-3 py-1.5 text-label-md text-on-surface"><Icon name="share" size={16} /> Partager</button>
+      </nav>
+
+      <CampaignHero campaign={campaign} />
+
+      {/* Search & filters within the campaign */}
+      <section className="sticky top-[var(--header-h,64px)] z-20 -mx-4 mt-5 bg-surface/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:bg-surface-lowest md:p-4 md:shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 max-md:flex-nowrap max-md:flex-col max-md:items-stretch">
+          <label className="flex h-10 min-w-0 flex-1 basis-60 items-center max-md:basis-auto max-md:flex-none gap-2 rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3">
+            <Icon name="search" size={18} className="text-outline" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher dans cette campagne" className="min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none" />
+          </label>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] md:contents">
+          <select aria-label="Commune" value={city} onChange={e => setCity(e.target.value)} className={select}>
+            <option value="">Commune : toutes</option>
+            {places.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select aria-label="Remise" value={minDiscount} onChange={e => setMinDiscount(Number(e.target.value))} className={select}>
+            {DISCOUNTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <select aria-label="Trier" value={sort} onChange={e => setSort(e.target.value as Sort)} className={select}>
+            {SORTS.map(([v, l]) => <option key={v} value={v}>Trier : {l}</option>)}
+          </select>
+          </div>
         </div>
+        {campaign.categoryCounts.length > 1 && (
+          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
+            {[{ slug: '', name: 'Tous', icon: null, count: campaign.listingsCount }, ...campaign.categoryCounts].map(c => (
+              <button key={c.slug || 'all'} onClick={() => setCategory(c.slug)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-none px-3.5 py-2 text-label-md ${category === c.slug ? 'bg-on-surface text-surface' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
+                {c.icon && <CategoryIcon icon={c.icon} size={16} />} {c.name} <span className="opacity-60">({c.count})</span>
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
-      <div className="mx-auto max-w-[1320px] px-4 md:px-8 lg:px-12">
-        {/* Flash grid */}
+      {/* Top discounts */}
+      {!filtered && top.length > 2 && (
         <section className="mt-8">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <p className="m-0 flex items-center gap-1.5 text-label-sm font-bold uppercase tracking-wider text-primary"><Icon name="local_fire_department" size={15} /> Incontournables</p>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h2 className="m-0 text-headline-md font-bold text-on-surface md:text-headline-lg">Top remises</h2>
+          </div>
+          <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-4 md:gap-5 md:overflow-visible md:px-0">
+            {top.slice(0, 8).map((l, i) => <div key={l.id} className={`w-[46%] shrink-0 snap-start md:w-auto ${i >= 4 ? 'md:hidden' : ''}`}>{card(l)}</div>)}
+          </div>
+        </section>
+      )}
+
+      {/* The team's banner */}
+      {campaign.visuals?.banner && <div className="mt-8"><CampaignBanner c={campaign} /></div>}
+
+      {/* Every offer */}
+      <section id="offres" className="mt-8">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <h2 className="m-0 text-headline-md font-bold text-on-surface md:text-headline-lg">{filtered ? 'Résultats' : 'Toutes les offres'}</h2>
+          <span className="text-label-md text-on-surface-variant">{offers.length} affichée{offers.length > 1 ? 's' : ''} sur {total}</span>
+        </div>
+        {offers.length ? (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5 xl:grid-cols-5">{offers.map(card)}</div>
+        ) : offersLoading ? (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5 xl:grid-cols-5">{Array.from({ length: 8 }, (_, i) => <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-surface-container" />)}</div>
+        ) : (
+          <div className="rounded-2xl bg-surface-container-low px-6 py-12 text-center">
+            <p className="m-0 text-headline-sm text-on-surface">Aucune offre ne correspond</p>
+            {filtered && <button onClick={() => { setSearch(''); setCategory(''); setCity(''); setMinDiscount(0) }} className="mt-3 cursor-pointer rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white">Effacer les filtres</button>}
+          </div>
+        )}
+        {offers.length < total && (
+          <button onClick={() => setPages(p => p + 1)} disabled={offersLoading} className="mx-auto mt-6 flex cursor-pointer items-center gap-2 rounded-xl border-none bg-surface-container-low px-6 py-3.5 text-label-lg font-bold text-on-surface hover:bg-surface-container disabled:opacity-60">
+            Charger plus d’articles ({total - offers.length} restants) <Icon name="expand_more" size={20} />
+          </button>
+        )}
+      </section>
+
+      {/* Sellers' invitation */}
+      {campaign.openToShops && (
+        <section className="mt-10 flex flex-col gap-4 rounded-2xl bg-surface-lowest p-5 shadow-sm md:flex-row md:items-center md:justify-between md:p-6">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="storefront" size={22} /></span>
             <div>
-              <div className="flex items-center gap-1 text-label-sm uppercase text-primary"><Timer size={14} /> Chrono expiration imminente</div>
-              <h2 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Ventes Flash &amp; Pépites Uniques</h2>
-            </div>
-            {entries.length > 0 && <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {entries.length} article{entries.length > 1 ? 's' : ''} à prix cassé</span>}
-          </div>
-          <div ref={entries.length ? grid : undefined} className={`grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5 ${entries.length ? '' : 'hidden'}`}>
-            {flash.map((e, i) => {
-              const sale = salePrice(e)
-              const d = discountOf(e)
-              const fav = favorites.includes(e.listing.id)
-              return (
-                <div key={e.id} className="reveal" style={{ '--i': i % 8 } as React.CSSProperties}>
-                  <div onClick={() => onSelectListing(e.listing.id)} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-card-hover">
-                    <div className="relative aspect-square overflow-hidden bg-surface-container-low">
-                      {imageOf(e) ? <img loading="lazy" decoding="async" src={imageOf(e)} alt={e.listing.title} className="reveal-img h-full w-full object-cover group-hover:scale-110" /> : <div className="flex h-full items-center justify-center text-outline"><Tag size={36} /></div>}
-                      {d > 0 && <span className="shine absolute left-2 top-2 rounded-md px-2 py-0.5 text-label-sm uppercase text-white" style={{ background: color }}>-{d}% Flash</span>}
-                      <button onClick={ev => { ev.stopPropagation(); onToggleFavorite(e.listing.id) }} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 shadow-sm" aria-label="Favori">
-                        <Heart size={17} fill={fav ? 'var(--primary)' : 'none'} color={fav ? 'var(--primary)' : 'var(--fg)'} />
-                      </button>
-                      {endsIn && (
-                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/70 px-2 py-1 text-[11px] text-white">
-                          <span className="flex items-center gap-1"><Timer size={12} className="text-primary-container" /> Fin dans {endsIn}</span>
-                          <span>Pièce unique</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-1 flex-col p-3">
-                      <div className="flex items-center justify-between gap-2 text-[11px] text-on-surface-variant">
-                        <span className="truncate">{e.listing.brand || e.listing.category.name}</span>
-                        {e.listing.condition && e.listing.condition !== 'N/A' && <span className="flex shrink-0 items-center gap-0.5"><CheckCircle2 size={12} className="text-tertiary" /> {e.listing.condition}</span>}
-                      </div>
-                      <div className="mt-0.5 line-clamp-1 text-label-lg text-on-surface">{e.listing.title}</div>
-                      <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-headline-sm font-extrabold text-primary"><Price amount={sale ?? e.listing.price} currency={e.listing.currency} /></span>
-                        {sale != null && <span className="text-body-sm text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></span>}
-                      </div>
-                      {d > 0 && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full" style={{ width: `${Math.min(100, d)}%`, background: color }} /></div>}
-                      <div className="mt-2 flex items-center gap-1 text-[11px] text-tertiary"><Handshake size={13} /> Remise en main propre{noCommission && ' gratuite'}</div>
-                      <button onClick={ev => { ev.stopPropagation(); contact(e)() }} className="mt-2 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-low py-2 text-label-md text-on-surface hover:bg-primary hover:text-white">
-                        <MessageSquare size={15} /> Discuter avec le vendeur
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          {entries.length === 0 && (
-            promos.length ? (
-              <>
-                <p className="m-0 mb-3 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="storefront" size={16} className="text-primary" /> Les articles de la campagne arrivent. En attendant, profitez des promotions des boutiques :</p>
-                <div ref={grid} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5">
-                  {promos.map((l, i) => (
-                    <div key={l.id} className="reveal" style={{ '--i': i % 8 } as React.CSSProperties}>
-                      <ListingCard listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)}
-                        onContact={() => (isLoggedIn && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id))} />
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="rounded-2xl bg-surface-container-low p-8 text-center">
-                <p className="m-0 text-label-lg text-on-surface">Les articles de la campagne arrivent très bientôt.</p>
-                <button onClick={() => onNavigate('search')} className="mt-3 cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-md text-white">Explorer le catalogue</button>
-              </div>
-            )
-          )}
-        </section>
-
-        {/* Reassurance */}
-        <section className="mt-10 grid gap-3 md:grid-cols-3">
-          {[
-            ...(noCommission ? [{ icon: <Percent size={19} />, box: 'bg-tertiary-soft text-tertiary', title: '0% frais marketplace', text: 'Zéro commission, même en période de rabais extrêmes.' }] : []),
-            { icon: <MessageSquare size={19} />, box: 'bg-primary-fixed text-primary', title: 'Négociation en direct', text: 'Proposez une offre instantanée au vendeur par messagerie.' },
-            { icon: <ShieldCheck size={19} />, box: 'bg-tertiary-soft text-tertiary', title: 'Prix barré réel', text: 'Le prix d’origine de l’annonce est affiché à côté du prix promo.' },
-          ].map(t => (
-            <div key={t.title} className="relative flex items-center gap-3 rounded-2xl border border-outline-variant bg-surface-lowest p-4 shadow-sm">
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${t.box}`}>{t.icon}</span>
-              <div><div className="text-label-lg text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
-            </div>
-          ))}
-        </section>
-
-        {/* Thematic selections */}
-        {groups.length > 0 && (
-          <section className="mt-12">
-            <div className="text-label-sm uppercase text-primary">Rayons ciblés</div>
-            <h2 className="m-0 mb-4 mt-1 text-headline-md text-on-surface md:text-headline-lg">Les sélections thématiques de la campagne</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {groups.slice(0, 3).map((g, i) => {
-                const min = Math.min(...g.entries.map(e => salePrice(e) ?? e.listing.price ?? Infinity))
-                const best = Math.max(...g.entries.map(discountOf))
-                const pics = g.entries.filter(imageOf).slice(0, 2)
-                return (
-                  <div key={g.slug} className={`flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-lowest p-5 ${i === 2 ? 'md:col-span-2 md:flex-row md:items-center' : ''}`}>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="flex items-center gap-1.5 rounded bg-surface-container px-2 py-0.5 text-label-sm uppercase text-on-surface"><CategoryIcon icon={iconFor(g.slug)} size={14} /> {g.name}</span>
-                        {best > 0 && <span className="rounded-lg bg-primary-fixed px-2 py-1 text-center text-label-md text-primary">-{best}%<span className="block text-[10px] font-normal">sur {g.entries.length} article{g.entries.length > 1 ? 's' : ''}</span></span>}
-                      </div>
-                      <h3 className="m-0 mt-2 text-headline-sm text-on-surface">Sélection {g.name}</h3>
-                      <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{g.entries.length} pièce{g.entries.length > 1 ? 's' : ''} à prix réduit, en remise directe entre particuliers.</p>
-                      {Number.isFinite(min) && <div className="mt-3 text-headline-sm font-extrabold text-primary">Dès <Price amount={min} /></div>}
-                      <button onClick={() => setCat(g.slug)} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Explorer {g.name} <ArrowRight size={15} /></button>
-                    </div>
-                    {pics.length > 0 && (
-                      <div className={`grid gap-2 ${pics.length > 1 ? 'grid-cols-2' : 'max-w-[220px] grid-cols-1'} ${i === 2 ? 'md:w-80' : ''}`}>
-                        {pics.map(e => (
-                          <button key={e.id} onClick={() => onSelectListing(e.listing.id)} className="relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0">
-                            <img loading="lazy" decoding="async" src={imageOf(e)} alt="" className="h-full w-full object-cover" />
-                            <span className="absolute bottom-1.5 left-1.5 rounded bg-surface-lowest/95 px-1.5 text-[10px] font-semibold text-on-surface"><Price amount={salePrice(e) ?? e.listing.price} /></span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Latest validated */}
-        {latest.length > 0 && (
-          <section className="mt-12">
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <div className="text-label-sm uppercase text-primary">Fraîchement ajoutées</div>
-                <h2 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Dernières offres validées par l'équipe</h2>
-              </div>
-              <div className="hidden gap-2 md:flex">
-                <button disabled={railStart === 0} onClick={() => setRailStart(s => Math.max(0, s - 6))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-outline-variant bg-surface-lowest disabled:opacity-40"><ChevronLeft size={18} /></button>
-                <button disabled={railStart + 6 >= latest.length} onClick={() => setRailStart(s => s + 6)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-outline-variant bg-surface-lowest disabled:opacity-40"><ChevronRight size={18} /></button>
-              </div>
-            </div>
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-6 md:overflow-visible md:px-0">
-              {latest.slice(railStart, railStart + 6).map(e => (
-                <button key={e.id} onClick={() => onSelectListing(e.listing.id)} className="w-36 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-outline-variant bg-surface-lowest p-0 text-left md:w-auto">
-                  <div className="relative aspect-square overflow-hidden bg-surface-container-low">
-                    {imageOf(e) && <img loading="lazy" decoding="async" src={imageOf(e)} alt="" className="h-full w-full object-cover" />}
-                    {discountOf(e) > 0 && <span className="absolute left-1.5 top-1.5 rounded px-1.5 text-[10px] font-bold text-white" style={{ background: color }}>-{discountOf(e)}%</span>}
-                  </div>
-                  <div className="p-2">
-                    <div className="truncate text-body-sm text-on-surface">{e.listing.title}</div>
-                    <div className="text-label-md font-extrabold text-primary"><Price amount={salePrice(e) ?? e.listing.price} currency={e.listing.currency} /></div>
-                    {salePrice(e) != null && <div className="text-[11px] text-outline line-through"><Price amount={e.listing.price} currency={e.listing.currency} /></div>}
-                    <span className="mt-1 flex items-center justify-center gap-1 rounded-md bg-surface-container-low py-1 text-[11px] text-on-surface"><Eye size={12} /> Voir</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Seller CTA */}
-        <section className="relative mt-12 overflow-hidden rounded-3xl p-6 text-white md:p-10" style={{ background: color }}>
-          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10" />
-          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-label-sm uppercase"><Icon name="trending_up" size={14} /> Trafic record {campaign.name}</span>
-              <h2 className="m-0 mt-3 text-headline-lg text-white md:text-[36px] md:leading-[44px]">Vos placards regorgent de pépites ? Vendez-les aujourd'hui !</h2>
-              <p className="m-0 mt-2 text-body-md text-white/90">Profitez du pic d'acheteurs : déposez votre annonce{noCommission && ' gratuitement'} en moins de 2 minutes{noCommission ? ', fixez votre prix et gardez 100% de vos gains.' : ' et fixez votre prix.'}</p>
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-white/90">
-                <Claim><span className="flex items-center gap-1"><CheckCircle2 size={14} /> 0 F de frais de mise en vente</span></Claim>
-                <span className="flex items-center gap-1"><CheckCircle2 size={14} /> Paiement en direct sans intermédiaire</span>
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-col gap-2">
-              <button onClick={() => { try { sessionStorage.setItem(POST_CAMPAIGN_KEY, campaign.id) } catch { /* private mode */ } onNavigate('seller-post') }} className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-inverse-surface px-5 py-3 text-label-lg text-white hover:opacity-90"><Icon name="add_photo_alternate" size={19} /> Vendre pour {campaign.name}</button>
-              <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer rounded-lg border-none bg-white/15 px-5 py-2.5 text-label-md text-white hover:bg-white/25">Booster mes annonces</button>
+              <p className="m-0 text-label-sm font-bold uppercase tracking-wider text-primary">Espace vendeurs</p>
+              <h2 className="m-0 text-headline-sm font-bold text-on-surface">Vous vendez à Abidjan ?</h2>
+              <p className="m-0 mt-1 max-w-2xl text-body-sm text-on-surface-variant">
+                Participez à « {campaign.name} » et mettez vos articles devant tous les acheteurs de la campagne
+                {cost > 0 ? ` (${[campaign.entryFee ? `${campaign.entryFee} crédits d’inscription` : '', campaign.listingFee ? `${campaign.listingFee} crédits par article` : ''].filter(Boolean).join(' + ')})` : ' — participation gratuite'}
+                {campaign.minDiscountPercent ? `, remise minimale ${campaign.minDiscountPercent} %` : ''}.
+              </p>
             </div>
           </div>
+          <button
+            onClick={() => { try { sessionStorage.setItem(POST_CAMPAIGN_KEY, campaign.id) } catch { /* private mode */ } onNavigate('seller-post') }}
+            className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-lg font-bold text-white hover:bg-primary-dark"
+          >
+            <Icon name="add_circle" size={19} /> Vendre pour cette campagne
+          </button>
         </section>
-      </div>
+      )}
+
+      {/* Other live campaigns */}
+      {others.length > 0 && (
+        <section className="mt-10">
+          <h2 className="m-0 mb-3 text-headline-md font-bold text-on-surface">Autres campagnes en cours</h2>
+          <div className="grid gap-4 md:grid-cols-3">{others.slice(0, 6).map(c => <CampaignCompact key={c.id} c={c} />)}</div>
+        </section>
+      )}
     </div>
   )
 }

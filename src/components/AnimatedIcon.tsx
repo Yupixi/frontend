@@ -12,7 +12,7 @@ export const hasAnimatedIcon = (name: string) => !!fileFor(name)
 // The player (~150 KB, SVG-only light build) is fetched the first time an
 // animated icon actually has a file to play.
 let playerPromise: Promise<typeof import('lottie-web').default> | null = null
-const loadPlayer = () => (playerPromise ??= import('lottie-web/build/player/lottie_light').then(m => m.default as unknown as typeof import('lottie-web').default))
+export const loadLottiePlayer = () => (playerPromise ??= import('lottie-web/build/player/lottie_light').then(m => m.default as unknown as typeof import('lottie-web').default))
 
 // Building a Lottie instance (JSON parse + SVG tree) is main-thread work:
 // dozens of icons doing it during the first render cost over a second on a
@@ -145,7 +145,7 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
   useEffect(() => {
     if (!armed || !file || !box.current) return
     let cancelled = false
-    void Promise.all([loadPlayer(), file()]).then(([lottie, data]) => {
+    void Promise.all([loadLottiePlayer(), file()]).then(([lottie, data]) => {
       if (cancelled || !box.current) return
       anim.current = lottie.loadAnimation({ container: box.current, renderer: 'svg', loop, autoplay: loop, animationData: data })
       // Rest on the last frame (the icon's final pose) until triggered.

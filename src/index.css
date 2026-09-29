@@ -660,3 +660,48 @@ input, textarea, [contenteditable='true'], .ProseMirror {
   user-select: text;
   -webkit-touch-callout: default;
 }
+
+/* ─── Campaign hero (campaign page, home promotions) ─────────────────────
+   Tinted by the campaign's colour (--camp): a slowly drifting gradient,
+   soft floating blobs and sparkles, item photos floating and cross-fading
+   (Ken Burns), a pulsing discount badge and a ticking seconds digit. All
+   CSS: no timer re-renders the page. Still for "reduce motion". */
+.camp-bg {
+  background: linear-gradient(130deg,
+    color-mix(in oklab, var(--camp) 55%, black) 0%,
+    color-mix(in oklab, var(--camp) 85%, black) 32%,
+    color-mix(in oklab, var(--camp) 40%, black) 68%,
+    var(--camp) 100%);
+  background-size: 300% 300%;
+  animation: camp-gradient 12s ease infinite;
+}
+@keyframes camp-gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.camp-blob { position: absolute; border-radius: 9999px; filter: blur(35px); will-change: transform; }
+.camp-blob-light { background: color-mix(in oklab, var(--camp) 35%, white); }
+.camp-blob-1 { animation: camp-float-a 11s ease-in-out infinite; }
+.camp-blob-2 { animation: camp-float-b 13s ease-in-out infinite; }
+.camp-blob-3 { animation: camp-float-c 9s ease-in-out infinite; }
+.camp-blob-4 { animation: camp-float-d 14s ease-in-out infinite; }
+.camp-blob-5 { animation: camp-float-a 8s ease-in-out infinite reverse; }
+.camp-blob-6 { animation: camp-float-b 10s ease-in-out infinite reverse; }
+@keyframes camp-float-a { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(35px, -28px) scale(1.08); } 66% { transform: translate(-25px, 20px) scale(0.95); } }
+@keyframes camp-float-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-40px, 35px) scale(1.12); } }
+@keyframes camp-float-c { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, 30px) scale(0.92); } }
+@keyframes camp-float-d { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-28px, -22px) scale(1.1); } }
+.camp-sparkle { position: absolute; border-radius: 9999px; background: color-mix(in oklab, var(--camp) 25%, white); animation: camp-sparkle 3.2s ease-in-out infinite; }
+@keyframes camp-sparkle { 0%, 100% { opacity: 0.15; transform: scale(0.85); } 50% { opacity: 0.95; transform: scale(1.35); box-shadow: 0 0 10px color-mix(in oklab, var(--camp) 25%, white); } }
+.camp-card { animation: camp-card-float 4.4s ease-in-out infinite; --tilt: 0deg; transform: rotate(var(--tilt)); }
+@keyframes camp-card-float { 0%, 100% { transform: rotate(var(--tilt)) translateY(0); } 50% { transform: rotate(var(--tilt)) translateY(-8px); } }
+.camp-kb-a { animation: camp-kb-a 7s ease-in-out infinite; }
+.camp-kb-b { animation: camp-kb-b 7s ease-in-out infinite; opacity: 0; }
+@keyframes camp-kb-a { 0% { opacity: 1; transform: scale(1); } 45% { opacity: 1; transform: scale(1.06); } 50% { opacity: 0; transform: scale(1.07); } 95% { opacity: 0; transform: scale(1); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes camp-kb-b { 0%, 45% { opacity: 0; transform: scale(1.06); } 50% { opacity: 1; transform: scale(1); } 95% { opacity: 1; transform: scale(1.06); } 100% { opacity: 0; transform: scale(1.06); } }
+.camp-pulse { animation: camp-pulse 2.5s ease-in-out infinite; }
+@keyframes camp-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgb(187 0 19 / 0.4); } 50% { transform: scale(1.06); box-shadow: 0 8px 24px rgb(187 0 19 / 0.65); } }
+.camp-tick { display: inline-block; animation: camp-tick 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+@keyframes camp-tick { 0%, 40%, 60%, 100% { transform: translateY(0); opacity: 1; } 48% { transform: translateY(-4px); opacity: 0.55; } 52% { transform: translateY(4px); opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) {
+  .camp-bg, .camp-blob, .camp-sparkle, .camp-card, .camp-kb-a, .camp-kb-b, .camp-pulse, .camp-tick { animation: none !important; }
+  .camp-kb-a { opacity: 1 !important; }
+  .camp-kb-b { display: none !important; }
+}

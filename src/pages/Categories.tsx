@@ -12,6 +12,7 @@ import { thumbnailUrl } from '../lib/media'
 import PaymentLogo from '../components/PaymentLogo'
 import { Claim, useNoCommissionClaims } from '../lib/site'
 import { useLists } from '../lib/lists'
+import { requestOpenCampaign } from '../lib/navigation'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -131,7 +132,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
           {campaigns.map((c, i) => {
             const cover = c.listings.find(l => l.listing.coverImageUrl)?.listing.coverImageUrl
             return (
-              <button key={c.id} onClick={() => onNavigate('flash-offers')} className="flex min-h-[170px] cursor-pointer overflow-hidden rounded-2xl border-none bg-surface-lowest p-0 text-left shadow-sm">
+              <button key={c.id} onClick={() => requestOpenCampaign(c.slug)} className="flex min-h-[170px] cursor-pointer overflow-hidden rounded-2xl border-none bg-surface-lowest p-0 text-left shadow-sm">
                 <div className="flex flex-1 flex-col p-5">
                   <span className={`w-fit rounded px-2 py-0.5 text-label-sm uppercase ${i === 0 ? 'bg-primary-fixed text-primary' : 'bg-tertiary-soft text-tertiary'}`}>{i === 0 ? 'Top tendance' : 'Sélection Dilchap'}</span>
                   <span className="mt-2 text-headline-sm text-on-surface">{c.name}</span>
@@ -179,7 +180,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
           </div>
           <div className="flex shrink-0 flex-col gap-2">
             <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-6 py-3 text-label-lg text-white hover:bg-primary-dark"><Icon name="add_circle" size={20} /> Déposer mon annonce</button>
-            <button onClick={() => onNavigate('flash-offers')} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-white/10 px-6 py-2.5 text-label-md text-white"><Icon name="help" size={17} /> Voir les offres du moment</button>
+            <button onClick={() => requestOpenCampaign('')} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-white/10 px-6 py-2.5 text-label-md text-white"><Icon name="help" size={17} /> Voir les offres du moment</button>
           </div>
         </div>
       </section>

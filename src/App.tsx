@@ -5,7 +5,7 @@ import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './co
 import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
-import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT } from './lib/navigation'
+import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -82,6 +82,7 @@ type NavState = {
   selectedDisputeId?: string
   legalSlug?: string
   shopKey?: string
+  campaignSlug?: string
 }
 const LOCATION_WAIT_MS = 700
 
@@ -143,6 +144,11 @@ function sharedShopKey(): string | null {
   return new URLSearchParams(window.location.search).get('shop')
 }
 
+// "?campaign=<slug>" opens a campaign page (its « Partager » button).
+function sharedCampaignSlug(): string | null {
+  return new URLSearchParams(window.location.search).get('campaign')
+}
+
 function sharedListingId(): string | null {
   return new URLSearchParams(window.location.search).get('listing')
 }
@@ -150,13 +156,14 @@ function sharedListingId(): string | null {
 export default function App() {
   // Tab title, description and share tags from « Réglages du site ».
   useSeo()
-  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration
   // would fight it (it runs before the restored page has rendered).
   const pendingScroll = useRef(0)
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
   const [shopKey, setShopKey] = useState(sharedShopKey() ?? savedNav.shopKey ?? '')
+  const [campaignSlug, setCampaignSlug] = useState(sharedCampaignSlug() ?? savedNav.campaignSlug ?? '')
   const [dark, setDark] = useState(savedDark)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
@@ -356,6 +363,7 @@ export default function App() {
           if (st.disputeId !== undefined) setSelectedDisputeId(st.disputeId)
           if (st.legalSlug) setLegalSlug(st.legalSlug)
           if (st.shopKey) setShopKey(st.shopKey)
+          if (typeof st.campaignSlug === 'string') setCampaignSlug(st.campaignSlug)
           setPage(st.__yupixiPage)
         } else {
           setPage('home')
@@ -366,7 +374,7 @@ export default function App() {
     // carry no state, or a stale one: tag it with the page actually shown,
     // so coming back to it restores that page rather than home.
     if (window.history.state?.__yupixiPage !== page) {
-      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, shopKey }, '')
+      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, shopKey, campaignSlug }, '')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -393,15 +401,15 @@ export default function App() {
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug,
     }
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug])
 
-  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string }
+  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string }
   const historyEntry = (p: Page, sel: Selection = {}) => ({
     __yupixiPage: p,
-    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey,
+    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey, campaignSlug,
     ...sel,
   })
 
@@ -497,6 +505,7 @@ export default function App() {
     if (q.get('listing')) return selectListing(q.get('listing')!)
     if (q.get('seller')) return selectSeller(q.get('seller')!)
     if (q.get('legal')) return openLegal(q.get('legal')!)
+    if (q.get('campaign') !== null) return openCampaignRef.current(q.get('campaign')!)
     const target = shortcutPage(u.search)
     if (!target) return navigate('home')
     const dispute = q.get('dispute')
@@ -511,6 +520,19 @@ export default function App() {
     setLegalSlug(slug)
     navigate('legal', { legalSlug: slug })
   }
+
+  // A given campaign page ('' = the newest live one).
+  const openCampaign = (slug: string) => {
+    setCampaignSlug(slug)
+    navigate('flash-offers', { campaignSlug: slug })
+  }
+  const openCampaignRef = useRef(openCampaign)
+  openCampaignRef.current = openCampaign
+  useEffect(() => {
+    const onRequest = (e: Event) => openCampaignRef.current((e as CustomEvent<string>).detail)
+    window.addEventListener(OPEN_CAMPAIGN_EVENT, onRequest)
+    return () => window.removeEventListener(OPEN_CAMPAIGN_EVENT, onRequest)
+  }, [])
 
   const selectListing = (id: string) => {
     setSelectedListingId(id)
@@ -628,7 +650,7 @@ export default function App() {
       case 'legal':
         return <Legal slug={legalSlug} onOpenLegal={openLegal} onNavigate={navigate} />
       case 'flash-offers':
-        return <FlashOffers onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
+        return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} location={location} />
     }
