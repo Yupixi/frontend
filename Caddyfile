@@ -86,6 +86,19 @@
 		file_server
 	}
 
+	# The API on the storefront's own address, so it needs no public host of
+	# its own: GraphQL (HTTP and the chat's WebSocket), uploads and the
+	# payment webhook go to the backend over the internal network.
+	# API_UPSTREAM = the backend (e.g. http://dilchap-backend:3000 on the
+	# same Docker network); the build then leaves VITE_GRAPHQL_API_URL empty
+	# and the app calls <this origin>/graphql.
+	@api path /graphql /graphql/* /uploads /uploads/* /kyc/uploads /shops/uploads /webhooks/*
+	handle @api {
+		reverse_proxy {$API_UPSTREAM:https://yupixi-backend-gahuiz-52bc79-82-29-184-109.sslip.io} {
+			header_up Host {upstream_hostport}
+		}
+	}
+
 	# Search engines: robots.txt and sitemap.xml come from the backend
 	# (Backend src/modules/seo), which knows the live listings and shops.
 	@seo_files path /robots.txt /sitemap.xml
