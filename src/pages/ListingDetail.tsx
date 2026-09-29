@@ -105,9 +105,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const reportReasons = useLists().reportReasons.listing
   const [pickedReason, setReportReason] = useState('')
-  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -117,6 +115,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
   const listing = data?.listing
+  // Report reasons of the listing's country (the market until it loads).
+  const reportReasons = useLists(listing?.countryCode || undefined).reportReasons.listing
+  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   usePageTitle(listing?.title)
   // /annonce/<id> (or old words) → /annonce/<words of the title>-<id>.
   useEffect(() => {

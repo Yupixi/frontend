@@ -2,13 +2,14 @@ import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { useMemo } from 'react'
 import type { DisputeReason } from '../graphql/sellerTools'
-import { useCountries, useCountry, useMarketCode } from './countries'
+import { countryVars, useCountries, useCountry, useMarketCode, useMemberCountryCode } from './countries'
 
 // Choices offered in forms, edited in the back-office (« Listes de
 // référence », Backend content/reference-lists.ts). DEFAULT_LISTS mirrors
-// the backend defaults so forms are complete while the query loads.
+// the backend defaults so forms are complete while the query loads. The BO
+// can keep one version per country: `country` picks it (none = general).
 export const REFERENCE_LISTS_QUERY = gql`
-  query ReferenceLists { referenceLists }
+  query ReferenceLists($country: String) { referenceLists(country: $country) }
 `
 
 export type ReferenceLists = {
@@ -60,18 +61,31 @@ export const DEFAULT_LISTS: ReferenceLists = {
   },
 }
 
-// Lists with the places of a country (cities, districts of its main city,
-// meet-up spots): `countryCode`, else the visitor's market; for « Tous les
-// pays », the main city of each country and no districts.
+// Lists of a country (the BO's version for it, with its cities, districts
+// of its main city and meet-up spots): `countryCode` (the listing's, the
+// shop's…), else the visitor's market; for « Tous les pays », the general
+// lists with the main city of each country and no districts.
 export function useLists(countryCode?: string | null): ReferenceLists {
-  const { data } = useQuery<{ referenceLists: ReferenceLists }>(REFERENCE_LISTS_QUERY, { fetchPolicy: 'cache-first' })
   const market = useMarketCode()
+  const code = countryCode === undefined ? market : countryCode
+  // Each country is cached apart; the previous lists stay while another
+  // country's load (no flash of the defaults on a switch).
+  const { data, previousData } = useQuery<{ referenceLists: ReferenceLists }>(REFERENCE_LISTS_QUERY, {
+    variables: countryVars(code),
+    fetchPolicy: 'cache-first',
+  })
   const countries = useCountries()
-  const country = useCountry(countryCode === undefined ? market : countryCode, true)
-  const lists = data?.referenceLists ?? DEFAULT_LISTS
+  const country = useCountry(code, true)
+  const lists = (data ?? previousData)?.referenceLists ?? DEFAULT_LISTS
   return useMemo(() => country
     ? { ...lists, cities: country.cities, communes: country.districts, meetupSpots: country.meetupSpots, mainCity: country.mainCity }
     : { ...lists, cities: countries.map(c => c.mainCity), communes: [], meetupSpots: [], mainCity: '' }, [lists, country, countries])
+}
+
+// Member screens (disputes, chat quick replies): the lists of the member's
+// account country, where their deals happen, else the visitor's market.
+export function useMemberLists(): ReferenceLists {
+  return useLists(useMemberCountryCode())
 }
 
 // "Where do you live" pickers: districts of the main city, then the other towns.
@@ -80,6 +94,6 @@ export function placeOptions(l: ReferenceLists): string[] {
 }
 
 export function useDisputeLabel(): (r: DisputeReason) => string {
-  const { disputeReasons } = useLists()
+  const { disputeReasons } = useMemberLists()
   return r => disputeReasons[r]?.label ?? r
 }

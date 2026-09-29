@@ -32,7 +32,7 @@ import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, LEGAL_PAGES, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
 import { PaymentLogos } from './PaymentLogo'
-import { useCountries, useMarket, useMethods } from '../lib/countries'
+import { countryVars, useCountries, useMarket, useMarketCode, useMethods } from '../lib/countries'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, openNotificationTarget } from '../graphql/account'
 import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteConversation } from '../graphql/messaging'
@@ -105,9 +105,11 @@ export default function Layout({
   const navCategories = (categoriesData?.categories ?? []).slice(0, 8)
 
   // BO-authored footer copy — falls back to the default copy below when
-  // unconfigured, same convention as the Banner slots.
-  const { data: footerData } = useQuery<{ footerSettings: RemoteFooterSettings | null }>(FOOTER_SETTINGS_QUERY)
-  const footer = footerData?.footerSettings
+  // unconfigured, same convention as the Banner slots. The market's version
+  // (kept while another country's loads); the country's own support phone
+  // (« Pays ») still wins over it below.
+  const { data: footerLive, previousData: footerPrevious } = useQuery<{ footerSettings: RemoteFooterSettings | null }>(FOOTER_SETTINGS_QUERY, { variables: countryVars(useMarketCode()) })
+  const footer = (footerLive ?? footerPrevious)?.footerSettings
   // Brand, contacts, social / app links and claims (« Réglages du site »).
   const site = useSite()
   // Visitor's country (none for « Tous les pays »): towns, methods, support.

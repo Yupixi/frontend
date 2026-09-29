@@ -25,14 +25,26 @@ export function useCountry(code: string | null | undefined, any = false): Countr
   return countries.find(c => c.code === code) ?? (any ? marketForCountry(code) : undefined)
 }
 
+// The signed-in member's country, remembered so a reload shows it at once.
+export const ACCOUNT_COUNTRY_KEY = 'yupixi_account_country'
+export const rememberedAccountCountry = () => { try { return localStorage.getItem(ACCOUNT_COUNTRY_KEY) } catch { return null } }
+
 // Current market (country picker, else the member's country, see App) and
-// the signed-in member's own country, shared without prop drilling.
+// the signed-in member's own country, shared without prop drilling. Starts
+// as App will set it (manual pick > remembered account country > IP), so
+// what loads before App (the launch gate) asks for the right country.
 type MarketState = { market: string | null, account: string | null }
-let state: MarketState = { market: getStoredLocation()?.countryCode ?? null, account: null }
+const initialState = (): MarketState => {
+  const stored = getStoredLocation()
+  const account = typeof window === 'undefined' ? null : rememberedAccountCountry()
+  return { market: stored?.source !== 'manual' && account ? account : stored?.countryCode ?? null, account }
+}
+let state: MarketState = initialState()
 const listeners = new Set<() => void>()
 const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn) } }
 
-export function setMarketState(next: MarketState) {
+export function setMarketState(patch: Partial<MarketState>) {
+  const next = { ...state, ...patch }
   if (next.market === state.market && next.account === state.account) return
   state = next
   listeners.forEach(fn => fn())
@@ -40,6 +52,14 @@ export function setMarketState(next: MarketState) {
 
 export const useMarketCode = () => useSyncExternalStore(subscribe, () => state.market)
 export const useAccountCountryCode = () => useSyncExternalStore(subscribe, () => state.account)
+// Member screens (support, disputes, chat): the account's country, else
+// the visitor's market (signed out, or no country on the account).
+export const useMemberCountryCode = () => useSyncExternalStore(subscribe, () => state.account ?? state.market)
+
+// `country` argument of the BO content queries (home, site, lists, footer,
+// pages, launch): that country's version, none = the general one. Apollo
+// caches each country apart, so a switch loads the other one once.
+export const countryVars = (code: string | null | undefined): { country?: string } => (code ? { country: code } : {})
 
 // The visitor's country, undefined for « Tous les pays ».
 export function useMarket(): Country | undefined {

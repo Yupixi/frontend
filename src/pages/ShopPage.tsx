@@ -141,15 +141,16 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const [copied, setCopied] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const reportReasons = useLists().reportReasons.shop
   const [pickedReason, setReportReason] = useState('')
-  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
 
   const { data, loading, refetch } = useQuery<{ shop: Shop }>(SHOP_QUERY, { variables: { key: shopKey }, skip: !!preloaded })
   const shop = data?.shop ?? preloaded
   usePageTitle(shop?.name)
+  // Report reasons of the shop's country (the market until it loads).
+  const reportReasons = useLists(shop?.countryCode || undefined).reportReasons.shop
+  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   const ownerId = shop?.owner.id
   const { data: all } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId: ownerId }, sort, pageSize: 100 }, skip: !ownerId,

@@ -4,13 +4,13 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from './AccountLayout'
-import { FOOTER_SETTINGS_QUERY } from '../../graphql/content'
 import { MY_REPUTATION_QUERY } from '../../graphql/sellerHub'
 import {
   KYC_DOCS, KYC_REJECT_LABELS, MY_KYC_QUERY, SUBMIT_KYC_MUTATION,
   type KycDocType, type KycPart, type KycSubmission, type MyKyc,
 } from '../../graphql/kyc'
 import { uploadKycPhoto } from '../../lib/upload'
+import { useSupportPhone } from '../../lib/site'
 import type { AuthUser } from '../../graphql/auth'
 
 type Props = {
@@ -547,8 +547,7 @@ function Pending({ sub, retention, onNavigate }: { sub: KycSubmission; retention
 }
 
 function Rejected({ sub, onRetry }: { sub: KycSubmission; onRetry: () => void }) {
-  const { data } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
-  const support = data?.footerSettings?.supportPhone
+  const support = useSupportPhone()
   const parts: KycPart[] = ['FRONT', ...(sub.hasBack ? ['BACK' as const] : []), 'SELFIE']
   return (
     <div className="mx-auto max-w-xl">

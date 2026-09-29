@@ -2,12 +2,17 @@ import { useQuery } from '@apollo/client/react'
 import Icon from '../components/Icon'
 import { CONTENT_PAGE_QUERY, LEGAL_PAGES, type ContentPage } from '../graphql/content'
 import { richHtml } from '../lib/richText'
+import { countryVars, useMarketCode } from '../lib/countries'
 
 // Legal & help pages (CGU, remise en main propre, FAQ, confidentialité),
 // written by the team in the Backoffice "CMS & Pages légales".
 export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string; onOpenLegal: (slug: string) => void; onNavigate: (p: any) => void }) {
-  const { data, loading } = useQuery<{ contentPage: ContentPage | null }>(CONTENT_PAGE_QUERY, { variables: { slug } })
-  const page = data?.contentPage
+  // The market's version when the pages are « par pays » (else the general
+  // one); on a country switch the same page stays shown while it loads.
+  const market = useMarketCode()
+  const { data, previousData, loading } = useQuery<{ contentPage: ContentPage | null }>(CONTENT_PAGE_QUERY, { variables: { slug, ...countryVars(market) } })
+  const previous = previousData?.contentPage?.slug === slug ? previousData.contentPage : undefined
+  const page = data ? data.contentPage : previous
   const meta = LEGAL_PAGES.find((p) => p.slug === slug) ?? LEGAL_PAGES[0]
 
   return (

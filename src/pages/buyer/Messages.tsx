@@ -31,7 +31,7 @@ import type { AuthUser } from '../../graphql/auth'
 import { dateFormat } from '../../lib/intl'
 import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
-import { useLists } from '../../lib/lists'
+import { useMemberLists } from '../../lib/lists'
 
 
 const time = (iso: string) => dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
@@ -106,7 +106,7 @@ type Props = {
 
 // "Boîte de réception & Chat" mockups (desktop 3 columns, mobile thread).
 export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
-  const lists = useLists()
+  const lists = useMemberLists()
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = [...(listData?.myConversations ?? [])].sort(byLatestMessage)
   const [activeId, setActiveId] = useState<string | null>(null)

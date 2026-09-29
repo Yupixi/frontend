@@ -15,7 +15,7 @@ import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 import Select from '../components/Select'
 import { PaymentLogos } from '../components/PaymentLogo'
-import { fillPlacesDeep, useMarket, useMethods } from '../lib/countries'
+import { countryVars, fillPlacesDeep, useMarket, useMarketCode, useMethods } from '../lib/countries'
 import { ShopCard } from '../components/ShopCard'
 import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 import { HomePromotions } from '../components/campaign/CampaignTiles'
@@ -98,8 +98,13 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
 
-  // Content and layout set in the back-office (« Page d'accueil »).
-  const { data: homeData } = useQuery<{ homeConfig: HomeConfig }>(HOME_CONFIG_QUERY, { fetchPolicy: 'cache-and-network' })
+  // Content and layout set in the back-office (« Page d'accueil »), the
+  // market's version; the previous one stays while another country loads.
+  const { data: homeLive, previousData: homePrevious } = useQuery<{ homeConfig: HomeConfig }>(HOME_CONFIG_QUERY, {
+    variables: countryVars(useMarketCode()),
+    fetchPolicy: 'cache-and-network',
+  })
+  const homeData = homeLive ?? homePrevious
   // {{ville}} / {{pays}} in the texts: the visitor's country.
   const market = useMarket()
   const methods = useMethods().filter(m => m !== 'CASH')

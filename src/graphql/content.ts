@@ -80,8 +80,8 @@ export const ACTIVE_CAMPAIGN_BAR_QUERY = gql`
 export type ActiveCampaignBar = Pick<ActiveCampaign, 'id' | 'name' | 'slug' | 'description' | 'themeColor' | 'endsAt'>
 
 export const FOOTER_SETTINGS_QUERY = gql`
-  query FooterSettings {
-    footerSettings {
+  query FooterSettings($country: String) {
+    footerSettings(country: $country) {
       tagline
       quickLinks {
         label
@@ -125,9 +125,10 @@ export type ActiveCampaign = {
   listings: ActiveCampaignListing[]
 }
 
-// Legal & help pages edited in the Backoffice (CMS & Pages légales).
+// Legal & help pages edited in the Backoffice (CMS & Pages légales);
+// `country`: its own version when the pages are « par pays ».
 export const CONTENT_PAGE_QUERY = gql`
-  query ContentPage($slug: String!) { contentPage(slug: $slug) }
+  query ContentPage($slug: String!, $country: String) { contentPage(slug: $slug, country: $country) }
 `
 export type ContentPage = { slug: string; title: string; body: string; updatedAt: string }
 export const LEGAL_PAGES = [
