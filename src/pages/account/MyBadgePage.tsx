@@ -5,6 +5,7 @@ import WalletPaySheet from '../../components/WalletPaySheet'
 import { AccountLayout } from './AccountLayout'
 import { ME_QUERY, type AuthUser } from '../../graphql/auth'
 import Credits from '../../components/Credits'
+import OfferCredits from '../../components/OfferCredits'
 import { BADGE_LABEL, MY_BADGE_QUERY, type BadgePlan, type BadgeTier, type MyBadge } from '../../graphql/badges'
 import { delayText, useRules, type MarketplaceRules } from '../../lib/rules'
 
@@ -129,7 +130,7 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
               {current && <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${t.soft} ${t.tone}`}>{b.trial ? 'Offert' : 'Actif'}</span>}
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
-              <span className="whitespace-nowrap text-headline-lg font-extrabold text-on-surface"><Credits n={p.price} /></span>
+              <span className="whitespace-nowrap text-headline-lg font-extrabold text-on-surface"><OfferCredits op="BADGE" n={p.price} /></span>
               <span className="text-body-sm text-on-surface-variant">/ {period === 'MONTHLY' ? 'mois' : 'an'}</span>
             </div>
             {period === 'YEARLY' && <div className="text-body-sm text-on-surface-variant">soit <Credits n={Math.round(p.price / 12)} /> par mois</div>}

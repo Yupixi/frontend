@@ -5,6 +5,7 @@ import Price from '../../components/Price'
 import Select from '../../components/Select'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import WalletPaySheet from '../../components/WalletPaySheet'
+import OfferCredits from '../../components/OfferCredits'
 import { AccountLayout } from './AccountLayout'
 import {
   CREATE_SHOP_POST_MUTATION, CREATE_SHOP_SALE_MUTATION, END_SHOP_SALE_MUTATION, JOIN_CAMPAIGN_MUTATION, MY_SHOP_LISTINGS_QUERY,
@@ -14,7 +15,7 @@ import {
 } from '../../graphql/shops'
 import { uploadImages } from '../../lib/upload'
 import { formatNumber } from '../../lib/format'
-import Credits, { creditsLabel } from '../../components/Credits'
+import { creditsLabel } from '../../components/Credits'
 import type { AuthUser } from '../../graphql/auth'
 import { Claim } from '../../lib/site'
 import RichTextEditor from '../../components/RichTextEditor'
@@ -434,8 +435,8 @@ function DueBox({ c, onPay }: { c: OpenCampaign, onPay: () => void }) {
   const n = c.myItems.filter(i => i.status === 'AWAITING_PAYMENT').length
   return (
     <div className="mb-2 flex flex-col gap-2 rounded-xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10">
-      <div className="min-w-0 flex-1 text-body-sm"><div className="text-label-md text-on-surface">À régler : <Credits n={c.amountDue} /></div><div className="text-on-surface-variant">{n} article{n > 1 ? 's' : ''} accepté{n > 1 ? 's' : ''}{!c.entryFeePaid && c.entryFee > 0 ? ', participation incluse' : ''}. La remise s’active après le paiement.</div></div>
-      <button onClick={onPay} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="toll" size={18} /> Régler <Credits n={c.amountDue} /></button>
+      <div className="min-w-0 flex-1 text-body-sm"><div className="text-label-md text-on-surface">À régler : <OfferCredits op="CAMPAIGN" n={c.amountDue} /></div><div className="text-on-surface-variant">{n} article{n > 1 ? 's' : ''} accepté{n > 1 ? 's' : ''}{!c.entryFeePaid && c.entryFee > 0 ? ', participation incluse' : ''}. La remise s’active après le paiement.</div></div>
+      <button onClick={onPay} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="toll" size={18} /> Régler <OfferCredits op="CAMPAIGN" n={c.amountDue} tag={false} /></button>
     </div>
   )
 }
