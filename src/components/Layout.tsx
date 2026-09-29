@@ -35,7 +35,7 @@ import { PaymentLogos } from './PaymentLogo'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, openNotificationTarget } from '../graphql/account'
 import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteConversation } from '../graphql/messaging'
-import { formatRelativeDate } from '../lib/format'
+import { formatRelativeDate, plainText } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 import { syncAppBadge } from '../lib/pushNotifications'
 import { requestOpenCampaign } from '../lib/navigation'
@@ -237,7 +237,7 @@ export default function Layout({
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-bold">
             {activeCampaign.name}
             {activeCampaign.description && (
-              <span className="font-medium opacity-90"> — {activeCampaign.description}</span>
+              <span className="font-medium opacity-90"> — {plainText(activeCampaign.description)}</span>
             )}
           </span>
           {daysRemaining > 0 && (

@@ -19,6 +19,8 @@ import Credits from '../../components/Credits'
 import type { AuthUser } from '../../graphql/auth'
 import { useLists } from '../../lib/lists'
 import { useRules } from '../../lib/rules'
+import RichTextEditor from '../../components/RichTextEditor'
+import { plainText } from '../../lib/format'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -54,6 +56,9 @@ const profileInput = (f: Form) => ({
 })
 
 const inputCls = 'h-12 w-full rounded-xl border-none bg-surface-lowest px-3 text-body-md text-on-surface shadow-sm outline-none focus:outline focus:outline-2 focus:outline-primary'
+
+// Presentation: 20 to 1500 visible characters (rich text).
+const descriptionOk = (html: string) => { const n = plainText(html).length; return n >= 20 && n <= 1500 }
 
 function Field({ label, children, hint, required }: { label: string, children: React.ReactNode, hint?: string, required?: boolean }) {
   return (
@@ -156,9 +161,11 @@ function IdentityFields({ form, set, categories, withName }: { form: Form, set: 
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
       </Field>
-      <Field label="Description de la boutique" required hint={`${form.description.length} / 1500`}>
-        <textarea value={form.description} onChange={e => set({ description: e.target.value.slice(0, 1500) })} rows={4} placeholder="Présentez votre boutique, vos marques distribuées, vos engagements (garantie, service après-vente…)" className="w-full resize-y rounded-xl border-none bg-surface-lowest p-3 text-body-md text-on-surface shadow-sm outline-none focus:outline focus:outline-2 focus:outline-primary" />
-      </Field>
+      {/* Not a <label>: its toolbar buttons would take the clicks. */}
+      <div>
+        <span className="mb-1.5 flex items-center justify-between gap-2 text-label-md text-on-surface"><span>Description de la boutique<span className="text-primary"> *</span></span><span className="text-label-sm text-on-surface-variant">20 caractères minimum</span></span>
+        <RichTextEditor compact content={form.description} onChange={v => set({ description: v })} maxChars={1500} minHeight={120} label="Description de la boutique" placeholder="Présentez votre boutique, vos marques distribuées, vos engagements (garantie, service après-vente…)" />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Ville" required>
           <Select value={form.city} onChange={e => set({ city: e.target.value, commune: e.target.value === 'Abidjan' ? form.commune : '' })} className={`${inputCls} cursor-pointer`}>
@@ -283,7 +290,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
   // ─── Application wizard ───────────────────────────────────────────────
   if (wizard) {
     const stepOk = [
-      form.name.trim().length >= 2 && !!form.categoryId && form.description.trim().length >= 20 && !!form.city,
+      form.name.trim().length >= 2 && !!form.categoryId && descriptionOk(form.description) && !!form.city,
       form.hours.every(h => !h || h.open < h.close) && (!form.email || /^\S+@\S+\.\S+$/.test(form.email)),
       form.legalIdNumber.trim().length >= 5 && !!form.legalDocKey && form.consent,
     ]
@@ -839,7 +846,7 @@ function ProfileTab({ shop, categories, onSaved }: { shop: MyShopT, categories: 
   const [save, { loading }] = useMutation(UPDATE_SHOP_PROFILE_MUTATION)
   const [msg, setMsg] = useState<{ ok: boolean, text: string } | null>(null)
   const set = (p: Partial<Form>) => { setMsg(null); setForm(f => ({ ...f, ...p })) }
-  const ok = !!form.categoryId && form.description.trim().length >= 20 && form.hours.every(h => !h || h.open < h.close)
+  const ok = !!form.categoryId && descriptionOk(form.description) && form.hours.every(h => !h || h.open < h.close)
   return (
     <section>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

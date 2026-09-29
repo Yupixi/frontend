@@ -3,6 +3,7 @@ import CampaignMedia from './CampaignMedia'
 import { thumbnailUrl } from '../../lib/media'
 import { pad2, useCountdown } from '../../lib/useCountdown'
 import { type CampaignType, type LiveCampaign } from '../../graphql/campaigns'
+import { richHtml } from '../../lib/richText'
 
 const DEFAULT_TINT = '#0d4a3a'
 const HERO_BADGE: Record<CampaignType, string> = {
@@ -125,7 +126,7 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
             <span className={`text-label-md lg:hidden ${dark ? 'text-on-surface-variant' : 'text-white/85'}`}>{dateFr(campaign.startsAt)} – {dateFr(campaign.endsAt)}</span>
           </div>
           <h1 className="m-0 text-[32px] font-extrabold leading-[1.1] tracking-tight md:text-[44px] lg:text-[48px]">{campaign.name}</h1>
-          {campaign.description && <p className={`m-0 line-clamp-4 max-w-xl text-body-md md:text-body-lg lg:line-clamp-none ${dark ? 'text-on-surface-variant' : 'text-white/85'}`}>{campaign.description}</p>}
+          {campaign.description && <div className={`rich-text line-clamp-4 max-w-xl text-body-md md:text-body-lg lg:line-clamp-none ${dark ? 'text-on-surface-variant' : 'text-white/85 [&_a]:!text-white'}`} dangerouslySetInnerHTML={{ __html: richHtml(campaign.description) }} />}
           <div className={`hidden items-center gap-2 text-label-md lg:flex ${dark ? 'text-on-surface-variant' : 'text-white/85'}`}>
             <Icon name="calendar_month" size={18} className={dark ? 'text-tertiary' : 'text-white'} />
             Du {dateFr(campaign.startsAt)} au {dateFr(campaign.endsAt, true)}

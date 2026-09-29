@@ -17,6 +17,7 @@ import { Claim } from '../lib/site'
 import { useLists } from '../lib/lists'
 import { useRules } from '../lib/rules'
 import { usePageTitle } from '../lib/site'
+import { richHtml } from '../lib/richText'
 
 type Props = {
   shopKey: string
@@ -317,7 +318,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
               </button>
             )}
           </div>
-          {shop.description && <p className="m-0 mt-4 max-w-3xl whitespace-pre-line text-body-md text-on-surface">{shop.description}</p>}
+          {shop.description && <div className="rich-text selectable mt-4 max-w-3xl text-body-md text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(shop.description) }} />}
         </section>
 
         {/* Figures */}
@@ -408,7 +409,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
                 <div className="p-4 md:p-5">
                   <div className="flex items-center gap-2 text-body-sm text-on-surface-variant"><Icon name="campaign" size={16} className="text-primary" /> {formatRelativeDate(p.createdAt)}</div>
                   <h3 className="m-0 mt-1 text-headline-sm text-on-surface">{p.title}</h3>
-                  <p className="m-0 mt-1 whitespace-pre-line text-body-md text-on-surface">{p.body}</p>
+                  <div className="rich-text selectable mt-1 text-body-md text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(p.body) }} />
                   {p.listings.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {p.listings.map(l => (

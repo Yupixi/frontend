@@ -7,6 +7,7 @@ import { endsInLabel, useCountdown } from '../../lib/useCountdown'
 import { requestOpenCampaign, requestOpenLink } from '../../lib/navigation'
 import { CAMPAIGN_TYPE_LABEL, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignVisual, type LiveCampaign } from '../../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../../graphql/listings'
+import { plainText } from '../../lib/format'
 
 const DEFAULT_TINT = '#EB1100'
 const tintOf = (c: LiveCampaign) => c.themeColor || DEFAULT_TINT
@@ -63,7 +64,7 @@ export function CampaignFeatured({ c }: { c: LiveCampaign }) {
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2"><TypeBadge c={c} /><span className="rounded-full px-2.5 py-0.5 text-label-sm font-bold text-primary" style={{ background: `color-mix(in oklab, ${tintOf(c)} 12%, white)` }}>{bestLabel(c)}</span></div>
           <h3 className="m-0 text-headline-lg font-extrabold leading-tight text-on-surface">{c.name}</h3>
-          {c.description && <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{c.description}</p>}
+          {c.description && <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{plainText(c.description)}</p>}
         </div>
         <EndsIn endsAt={c.endsAt} className="shrink-0 rounded-full bg-surface-container-low px-3 py-1 text-label-sm text-on-surface-variant" />
       </div>
@@ -103,7 +104,7 @@ export function CampaignSlide({ c }: { c: LiveCampaign }) {
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <h3 className="m-0 text-headline-sm font-extrabold leading-tight text-on-surface">{c.name}</h3>
-          {c.description && <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{c.description}</p>}
+          {c.description && <p className="m-0 mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{plainText(c.description)}</p>}
         </div>
         {!card && <Thumbs c={c} size={40} />}
       </div>
