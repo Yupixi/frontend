@@ -3,6 +3,7 @@ import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
 import PaymentReturn from './components/PaymentReturn'
+import EmailVerifyPrompt, { verifyPromptDismissed } from './components/EmailVerifyPrompt'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { parsePath, pathFor, samePlace } from './lib/routes'
@@ -196,6 +197,7 @@ export default function App() {
   const [pushStatus, setPushStatus] = useState<PushSubscriptionResult | null>(null)
   const [enablingPush, setEnablingPush] = useState(false)
   const [pushDismissed, setPushDismissed] = useState(false)
+  const [verifyLater, setVerifyLater] = useState(verifyPromptDismissed)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [location, setLocation] = useState<StoredLocation | null>(() => getStoredLocation())
   // True while a first-visit IP lookup is in flight (capped, see below).
@@ -707,6 +709,12 @@ export default function App() {
     )
   }
 
+  // Signed up, address not confirmed yet: one top prompt at a time (the
+  // update banner first), not over the listing form.
+  const verifyPrompt = isLoggedIn && currentUser && !currentUser.isGuest && !currentUser.emailVerifiedAt && !verifyLater && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'
+    ? <EmailVerifyPrompt email={currentUser.email} onDismiss={() => setVerifyLater(true)} />
+    : null
+
   if (isAccountPage(page)) {
     // A guest identity only exists to hold a conversation open (see
     // AuthService.guestLogin) — there's no real seller/buyer account behind
@@ -780,6 +788,7 @@ export default function App() {
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
         <PaymentReturn isLoggedIn={isLoggedIn} />
+        {verifyPrompt}
         <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       </div>
     )
@@ -808,7 +817,8 @@ export default function App() {
       </Layout>
       <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}
-      {isLoggedIn && pushStatus && !showUpdateBanner && !showInstallBanner && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
+      {verifyPrompt}
+      {isLoggedIn && pushStatus && !verifyPrompt && !showUpdateBanner && !showInstallBanner && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />

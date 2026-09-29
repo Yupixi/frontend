@@ -56,6 +56,7 @@ export const ME_QUERY = gql`
       avatarUrl
       notificationPreferences
       isGuest
+      emailVerifiedAt
       isVerified badge
       bio
       coverUrl
@@ -80,6 +81,8 @@ export type AuthUser = {
   avatarUrl?: string | null
   notificationPreferences?: Record<string, unknown>
   isGuest?: boolean
+  // Null until the member opens the link e-mailed at sign-up.
+  emailVerifiedAt?: string | null
   isVerified?: boolean; badge?: BadgeTier | null
   boostCredits?: number
   bio?: string | null
@@ -91,3 +94,30 @@ export type AuthPayload = {
   guestSecret?: string | null
   user: AuthUser
 }
+
+// E-mailed links (Backend MailModule): address confirmation and password
+// reset. requestPasswordReset answers true whether or not the address
+// belongs to a member.
+export const VERIFY_EMAIL_MUTATION = gql`
+  mutation VerifyEmail($token: String!) {
+    verifyEmail(token: $token)
+  }
+`
+
+export const RESEND_VERIFICATION_MUTATION = gql`
+  mutation ResendVerificationEmail {
+    resendVerificationEmail
+  }
+`
+
+export const REQUEST_PASSWORD_RESET_MUTATION = gql`
+  mutation RequestPasswordReset($email: String!) {
+    requestPasswordReset(email: $email)
+  }
+`
+
+export const RESET_PASSWORD_MUTATION = gql`
+  mutation ResetPassword($input: ResetPasswordInput!) {
+    resetPassword(input: $input)
+  }
+`

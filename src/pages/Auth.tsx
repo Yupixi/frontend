@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../components/Icon'
 import Logo from '../components/DilchapLogo'
-import { LOGIN_MUTATION, REGISTER_MUTATION, type AuthPayload } from '../graphql/auth'
+import { LOGIN_MUTATION, REGISTER_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, type AuthPayload } from '../graphql/auth'
 import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 import { REQUEST_RECOVERY_MUTATION } from '../graphql/support'
 import { storeAccessToken } from '../lib/auth'
@@ -135,10 +135,44 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
   )
 }
 
-// No e-mail/SMS sender yet: a recovery request reaches the Dilchap support
-// queue (matched to the account, with its badge priority); WhatsApp stays
-// available as a second way.
+// "Mot de passe oublié": a reset link e-mailed to the account's address
+// (same answer whether or not it belongs to a member). No access to that
+// mailbox (or an account opened with a phone number): the request reaches
+// the support queue instead (SupportRecovery).
 function ForgotPassword({ onBack }: { onBack: () => void }) {
+  const [email, setEmail] = useState('')
+  const [support, setSupport] = useState(false)
+  const [send, { data, loading, error }] = useMutation<{ requestPasswordReset: boolean }>(REQUEST_PASSWORD_RESET_MUTATION)
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  if (support) return <SupportRecovery onBack={() => setSupport(false)} />
+  return (
+    <div className="flex flex-col gap-4">
+      <button onClick={onBack} className="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant"><Icon name="arrow_back" size={18} /> Retour à la connexion</button>
+      <div className="rounded-2xl bg-surface-container-low p-5">
+        <div className="text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="lock_reset" size={24} /></span>
+          <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Mot de passe oublié</h2>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant">Indiquez l’adresse e-mail de votre compte : nous vous envoyons un lien pour choisir un nouveau mot de passe.</p>
+        </div>
+        {data?.requestPasswordReset ? (
+          <p role="status" className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><Icon name="forward_to_inbox" size={18} className="mt-0.5 shrink-0" /> <span className="min-w-0 break-words">Si un compte Dilchap utilise <b className="font-semibold">{email.trim()}</b>, un e-mail vient de partir. Le lien est valable 1 heure ; pensez à regarder dans les spams.</span></p>
+        ) : (
+          <form onSubmit={e => { e.preventDefault(); void send({ variables: { email: email.trim().toLowerCase() } }).catch(() => undefined) }} className="mt-4 flex flex-col gap-3">
+            <input type="email" value={email} onChange={e => setEmail(e.target.value.slice(0, 120))} placeholder="nom@exemple.ci" autoComplete="email" className="h-12 rounded-xl border-none bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" />
+            {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{error.message}</p>}
+            <button type="submit" disabled={!valid || loading} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60"><Icon name="mail" size={19} /> {loading ? 'Envoi…' : 'Recevoir le lien'}</button>
+          </form>
+        )}
+        <button onClick={() => setSupport(true)} className="mx-auto mt-4 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-center text-label-md text-primary"><Icon name="support_agent" size={18} className="shrink-0" /> Plus accès à cet e-mail ? Contacter l’équipe</button>
+      </div>
+    </div>
+  )
+}
+
+// Lost access to the mailbox (or no e-mail on the account): the request
+// reaches the Dilchap support queue (matched to the account, with its badge
+// priority); WhatsApp stays available as a second way.
+function SupportRecovery({ onBack }: { onBack: () => void }) {
   const { data } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
   const phone = data?.footerSettings?.supportPhone
   const [form, setForm] = useState({ name: '', contact: '', message: '' })
@@ -153,11 +187,11 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
   }
   return (
     <div className="flex flex-col gap-4">
-      <button onClick={onBack} className="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant"><Icon name="arrow_back" size={18} /> Retour à la connexion</button>
+      <button onClick={onBack} className="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant"><Icon name="arrow_back" size={18} /> Recevoir un lien par e-mail</button>
       <div className="rounded-2xl bg-surface-container-low p-5">
         <div className="text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="lock_reset" size={24} /></span>
-          <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Mot de passe oublié</h2>
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="support_agent" size={24} /></span>
+          <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Récupérer mon compte</h2>
           <p className="m-0 mt-1 text-body-md text-on-surface-variant">Pour protéger votre compte, un membre de l’équipe vérifie votre identité et vous recontacte sur l’e-mail ou le numéro de votre compte.</p>
         </div>
         {done ? (
