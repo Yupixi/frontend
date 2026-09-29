@@ -339,6 +339,22 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .tiptap a { color: var(--primary); text-decoration: underline; cursor: pointer; }
 .tiptap a:hover { opacity: 0.8; }
 .tiptap s { text-decoration: line-through; }
+.tiptap ul, .rich-text ul { list-style: disc; }
+.tiptap ol, .rich-text ol { list-style: decimal; }
+.tiptap blockquote, .rich-text blockquote { border-left: 3px solid var(--border); margin: 0 0 0.5em; padding-left: 0.8em; color: var(--fg-muted); }
+.tiptap p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--fg-subtle); float: left; height: 0; pointer-events: none; }
+
+/* Rich text shown on the site (shop, categories, campaigns, legal pages):
+   the HTML the editors give. */
+.rich-text { overflow-wrap: anywhere; }
+.rich-text > :first-child { margin-top: 0; }
+.rich-text > :last-child { margin-bottom: 0; }
+.rich-text p { margin: 0 0 0.5em; }
+.rich-text h1, .rich-text h2 { font-size: 1.2em; font-weight: 800; margin: 0.8em 0 0.3em; }
+.rich-text h3, .rich-text h4 { font-size: 1.05em; font-weight: 700; margin: 0.7em 0 0.3em; }
+.rich-text ul, .rich-text ol { padding-left: 1.4em; margin: 0 0 0.5em; }
+.rich-text li > p { margin: 0; }
+.rich-text a { color: var(--primary); text-decoration: underline; }
 
 /* Mobile Responsive */
 @media (max-width: 768px) {

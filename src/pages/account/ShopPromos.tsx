@@ -18,6 +18,9 @@ import { formatNumber } from '../../lib/format'
 import { creditsLabel } from '../../components/Credits'
 import type { AuthUser } from '../../graphql/auth'
 import { Claim } from '../../lib/site'
+import RichTextEditor from '../../components/RichTextEditor'
+import { richHtml } from '../../lib/richText'
+import { plainText } from '../../lib/format'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onOpenShop: (slug: string) => void }
 type Tab = 'sales' | 'campaigns' | 'bundles' | 'posts'
@@ -459,7 +462,7 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
               <div className="min-w-0"><div className="text-label-md text-on-surface">Conditions de participation</div><div className="text-on-surface-variant">{c.minDiscountPercent ? `Remise minimale demandée : ${c.minDiscountPercent} % sur chaque article inscrit.` : 'Pas de remise minimale.'} Chaque article est vérifié par l’équipe Dilchap.</div></div>
             </div>
             <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">À régler en crédits, seulement pour les articles acceptés.</span>}</span></p>
-            {c.description && <p className="m-0 mt-2 text-body-sm text-on-surface">{c.description}</p>}
+            {c.description && <div className="rich-text mt-2 text-body-sm text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(c.description) }} />}
             <div className="mt-auto pt-3">
               {c.myItems.length > 0 ? (
                 <>
@@ -856,7 +859,7 @@ function PostsTab({ posts, quota, onCreate, onDuplicate, onOpenShop }: {
             {p.imageUrl && <img src={p.imageUrl} alt="" className="aspect-[16/10] w-full shrink-0 rounded-xl object-cover md:w-56" />}
             <div className="min-w-0 flex-1">
               <h3 className="m-0 text-headline-sm text-on-surface">{p.title}</h3>
-              <p className="m-0 mt-1 line-clamp-2 text-body-md text-on-surface-variant">{p.body}</p>
+              <p className="m-0 mt-1 line-clamp-2 text-body-md text-on-surface-variant">{plainText(p.body)}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface"><Icon name="group" size={15} /> Envoyée à {formatNumber(p.recipients)} abonné{p.recipients > 1 ? 's' : ''}</span>
                 <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface"><Icon name="visibility" size={15} /> {formatNumber(p.views)} vue{p.views > 1 ? 's' : ''}</span>
@@ -899,7 +902,8 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
   const input = useRef<HTMLInputElement>(null)
   const rows = useMemo(() => listings.filter(l => !q || l.title.toLowerCase().includes(q.toLowerCase())).slice(0, 40), [listings, q])
   const chosen = ids.map(id => listings.find(l => l.id === id)).filter((l): l is ShopListing => !!l)
-  const ok = title.trim().length >= 3 && body.trim().length >= 3
+  const bodyLength = plainText(body).length
+  const ok = title.trim().length >= 3 && bodyLength >= 3 && bodyLength <= 1000
   const pick = async (f?: File) => {
     if (!f) return
     setBusy(true); setError('')
@@ -924,7 +928,7 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
             <label className="block"><span className="mb-1 flex justify-between gap-2 text-label-lg text-on-surface">Titre de l’annonce <span className="text-label-sm font-normal text-on-surface-variant">{title.length} / 80 caractères</span></span><span className="mb-2 block text-body-sm text-on-surface-variant">Affiché en tête de la notification et dans vos actualités.</span><input value={title} onChange={e => setTitle(e.target.value.slice(0, 80))} placeholder="Ex : Nouveaux arrivages High-Tech sous scellé" className={inputCls} /></label>
           </section>
           <section className={card}>
-            <label className="block"><span className="mb-1 flex justify-between gap-2 text-label-lg text-on-surface">Message <span className="text-label-sm font-normal text-on-surface-variant">{body.length} / 1000 caractères</span></span><span className="mb-2 block text-body-sm text-on-surface-variant">Détaillez la nouveauté, les conditions ou la période.</span><textarea value={body} onChange={e => setBody(e.target.value.slice(0, 1000))} rows={6} placeholder="Chers abonnés, …" className="w-full resize-y rounded-xl border-none bg-surface-container-low p-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" /></label>
+            <div><span className="mb-1 block text-label-lg text-on-surface">Message</span><span className="mb-2 block text-body-sm text-on-surface-variant">Détaillez la nouveauté, les conditions ou la période. La notification reprend le texte seul.</span><RichTextEditor compact content={body} onChange={setBody} maxChars={1000} minHeight={140} label="Message" placeholder="Chers abonnés, …" /></div>
           </section>
           <section className={card}>
             <div className="mb-2 text-label-lg text-on-surface">Photo d’illustration <span className="text-label-sm font-normal text-on-surface-variant">(facultatif)</span></div>
@@ -964,7 +968,7 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
             <div className="mb-1.5 flex items-center gap-1 text-label-sm uppercase text-on-surface-variant"><Icon name="notifications" size={15} /> Notification sur téléphone</div>
             <div className="flex gap-3 rounded-2xl bg-inverse-surface p-3 text-surface">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-label-lg font-bold text-white">D</span>
-              <div className="min-w-0 flex-1"><div className="flex justify-between gap-2 text-label-sm opacity-80"><span className="truncate">Dilchap</span><span className="shrink-0">à l’instant</span></div><div className="truncate text-label-md">{shopName} : {title || 'Titre de l’annonce'}</div><div className="line-clamp-2 text-body-sm opacity-80">{body || 'Votre message…'}</div></div>
+              <div className="min-w-0 flex-1"><div className="flex justify-between gap-2 text-label-sm opacity-80"><span className="truncate">Dilchap</span><span className="shrink-0">à l’instant</span></div><div className="truncate text-label-md">{shopName} : {title || 'Titre de l’annonce'}</div><div className="line-clamp-2 text-body-sm opacity-80">{plainText(body) || 'Votre message…'}</div></div>
             </div>
           </div>
           <div>
@@ -974,7 +978,7 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
               <div className="p-4">
                 <div className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="campaign" size={15} className="text-primary" /> {shopName} · à l’instant</div>
                 <h3 className="m-0 mt-1 break-words text-headline-sm text-on-surface">{title || 'Titre de l’annonce'}</h3>
-                <p className="m-0 mt-1 line-clamp-6 whitespace-pre-line break-words text-body-sm text-on-surface">{body || 'Votre message apparaîtra ici.'}</p>
+                {plainText(body) ? <div className="rich-text mt-1 line-clamp-6 break-words text-body-sm text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(body) }} /> : <p className="m-0 mt-1 text-body-sm text-on-surface">Votre message apparaîtra ici.</p>}
                 {chosen.length > 0 && (
                   <div className="mt-3 flex flex-col gap-2">
                     {chosen.map(l => (
@@ -994,7 +998,7 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
       <div className="mt-4 flex flex-col gap-2 lg:items-end">
         <div className="flex w-full gap-3 lg:w-auto">
           <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">Annuler</button>
-          <button disabled={!ok || loading || busy || quota.used >= quota.limit} onClick={() => void send({ variables: { input: { title: title.trim(), body: body.trim(), imageUrl: imageUrl || undefined, listingIds: ids } } }).then(onDone).catch((e: Error) => setError(e.message))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="send" size={19} /> <span className="truncate">{loading ? 'Envoi…' : `Envoyer à ${formatNumber(quota.followers)} abonné${quota.followers > 1 ? 's' : ''}`}</span></button>
+          <button disabled={!ok || loading || busy || quota.used >= quota.limit} onClick={() => void send({ variables: { input: { title: title.trim(), body, imageUrl: imageUrl || undefined, listingIds: ids } } }).then(onDone).catch((e: Error) => setError(e.message))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="send" size={19} /> <span className="truncate">{loading ? 'Envoi…' : `Envoyer à ${formatNumber(quota.followers)} abonné${quota.followers > 1 ? 's' : ''}`}</span></button>
         </div>
         <p className="m-0 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Icon name="info" size={15} className="mt-0.5 shrink-0 text-primary" /> Cet envoi utilise 1 de vos {quota.limit} annonces sur 7 jours. La diffusion est immédiate et irréversible.</p>
       </div>

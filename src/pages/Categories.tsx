@@ -13,6 +13,8 @@ import PaymentLogo from '../components/PaymentLogo'
 import { Claim, useNoCommissionClaims } from '../lib/site'
 import { useLists } from '../lib/lists'
 import { requestOpenCampaign } from '../lib/navigation'
+import { richHtml } from '../lib/richText'
+import { plainText } from '../lib/format'
 
 type CategoriesProps = {
   onNavigate: (page: any) => void
@@ -107,7 +109,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
                 <span className="flex items-center gap-1 rounded-full bg-surface-container-low px-2.5 py-1 text-label-sm text-on-surface"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {formatNumber(cat.listingsCount ?? 0)} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
               </div>
               <button onClick={() => onCategorySelect?.(cat.slug)} className="mt-4 cursor-pointer border-none bg-transparent p-0 text-left text-headline-sm text-on-surface hover:text-primary">{cat.name}</button>
-              {cat.description && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{cat.description}</p>}
+              {cat.description && <div className="rich-text mt-1 text-body-sm text-on-surface-variant" dangerouslySetInnerHTML={{ __html: richHtml(cat.description) }} />}
               {cat.subcategories.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {cat.subcategories.slice(0, 4).map(s => (
@@ -136,7 +138,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
                 <div className="flex flex-1 flex-col p-5">
                   <span className={`w-fit rounded px-2 py-0.5 text-label-sm uppercase ${i === 0 ? 'bg-primary-fixed text-primary' : 'bg-tertiary-soft text-tertiary'}`}>{i === 0 ? 'Top tendance' : 'Sélection Dilchap'}</span>
                   <span className="mt-2 text-headline-sm text-on-surface">{c.name}</span>
-                  {c.description && <span className="mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{c.description}</span>}
+                  {c.description && <span className="mt-1 line-clamp-2 text-body-sm text-on-surface-variant">{plainText(c.description)}</span>}
                   <span className="flex-1" />
                   <span className={`mt-3 flex w-fit items-center gap-1 rounded-lg px-3 py-2 text-label-sm ${i === 0 ? 'bg-inverse-surface text-white' : 'text-primary'}`}>{i === 0 ? 'Découvrir la sélection' : 'Voir les pièces'} <Icon name={i === 0 ? 'north_east' : 'arrow_forward'} size={15} /></span>
                 </div>
