@@ -631,3 +631,32 @@ label:has(> input.sr-only) { position: relative; }
 @keyframes shine { 0%, 60% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(220%) skewX(-18deg); } }
 .shine { position: relative; overflow: hidden; }
 .shine::after { content: ''; position: absolute; inset: 0; width: 40%; pointer-events: none; transform: translateX(-120%) skewX(-18deg); background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent); }
+
+/* Chrome Android "Toucher pour rechercher": a tap on text it believes is
+   inert selects the word and opens a Google search. Cards and rows are
+   <div>s clicked through React, so Chrome can't tell they're controls.
+   Controls never select text; in the installed app (an app, not a page)
+   nothing does, except fields and the long texts worth copying
+   (.selectable: listing description, messages, legal pages). */
+button, a, [role='button'], .cursor-pointer, label {
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .selectable, .selectable * {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}
+/* Fields always: iOS won't let you type in a field that can't select. */
+input, textarea, [contenteditable='true'], .ProseMirror {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}

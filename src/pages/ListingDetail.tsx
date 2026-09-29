@@ -465,7 +465,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             <div className="lg:p-6">
               <section className={tab === 'description' ? '' : 'lg:hidden'}>
                 <h2 className="m-0 mb-3 text-label-lg text-on-surface lg:hidden">Description de l'article</h2>
-                <div className="rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface max-lg:border max-lg:border-solid max-lg:border-outline-variant/60 max-lg:p-4 lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }} />
+                <div className="selectable rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface max-lg:border max-lg:border-solid max-lg:border-outline-variant/60 max-lg:p-4 lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }} />
                 <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</p>
               </section>
               <section className={tab === 'specs' ? 'hidden lg:block' : 'hidden'}>

@@ -260,7 +260,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
                   {m.offer ? (
                     <OfferBubble offer={m.offer} currency={data?.conversation?.listing?.currency ?? 'XOF'} isMine={isMe} canRespond={false} responding={false} onAccept={() => {}} onReject={() => {}} />
                   ) : (
-                    <div className={`px-3 py-2 text-body-sm ${isMe ? 'rounded-2xl rounded-br-md bg-primary text-white' : 'rounded-2xl rounded-bl-md bg-surface-lowest text-on-surface'}`}>{m.body}</div>
+                    <div className={`selectable px-3 py-2 text-body-sm ${isMe ? 'rounded-2xl rounded-br-md bg-primary text-white' : 'rounded-2xl rounded-bl-md bg-surface-lowest text-on-surface'}`}>{m.body}</div>
                   )}
                   <div className={`mt-0.5 flex items-center gap-1 text-label-sm text-on-surface-variant ${isMe ? 'justify-end' : 'justify-start'}`}>
                     {dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(m.createdAt))}

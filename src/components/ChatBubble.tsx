@@ -97,7 +97,7 @@ export default function ChatBubble({ message: m, mine, quoteAuthor, onReply, onO
         {quote}
         {m.audioUrl && <VoicePlayer src={m.audioUrl} duration={m.audioDuration ?? 0} mine={mine} seed={m.id} />}
         {photos.length > 0 && <div className={m.body ? 'mb-2' : ''}><PhotoGrid photos={photos} onOpen={i => onOpenPhotos(photos, i)} /></div>}
-        {m.body && <div className="whitespace-pre-wrap break-words"><Linkified text={m.body} mine={mine} /></div>}
+        {m.body && <div className="selectable whitespace-pre-wrap break-words"><Linkified text={m.body} mine={mine} /></div>}
       </div>
       {/* Desktop hover actions */}
       <div className="hidden shrink-0 gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100 [@media(hover:hover)]:flex">
