@@ -20,23 +20,46 @@ import OfferBanner from '../../components/OfferBanner'
 // Every member is both a buyer and a seller — one account, one space. This
 // shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
 // annonce): grouped sidebar, compact header with the publish CTA.
-const SECTIONS = [
+type NavLeaf = { key: string; icon: typeof Home; label: string }
+// A sub-group folds a few related links under one collapsible entry.
+type NavGroup = { label: string; icon: typeof Home; items: NavLeaf[] }
+type NavEntry = NavLeaf | NavGroup
+const isGroup = (e: NavEntry): e is NavGroup => 'items' in e
+const leaves = (entries: NavEntry[]) => entries.flatMap(e => (isGroup(e) ? e.items : [e]))
+
+const SECTIONS: { title: string; items: NavEntry[] }[] = [
   {
     title: 'Gestion & Ventes',
     items: [
       { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-      { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
-      { key: 'seller-shop', icon: Store, label: 'Ma Boutique officielle' },
-      { key: 'seller-shop-promos', icon: Tag, label: 'Promotions & Soldes' },
-      { key: 'seller-campaigns', icon: Megaphone, label: 'Campagnes Dilchap' },
-      { key: 'seller-orders', icon: Truck, label: 'Commandes & Envois' },
-      { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
-      { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
-      { key: 'seller-reviews', icon: Star, label: 'Avis & Réputation' },
-      { key: 'seller-badge', icon: BadgeCheck, label: 'Mon badge' },
-      { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
+      {
+        label: 'Annonces', icon: Package, items: [
+          { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
+          { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
+          { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
+        ],
+      },
+      {
+        label: 'Boutique', icon: Store, items: [
+          { key: 'seller-shop', icon: Store, label: 'Ma Boutique officielle' },
+          { key: 'seller-shop-promos', icon: Tag, label: 'Promotions & Soldes' },
+          { key: 'seller-campaigns', icon: Megaphone, label: 'Campagnes Dilchap' },
+        ],
+      },
+      {
+        label: 'Ventes', icon: Truck, items: [
+          { key: 'seller-orders', icon: Truck, label: 'Commandes & Envois' },
+          { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
+          { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
+        ],
+      },
+      {
+        label: 'Réputation', icon: Star, items: [
+          { key: 'seller-reviews', icon: Star, label: 'Avis & Réputation' },
+          { key: 'seller-badge', icon: BadgeCheck, label: 'Mon badge' },
+        ],
+      },
       { key: 'buyer-messages', icon: MessageSquare, label: 'Messagerie' },
-      { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
     ],
   },
   {
@@ -51,6 +74,10 @@ const SECTIONS = [
     ],
   },
 ]
+
+// Folded sections / sub-groups, remembered per browser (keys: titles, labels).
+const FOLDED_KEY = 'dilchap_sidebar_folded'
+const readFolded = (): string[] => { try { return JSON.parse(localStorage.getItem(FOLDED_KEY) ?? '[]') as string[] } catch { return [] } }
 
 export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-dashboard': 'Tableau de bord',
@@ -142,17 +169,19 @@ function useUnreadCounts() {
 
 const SIDEBAR_KEY = 'dilchap_sidebar_collapsed'
 
-function NavItem({ active, icon: Icon, label, badge, dot, onClick, muted, collapsed }: {
+function NavItem({ active, icon: Icon, label, badge, dot, onClick, muted, collapsed, nested }: {
   active?: boolean, icon: typeof Home, label: string, badge?: React.ReactNode, dot?: string | number, onClick: () => void, muted?: boolean, collapsed?: boolean
+  /** Link inside a sub-group: indented under the group's line. */
+  nested?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
-      className={`relative mb-0.5 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none py-2.5 text-left ${collapsed ? 'justify-center px-0' : 'px-3'} ${active ? 'bg-primary text-white' : `bg-transparent hover:bg-surface-container-low ${muted ? 'text-on-surface-variant' : 'text-on-surface'}`} ${muted ? 'text-body-sm' : 'text-label-md'}`}
+      className={`relative mb-0.5 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none py-2.5 text-left ${collapsed ? 'justify-center px-0' : nested ? 'pl-9 pr-3' : 'px-3'} ${active ? 'bg-primary text-white' : `bg-transparent hover:bg-surface-container-low ${muted ? 'text-on-surface-variant' : 'text-on-surface'}`} ${muted ? 'text-body-sm' : 'text-label-md'}`}
     >
-      <Icon size={20} className={active ? 'text-white' : 'text-on-surface-variant'} />
+      <Icon size={nested ? 18 : 20} className={active ? 'text-white' : 'text-on-surface-variant'} />
       {collapsed
         // Reduced rail: counters become a small bubble on the icon.
         ? dot !== undefined && <span className={`absolute right-2 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${active ? 'bg-white text-primary' : 'bg-primary text-white'}`}>{dot}</span>
@@ -161,38 +190,92 @@ function NavItem({ active, icon: Icon, label, badge, dot, onClick, muted, collap
   )
 }
 
-function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, activeDisputes, isGuest, collapsed, onToggleCollapsed }: {
+function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, activeDisputes, isGuest, collapsed }: {
   active: string; onNavigate: (p: any) => void; listingsCount?: number; unreadMessages?: number; activeDisputes?: number; isGuest?: boolean
-  // Desktop only: icons-only rail, and the button that switches it.
-  collapsed?: boolean; onToggleCollapsed?: () => void
+  // Desktop only: icons-only rail (switched from the header).
+  collapsed?: boolean
 }) {
   // A guest identity only exists to hold a conversation open — there's no
   // account behind it, so every other area stays hidden.
   const sections = isGuest
-    ? [{ title: 'Messagerie', items: SECTIONS[0].items.filter(i => i.key === 'buyer-messages') }]
+    ? [{ title: 'Messagerie', items: leaves(SECTIONS[0].items).filter(i => i.key === 'buyer-messages') as NavEntry[] }]
     : SECTIONS
+  const [folded, setFolded] = useState<string[]>(readFolded)
+  const setAndSave = (next: string[]) => { try { localStorage.setItem(FOLDED_KEY, JSON.stringify(next)) } catch { /* private mode */ } return next }
+  const toggle = (key: string) => setFolded(f => setAndSave(f.includes(key) ? f.filter(k => k !== key) : [...f, key]))
+  // Reaching a page unfolds its section and sub-group (folding it again by
+  // hand stays possible while on it).
+  useEffect(() => {
+    const keys = SECTIONS.flatMap(sec => sec.items.flatMap(e => (
+      isGroup(e) ? (e.items.some(i => i.key === active) ? [sec.title, `${sec.title}›${e.label}`] : []) : e.key === active ? [sec.title] : []
+    )))
+    if (keys.length) setFolded(f => (f.some(k => keys.includes(k)) ? setAndSave(f.filter(k => !keys.includes(k))) : f))
+  }, [active])
+
+  const badgeOf = (key: string) => key === 'buyer-messages' && unreadMessages
+    ? <span className={`rounded-full px-2 text-label-sm ${active === key ? 'bg-white text-primary' : 'bg-primary-fixed text-primary'}`}>{unreadMessages} non lu{unreadMessages > 1 ? 's' : ''}</span>
+    : key === 'seller-listings' && listingsCount
+      ? <span className={`rounded-full px-2 text-label-sm ${active === key ? 'bg-white/25 text-white' : 'bg-surface-container text-on-surface-variant'}`}>{listingsCount}</span>
+      : key === 'seller-disputes' && activeDisputes
+        ? <span className={`h-2 w-2 rounded-full ${active === key ? 'bg-white' : 'bg-primary'}`} aria-label={`${activeDisputes} litige(s) en cours`} />
+        : undefined
+  const dotOf = (key: string) => key === 'buyer-messages' && unreadMessages ? unreadMessages
+    : key === 'seller-disputes' && activeDisputes ? activeDisputes : undefined
+  // What a folded section / sub-group still shows: unread messages + disputes.
+  const pending = (items: NavLeaf[]) => items.reduce((n, i) => n + (Number(dotOf(i.key)) || 0), 0)
+  const chip = (n: number) => n > 0 && <span className="rounded-full bg-primary px-1.5 text-label-sm text-white">{n > 99 ? '99+' : n}</span>
+  const leaf = (item: NavLeaf, nested = false) => (
+    <NavItem key={item.key} collapsed={collapsed} nested={nested} active={active === item.key} icon={item.icon} label={item.label} badge={badgeOf(item.key)} dot={dotOf(item.key)} onClick={() => onNavigate(item.key)} />
+  )
+
   return (
     <div className="flex h-full flex-col">
-      <div className={`flex-1 overflow-y-auto overflow-x-hidden py-4 ${collapsed ? 'px-2' : 'px-3'}`}>
-        {sections.map((section, i) => (
-          <div key={section.title} className={collapsed ? 'mb-3' : 'mb-5'}>
-            {collapsed
-              ? i > 0 && <div className="mx-2 mb-3 border-0 border-t border-solid border-outline-variant" />
-              : <div className="mb-2 whitespace-nowrap px-3 text-label-sm uppercase text-on-surface-variant">{section.title}</div>}
-            {section.items.map(item => {
-              const badge = item.key === 'buyer-messages' && unreadMessages
-                ? <span className={`rounded-full px-2 text-label-sm ${active === item.key ? 'bg-white text-primary' : 'bg-primary-fixed text-primary'}`}>{unreadMessages} non lu{unreadMessages > 1 ? 's' : ''}</span>
-                : item.key === 'seller-listings' && listingsCount
-                  ? <span className={`rounded-full px-2 text-label-sm ${active === item.key ? 'bg-white/25 text-white' : 'bg-surface-container text-on-surface-variant'}`}>{listingsCount}</span>
-                  : item.key === 'seller-disputes' && activeDisputes
-                    ? <span className={`h-2 w-2 rounded-full ${active === item.key ? 'bg-white' : 'bg-primary'}`} aria-label={`${activeDisputes} litige(s) en cours`} />
-                    : undefined
-              const dot = item.key === 'buyer-messages' && unreadMessages ? unreadMessages
-                : item.key === 'seller-disputes' && activeDisputes ? activeDisputes : undefined
-              return <NavItem key={item.key} collapsed={collapsed} active={active === item.key} icon={item.icon} label={item.label} badge={badge} dot={dot} onClick={() => onNavigate(item.key)} />
-            })}
-          </div>
-        ))}
+      <div className={`flex-1 overflow-y-auto overflow-x-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${collapsed ? 'px-2' : 'px-3'}`}>
+        {sections.map((section, i) => {
+          // Icons-only rail: every link, no folding.
+          if (collapsed) return (
+            <div key={section.title} className="mb-3">
+              {i > 0 && <div className="mx-2 mb-3 border-0 border-t border-solid border-outline-variant" />}
+              {leaves(section.items).map(item => leaf(item))}
+            </div>
+          )
+          const open = !folded.includes(section.title)
+          return (
+            <div key={section.title} className="mb-4">
+              {section.items.length > 1 ? (
+                <button type="button" onClick={() => toggle(section.title)} aria-expanded={open}
+                  className="mb-1 flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-1.5 text-left text-label-sm uppercase text-on-surface-variant hover:text-on-surface">
+                  <span className="min-w-0 flex-1 truncate">{section.title}</span>
+                  {!open && chip(pending(leaves(section.items)))}
+                  <ChevronDown size={16} className={`shrink-0 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+                </button>
+              ) : <div className="mb-2 whitespace-nowrap px-3 text-label-sm uppercase text-on-surface-variant">{section.title}</div>}
+              {open && section.items.map(e => {
+                if (!isGroup(e)) return leaf(e)
+                const key = `${section.title}›${e.label}`
+                const here = e.items.some(it => it.key === active)
+                const groupOpen = !folded.includes(key)
+                const GroupIcon = e.icon
+                return (
+                  <div key={key}>
+                    <button type="button" onClick={() => toggle(key)} aria-expanded={groupOpen}
+                      className={`mb-0.5 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md hover:bg-surface-container-low ${here ? 'font-bold text-on-surface' : 'text-on-surface'}`}>
+                      <GroupIcon size={20} className="shrink-0 text-on-surface-variant" />
+                      <span className="flex-1 whitespace-nowrap">{e.label}</span>
+                      {!groupOpen && chip(pending(e.items))}
+                      <ChevronDown size={16} className={`shrink-0 text-on-surface-variant transition-transform duration-200 ${groupOpen ? '' : '-rotate-90'}`} />
+                    </button>
+                    {groupOpen && (
+                      <div className="relative before:absolute before:bottom-1 before:left-[1.4rem] before:top-1 before:w-px before:bg-outline-variant">
+                        {e.items.map(item => leaf(item, true))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
         {!isGuest && !collapsed && (
           <div className="mx-1 mt-2 rounded-xl bg-tertiary-soft p-3">
             <div className="mb-1 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={15} /> Sécurité Dilchap</div>
@@ -203,25 +286,15 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
       <div className={`border-0 border-t border-solid border-outline-variant py-3 ${collapsed ? 'px-2' : 'px-3'}`}>
         <NavItem collapsed={collapsed} icon={Store} label="Retour à la boutique" onClick={() => onNavigate('home')} muted />
         {!isGuest && <NavItem collapsed={collapsed} active={active === 'buyer-settings'} icon={Settings} label="Paramètres" onClick={() => onNavigate('buyer-settings')} muted />}
-        {onToggleCollapsed && (
-          <button
-            onClick={onToggleCollapsed}
-            title={collapsed ? 'Agrandir le menu' : 'Réduire le menu'}
-            aria-label={collapsed ? 'Agrandir le menu' : 'Réduire le menu'}
-            aria-expanded={!collapsed}
-            className={`mt-1 flex w-full cursor-pointer items-center gap-3 rounded-lg border-none bg-transparent py-2 text-body-sm text-on-surface-variant hover:bg-surface-container-low ${collapsed ? 'justify-center px-0' : 'px-3'}`}
-          >
-            <Icon name={collapsed ? 'left_panel_open' : 'left_panel_close'} size={20} />
-            {!collapsed && <span className="whitespace-nowrap">Réduire le menu</span>}
-          </button>
-        )}
       </div>
     </div>
   )
 }
 
-function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBack, onNavigate, onLogout, unreadMessages, unreadNotifications }: {
+function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBack, onNavigate, onLogout, unreadMessages, unreadNotifications, collapsed, onToggleCollapsed }: {
   activeLabel: string; isHome: boolean; currentUser?: AuthUser | null; onToggleSidebar: () => void; onBack: () => void; onNavigate: (p: any) => void; onLogout: () => void; unreadMessages?: number; unreadNotifications?: number
+  /** Desktop: the sidebar is reduced to icons, and the button switching it. */
+  collapsed?: boolean; onToggleCollapsed?: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const bellRings = useIncreaseCounter(unreadNotifications ?? 0)
@@ -236,9 +309,18 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
         ? <button onClick={onToggleSidebar} className={`${iconBtn} -ml-2 lg:hidden`} aria-label="Menu"><Menu size={22} /></button>
         : <button onClick={onBack} className={`${iconBtn} -ml-2 text-on-surface lg:hidden`} aria-label="Retour"><Icon name="arrow_back" size={24} /></button>}
       <button onClick={() => onNavigate('home')} className={`${isHome ? 'block' : 'hidden'} cursor-pointer border-none bg-transparent p-0 lg:block`} aria-label="Accueil"><Logo size="sm" /></button>
-      {!isGuest && (
-        <span className={`hidden items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase md:flex ${currentUser?.badge === 'CERTIFIED' ? 'bg-tertiary-soft text-tertiary' : currentUser?.badge ? 'bg-verified-soft text-verified' : 'bg-surface-container text-on-surface-variant'}`}>
-          {currentUser?.badge ? <><BadgeCheck size={14} /> {BADGE_LABEL[currentUser.badge]}</> : 'Espace vendeur'}
+      {/* Desktop: collapse / expand the sidebar, after a separator. */}
+      {!isGuest && onToggleCollapsed && (
+        <>
+          <span aria-hidden className="hidden h-6 w-px bg-outline-variant lg:block" />
+          <button onClick={onToggleCollapsed} title={collapsed ? 'Agrandir le menu' : 'Réduire le menu'} aria-label={collapsed ? 'Agrandir le menu' : 'Réduire le menu'} aria-expanded={!collapsed} className={`${iconBtn} hidden lg:flex`}>
+            <Icon name={collapsed ? 'left_panel_open' : 'left_panel_close'} size={22} />
+          </button>
+        </>
+      )}
+      {!isGuest && currentUser?.badge && (
+        <span className={`hidden items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase md:flex ${currentUser.badge === 'CERTIFIED' ? 'bg-tertiary-soft text-tertiary' : 'bg-verified-soft text-verified'}`}>
+          <BadgeCheck size={14} /> {BADGE_LABEL[currentUser.badge]}
         </span>
       )}
       <h1 className={`m-0 min-w-0 truncate lg:hidden ${isHome ? 'text-label-md text-on-surface-variant' : 'text-headline-sm text-on-surface'}`}>{isHome ? 'Mon compte' : activeLabel}</h1>
@@ -310,7 +392,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
   return (
     <div className={`safe-pt flex bg-surface ${fill ? 'h-[100dvh]' : 'h-screen'}`}>
       <aside className={`hidden shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest transition-[width] duration-200 lg:block ${collapsed ? 'w-[72px]' : 'w-64'}`}>
-        <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+        <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} collapsed={collapsed} />
       </aside>
 
       {sidebarOpen && (
@@ -329,7 +411,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <AccountHeader activeLabel={title || ACCOUNT_PAGE_LABELS[active] || active} isHome={active === 'buyer-dashboard' || active === 'seller-dashboard'} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onBack={back} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} />
+        <AccountHeader activeLabel={title || ACCOUNT_PAGE_LABELS[active] || active} isHome={active === 'buyer-dashboard' || active === 'seller-dashboard'} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onBack={back} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
         {!fill && <OfferBanner />}
         <main className={fill ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : `dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6 ${tabs && !isGuest ? 'pb-24 lg:pb-6' : ''}`}>
           {children}
