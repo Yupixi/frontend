@@ -2,23 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation } from '@apollo/client/react'
 import DilchapLogo from './DilchapLogo'
 import Icon from './Icon'
-import { RESET_PASSWORD_MUTATION, VERIFY_EMAIL_MUTATION } from '../graphql/auth'
+import { RESET_PASSWORD_MUTATION, UNSUBSCRIBE_EMAILS_MUTATION, VERIFY_EMAIL_MUTATION } from '../graphql/auth'
 
 // The pages the links of our e-mails open (Backend MailModule):
 // /verifier-email?token=… confirms the address, /nouveau-mot-de-passe?token=…
-// sets a new password. Shown on their own, outside the app.
-export const EMAIL_LINK_PATHS = ['/verifier-email', '/nouveau-mot-de-passe']
+// sets a new password, /desabonnement?t=… stops a kind of e-mail (link at
+// the bottom of activity e-mails). Shown on their own, outside the app.
+export const EMAIL_LINK_PATHS = ['/verifier-email', '/nouveau-mot-de-passe', '/desabonnement']
 
 export const isEmailLinkPath = (pathname: string) => EMAIL_LINK_PATHS.includes(pathname.replace(/\/+$/, ''))
 
 // The token is read once, then dropped from the address bar (history,
 // screenshots, Referer).
-function useLinkToken() {
+function useLinkToken(param = 'token') {
   const [token] = useState(() => {
     const url = new URL(window.location.href)
-    const t = url.searchParams.get('token') ?? ''
+    const t = url.searchParams.get(param) ?? ''
     if (t) {
-      url.searchParams.delete('token')
+      url.searchParams.delete(param)
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
     }
     return t
@@ -124,6 +125,36 @@ function ResetPassword() {
   )
 }
 
+// One click on a button (not on load: mail scanners open links by
+// themselves), then the member's e-mail switch of that kind is off.
+function Unsubscribe() {
+  const token = useLinkToken('t')
+  const [unsubscribe, { data, loading, error }] = useMutation<{ unsubscribeEmails: string }>(UNSUBSCRIBE_EMAILS_MUTATION)
+
+  if (!token || error)
+    return (
+      <Shell icon="link_off" tone="err" title="Lien non valable">
+        <p className="m-0">{error?.message ?? 'Ce lien est incomplet.'} Vous pouvez choisir vos e‑mails dans Paramètres › Notifications & Alertes.</p>
+        <button onClick={home} className={`${btn} mt-6`}>Aller sur Dilchap</button>
+      </Shell>
+    )
+  if (data)
+    return (
+      <Shell icon="check_circle" tone="ok" title="C’est noté">
+        <p className="m-0">Vous ne recevrez plus d’e‑mails « {data.unsubscribeEmails} ». Les notifications dans l’application continuent ; vous pouvez tout réactiver dans Paramètres › Notifications & Alertes.</p>
+        <button onClick={home} className={`${btn} mt-6`}>Continuer sur Dilchap <Icon name="arrow_forward" size={19} /></button>
+      </Shell>
+    )
+  return (
+    <Shell icon="mark_email_read" tone="info" title="Moins d’e‑mails ?">
+      <p className="m-0">Arrêtez les e‑mails de ce type. Les e‑mails de sécurité (mot de passe, connexion) et les reçus continueront d’arriver.</p>
+      <button onClick={() => void unsubscribe({ variables: { t: token } }).catch(() => undefined)} disabled={loading} className={`${btn} mt-6`}>{loading ? 'Un instant…' : 'Ne plus recevoir ces e‑mails'}</button>
+      <button onClick={home} className="mt-2 flex h-11 w-full cursor-pointer items-center justify-center rounded-xl border-none bg-transparent text-label-lg text-on-surface-variant hover:bg-surface-container-low">Garder mes e‑mails</button>
+    </Shell>
+  )
+}
+
 export default function EmailLinkPage() {
-  return window.location.pathname.startsWith('/verifier-email') ? <VerifyEmail /> : <ResetPassword />
+  const path = window.location.pathname
+  return path.startsWith('/verifier-email') ? <VerifyEmail /> : path.startsWith('/desabonnement') ? <Unsubscribe /> : <ResetPassword />
 }

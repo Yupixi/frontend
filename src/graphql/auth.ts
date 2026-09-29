@@ -121,3 +121,10 @@ export const RESET_PASSWORD_MUTATION = gql`
     resetPassword(input: $input)
   }
 `
+
+// « Ne plus recevoir ces e-mails » (signed link of activity e-mails).
+export const UNSUBSCRIBE_EMAILS_MUTATION = gql`
+  mutation UnsubscribeEmails($t: String!) {
+    unsubscribeEmails(token: $t)
+  }
+`

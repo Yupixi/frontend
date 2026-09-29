@@ -399,7 +399,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </table>
                 </div>
                 </div>
-                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Les alertes push sont actives aujourd'hui ; les envois WhatsApp/SMS et e-mail suivront vos préférences dès l'ouverture de ces canaux.</p>
+                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Push et e-mail suivent ces choix (au plus un e-mail par jour pour les messages en attente) ; WhatsApp/SMS dès l'ouverture de ce canal. Les e-mails de sécurité et les reçus d'achat sont toujours envoyés.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="bedtime" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1">
