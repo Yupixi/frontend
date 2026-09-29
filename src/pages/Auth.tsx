@@ -13,6 +13,7 @@ import { useNoCommissionClaims } from '../lib/site'
 import { placeOptions, useLists } from '../lib/lists'
 import { localNumberError, toIntl } from '../lib/dialing'
 import { useCountries, useHomeCountry, useMarket, useMethods, type Country } from '../lib/countries'
+import Flag from '../components/Flag'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -41,7 +42,7 @@ function readable(message?: string) {
 
 // Flag and dial code of the country a local number belongs to.
 const DialPrefix = ({ country, className = '' }: { country: Country; className?: string }) => (
-  <span className={`flex shrink-0 items-center gap-1 text-label-md ${className}`}><span aria-hidden>{country.flag}</span>+{country.dialCode}</span>
+  <span className={`flex shrink-0 items-center gap-1 text-label-md ${className}`}><Flag code={country.code} />+{country.dialCode}</span>
 )
 
 function PhoneOrEmail({ value, onChange, country }: { value: string; onChange: (v: string) => void; country: Country }) {
@@ -121,7 +122,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
       <label className="text-label-md text-on-surface">Pays
         {/* Another country, other towns: the chosen city no longer applies. */}
         <Select value={country.code} onChange={e => setForm(f => ({ ...f, countryCode: e.target.value, city: '' }))} className={`${field} mt-1.5 cursor-pointer`}>
-          {countries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+          {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
         </Select>
       </label>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 sm:grid-cols-2">

@@ -332,7 +332,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <label className="text-label-md text-on-surface">Pays
                     <Select value={form.countryCode} onChange={e => changeCountry(e.target.value)} className={`${field} mt-1`}>
                       {!countries.some(c => c.code === form.countryCode) && <option value={form.countryCode}>{country?.name ?? form.countryCode}</option>}
-                      {countries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                      {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                     </Select>
                   </label>
                   <label className="text-label-md text-on-surface">Ville / commune principale
