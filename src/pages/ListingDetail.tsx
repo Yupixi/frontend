@@ -1,5 +1,5 @@
 import AnimatedIcon from '../components/AnimatedIcon'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import DOMPurify from 'dompurify'
 import { gql } from '@apollo/client'
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
@@ -54,6 +54,8 @@ import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
 import { Claim } from '../lib/site'
 import { useLists } from '../lib/lists'
+import { listingPath, samePlace } from '../lib/routes'
+import { usePageTitle } from '../lib/site'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -120,6 +122,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
   const listing = data?.listing
+  usePageTitle(listing?.title)
+  // /annonce/<id> (or old words) → /annonce/<words of the title>-<id>.
+  useEffect(() => {
+    if (!listing) return
+    const want = listingPath(listing.id, listing.title)
+    const here = window.location.pathname
+    if (here.startsWith('/annonce/') && here !== want && samePlace(here, want))
+      window.history.replaceState(window.history.state, '', want)
+  }, [listing?.id, listing?.title])
   // Similar listings and the seller card load alongside the listing, not
   // after it: the seller id is usually already in the cache from the card
   // that was clicked.
@@ -222,7 +233,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
       .map(([k, v]) => ({ label: category?.attributes.find(a => a.key === k)?.label ?? k, value: String(v), icon: 'tune' })),
   ]
   const responseTime = formatResponseTime(seller?.responseTimeMinutes)
-  const shareUrl = `${window.location.origin}${window.location.pathname}?listing=${listing.id}`
+  const shareUrl = `${window.location.origin}${listingPath(listing.id, listing.title)}`
 
   const share = async () => {
     if (navigator.share) {

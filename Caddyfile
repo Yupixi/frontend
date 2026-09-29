@@ -15,12 +15,25 @@
 	}
 }
 
+# The backend that renders pages for search engines (Backend
+# src/modules/seo). SEO_BACKEND_URL = the API's public address; the
+# visitor's host tells it which storefront (it must be in the API's
+# SITE_URL or CORS_ORIGIN list).
+(seo_backend) {
+	reverse_proxy {$SEO_BACKEND_URL:https://yupixi-backend-gahuiz-52bc79-82-29-184-109.sslip.io} {
+		header_up Host {upstream_hostport}
+		header_up X-Site-Host {hostport}
+		transport http {
+			dial_timeout 3s
+			response_header_timeout 8s
+		}
+	}
+}
+
 :{$PORT:3000} {
 	log {
 		format json
 	}
-
-	rewrite /health /*
 
 	root * /app/{$NIXPACKS_SPA_OUTPUT_DIR:dist}
 
@@ -54,6 +67,47 @@
 	# the next visit. `?` only sets it when no rule above did.
 	header ?Cache-Control "no-cache"
 
-	try_files {path} /index.html
-	file_server
+	# Health check of the platform: the app shell, without the backend.
+	handle /health {
+		rewrite * /index.html
+		file_server
+	}
+
+	# Search engines: robots.txt and sitemap.xml come from the backend
+	# (Backend src/modules/seo), which knows the live listings and shops.
+	@seo_files path /robots.txt /sitemap.xml
+	handle @seo_files {
+		rewrite * /seo{path}
+		import seo_backend
+	}
+
+	# Storefront pages (/, /annonce/…, /categorie/…, /boutique/…: every
+	# path without a file extension) come back from the backend as the
+	# app's own index.html with the page's title, description, share image,
+	# canonical URL and structured data, for search engines and link
+	# previews (WhatsApp, Facebook). The app then starts as usual.
+	@page {
+		method GET HEAD
+		not path_regexp \.[A-Za-z0-9]+$
+	}
+	handle @page {
+		rewrite * /seo/page{path}
+		import seo_backend
+	}
+
+	# Files of the build (JS, CSS, images, fonts, the index.html itself).
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Backend unreachable or too slow: the plain app shell, the site keeps
+	# working (with the build's default title and share tags).
+	handle_errors {
+		@backend_down expression `{err.status_code} >= 502 && {err.status_code} <= 504`
+		handle @backend_down {
+			rewrite * /index.html
+			file_server
+		}
+	}
 }

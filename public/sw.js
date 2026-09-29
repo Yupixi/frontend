@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v15'
+const VERSION = 'v16'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -226,11 +226,15 @@ self.addEventListener('fetch', (event) => {
       (async () => {
         try {
           const response = await fetch(request)
-          const cache = await caches.open(PAGE_CACHE)
-          cache.put(request, response.clone()).catch(() => {})
+          // One copy of the app shell for offline use: every page (each
+          // listing has its own address) is the same app.
+          if (response.ok) {
+            const cache = await caches.open(PAGE_CACHE)
+            cache.put('/', response.clone()).catch(() => {})
+          }
           return response
         } catch {
-          const cached = await caches.match(request)
+          const cached = (await caches.match(request)) || (await caches.match('/'))
           return cached || (await caches.match(OFFLINE_URL)) || new Response(null, { status: 504 })
         }
       })(),

@@ -16,6 +16,7 @@ import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { Claim } from '../lib/site'
 import { useLists } from '../lib/lists'
 import { useRules } from '../lib/rules'
+import { usePageTitle } from '../lib/site'
 
 type Props = {
   shopKey: string
@@ -146,6 +147,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
 
   const { data, loading, refetch } = useQuery<{ shop: Shop }>(SHOP_QUERY, { variables: { key: shopKey }, skip: !!preloaded })
   const shop = data?.shop ?? preloaded
+  usePageTitle(shop?.name)
   const ownerId = shop?.owner.id
   const { data: all } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId: ownerId }, sort, pageSize: 100 }, skip: !ownerId,

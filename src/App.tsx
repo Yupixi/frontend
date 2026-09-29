@@ -5,6 +5,7 @@ import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './co
 import PaymentReturn from './components/PaymentReturn'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
+import { parsePath, pathFor, samePlace } from './lib/routes'
 import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
@@ -153,30 +154,37 @@ function sharedListingId(): string | null {
   return new URLSearchParams(window.location.search).get('listing')
 }
 
+// The page the address opens (/annonce/…, /categorie/…, /boutique/…; see
+// lib/routes). /compte = an account page, restored from the session.
+const initialRoute = parsePath(window.location.pathname)
+const routePage = (): Page | null =>
+  !initialRoute ? null : initialRoute.page === 'account' ? (savedNav.page ?? 'home') : initialRoute.page
+const initialSearch = initialRoute?.page === 'search'
+
 export default function App() {
-  // Tab title, description and share tags from « Réglages du site ».
-  useSeo()
-  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? savedNav.page ?? 'home'))
+  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration
   // would fight it (it runs before the restored page has rendered).
   const pendingScroll = useRef(0)
-  const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
-  const [shopKey, setShopKey] = useState(sharedShopKey() ?? savedNav.shopKey ?? '')
-  const [campaignSlug, setCampaignSlug] = useState(sharedCampaignSlug() ?? savedNav.campaignSlug ?? '')
+  const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? initialRoute?.legalSlug ?? savedNav.legalSlug ?? 'cgu')
+  const [shopKey, setShopKey] = useState(sharedShopKey() ?? initialRoute?.shopKey ?? savedNav.shopKey ?? '')
+  const [campaignSlug, setCampaignSlug] = useState(sharedCampaignSlug() ?? initialRoute?.campaignSlug ?? savedNav.campaignSlug ?? '')
   const [dark, setDark] = useState(savedDark)
+  // Tab title, description and share tags when moving between pages.
+  useSeo(page)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
-  const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? savedNav.selectedListingId ?? 'l1')
-  const [searchTerm, setSearchTerm] = useState(savedNav.searchTerm ?? '')
+  const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
+  const [searchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedNav.searchTerm ?? ''))
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
-  const [selectedSellerId, setSelectedSellerId] = useState(sharedSellerId() ?? savedNav.selectedSellerId ?? 's1')
+  const [selectedSellerId, setSelectedSellerId] = useState(sharedSellerId() ?? initialRoute?.sellerId ?? savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
   // right conversation, not part of the session-restored nav state.
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
   // Conversation to open directly (message notification / push link), consumed by BuyerMessages.
   const [openConversationId, setOpenConversationId] = useState<string | null>(() => conversationFromUrl())
-  const [categoryFilter, setCategoryFilter] = useState(savedNav.categoryFilter ?? '')
+  const [categoryFilter, setCategoryFilter] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedNav.categoryFilter ?? ''))
   const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
   const [selectedDisputeId, setSelectedDisputeId] = useState(linkParam('dispute') ?? savedNav.selectedDisputeId ?? '')
   // Support ticket to open (notification of a reply).
@@ -398,6 +406,14 @@ export default function App() {
     window.scrollTo({ top, behavior: 'instant' })
   }, [page])
 
+  // The address bar follows the page: public pages have their own URL
+  // (shareable, indexed), account pages sit under /compte.
+  useEffect(() => {
+    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, searchTerm })
+    const here = window.location.pathname + window.location.search
+    if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(window.history.state, '', path)
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, searchTerm])
+
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
@@ -499,6 +515,14 @@ export default function App() {
     try { u = new URL(url, window.location.origin) } catch { return }
     if (u.origin !== window.location.origin) { window.open(u.href, '_blank', 'noopener'); return }
     const q = u.searchParams
+    const route = parsePath(u.pathname)
+    if (route?.page === 'listing-detail' && route.listingId) return selectListing(route.listingId)
+    if (route?.page === 'seller-profile' && route.sellerId) return selectSeller(route.sellerId)
+    if (route?.page === 'shop' && route.shopKey) return openShop(route.shopKey)
+    if (route?.page === 'legal' && route.legalSlug) return openLegal(route.legalSlug)
+    if (route?.page === 'flash-offers') return openCampaignRef.current(route.campaignSlug ?? '')
+    if (route?.page === 'search' && route.category) return navigateToCategory(route.category)
+    if (route && route.page !== 'account') return navigate(route.page)
     const conversation = q.get('conversation')
     if (conversation) return openConversationRef.current(conversation)
     if (q.get('shop')) return openShop(q.get('shop')!)
