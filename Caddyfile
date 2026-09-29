@@ -121,6 +121,19 @@
 		import seo_backend
 	}
 
+	# Hashed build files: a name the current build doesn't have (a page
+	# rendered from the previous build during a deploy) is a plain 404 that
+	# no cache keeps — never the app shell, which the CDN would otherwise
+	# store for a year under the script's name and break the site.
+	handle /assets/* {
+		@missing not file
+		handle @missing {
+			header Cache-Control "no-store"
+			respond 404
+		}
+		file_server
+	}
+
 	# Files of the build (JS, CSS, images, fonts, the index.html itself).
 	handle {
 		try_files {path} /index.html
