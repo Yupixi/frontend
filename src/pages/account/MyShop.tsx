@@ -15,7 +15,7 @@ import {
   type MyShop as MyShopT, type MyShopData, type OpeningHours, type ShopListing, type ShopPlan, type ShopRejectReason,
 } from '../../graphql/shops'
 import { uploadImages, uploadShopDocument } from '../../lib/upload'
-import Credits from '../../components/Credits'
+import OfferCredits from '../../components/OfferCredits'
 import type { AuthUser } from '../../graphql/auth'
 import { useLists } from '../../lib/lists'
 import { useRules } from '../../lib/rules'
@@ -364,7 +364,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
           </div>
           <dl className="m-0 mt-3 flex flex-col gap-2 rounded-xl bg-surface-lowest p-3 text-body-sm">
             <div className="flex justify-between gap-3"><dt className="text-on-surface-variant">Emplacement</dt><dd className="m-0 text-right text-on-surface">{[form.commune, form.city].filter(Boolean).join(', ')}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-on-surface-variant">Abonnement</dt><dd className="m-0 whitespace-nowrap text-primary"><Credits n={plan.price} /> / mois</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-on-surface-variant">Abonnement</dt><dd className="m-0 whitespace-nowrap text-primary"><OfferCredits op="SHOP" n={plan.price} /> / mois</dd></div>
           </dl>
           <p className="m-0 mt-2 flex items-start gap-1.5 text-body-sm text-tertiary"><Icon name="verified_user" size={16} className="mt-0.5 shrink-0" /> Rien à payer maintenant : l’abonnement se règle une fois la boutique validée.</p>
         </div>
@@ -528,7 +528,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
           ))}
         </ul>
       </div>
-      <button onClick={() => setPaying(true)} className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white shadow-md"><Icon name="payments" size={20} /> Activer l’abonnement — <Credits n={plan.price} /></button>
+      <button onClick={() => setPaying(true)} className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white shadow-md"><Icon name="payments" size={20} /> Activer l’abonnement — <OfferCredits op="SHOP" n={plan.price} /></button>
       <p className="m-0 mt-2 flex items-center justify-center gap-1.5 text-center text-body-sm text-on-surface-variant"><Icon name="lock" size={15} /> Payé en crédits. Sans engagement : aucun renouvellement automatique.</p>
       {pay}
     </>)
@@ -544,7 +544,7 @@ function PlanCard({ plan, withMethods }: { plan: ShopPlan, withMethods?: boolean
         <div className="text-label-sm uppercase text-primary">Abonnement Boutique officielle</div>
         <span className="whitespace-nowrap rounded-full bg-surface-container px-2.5 py-0.5 text-label-sm text-on-surface-variant">Sans engagement</span>
       </div>
-      <div className="mt-1 flex items-baseline gap-1"><span className="whitespace-nowrap text-display font-extrabold text-on-surface"><Credits n={plan.price} /></span><span className="text-body-md text-on-surface-variant">/ mois</span></div>
+      <div className="mt-1 flex items-baseline gap-1"><span className="whitespace-nowrap text-display font-extrabold text-on-surface"><OfferCredits op="SHOP" n={plan.price} /></span><span className="text-body-md text-on-surface-variant">/ mois</span></div>
       <p className="m-0 mt-1 flex items-center gap-1.5 text-label-md text-primary"><Icon name="bolt" size={17} /> {plan.credits} crédits offerts chaque mois</p>
       {withMethods && <div className="mt-3"><div className="mb-1.5 text-label-sm uppercase text-on-surface-variant">Crédits achetés par</div><PaymentLogos /></div>}
     </div>
@@ -592,7 +592,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
             </div>
             <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Aucun renouvellement automatique : prolongez de {plan.days} jours quand vous le souhaitez.</p>
           </div>
-          <button onClick={onRenew} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="autorenew" size={18} /> Renouveler (<Credits n={plan.price} />)</button>
+          <button onClick={onRenew} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="autorenew" size={18} /> Renouveler (<OfferCredits op="SHOP" n={plan.price} />)</button>
         </section>
         <section className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-container text-primary">{shop.logoUrl ? <img src={shop.logoUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="storefront" size={26} />}</span>

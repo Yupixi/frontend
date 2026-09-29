@@ -15,6 +15,7 @@ import type { AuthUser } from '../../graphql/auth'
 import { syncAppBadge } from '../../lib/pushNotifications'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { Claim } from '../../lib/site'
+import OfferBanner from '../../components/OfferBanner'
 
 // Every member is both a buyer and a seller — one account, one space. This
 // shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
@@ -329,6 +330,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
 
       <div className="flex min-w-0 flex-1 flex-col">
         <AccountHeader activeLabel={title || ACCOUNT_PAGE_LABELS[active] || active} isHome={active === 'buyer-dashboard' || active === 'seller-dashboard'} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onBack={back} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} />
+        {!fill && <OfferBanner />}
         <main className={fill ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : `dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6 ${tabs && !isGuest ? 'pb-24 lg:pb-6' : ''}`}>
           {children}
         </main>

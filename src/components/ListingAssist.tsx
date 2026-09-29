@@ -3,6 +3,7 @@ import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Icon from './Icon'
 import BuyCreditsSheet from './BuyCreditsSheet'
 import { creditsLabel } from './Credits'
+import { offerLabel, useOfferPrice } from '../lib/priceOffers'
 import {
   ASSIST_LISTING_MUTATION, LISTING_ADVICE_QUERY, LISTING_ASSIST_AVAILABLE_QUERY,
   type ListingAdvice, type ListingAssistOffer, type ListingDraftSuggestion,
@@ -42,7 +43,9 @@ export function AssistButton({ cover, title, description, onApply }: {
   onApply: (s: ListingDraftSuggestion) => void
 }) {
   const { data } = useQuery<ListingAssistOffer>(LISTING_ASSIST_AVAILABLE_QUERY, { fetchPolicy: 'cache-and-network' })
-  const cost = data?.listingAssistPrice ?? 0
+  // Price less the live offer (« Offres & gratuités »), as the server takes it.
+  const quote = useOfferPrice('AI_ASSIST', data?.listingAssistPrice ?? 0)
+  const cost = quote?.price ?? 0
   const { data: wallet, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { skip: !data?.listingAssistAvailable || !cost, fetchPolicy: 'cache-and-network' })
   const [assist, { loading }] = useMutation<{ assistListing: ListingDraftSuggestion }>(ASSIST_LISTING_MUTATION)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +81,7 @@ export function AssistButton({ cover, title, description, onApply }: {
         <button type="button" disabled={busy || !canRun} onClick={() => void run()}
           className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-on-surface px-3.5 py-2.5 text-label-md text-surface-lowest disabled:cursor-default disabled:opacity-50">
           <Icon name={busy ? 'progress_activity' : 'auto_awesome'} size={17} className={busy ? 'animate-spin' : ''} /> {busy ? 'Rédaction…' : 'Rédiger avec l’IA'}
-          {!busy && cost > 0 && <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-label-sm">{creditsLabel(cost)}</span>}
+          {!busy && (cost > 0 || !!quote?.percent) && <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-label-sm">{quote?.percent ? <><s className="opacity-70">{quote.base}</s> {cost > 0 ? creditsLabel(cost) : offerLabel(100)}</> : creditsLabel(cost)}</span>}
         </button>
       </div>
       {cost > 0 && balance != null && (

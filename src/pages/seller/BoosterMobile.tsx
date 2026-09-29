@@ -7,9 +7,11 @@ import SafeImg from '../../components/SafeImg'
 import BottomSheet from '../../components/BottomSheet'
 import type { MyListingRow } from '../../graphql/listings'
 import type { BoostPack, BoostPackInfo } from '../../graphql/promotions'
-import Credits, { creditsLabel } from '../../components/Credits'
+import { creditsLabel } from '../../components/Credits'
 import PaymentLogo from '../../components/PaymentLogo'
 import { Claim } from '../../lib/site'
+import OfferCredits from '../../components/OfferCredits'
+import { packOperation, useOfferPrice } from '../../lib/priceOffers'
 
 type Props = {
   live: MyListingRow[]
@@ -36,6 +38,8 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
   const turbo = pack('TURBO_7D')
   const urgent = pack('URGENT_72H')
   const flash = pack('BUMP_FLASH')
+  // What the bump really costs (live offer « Offres & gratuités »).
+  const flashCost = useOfferPrice('BUMP', flash?.price, null, listing?.id)?.price ?? flash?.price ?? 0
   const daily = pack('BUMP_DAILY_7')
   const bumpTiles = [
     flash && { p: flash, top: '1 Remontée', sub: 'Flash', eco: false },
@@ -60,7 +64,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         </div>
         <h1 className="m-0 mt-2 text-headline-sm text-on-surface">Propulsez vos annonces en tête de liste</h1>
         <div className="mt-2 flex items-end justify-between gap-3">
-          <p className="m-0 text-body-sm text-on-surface-variant">{flash ? <>Une remontée immédiate en tête du catalogue : {creditsLabel(flash.price)}.</> : 'Remontée immédiate en tête du catalogue.'}</p>
+          <p className="m-0 text-body-sm text-on-surface-variant">{flash ? <>Une remontée immédiate en tête du catalogue : {creditsLabel(flashCost)}.</> : 'Remontée immédiate en tête du catalogue.'}</p>
           <button onClick={() => onNavigate('seller-wallet')} className="flex h-10 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container-high px-3 text-label-md text-on-surface">
             <Icon name="add_circle" size={17} /> Acheter
           </button>
@@ -102,9 +106,9 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
               </div>
             ))}
           </div>
-          {!!flash && credits >= flash.price && (
+          {!!flash && credits >= flashCost && (
             <button disabled={disabled} onClick={onBump} className="mt-3 flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-3 text-label-md text-white disabled:opacity-60">
-              <Icon name="arrow_upward" size={17} /> Remonter · {creditsLabel(flash?.price ?? 0)}
+              <Icon name="arrow_upward" size={17} /> Remonter · {creditsLabel(flashCost)}
             </button>
           )}
         </section>
@@ -131,7 +135,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="min-w-0">
               <div className="text-label-sm text-on-surface-variant">Tarif forfaitaire</div>
-              <div className="whitespace-nowrap text-headline-sm font-extrabold text-primary"><Credits n={turbo.price} /></div>
+              <div className="whitespace-nowrap text-headline-sm font-extrabold text-primary"><OfferCredits op="BOOST" n={turbo.price} listingId={listing?.id} /></div>
             </div>
             <button disabled={disabled} onClick={() => onChoose('TURBO_7D')} className="flex h-11 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50">
               Choisir Turbo <Icon name="bolt" size={17} />
@@ -154,7 +158,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
               <button key={t.p.pack} disabled={disabled} onClick={() => onChoose(t.p.pack)} aria-label={`${t.p.label} · ${creditsLabel(t.p.price)}`} className={`relative flex cursor-pointer flex-col items-center gap-0.5 overflow-hidden rounded-xl border-none px-1 pb-2 text-on-surface disabled:opacity-50 ${t.eco ? 'bg-primary-fixed/40 pt-6' : 'bg-surface-container-low pt-2.5'}`}>
                 {t.eco && <span className="absolute inset-x-0 top-0 bg-primary py-0.5 text-[10px] font-bold uppercase text-white">Éco</span>}
                 <span className="whitespace-nowrap text-label-sm text-on-surface-variant">{t.top}</span>
-                <span className="whitespace-nowrap text-label-lg font-bold"><Credits n={t.p.price} /></span>
+                <span className="whitespace-nowrap text-label-lg font-bold"><OfferCredits op={packOperation(t.p.pack)} n={t.p.price} listingId={listing?.id} tag={false} /></span>
                 <span className={`whitespace-nowrap text-label-sm ${t.eco ? 'text-primary' : 'text-tertiary'}`}>{t.sub}</span>
               </button>
             ))}
@@ -179,7 +183,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
               <button key={p.pack} disabled={disabled} onClick={() => onChoose(p.pack)} aria-label={`${p.label} · ${creditsLabel(p.price)}`} className="flex cursor-pointer items-center justify-between gap-1 rounded-xl border border-solid border-outline-variant bg-surface-lowest p-3 text-left text-on-surface disabled:opacity-50">
                 <span className="min-w-0">
                   <span className="block whitespace-nowrap text-label-sm text-on-surface-variant">{p.durationHours < 168 ? `${p.durationHours} Heures` : `${days(p.durationHours)} Jours complets`}</span>
-                  <span className="block whitespace-nowrap text-label-lg font-bold"><Credits n={p.price} /></span>
+                  <span className="block whitespace-nowrap text-label-lg font-bold"><OfferCredits op={packOperation(p.pack)} n={p.price} listingId={listing?.id} tag={false} /></span>
                 </span>
                 <Icon name="chevron_right" size={20} className="shrink-0 text-primary" />
               </button>
@@ -194,7 +198,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           <div className="min-w-0 flex-1">
             <h3 className="m-0 text-label-lg text-on-surface">{urgent.label}</h3>
             <p className="m-0 text-body-sm text-on-surface-variant">Macaron clignotant rouge {urgent.durationHours}h</p>
-            <span className="text-label-md font-bold text-primary"><Credits n={urgent.price} /></span>
+            <span className="text-label-md font-bold text-primary"><OfferCredits op="BOOST" n={urgent.price} listingId={listing?.id} /></span>
           </div>
           <button disabled={disabled} onClick={() => onChoose('URGENT_72H')} className="h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high px-4 text-label-md text-on-surface disabled:opacity-50">Activer</button>
         </section>

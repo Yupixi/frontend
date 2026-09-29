@@ -6,6 +6,7 @@ import Icon from './Icon'
 import Price from './Price'
 import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
 import { WALLET_BALANCE_QUERY, type WalletBalance } from '../graphql/payments'
+import { applyOffer, offerLabel, usePriceOffers } from '../lib/priceOffers'
 
 // "Vendre pour {campagne}" on the campaign page: the wizard opens with that
 // campaign ticked.
@@ -22,8 +23,10 @@ const dateFr = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day:
 // "Participer à une campagne" in the listing wizard: the Dilchap campaigns
 // this seller may join, what it costs in credits (taken on publishing), the
 // balance, and a way to buy the missing credits without leaving the form.
-export default function CampaignOptIn({ price, currency, value, onChange, render = body => body }: {
+export default function CampaignOptIn({ price, currency, categoryId, value, onChange, render = body => body }: {
   price: number
+  // Category of the listing: category offers (« Offres & gratuités »).
+  categoryId?: string | null
   currency: string
   value: CampaignChoice | null
   onChange: (v: CampaignChoice | null) => void
@@ -31,6 +34,9 @@ export default function CampaignOptIn({ price, currency, value, onChange, render
   render?: (body: React.ReactNode) => React.ReactNode
 }) {
   const { data } = useQuery<{ openShopCampaigns: OpenCampaign[] }>(OPEN_CAMPAIGNS_QUERY, { fetchPolicy: 'cache-and-network' })
+  const offers = usePriceOffers()
+  // What joining really costs, the live offer applied (as the server does).
+  const costOf = (c: OpenCampaign) => applyOffer(offers, 'CAMPAIGN', campaignCost(c), categoryId)
   const { data: wallet, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { fetchPolicy: 'cache-and-network' })
   const [topUp, setTopUp] = useState(false)
   // Credits bought by Mobile Money land once the payment is confirmed,
@@ -56,7 +62,7 @@ export default function CampaignOptIn({ price, currency, value, onChange, render
   if (!campaigns.length) return null
 
   const balance = wallet?.myWallet.credits ?? 0
-  const cost = value ? campaignCost(value.campaign) : 0
+  const cost = value ? costOf(value.campaign).price : 0
   const missing = Math.max(0, cost - balance)
 
   return render(
@@ -66,7 +72,8 @@ export default function CampaignOptIn({ price, currency, value, onChange, render
         const min = c.minDiscountPercent ?? 1
         const pct = on ? value!.discountPercent : Math.max(min, 10)
         const promo = price > 0 ? Math.round(price * (1 - pct / 100)) : null
-        const fee = campaignCost(c)
+        const quote = costOf(c)
+        const fee = quote.price
         return (
           <div key={c.id} className={`rounded-xl border-[1.5px] border-solid p-3 ${on ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-container-low'}`}>
             <label className="flex cursor-pointer items-start gap-3">
@@ -78,7 +85,7 @@ export default function CampaignOptIn({ price, currency, value, onChange, render
                   {c.minDiscountPercent ? ` · remise minimale ${c.minDiscountPercent} %` : ''}
                 </span>
                 <span className="mt-1 block text-label-md text-on-surface">
-                  {fee > 0 ? <>Coût : <Credits n={fee} />{!c.entryFeePaid && c.entryFee > 0 && c.listingFee > 0 ? <span className="text-body-sm text-on-surface-variant"> (frais d’entrée + article)</span> : null}</> : 'Participation gratuite'}
+                  {quote.percent > 0 ? <>Coût : <s className="font-normal text-on-surface-variant"><Credits n={quote.base} unit={false} /></s> {fee > 0 ? <Credits n={fee} /> : 'gratuit'} <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary">{offerLabel(quote.percent)}</span></> : fee > 0 ? <>Coût : <Credits n={fee} />{!c.entryFeePaid && c.entryFee > 0 && c.listingFee > 0 ? <span className="text-body-sm text-on-surface-variant"> (frais d’entrée + article)</span> : null}</> : 'Participation gratuite'}
                 </span>
               </span>
             </label>

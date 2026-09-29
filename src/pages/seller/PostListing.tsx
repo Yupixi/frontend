@@ -10,6 +10,7 @@ import { AssistButton, ListingAdvicePanel } from '../../components/ListingAssist
 import type { ListingDraftSuggestion } from '../../graphql/listingAssist'
 import BoostMenu from '../../components/BoostMenu'
 import CampaignOptIn, { campaignCost, type CampaignChoice } from '../../components/CampaignOptIn'
+import { applyOffer, usePriceOffers } from '../../lib/priceOffers'
 import { JOIN_CAMPAIGN_WITH_LISTING_MUTATION } from '../../graphql/shops'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
@@ -185,6 +186,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const categories = categoriesData?.categories ?? []
+  const offers = usePriceOffers()
   const category = categories.find(c => c.id === form.categoryId)
   const subcategory = category?.subcategories.find(s => s.id === form.subcategoryId)
   const requiresPrice = category?.requiresPrice ?? true
@@ -446,7 +448,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         const { campaign: c, discountPercent } = campaignChoice
         try {
           await joinCampaign({ variables: { input: { campaignId: c.id, listingId: id, discountPercent } } })
-          campaign = { name: c.name, credits: campaignCost(c) }
+          campaign = { name: c.name, credits: applyOffer(offers, 'CAMPAIGN', campaignCost(c), form.categoryId).price }
         } catch (err) {
           campaign = { name: c.name, error: err instanceof Error ? err.message : 'La participation a échoué.' }
         }
@@ -797,7 +799,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
             {/* Dilchap campaign, joined and paid on publishing */}
             {publishes && requiresPrice && (
-              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} value={campaignChoice} onChange={setCampaignChoice} />
+              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} categoryId={form.categoryId} value={campaignChoice} onChange={setCampaignChoice} />
             )}
 
             {/* Exchange */}

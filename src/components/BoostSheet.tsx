@@ -22,7 +22,7 @@ type Props = {
 export default function BoostSheet({ open, onClose, listing, onBumped }: Props) {
   const { data, loading } = useQuery<{ myWallet: { credits: number } }>(MY_WALLET_QUERY, { skip: !open, fetchPolicy: 'cache-and-network' })
   // A bump costs the "Remontée instantanée" price, in credits (BO).
-  const cost = useBumpCost(!open)
+  const cost = useBumpCost(!open, listing.id)
   const [bump, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION, { refetchQueries: [MY_WALLET_QUERY] })
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)

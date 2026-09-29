@@ -40,6 +40,7 @@ import type { StoredLocation } from '../lib/location'
 import { syncAppBadge } from '../lib/pushNotifications'
 import { requestOpenCampaign } from '../lib/navigation'
 import { useSite } from '../lib/site'
+import OfferBanner from './OfferBanner'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
@@ -245,6 +246,9 @@ export default function Layout({
           )}
         </button>
       )}
+
+      {/* « Offres & gratuités » set in the back-office. */}
+      <OfferBanner />
 
       {/* Listing detail brings its own mobile app bar (back + title +
           share), as in the Stitch mockup — the site header is desktop-only
