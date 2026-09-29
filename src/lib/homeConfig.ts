@@ -49,7 +49,7 @@ export const DEFAULT_HOME: HomeConfig = {
       {
         image: '/stitch/hero-2.webp', badge: 'Affaires en or', badgeIcon: 'diamond', tone: 'green',
         title: 'Trouvez les *meilleures affaires directes* 100% P2P',
-        text: 'Échangez en direct en lieu sécurisé avec Wave, Orange Money ou espèces. Remise en main propre sans surprise.',
+        text: 'Échangez en direct en lieu sécurisé par Mobile Money ou en espèces. Remise en main propre sans surprise.',
         tags: ['📍 #RemiseSécurisée', '🤝 #0Commission', '📲 #PaiementWave', '🛡️ #VendeursVérifiés'],
       },
     ],
@@ -63,7 +63,7 @@ export const DEFAULT_HOME: HomeConfig = {
   reassurance: [
     { icon: 'percent', title: '100% P2P & Gratuit', text: '0% de commission sur toutes vos ventes' },
     { icon: 'shield_with_heart', title: 'Remise en main propre', text: 'Vérifiez le produit avant paiement en lieu sécurisé' },
-    { icon: 'contactless', title: 'Paiements directs acceptés', text: 'Wave, Orange Money ou espèces sans intermédiaire' },
+    { icon: 'contactless', title: 'Paiements directs acceptés', text: 'Mobile Money ou espèces, sans intermédiaire' },
   ],
   mobileStrip: { title: '100% P2P • 0% Commission', text: 'Remise directe' },
   flashFallback: { title: 'Bons plans du moment', subtitle: 'Prix doux entre particuliers', text: 'Ventes flash et fins de dressing express, en direct des particuliers.' },
@@ -81,7 +81,7 @@ export const DEFAULT_HOME: HomeConfig = {
     steps: [
       { title: 'Dénichez votre pépite', text: 'Parcourez des centaines de pièces uniques publiées chaque jour à proximité de votre commune ou de votre lieu de travail.' },
       { title: 'Négociez en direct sur le chat', text: 'Échangez avec le vendeur via la messagerie instantanée, posez vos questions et fixez un prix équitable sans intermédiaire.' },
-      { title: 'Payez en main propre sécurisé', text: "Rendez-vous dans un lieu public. Testez l'article puis payez directement via Wave, Orange Money ou espèces." },
+      { title: 'Payez en main propre sécurisé', text: "Rendez-vous dans un lieu public. Testez l'article puis payez directement par Mobile Money ou en espèces." },
     ],
     badges: ['Profils et avis certifiés', '0 F de frais de plateforme', 'Équipe de modération active 7j/7'],
   },
