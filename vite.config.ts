@@ -8,7 +8,7 @@ import { collectIconNames, fontLinks, ICON_FONT_AXES } from './scripts/materialS
 const siteJsonPath = path.resolve(__dirname, './.figma/make/site.json')
 const siteConfiguration = fs.existsSync(siteJsonPath)
   ? JSON.parse(fs.readFileSync(siteJsonPath, 'utf-8'))
-  : { title: "Dilchap — Marketplace Côte d'Ivoire", description: "Plateforme e-commerce et petites annonces en Côte d'Ivoire" }
+  : { title: 'Dilchap — Marketplace d’Afrique de l’Ouest', description: 'Petites annonces et boutiques en Afrique de l’Ouest : Côte d’Ivoire, Sénégal, Bénin, Burkina Faso, Mali, Togo, Niger, Guinée-Bissau' }
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {

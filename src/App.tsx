@@ -163,6 +163,9 @@ const routePage = (): Page | null =>
   !initialRoute ? null : initialRoute.page === 'account' ? (savedNav.page ?? 'home') : initialRoute.page
 const initialSearch = initialRoute?.page === 'search'
 
+const ACCOUNT_COUNTRY_KEY = 'yupixi_account_country'
+const rememberedAccountCountry = () => { try { return localStorage.getItem(ACCOUNT_COUNTRY_KEY) } catch { return null } }
+
 export default function App() {
   const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
   // Scroll position to apply on the next page change (see the layout effect
@@ -233,7 +236,15 @@ export default function App() {
   // guess — always an active country, or none (« Tous les pays »).
   const countries = useCountries()
   const active = (code: string | null | undefined) => (code && countries.some(c => c.code === code) ? code : null)
-  const accountCountry = active(currentUser?.countryCode)
+  // The member's country, remembered so a reload shows it at once (not the
+  // IP guess for a second while the session loads).
+  const accountCountry = active(currentUser?.countryCode ?? (!currentUser && isLoggedIn ? rememberedAccountCountry() : null))
+  useEffect(() => {
+    try {
+      if (currentUser?.countryCode) localStorage.setItem(ACCOUNT_COUNTRY_KEY, currentUser.countryCode)
+      else if (!isLoggedIn) localStorage.removeItem(ACCOUNT_COUNTRY_KEY)
+    } catch { /* private mode */ }
+  }, [currentUser?.countryCode, isLoggedIn])
   const marketLocation: StoredLocation | null = location?.source !== 'manual' && accountCountry
     ? { countryCode: accountCountry, city: location?.countryCode === accountCountry ? location.city : null, source: location?.source ?? 'ip' }
     : location && location.countryCode !== active(location.countryCode) ? { ...location, countryCode: null, city: null } : location
