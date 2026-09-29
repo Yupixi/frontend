@@ -762,7 +762,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     <Field label="Pays">
                       <Select className={inputCls} value={form.countryCode} onChange={e => changeCountry(e.target.value)}>
                         {!countries.some(c => c.code === form.countryCode) && <option value={form.countryCode}>{country.name}</option>}
-                        {countries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                        {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                       </Select>
                     </Field>
                   </div>

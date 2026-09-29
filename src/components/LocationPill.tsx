@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Icon from './Icon'
 import { useCountries } from '../lib/countries'
 import type { StoredLocation } from '../lib/location'
+import Flag from './Flag'
 
 type LocationPillProps = {
   location: StoredLocation | null | undefined
@@ -50,7 +51,7 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
         title={label}
         className={`flex cursor-pointer items-center justify-center rounded-xl border-none text-label-md text-on-surface ${compact ? 'h-9 gap-1 rounded-full bg-surface-container pl-2 pr-1.5 hover:bg-surface-container-high' : 'h-10 gap-1.5 bg-surface-container-low px-3 hover:bg-surface-container'}`}
       >
-        <AnimatedIcon name="location" fallback="location_on" size={compact ? 16 : 18} className="text-primary" playOnView={300} playOnInteract trigger={label} />
+        {market ? <Flag code={market.code} size={compact ? 11 : 13} className="mx-0.5" /> : <AnimatedIcon name="location" fallback="location_on" size={compact ? 16 : 18} className="text-primary" playOnView={300} playOnInteract trigger={label} />}
         <span className={`truncate ${compact ? 'max-w-[76px] max-[400px]:hidden' : 'max-w-[140px]'}`}>{compact ? shortLabel : label}</span>
         <Icon name="expand_more" size={compact ? 16 : 17} className="text-on-surface-variant" />
       </button>
@@ -64,7 +65,7 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
             <button onClick={() => pick(null)} className={option(!market)}>Tous les pays{!market && <Icon name="check" size={17} />}</button>
             {countries.map(m => (
               <button key={m.code} onClick={() => pick(m.code)} className={option(market?.code === m.code)}>
-                <span className="flex items-center gap-2"><span aria-hidden>{m.flag}</span>{m.name}</span>{market?.code === m.code && <Icon name="check" size={17} />}
+                <span className="flex items-center gap-2"><Flag code={m.code} />{m.name}</span>{market?.code === m.code && <Icon name="check" size={17} />}
               </button>
             ))}
             {market && (
