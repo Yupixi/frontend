@@ -48,7 +48,7 @@ function Ticket({ t, focus, onChanged }: { t: SupportTicket, focus?: boolean, on
           {t.messages.map(m => (
             <div key={m.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-body-sm ${m.adminId ? 'self-start bg-surface-container-low text-on-surface' : 'self-end bg-primary-fixed/50 text-on-surface'}`}>
               <div className="mb-0.5 text-label-sm text-on-surface-variant">{m.adminId ? `${m.admin?.fullName ?? 'Équipe'} • Support Dilchap` : 'Vous'} • {when(m.createdAt)}</div>
-              <p className="m-0 whitespace-pre-line break-words">{m.body}</p>
+              <p className="selectable m-0 whitespace-pre-line break-words">{m.body}</p>
             </div>
           ))}
           <textarea value={text} onChange={e => setText(e.target.value.slice(0, 3000))} rows={3} placeholder={t.status === 'RESOLVED' ? 'Répondre rouvre la demande…' : 'Votre message…'} className="mt-1 w-full resize-y rounded-xl border-none bg-surface-container-low p-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" />

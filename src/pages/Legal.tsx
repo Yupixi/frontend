@@ -26,7 +26,7 @@ export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string;
         {loading && !page ? (
           <p className="mt-6 text-on-surface-variant">Chargement…</p>
         ) : page?.body?.trim() ? (
-          <div className="legal-content mt-6 text-body-md leading-relaxed text-on-surface [&_a]:text-primary [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-headline-sm [&_h3]:mt-4 [&_h3]:text-label-lg [&_li]:ml-5 [&_li]:list-disc [&_p]:my-3" dangerouslySetInnerHTML={{ __html: renderMarkdown(page.body) }} />
+          <div className="selectable legal-content mt-6 text-body-md leading-relaxed text-on-surface [&_a]:text-primary [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-headline-sm [&_h3]:mt-4 [&_h3]:text-label-lg [&_li]:ml-5 [&_li]:list-disc [&_p]:my-3" dangerouslySetInnerHTML={{ __html: renderMarkdown(page.body) }} />
         ) : (
           <p className="mt-6 flex items-center gap-2 rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant"><Icon name="edit_note" size={22} /> Cette page est en cours de rédaction par l'équipe Dilchap.</p>
         )}
