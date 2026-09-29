@@ -53,6 +53,7 @@ import PaymentLogo from '../components/PaymentLogo'
 import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
 import { Claim } from '../lib/site'
+import { useLists } from '../lib/lists'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -72,7 +73,6 @@ type ListingDetailProps = {
   onContactSeller?: (sellerId: string, listingId?: string) => void
 }
 
-const REPORT_REASONS = ['Prix suspect', 'Annonce frauduleuse', 'Tentative d\'arnaque', 'Contenu inapproprié', 'Article déjà vendu', 'Autre']
 
 export const PAYMENT_LABELS: Record<string, string> = {
   CASH: 'Espèces en main propre',
@@ -108,7 +108,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
+  const reportReasons = useLists().reportReasons.listing
+  const [pickedReason, setReportReason] = useState('')
+  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -661,7 +663,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <p className="m-0 text-body-sm text-on-surface-variant">Merci, votre signalement a été transmis.</p>
             ) : reportOpen ? (
               <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3 text-left">
-                <Select className="input mb-2" value={reportReason} onChange={e => setReportReason(e.target.value)}>{REPORT_REASONS.map(r => <option key={r}>{r}</option>)}</Select>
+                <Select className="input mb-2" value={reportReason} onChange={e => setReportReason(e.target.value)}>{reportReasons.map(r => <option key={r}>{r}</option>)}</Select>
                 <textarea className="input mb-2" rows={2} placeholder="Détails (optionnel)" value={reportMessage} onChange={e => setReportMessage(e.target.value)} />
                 <div className="flex gap-2">
                   <button disabled={reporting} onClick={() => void createReport({ variables: { targetType: 'LISTING', targetListingId: listing.id, reason: reportReason, message: reportMessage || undefined } }).then(() => setReportDone(true))} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">{reporting ? 'Envoi…' : 'Envoyer'}</button>

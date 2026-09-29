@@ -19,14 +19,10 @@ import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator 
 import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
 import { dateFormat } from '../lib/intl'
+import { useLists } from '../lib/lists'
 
 // Short chip labels so the row wraps instead of being cut off on phones;
 // the full sentence goes into the message box.
-const QUICK_MESSAGES = [
-  { label: 'Toujours disponible ?', text: 'Bonjour, l’article est-il toujours disponible ?' },
-  { label: 'Prix négociable ?', text: 'Bonjour, votre prix est-il négociable ?' },
-  { label: 'Un rendez-vous ?', text: 'Est-il possible de convenir d’un rendez-vous ?' },
-]
 
 type InlineConversationProps = {
   sellerId: string
@@ -90,6 +86,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
   onAuthenticated: () => void
   onStarted: (conversationId: string) => void
 }) {
+  const quick = useLists().quickReplies.buyer.slice(0, 3)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -149,7 +146,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
       {withIcon('call', <input className={`${field} pl-10 pr-3`} type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} />)}
       {withIcon('mail', <input className={`${field} pl-10 pr-3`} type="email" placeholder="E-mail (optionnel)" value={email} onChange={e => setEmail(e.target.value)} />)}
       <div className="flex flex-wrap gap-1.5">
-        {QUICK_MESSAGES.map(q => <button key={q.label} type="button" onClick={() => setMessage(q.text)} className={chip}>{q.label}</button>)}
+        {quick.map(q => <button key={q} type="button" onClick={() => setMessage(q)} className={chip}>{q}</button>)}
       </div>
       <textarea className={`${field} resize-y px-3`} placeholder="Votre message…" value={message} onChange={e => setMessage(e.target.value)} required minLength={2} rows={3} />
       <button type="submit" disabled={sending || loggingIn} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
@@ -171,6 +168,7 @@ function messageDayLabel(iso: string): string {
 }
 
 function ThreadView({ conversationId, sellerName, onClose }: { conversationId: string, sellerName: string, onClose: () => void }) {
+  const quick = useLists().quickReplies.buyer.slice(0, 3)
   const [msg, setMsg] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { data, refetch } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, { variables: { id: conversationId } })
@@ -292,7 +290,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
       ) : (
         <div className="mt-2">
           <div className="flex flex-wrap gap-1.5 pb-1.5">
-            {QUICK_MESSAGES.map(q => <button key={q.label} type="button" onClick={() => setMsg(q.text)} className={chip}>{q.label}</button>)}
+            {quick.map(q => <button key={q} type="button" onClick={() => setMsg(q)} className={chip}>{q}</button>)}
           </div>
           <div className="flex gap-2">
             {canOffer && (

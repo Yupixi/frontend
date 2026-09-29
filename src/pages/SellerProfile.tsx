@@ -23,8 +23,8 @@ import ShopPage from './ShopPage'
 import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
 import { Claim, useNoCommissionClaims } from '../lib/site'
+import { useLists } from '../lib/lists'
 
-const REPORT_REASONS = ['Tentative d’arnaque', 'Faux profil', 'Comportement inapproprié', 'Article non conforme', 'Autre']
 
 type SellerProfileProps = {
   sellerId: string
@@ -62,7 +62,9 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
+  const reportReasons = useLists().reportReasons.user
+  const [pickedReason, setReportReason] = useState('')
+  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
 
@@ -379,7 +381,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
         <p className="m-0 mb-3 text-body-sm text-on-surface-variant">L'équipe de modération examine chaque signalement. Le vendeur ne voit pas qui l'a signalé.</p>
         <label className="text-label-md text-on-surface">Motif
           <Select value={reportReason} onChange={e => setReportReason(e.target.value)} className="input mt-1.5 cursor-pointer">
-            {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+            {reportReasons.map(r => <option key={r} value={r}>{r}</option>)}
           </Select>
         </label>
         <label className="mt-3 block text-label-md text-on-surface">Détails (facultatif)

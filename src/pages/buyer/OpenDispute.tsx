@@ -13,6 +13,7 @@ import {
 } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
+import { useLists } from '../../lib/lists'
 
 type Props = {
   orderId: string
@@ -24,12 +25,13 @@ type Props = {
   onLogout: () => void
 }
 
-const REASONS: { value: DisputeReason; icon: string; title: string; text: string }[] = [
-  { value: 'NOT_AS_DESCRIBED', icon: 'broken_image', title: 'Non conforme / Défaut caché', text: 'Rayures, casse non déclarée, composants défectueux au test.' },
-  { value: 'NO_SHOW', icon: 'person_off', title: 'Vendeur absent au rendez-vous', text: "Le vendeur ne s'est pas présenté au point de retrait convenu." },
-  { value: 'PAYMENT_PRESSURE', icon: 'warning', title: "Demande anormale d'acompte", text: 'Pression pour un paiement avant la remise ou hors application.' },
-  { value: 'COUNTERFEIT', icon: 'new_releases', title: 'Contrefaçon présumée', text: 'Logo non authentique, matière suspecte ou numéro de série faux.' },
-  { value: 'OTHER', icon: 'help', title: 'Autre motif', text: 'Circonstances particulières nécessitant un arbitrage.' },
+// Buyer-side reasons; wording from « Listes de référence ».
+const REASONS: { value: DisputeReason; icon: string }[] = [
+  { value: 'NOT_AS_DESCRIBED', icon: 'broken_image' },
+  { value: 'NO_SHOW', icon: 'person_off' },
+  { value: 'PAYMENT_PRESSURE', icon: 'warning' },
+  { value: 'COUNTERFEIT', icon: 'new_releases' },
+  { value: 'OTHER', icon: 'help' },
 ]
 const STEPS = [
   { title: 'Échange amiable (24h)', text: 'Le vendeur est averti immédiatement et peut proposer une remise ou l’annulation.' },
@@ -39,6 +41,7 @@ const STEPS = [
 
 // "Déclarer un litige sur votre commande" (desktop + mobile mockups).
 export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpened, onOpenConversation, currentUser, onLogout }: Props) {
+  const { disputeReasons } = useLists()
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY, { skip: !!orderId })
   const { data, loading } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId })
   const { data: statsData } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)
@@ -116,7 +119,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
                       <label key={r.value} className={`relative flex cursor-pointer gap-3 rounded-xl p-3 ${on ? 'bg-primary-fixed/70' : 'bg-surface-container-low'}`}>
                         <input type="radio" name="reason" checked={on} onChange={() => setReason(r.value)} className="sr-only" />
                         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-primary text-white' : 'bg-surface-lowest text-on-surface-variant'}`}><Icon name={r.icon} size={19} /></span>
-                        <span className="min-w-0 flex-1"><span className="block text-label-lg text-on-surface md:text-label-md">{r.title}</span><span className="block text-body-sm text-on-surface-variant">{r.text}</span></span>
+                        <span className="min-w-0 flex-1"><span className="block text-label-lg text-on-surface md:text-label-md">{disputeReasons[r.value].label}</span><span className="block text-body-sm text-on-surface-variant">{disputeReasons[r.value].hint}</span></span>
                         <Icon name={on ? 'check_circle' : 'radio_button_unchecked'} size={20} fill={on} className={on ? 'text-primary' : 'text-outline-variant'} />
                       </label>
                     )

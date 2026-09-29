@@ -9,6 +9,7 @@ import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 import { setAuthReason } from '../lib/authReason'
 import { formatNumber } from '../lib/format'
 import { ShopCard } from '../components/ShopCard'
+import { useLists } from '../lib/lists'
 
 type Props = {
   onNavigate: (page: any) => void
@@ -22,6 +23,7 @@ const PAGE_SIZE = 12
 
 // "Annuaire des Boutiques officielles".
 export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: Props) {
+  const lists = useLists()
   const [search, setSearch] = useState('')
   const [term, setTerm] = useState('')
   const [category, setCategory] = useState('')
@@ -78,7 +80,7 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
           </Select>
           <Select value={city} onChange={e => setCity(e.target.value)} className="h-11 min-w-0 cursor-pointer rounded-xl border-none bg-surface-container-low px-3 text-label-md text-on-surface outline-none md:w-40">
             <option value="">Toutes les villes</option>
-            {['Abidjan', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Korhogo'].map(c => <option key={c} value={c}>{c}</option>)}
+            {lists.cities.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
         </div>
       </section>

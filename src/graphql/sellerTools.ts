@@ -104,15 +104,6 @@ export type DisputeStats = {
   inMediation: number; awaitingBuyer: number; amicable: number; rejected: number; mediationWhatsapp: string | null
 }
 
-export const DISPUTE_REASON_LABELS: Record<DisputeReason, string> = {
-  FAKE_PAYMENT: "Tentative d'arnaque faux SMS (Wave / Orange Money)",
-  NOT_AS_DESCRIBED: "Non-conformité présumée de l'article",
-  NO_SHOW: 'Désistement sans préavis au point de remise',
-  LATE: 'Retard excessif au lieu de rendez-vous (> 45min)',
-  COUNTERFEIT: "Suspicion d'article contrefait",
-  PAYMENT_PRESSURE: 'Pression pour un paiement hors application',
-  OTHER: 'Autre motif',
-}
 export const DISPUTE_REASON_ICONS: Record<DisputeReason, string> = {
   FAKE_PAYMENT: 'security_update_warning',
   NOT_AS_DESCRIBED: 'flag',
@@ -122,6 +113,7 @@ export const DISPUTE_REASON_ICONS: Record<DisputeReason, string> = {
   PAYMENT_PRESSURE: 'warning',
   OTHER: 'help',
 }
+export const DISPUTE_REASONS = Object.keys(DISPUTE_REASON_ICONS) as DisputeReason[]
 export const disputeIsOpen = (s: DisputeStatus) => s === 'AWAITING_SELLER' || s === 'AWAITING_BUYER' || s === 'IN_MEDIATION'
 
 // ─── Remise en main propre ──────────────────────────────────────────────────

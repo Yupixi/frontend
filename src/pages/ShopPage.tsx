@@ -14,6 +14,7 @@ import { formatNumber, formatRelativeDate } from '../lib/format'
 import { ShopLogo } from '../components/ShopCard'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { Claim } from '../lib/site'
+import { useLists } from '../lib/lists'
 
 type Props = {
   shopKey: string
@@ -29,7 +30,6 @@ type Props = {
 }
 
 type Tab = 'home' | 'all' | 'news' | 'reviews' | 'infos'
-const REPORT_REASONS = ['Contrefaçon', 'Tentative d’arnaque', 'Informations trompeuses', 'Comportement inapproprié', 'Autre']
 const since = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : null)
 const socialUrl = (kind: 'facebook' | 'instagram' | 'tiktok', v: string) => {
   if (/^https?:\/\//.test(v)) return v
@@ -136,7 +136,9 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const [copied, setCopied] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
+  const reportReasons = useLists().reportReasons.shop
+  const [pickedReason, setReportReason] = useState('')
+  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
 
@@ -464,7 +466,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
         <p className="m-0 mb-3 text-body-sm text-on-surface-variant">L’équipe de modération examine chaque signalement. La boutique ne voit pas qui l’a signalée.</p>
         <label className="text-label-md text-on-surface">Motif
           <Select value={reportReason} onChange={e => setReportReason(e.target.value)} className="input mt-1.5 cursor-pointer">
-            {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+            {reportReasons.map(r => <option key={r} value={r}>{r}</option>)}
           </Select>
         </label>
         <label className="mt-3 block text-label-md text-on-surface">Détails (facultatif)

@@ -3,9 +3,10 @@ import { useMutation } from '@apollo/client/react'
 import Icon from './Icon'
 import { uploadImages } from '../lib/upload'
 import {
-  DISPUTE_REASON_ICONS, DISPUTE_REASON_LABELS, OPEN_DISPUTE_MUTATION,
+  DISPUTE_REASON_ICONS, OPEN_DISPUTE_MUTATION,
   type Dispute, type DisputeReason, type DisputeStatus,
 } from '../graphql/sellerTools'
+import { useDisputeLabel } from '../lib/lists'
 
 // Shared pieces of the dispute screens (seller "Litiges & Signalements",
 // buyer "Suivi de mon litige").
@@ -136,6 +137,7 @@ export function MediationCard({ whatsapp, compact }: { whatsapp: string | null; 
 export function OpenDisputeModal({ conversationId, perspective, onClose, onOpened }: {
   conversationId: string; perspective: 'SELLER' | 'BUYER'; onClose: () => void; onOpened: (d: Dispute) => void
 }) {
+  const reasonLabel = useDisputeLabel()
   const reasons: DisputeReason[] = perspective === 'SELLER'
     ? ['FAKE_PAYMENT', 'NO_SHOW', 'LATE', 'OTHER']
     : ['NOT_AS_DESCRIBED', 'NO_SHOW', 'LATE', 'FAKE_PAYMENT', 'OTHER']
@@ -158,7 +160,7 @@ export function OpenDisputeModal({ conversationId, perspective, onClose, onOpene
             <label key={r} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${reason === r ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant'}`}>
               <input type="radio" checked={reason === r} onChange={() => setReason(r)} className="m-0 h-5 w-5 shrink-0 accent-[var(--primary)]" />
               <Icon name={DISPUTE_REASON_ICONS[r]} size={18} className="text-primary" />
-              <span className="text-label-md text-on-surface">{DISPUTE_REASON_LABELS[r]}</span>
+              <span className="text-label-md text-on-surface">{reasonLabel(r)}</span>
             </label>
           ))}
         </div>

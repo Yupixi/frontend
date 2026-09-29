@@ -31,19 +31,8 @@ import type { AuthUser } from '../../graphql/auth'
 import { dateFormat } from '../../lib/intl'
 import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
+import { useLists } from '../../lib/lists'
 
-const BUYER_SUGGESTIONS = [
-  'L’article est-il toujours disponible ?',
-  'Votre prix est-il négociable ?',
-  'Je serai là avec 5 min d’avance',
-  'Paiement par Wave direct ?',
-]
-const SELLER_SUGGESTIONS = [
-  'Oui, toujours disponible !',
-  'Le prix est ferme, désolé.',
-  'Dites-moi vos disponibilités pour un RDV.',
-  'Paiement Wave ou espèces à la remise.',
-]
 
 const time = (iso: string) => dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 // Day separator, stamped with the first message of that day ("Aujourd'hui, 10:42").
@@ -117,6 +106,7 @@ type Props = {
 
 // "Boîte de réception & Chat" mockups (desktop 3 columns, mobile thread).
 export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
+  const lists = useLists()
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = [...(listData?.myConversations ?? [])].sort(byLatestMessage)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -285,7 +275,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const acceptedOffer = [...messages].reverse().find(m => m.offer?.status === 'ACCEPTED')?.offer
   const agreedPrice = acceptedOffer?.amount ?? conv?.listing?.price ?? null
   const lastMeetup = [...messages].reverse().find(m => m.meetup)?.meetup
-  const suggestions = conv?.canManageDeal ? SELLER_SUGGESTIONS : BUYER_SUGGESTIONS
+  const suggestions = conv?.canManageDeal ? lists.quickReplies.seller : lists.quickReplies.buyer
   const canNegotiate = !!conv && !conv.closedAt && !conv.canManageDeal && !!conv.listing?.negotiable && conv.dealStatus === 'DISCUSSING'
   const closed = !!conv?.closedAt
   const discussing = conv?.dealStatus === 'DISCUSSING' && !closed

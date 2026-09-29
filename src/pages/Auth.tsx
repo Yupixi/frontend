@@ -10,6 +10,7 @@ import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
 import { useNoCommissionClaims } from '../lib/site'
+import { placeOptions, useLists } from '../lib/lists'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -17,7 +18,6 @@ type AuthProps = {
   onClose: () => void
 }
 
-const COMMUNES = ['Cocody', 'Marcory', 'Plateau', 'Yopougon', 'Koumassi', 'Treichville', 'Adjamé', 'Abobo', 'Port-Bouët', 'Bingerville', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Korhogo']
 const PERKS = [
   { icon: 'percent', title: '0 Franc de commission cachée', text: 'Le prix affiché est celui que vous payez au vendeur. Aucun frais de dossier.' },
   { icon: 'handshake', title: 'Vérification directe avant achat', text: "Testez le smartphone, essayez l'article ou examinez le produit avant de régler." },
@@ -94,6 +94,7 @@ function LoginForm({ onSuccess, onForgot }: { onSuccess: (p: AuthPayload) => voi
 }
 
 function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
+  const lists = useLists()
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', city: '', password: '' })
   const [accepted, setAccepted] = useState(false)
   const [register, { loading, error }] = useMutation<{ register: AuthPayload }>(REGISTER_MUTATION)
@@ -116,7 +117,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
       <label className="text-label-md text-on-surface">Ville / commune
         <Select value={form.city} onChange={set('city')} className={`${field} mt-1.5 cursor-pointer`}>
           <option value="">Choisir…</option>
-          {COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
+          {placeOptions(lists).map(c => <option key={c} value={c}>{c}</option>)}
         </Select>
       </label>
       <label className="text-label-md text-on-surface">Mot de passe

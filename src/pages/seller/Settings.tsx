@@ -15,6 +15,7 @@ import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
 import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
+import { placeOptions, useLists } from '../../lib/lists'
 
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
@@ -50,14 +51,6 @@ const ALERTS = [
   { key: 'campaigns', icon: 'campaign', title: 'Campagnes promos Dilchap', sub: 'Opportunités de visibilité collective (Black Friday, braderies P2P).' },
 ]
 const DEFAULT_ALERTS: Alerts = Object.fromEntries(ALERTS.map(a => [a.key, { push: true, whatsapp: false, email: a.key !== 'advice' }]))
-const COMMUNES = ['Cocody', 'Marcory', 'Plateau', 'Yopougon', 'Koumassi', 'Treichville', 'Adjamé', 'Abobo', 'Port-Bouët', 'Bingerville', 'Anyama', 'Bouaké', 'Yamoussoukro', 'San-Pédro', 'Daloa', 'Korhogo']
-const SUGGESTED_SPOTS = [
-  { name: 'Playce Marcory • Carrefour Duncan', sub: 'Zone commerciale ultra-fréquentée, parking gardé' },
-  { name: 'Cap Sud Marcory • Entrée Principale', sub: 'Boulevard VGE, caméras & cafés à disposition' },
-  { name: 'Playce Cocody Riviera • Espace Food', sub: 'Idéal pour les rendez-vous en journée' },
-  { name: 'Sococé Deux-Plateaux • Galerie', sub: 'Galerie marchande, sécurité renforcée' },
-  { name: 'Cosmos Yopougon • Hall principal', sub: 'Centre commercial éclairé et surveillé' },
-]
 const PAYMENTS = [
   { code: 'WAVE', icon: 'qr_code_2', title: "Wave Côte d'Ivoire", sub: 'QR code ou transfert direct' },
   { code: 'ORANGE_MONEY', icon: 'smartphone', title: 'Orange Money CI', sub: 'Transfert direct au numéro du vendeur' },
@@ -154,6 +147,7 @@ function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
 // les modifications" / unsaved-changes bar), plus the security & account
 // actions that apply immediately.
 export default function Settings({ onNavigate, currentUser, onLogout, onProfileUpdated, dark, onToggleDark, onViewShop }: Props) {
+  const lists = useLists()
   const { data, refetch } = useQuery<SettingsData>(SELLER_SETTINGS_QUERY)
   const me = data?.me
   const rep = data?.myReputation
@@ -327,7 +321,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <label className="text-label-md text-on-surface">Commune principale de référence
                     <Select value={form.city} onChange={e => set('city', e.target.value)} className={`${field} mt-1`}>
                       <option value="">—</option>
-                      {[...new Set([form.city, ...COMMUNES].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
+                      {[...new Set([form.city, ...placeOptions(lists)].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
                     </Select>
                   </label>
                   <label className="text-label-md text-on-surface sm:col-span-2">Description / Bio publique de la boutique
@@ -426,7 +420,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 <div className="text-label-md text-on-surface">Points de remise en main propre favoris</div>
                 <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Proposés aux acheteurs lors de la prise de rendez-vous :</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {[...SUGGESTED_SPOTS, ...form.meetupSpots.filter(s => !SUGGESTED_SPOTS.some(x => x.name === s)).map(name => ({ name, sub: 'Repère personnalisé' }))].map(s => {
+                  {[...lists.meetupSpots, ...form.meetupSpots.filter(s => !lists.meetupSpots.some(x => x.name === s)).map(name => ({ name, sub: 'Repère personnalisé' }))].map(s => {
                     const on = form.meetupSpots.includes(s.name)
                     return (
                       <label key={s.name} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${on ? 'border-primary/40 bg-primary-fixed/20' : 'border-outline-variant bg-surface-container-low'}`}>
