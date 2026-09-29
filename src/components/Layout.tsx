@@ -32,6 +32,7 @@ import LocationPill from './LocationPill'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { FOOTER_SETTINGS_QUERY, ACTIVE_CAMPAIGN_BAR_QUERY, LEGAL_PAGES, type RemoteFooterSettings, type ActiveCampaignBar } from '../graphql/content'
 import { PaymentLogos } from './PaymentLogo'
+import { useCountries, useMarket, useMethods } from '../lib/countries'
 import { MY_NOTIFICATIONS_QUERY, MARK_NOTIFICATION_READ_MUTATION, MARK_ALL_NOTIFICATIONS_READ_MUTATION, type RemoteNotification, NOTIFICATION_META, openNotificationTarget } from '../graphql/account'
 import MsIcon from './Icon'
 import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteConversation } from '../graphql/messaging'
@@ -109,6 +110,10 @@ export default function Layout({
   const footer = footerData?.footerSettings
   // Brand, contacts, social / app links and claims (« Réglages du site »).
   const site = useSite()
+  // Visitor's country (none for « Tous les pays »): towns, methods, support.
+  const market = useMarket()
+  const countries = useCountries()
+  const methods = useMethods().filter(m => m !== 'CASH')
   const socials = (['facebook', 'instagram', 'tiktok', 'youtube', 'x', 'linkedin', 'whatsapp'] as const)
     .filter(k => site.socials[k])
     .map(k => [k, site.socials[k], { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', x: 'X', linkedin: 'LinkedIn', whatsapp: 'WhatsApp' }[k]] as const)
@@ -572,7 +577,7 @@ export default function Layout({
               <Logo size="lg" />
               <p className="mt-4 max-w-md text-body-md text-on-surface-variant">
                 {footer?.tagline ||
-                  `${site.brand.name} rend l'achat et la vente entre particuliers simples, fluides et sécurisés en Côte d'Ivoire.`}
+                  `${site.brand.name} rend l’achat et la vente entre particuliers simples, fluides et sécurisés ${market?.inName ?? 'en Afrique de l’Ouest'}.`}
               </p>
               {socials.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -596,7 +601,7 @@ export default function Layout({
               <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Recherches rapides</h4>
               <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
                 {(footer?.quickLinks?.length ? footer.quickLinks : [
-                  { label: 'Appartements à Abidjan Cocody', query: 'appartement' },
+                  { label: 'Appartements à louer', query: 'appartement' },
                   { label: 'iPhone 15 Pro Max', query: 'iPhone 15' },
                   { label: 'Toyota RAV4 & Hilux', query: 'Toyota' },
                   { label: 'Robes & sacs de marque', query: 'robe' },
@@ -633,9 +638,9 @@ export default function Layout({
             <div>
               <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Assistance</h4>
               <p className="m-0 text-body-sm text-on-surface-variant">
-                {footer?.supportCities || 'Abidjan • Bouaké • Yamoussoukro • San-Pédro • Daloa • Korhogo'}
+                {footer?.supportCities || (market ? market.cities.slice(0, 6) : countries.map(c => c.mainCity)).join(' • ')}
               </p>
-              {footer?.supportPhone && <p className="mb-0 mt-3 text-label-md text-primary">Support{site.contact.hours ? '' : ' 7j/7'} : {footer.supportPhone}</p>}
+              {(market?.supportPhone || footer?.supportPhone) && <p className="mb-0 mt-3 text-label-md text-primary">Support{site.contact.hours ? '' : ' 7j/7'} : {market?.supportPhone || footer?.supportPhone}</p>}
               {site.contact.hours && <p className="mb-0 mt-1 text-body-sm text-on-surface-variant">{site.contact.hours}</p>}
               {site.contact.email && <a href={`mailto:${site.contact.email}`} className="mt-1 block text-body-sm text-primary no-underline hover:underline">{site.contact.email}</a>}
               {site.contact.address && <p className="mb-0 mt-1 text-body-sm text-on-surface-variant">{site.contact.address}</p>}
@@ -646,7 +651,7 @@ export default function Layout({
                   </li>
                 ))}
               </ul>
-              <PaymentLogos className="mt-4" size={26} />
+              <PaymentLogos className="mt-4" size={26} methods={methods} />
             </div>
           </div>
 
@@ -654,7 +659,7 @@ export default function Layout({
             <p className="m-0">
               {footer?.copyrightText || `© ${new Date().getFullYear()} ${site.brand.name}. Tous droits réservés.`}
             </p>
-            <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> Mise en relation sécurisée · Fait en Côte d'Ivoire</span>
+            <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> Mise en relation sécurisée · Fait en Afrique de l’Ouest</span>
           </div>
         </div>
       </footer>

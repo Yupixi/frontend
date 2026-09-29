@@ -5,6 +5,7 @@ import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import { OpenDisputeModal } from '../../components/DisputeParts'
 import { PAYMENT_LABELS } from '../ListingDetail'
+import { useAccountCountryCode, useMethods } from '../../lib/countries'
 import {
   CONFIRM_HANDOVER_MUTATION, SALES_ORDER_QUERY, VERIFY_HANDOVER_CODE_MUTATION, disputeIsOpen, type HandoverOrder,
 } from '../../graphql/sellerTools'
@@ -47,7 +48,10 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
   const [codeFocused, setCodeFocused] = useState(false)
   const [codeState, setCodeState] = useState<'idle' | 'valid' | 'invalid'>('idle')
   const [checks, setChecks] = useState(CHECKS.map(() => false))
-  const methods = o?.listing.paymentMethods.length ? o.listing.paymentMethods : ['WAVE', 'ORANGE_MONEY', 'CASH']
+  // Listing without methods: those of the seller's country.
+  const account = useAccountCountryCode()
+  const countryMethods = useMethods(o?.listing.countryCode ?? account)
+  const methods = o?.listing.paymentMethods.length ? o.listing.paymentMethods : countryMethods
   const [method, setMethod] = useState('')
   const [attested, setAttested] = useState(false)
   const [rating, setRating] = useState(5)

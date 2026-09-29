@@ -33,7 +33,7 @@ const TABS: { key: Tab; label: string; short: string }[] = [
 const GOLDEN = [
   ['handshake', 'Protocole de remise', "La vente n'est clôturée que lorsque vous donnez votre code à 4 chiffres en face-à-face."],
   ['sell', '0 F de commission', 'Le prix affiché est le prix exact payé. Aucun frais caché.'],
-  ['location_on', 'Points de rencontre sûrs', 'Privilégiez les galeries marchandes : Playce, Cap Sud, Cosmos Yopougon, Sococé.'],
+  ['location_on', 'Points de rencontre sûrs', 'Privilégiez les galeries marchandes et les lieux publics fréquentés.'],
   ['support_agent', 'Assistance locale 7j/7', "Notre équipe intervient par WhatsApp en cas de retard ou d'imprévu."],
 ]
 const when = (iso: string) => {
@@ -79,7 +79,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
         <BuyerTabs active={active} onNavigate={onNavigate} />
         <section className="flex items-start justify-between gap-4 md:flex-wrap md:rounded-3xl md:bg-surface-container-low md:p-6">
           <div className="min-w-0 max-w-2xl">
-            <div className="hidden items-center gap-1 text-label-sm uppercase text-tertiary md:flex"><Icon name="verified" size={15} /> Sécurisation peer-to-peer Côte d'Ivoire</div>
+            <div className="hidden items-center gap-1 text-label-sm uppercase text-tertiary md:flex"><Icon name="verified" size={15} /> Sécurisation peer-to-peer</div>
             <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface md:text-headline-lg">Mes achats &amp; remises<span className="hidden md:inline"> en main propre</span></h1>
             <p className="m-0 mt-1 text-body-md text-on-surface-variant"><span className="md:hidden">Suivi sécurisé des remises en main propre</span><span className="max-md:hidden">Suivi de vos achats{noCommission ? ', code secret de remise et 0 F de commission.' : ' et code secret de remise.'}</span></p>
           </div>

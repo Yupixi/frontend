@@ -10,6 +10,7 @@ import { setAuthReason } from '../lib/authReason'
 import { formatNumber } from '../lib/format'
 import { ShopCard } from '../components/ShopCard'
 import { useLists } from '../lib/lists'
+import { useMarketCode } from '../lib/countries'
 
 type Props = {
   onNavigate: (page: any) => void
@@ -24,17 +25,20 @@ const PAGE_SIZE = 12
 // "Annuaire des Boutiques officielles".
 export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: Props) {
   const lists = useLists()
+  // Shops of the visitor's country (all for « Tous les pays »).
+  const countryCode = useMarketCode()
   const [search, setSearch] = useState('')
   const [term, setTerm] = useState('')
   const [category, setCategory] = useState('')
   const [city, setCity] = useState('')
   const [sort, setSort] = useState<Sort>('POPULAR')
   const [page, setPage] = useState(1)
-  useEffect(() => setPage(1), [term, category, city, sort])
+  useEffect(() => setPage(1), [term, category, city, sort, countryCode])
+  useEffect(() => setCity(''), [countryCode])
 
   const { data: cats } = useQuery<{ categories: { id: string, slug: string, name: string }[] }>(CATEGORIES_QUERY)
   const { data, loading, refetch } = useQuery<{ shops: { items: Shop[], total: number } }>(SHOPS_QUERY, {
-    variables: { search: term || undefined, categorySlug: category || undefined, city: city || undefined, sort, page, pageSize: PAGE_SIZE },
+    variables: { search: term || undefined, categorySlug: category || undefined, countryCode: countryCode ?? undefined, city: city || undefined, sort, page, pageSize: PAGE_SIZE },
   })
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
@@ -59,7 +63,7 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
         <div className="min-w-0">
           <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified" size={14} fill /> Entreprises vérifiées</span>
           <h1 className="m-0 mt-2 text-headline-lg text-on-surface md:text-display">Boutiques officielles</h1>
-          <p className="m-0 mt-1 max-w-2xl text-body-md text-on-surface-variant">Des entreprises et marques dont le registre de commerce (RCCM) ou le compte contribuable (NCC) et l’identité du gérant ont été vérifiés par Dilchap.</p>
+          <p className="m-0 mt-1 max-w-2xl text-body-md text-on-surface-variant">Des entreprises et marques dont le registre de commerce (RCCM) ou l’identifiant fiscal (NCC, NINEA, IFU, NIF) et l’identité du gérant ont été vérifiés par Dilchap.</p>
         </div>
         <div className="flex shrink-0 items-center gap-3 rounded-xl bg-surface-lowest px-4 py-3 shadow-sm">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="storefront" size={20} /></span>

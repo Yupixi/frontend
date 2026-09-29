@@ -9,6 +9,7 @@ import { LISTINGS_QUERY, type ListingSort, type RemoteListing } from '../graphql
 import { FOLLOW_SELLER_MUTATION, SELLER_REVIEWS_QUERY, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteReview } from '../graphql/reviews'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { DAYS, SHOP_POSTS_QUERY, SHOP_QUERY, TRACK_SHOP_POST_VIEWS_MUTATION, TRACK_SHOP_VISIT_MUTATION, openNow, shopUrl, type Shop, type ShopPost } from '../graphql/shops'
+import { marketForCountry } from '../data/markets'
 import Price from '../components/Price'
 import { formatNumber, formatRelativeDate } from '../lib/format'
 import { ShopLogo } from '../components/ShopCard'
@@ -56,8 +57,8 @@ export function OfficialPill({ className = '' }: { className?: string }) {
 // Opening hours, contacts, legal transparency: the side column on desktop,
 // the "Infos" tab on phones.
 function ShopInfos({ shop, onReport, canReport }: { shop: Shop, onReport: () => void, canReport: boolean }) {
-  const now = openNow(shop.openingHours)
-  const today = (new Date().getUTCDay() + 6) % 7
+  const now = openNow(shop.openingHours, marketForCountry(shop.countryCode)?.timeZone)
+  const today = now.day
   const place = [shop.address, shop.commune, shop.city].filter(Boolean).join(', ')
   const socials = ([['instagram', 'photo_camera', 'Instagram'], ['facebook', 'public', 'Facebook'], ['tiktok', 'music_note', 'TikTok']] as const)
     .filter(([k]) => shop[k])
@@ -74,7 +75,7 @@ function ShopInfos({ shop, onReport, canReport }: { shop: Shop, onReport: () => 
           <>
             <p className="m-0 mt-4 text-label-sm uppercase text-on-surface-variant">Adresse</p>
             <p className="m-0 mt-1 text-body-md text-on-surface">{place}</p>
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place}, Côte d’Ivoire`)}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-label-md text-primary no-underline">
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place}, ${marketForCountry(shop.countryCode)?.name ?? ''}`)}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-label-md text-primary no-underline">
               <Icon name="directions" size={16} /> Itinéraire
             </a>
           </>
@@ -198,7 +199,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   }
 
   const isOwner = currentUserId === shop.owner.id
-  const now = openNow(shop.openingHours)
+  const now = openNow(shop.openingHours, marketForCountry(shop.countryCode)?.timeZone)
   const responseTime = formatResponseTime(shop.responseTimeMinutes)
   const requireAuth = (fn: () => void, reason: AuthReason) => () => {
     if (isLoggedIn) return fn()

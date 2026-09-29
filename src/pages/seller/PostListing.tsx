@@ -14,7 +14,8 @@ import { applyOffer, usePriceOffers } from '../../lib/priceOffers'
 import { JOIN_CAMPAIGN_WITH_LISTING_MUTATION } from '../../graphql/shops'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
-import { MARKETS, marketForCountry } from '../../data/markets'
+import { marketForCountry } from '../../data/markets'
+import { METHOD_LABELS, useCountries, useHomeCountry, type Country, type PaymentMethodCode } from '../../lib/countries'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
 import {
   ATTACH_LISTING_MEDIA_MUTATION, CREATE_LISTING_MUTATION, DELETE_LISTING_MEDIA_MUTATION, MY_LISTING_QUERY,
@@ -34,12 +35,10 @@ const TITLE_MAX = 80
 const DRAFT_KEY = 'dilchap_listing_draft'
 
 
-// Mockup groups mobile wallets; each group maps to backend payment codes.
-const PAYMENT_GROUPS = [
-  { label: 'Espèces en main propre', icon: 'payments', codes: ['CASH'] },
-  { label: 'Wave / Orange Money', icon: 'phone_iphone', codes: ['WAVE', 'ORANGE_MONEY'] },
-  { label: 'MTN MoMo / Moov', icon: 'account_balance_wallet', codes: ['MTN_MOMO', 'MOOV_MONEY'] },
-]
+const methodLabel = (m: PaymentMethodCode) => (m === 'CASH' ? 'Espèces en main propre' : METHOD_LABELS[m])
+// New listing: cash and the first two mobile wallets of the country.
+const defaultMethods = (c: Country): string[] => ['CASH', ...c.methods.filter(m => m !== 'CASH').slice(0, 2)]
+const placeDefaults = (c: Country) => ({ countryCode: c.code, currency: c.currency, city: c.mainCity, locationLabel: '', meetupSpot: '', paymentMethods: defaultMethods(c) })
 
 // Categories where clothing/shoe size is meaningful.
 const SIZED_CATEGORIES = ['mode', 'famille']
@@ -70,8 +69,8 @@ type Form = {
 
 const EMPTY: Form = {
   categoryId: '', subcategoryId: '', title: '', condition: '', brand: '', modelName: '', size: '', description: '',
-  price: '', originalPrice: '', negotiable: true, minOfferPrice: '', quantity: '1', countryCode: 'CI', currency: 'XOF',
-  city: 'Abidjan', locationLabel: '', meetupSpot: '', paymentMethods: ['CASH', 'WAVE', 'ORANGE_MONEY'], deliveryAvailable: false, attributes: {},
+  price: '', originalPrice: '', negotiable: true, minOfferPrice: '', quantity: '1', countryCode: '', currency: 'XOF',
+  city: '', locationLabel: '', meetupSpot: '', paymentMethods: ['CASH'], deliveryAvailable: false, attributes: {},
 }
 
 function loadDraft(): { form: Form, savedAt: string } | null {
@@ -137,21 +136,35 @@ const FIELD_LABELS: Record<FieldKey, string> = {
 // Mobile wizard step -> required fields it holds, in on-screen order.
 const STEP_FIELDS: Record<number, FieldKey[]> = { 1: ['title', 'category', 'condition', 'description'], 2: ['price'], 3: ['city'] }
 
-// Abidjan quick picks for the "Zone de remise" chips: the first communes
-// and meetup spots of « Listes de référence ».
+// Quick picks for the "Zone de remise" chips: the first districts and
+// meetup spots of the listing's country main city (« Pays »).
 const QUICK_PICKS = 6
 
 // "Déposer une annonce" mockup: one guided form (photos → infos → prix →
 // modalités d'échange) with a sticky earnings/preview column.
 export default function PostListing({ onNavigate, currentUser, onLogout, listingId }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string }) {
   const maxPhotos = useRules().LISTING_MAX_PHOTOS
-  const lists = useLists()
+  // Listing country: the seller's by default, any active one allowed.
+  const home = useHomeCountry()
+  const countries = useCountries()
   const isEditing = !!listingId
   const noCommission = useNoCommissionClaims()
   useEffect(() => { if (!getAccessToken()) onNavigate('auth') }, [onNavigate])
 
   const draft = useRef(isEditing ? null : loadDraft())
-  const [form, setForm] = useState<Form>(() => ({ ...EMPTY, ...(draft.current?.form ?? {}) }))
+  const [form, setForm] = useState<Form>(() => ({ ...EMPTY, ...placeDefaults(home), ...(draft.current?.form ?? {}) }))
+  const lists = useLists(form.countryCode)
+  const country = countries.find(c => c.code === form.countryCode) ?? marketForCountry(form.countryCode) ?? home
+  // Until the seller writes anything, a new listing follows the account's
+  // country (known once the session is restored), or leaves an inactive one.
+  useEffect(() => {
+    if (isEditing) return
+    setForm(f => {
+      const active = countries.some(c => c.code === f.countryCode)
+      const untouched = !f.title && f.city === marketForCountry(f.countryCode)?.mainCity
+      return f.countryCode !== home.code && (!active || untouched) ? { ...f, ...placeDefaults(home) } : f
+    })
+  }, [home, countries, isEditing])
   const [savedAt, setSavedAt] = useState<string | null>(draft.current?.savedAt ?? null)
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm(f => ({ ...f, [key]: value }))
 
@@ -190,7 +203,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const category = categories.find(c => c.id === form.categoryId)
   const subcategory = category?.subcategories.find(s => s.id === form.subcategoryId)
   const requiresPrice = category?.requiresPrice ?? true
-  const isAbidjan = form.countryCode === 'CI' && /abidjan/i.test(form.city)
+  // Districts and meetup spots are those of the country's main city.
+  const inMainCity = !!lists.mainCity && form.city.trim().toLowerCase() === lists.mainCity.toLowerCase()
 
   const { data: existingData, loading: loadingExisting } = useQuery<{ myListing: MyListingDetail }>(MY_LISTING_QUERY, { variables: { id: listingId }, skip: !isEditing })
   // A draft saved on the server ("Mes annonces › Compléter") is finished and
@@ -289,9 +303,16 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const removeExisting = (id: string) => { setExistingMedia(p => p.filter(m => m.id !== id)); void deleteMedia({ variables: { mediaId: id } }).catch(() => undefined) }
   const allPhotos = [...existingMedia.map(m => ({ key: m.id, url: m.url, remove: () => removeExisting(m.id) })), ...imagePreviews.map((url, i) => ({ key: url, url, remove: () => removeNew(i) }))]
 
-  const togglePayment = (codes: string[]) => {
-    const on = codes.every(c => form.paymentMethods.includes(c))
-    set('paymentMethods', on ? form.paymentMethods.filter(c => !codes.includes(c)) : [...new Set([...form.paymentMethods, ...codes])])
+  const togglePayment = (code: string) =>
+    set('paymentMethods', form.paymentMethods.includes(code) ? form.paymentMethods.filter(c => c !== code) : [...form.paymentMethods, code])
+  // Another country: its main city, and the methods it also offers.
+  const changeCountry = (code: string) => {
+    const next = countries.find(c => c.code === code)
+    if (!next) return
+    setForm(f => {
+      const kept = f.paymentMethods.filter(m => m === 'CASH' || (next.methods as string[]).includes(m))
+      return { ...f, ...placeDefaults(next), paymentMethods: kept.length ? kept : defaultMethods(next) }
+    })
   }
 
   const wordCount = form.description.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
@@ -481,7 +502,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
   const reset = () => {
     void clearDraftPhotos()
-    setForm(EMPTY); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false); setCampaignChoice(null)
+    setForm({ ...EMPTY, ...placeDefaults(home) }); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false); setCampaignChoice(null)
   }
 
   const cover = allPhotos[0]?.url
@@ -739,8 +760,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Field label="Prix neuf (optionnel)"><input type="number" min={0} className={inputCls} value={form.originalPrice} onChange={e => set('originalPrice', e.target.value)} placeholder="Barré sur l'annonce" /></Field>
                     <Field label="Pays">
-                      <Select className={inputCls} value={form.countryCode} onChange={e => setForm(f => ({ ...f, countryCode: e.target.value, currency: marketForCountry(e.target.value)?.currency ?? f.currency }))}>
-                        {MARKETS.map(m => <option key={m.countryCode} value={m.countryCode}>{m.country}</option>)}
+                      <Select className={inputCls} value={form.countryCode} onChange={e => changeCountry(e.target.value)}>
+                        {!countries.some(c => c.code === form.countryCode) && <option value={form.countryCode}>{country.name}</option>}
+                        {countries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                       </Select>
                     </Field>
                   </div>
@@ -806,12 +828,12 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             <Card className={only(3)} icon="handshake" title="Modalités d'échange et de rencontre" subtitle="Aucun transporteur obligatoire : convenez directement du lieu de remise et du mode de règlement avec l'acheteur.">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Ville & Commune" required>
-                  <div className="relative"><Icon name="location_city" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input data-field="city" aria-invalid={bad('city')} className={`${bad('city') ? inputBad : inputCls} pl-10`} value={form.city} onChange={e => set('city', e.target.value)} placeholder="Abidjan" /></div>
+                  <div className="relative"><Icon name="location_city" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input data-field="city" aria-invalid={bad('city')} className={`${bad('city') ? inputBad : inputCls} pl-10`} value={form.city} onChange={e => set('city', e.target.value)} placeholder={country.mainCity} list="post-listing-cities" /><datalist id="post-listing-cities">{lists.cities.map(c => <option key={c} value={c} />)}</datalist></div>
                   <FieldError show={bad('city')}>Indiquez la ville.</FieldError>
                 </Field>
                 <Field label="Quartier">
-                  <div className="relative"><MapPin size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.locationLabel} onChange={e => set('locationLabel', e.target.value)} placeholder="Cocody (Angré 8e Tranche)" /></div>
-                  {isAbidjan && (
+                  <div className="relative"><MapPin size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.locationLabel} onChange={e => set('locationLabel', e.target.value)} placeholder={lists.communes[0] ? `Ex : ${lists.communes[0]}` : 'Quartier, repère'} /></div>
+                  {inMainCity && lists.communes.length > 0 && (
                     <span className="mt-2 flex flex-wrap gap-1.5">
                       {lists.communes.slice(0, QUICK_PICKS).map(z => {
                         const on = form.locationLabel.trim() === z
@@ -822,9 +844,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="Lieu de rendez-vous suggéré" hint="Un lieu public et fréquenté : centre commercial, station-service…">
-                    <div className="relative"><Icon name="storefront" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.meetupSpot} onChange={e => set('meetupSpot', e.target.value)} placeholder="Ex : Playce Marcory / Cap Sud" /></div>
+                    <div className="relative"><Icon name="storefront" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.meetupSpot} onChange={e => set('meetupSpot', e.target.value)} placeholder={lists.meetupSpots[0] ? `Ex : ${lists.meetupSpots[0].name}` : 'Ex : centre commercial, station-service…'} /></div>
                   </Field>
-                  {isAbidjan && (
+                  {inMainCity && lists.meetupSpots.length > 0 && (
                     <div className="mt-2 rounded-xl bg-tertiary-soft/60 p-3">
                       <span className="mb-2 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={14} /> Lieux publics et fréquentés</span>
                       <span className="flex flex-wrap gap-1.5">
@@ -842,13 +864,14 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <div className="mt-4">
                 <span className="mb-1.5 block text-label-md text-on-surface">Moyens de règlement acceptés lors de la rencontre</span>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {PAYMENT_GROUPS.map(g => {
-                    const on = g.codes.every(c => form.paymentMethods.includes(c))
+                  {/* Cash first, then the country's mobile wallets. */}
+                  {[...new Set<PaymentMethodCode>(['CASH', ...country.methods])].map(m => {
+                    const on = form.paymentMethods.includes(m)
                     return (
-                      <label key={g.label} className={`flex cursor-pointer items-center gap-2 rounded-xl border-[1.5px] border-solid p-3 ${on ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-container-low'}`}>
-                        <span className="flex -space-x-1.5">{g.codes.map(c => <PaymentLogo key={c} method={c} size={26} />)}</span>
-                        <span className="flex-1 text-label-md text-on-surface">{g.label}</span>
-                        <input type="checkbox" checked={on} onChange={() => togglePayment(g.codes)} className="h-4 w-4 accent-[var(--primary)]" />
+                      <label key={m} className={`flex cursor-pointer items-center gap-2 rounded-xl border-[1.5px] border-solid p-3 ${on ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-container-low'}`}>
+                        <PaymentLogo method={m} size={26} />
+                        <span className="flex-1 text-label-md text-on-surface">{methodLabel(m)}</span>
+                        <input type="checkbox" checked={on} onChange={() => togglePayment(m)} className="h-4 w-4 accent-[var(--primary)]" />
                       </label>
                     )
                   })}

@@ -15,6 +15,7 @@ import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifica
 import Home, { type SearchPreset } from './pages/Home'
 import { lazyPage, preloadPages } from './lib/lazyPage'
 import { useSeo } from './lib/site'
+import { setMarketState, useCountries } from './lib/countries'
 
 // Home is the landing page and ships in the entry chunk; every other page is
 // its own chunk so a first visit only downloads what it renders (recharts,
@@ -162,6 +163,9 @@ const routePage = (): Page | null =>
   !initialRoute ? null : initialRoute.page === 'account' ? (savedNav.page ?? 'home') : initialRoute.page
 const initialSearch = initialRoute?.page === 'search'
 
+const ACCOUNT_COUNTRY_KEY = 'yupixi_account_country'
+const rememberedAccountCountry = () => { try { return localStorage.getItem(ACCOUNT_COUNTRY_KEY) } catch { return null } }
+
 export default function App() {
   const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
   // Scroll position to apply on the next page change (see the layout effect
@@ -178,7 +182,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
   const [searchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedNav.searchTerm ?? ''))
-  const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? 'Abidjan')
+  const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? '')
   const [selectedSellerId, setSelectedSellerId] = useState(sharedSellerId() ?? initialRoute?.sellerId ?? savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
   // right conversation, not part of the session-restored nav state.
@@ -227,6 +231,34 @@ export default function App() {
     setStoredLocation(next)
     setLocation(next)
   }
+
+  // Market shown: a manual choice, else the member's country, else the IP
+  // guess — always an active country, or none (« Tous les pays »).
+  const countries = useCountries()
+  const active = (code: string | null | undefined) => (code && countries.some(c => c.code === code) ? code : null)
+  // The member's country, remembered so a reload shows it at once (not the
+  // IP guess for a second while the session loads).
+  const accountCountry = active(currentUser?.countryCode ?? (!currentUser && isLoggedIn ? rememberedAccountCountry() : null))
+  useEffect(() => {
+    try {
+      if (currentUser?.countryCode) localStorage.setItem(ACCOUNT_COUNTRY_KEY, currentUser.countryCode)
+      else if (!isLoggedIn) localStorage.removeItem(ACCOUNT_COUNTRY_KEY)
+    } catch { /* private mode */ }
+  }, [currentUser?.countryCode, isLoggedIn])
+  const marketLocation: StoredLocation | null = location?.source !== 'manual' && accountCountry
+    ? { countryCode: accountCountry, city: location?.countryCode === accountCountry ? location.city : null, source: location?.source ?? 'ip' }
+    : location && location.countryCode !== active(location.countryCode) ? { ...location, countryCode: null, city: null } : location
+  // The member changed their account country: the market follows it.
+  const lastAccount = useRef(accountCountry)
+  useEffect(() => {
+    const prev = lastAccount.current
+    lastAccount.current = accountCountry
+    if (prev && accountCountry && prev !== accountCountry && location?.countryCode !== accountCountry) changeLocation({ countryCode: accountCountry, city: null, source: 'manual' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountCountry])
+  useLayoutEffect(() => {
+    setMarketState({ market: marketLocation?.countryCode ?? null, account: accountCountry })
+  }, [marketLocation?.countryCode, accountCountry])
 
   useEffect(() => {
     const onUpdateAvailable = () => setShowUpdateBanner(true)
@@ -660,9 +692,9 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={location} locationPending={locationPending} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
+        return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? location?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} onContactSeller={contactSellerAbout} />
       case 'seller-profile':
@@ -678,7 +710,7 @@ export default function App() {
       case 'flash-offers':
         return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:
-        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} location={location} />
+        return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} location={marketLocation} />
     }
   }
 
@@ -809,7 +841,7 @@ export default function App() {
         onSelectListing={selectListing}
         onSetSearchTerm={setSearchTerm}
         onClearCategoryFilter={() => setCategoryFilter('')}
-        location={location}
+        location={marketLocation}
         onLocationChange={changeLocation}
         onOpenLegal={openLegal}
       >

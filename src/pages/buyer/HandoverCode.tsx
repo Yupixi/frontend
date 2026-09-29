@@ -33,6 +33,9 @@ const METHOD_BADGE: Record<string, { letter: string; cls: string; sub: string }>
   ORANGE_MONEY: { letter: 'OM', cls: 'bg-orange-100 text-orange-600', sub: 'Sans frais' },
   MTN_MOMO: { letter: 'M', cls: 'bg-yellow-100 text-yellow-700', sub: 'Mobile Money' },
   MOOV_MONEY: { letter: 'M', cls: 'bg-blue-100 text-blue-700', sub: 'Mobile Money' },
+  FREE_MONEY: { letter: 'FM', cls: 'bg-surface-container text-on-surface', sub: 'Mobile Money' },
+  T_MONEY: { letter: 'T', cls: 'bg-surface-container text-on-surface', sub: 'Mobile Money' },
+  AIRTEL_MONEY: { letter: 'AM', cls: 'bg-surface-container text-on-surface', sub: 'Mobile Money' },
   CASH: { letter: 'F', cls: 'bg-surface-container text-on-surface', sub: "Faire l'appoint" },
 }
 

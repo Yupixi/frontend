@@ -3,6 +3,8 @@ import DilchapLogo from './DilchapLogo'
 import Icon from './Icon'
 import { useLaunch, type LaunchStatus } from '../lib/launch'
 import { useSite } from '../lib/site'
+import { marketForCountry } from '../data/markets'
+import { getStoredLocation } from '../lib/location'
 
 // Before the launch date (BO › Contenu › Lancement) visitors see the launch
 // page; the team's secret link shows the site with a reminder banner. If
@@ -50,7 +52,7 @@ function LaunchPage({ status, onOpen }: { status: LaunchStatus, onOpen: () => vo
   // The date is reached: ask again, the site opens.
   useEffect(() => { if (c && c.left === 0) onOpen() }, [c?.left === 0]) // eslint-disable-line react-hooks/exhaustive-deps
   const date = status.launchAt
-    ? new Date(status.launchAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Abidjan' })
+    ? new Date(status.launchAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: marketForCountry(getStoredLocation()?.countryCode)?.timeZone ?? 'Africa/Abidjan' })
     : null
   const socials = (['facebook', 'instagram', 'tiktok', 'youtube', 'whatsapp'] as const).filter(k => site.socials[k])
 

@@ -1,5 +1,5 @@
 import Icon from '../../components/Icon'
-import PaymentLogo from '../../components/PaymentLogo'
+import PaymentLogo, { useMobileMethods } from '../../components/PaymentLogo'
 import { useNoCommissionClaims } from '../../lib/site'
 
 // Buyer-side hand-over space (Stitch "Mon code de remise / Reçus & Clôtures /
@@ -43,17 +43,18 @@ export function Breadcrumb({ items, onNavigate }: { items: { label: string; page
 
 export const TRUST_FOOTER = [
   { icon: 'percent', title: '0% Commission', text: 'Achetez et vendez sans frais cachés en remise directe.', cls: 'bg-tertiary-soft text-tertiary' },
-  { icon: 'account_balance_wallet', logos: true, title: 'Wave & Orange Money', text: 'Vous ne payez le vendeur qu’après avoir vérifié l’article sur place.', cls: 'bg-primary-fixed text-primary' },
+  { icon: 'account_balance_wallet', logos: true, title: 'Mobile Money ou espèces', text: 'Vous ne payez le vendeur qu’après avoir vérifié l’article sur place.', cls: 'bg-primary-fixed text-primary' },
   { icon: 'handshake', title: 'Remise Sécurisée', text: "Contrôle physique de l'article avant confirmation définitive.", cls: 'bg-tertiary-soft text-tertiary' },
 ]
 
 export function TrustFooter() {
+  const mobile = useMobileMethods()
   const noCommission = useNoCommissionClaims()
   return (
     <section className={`mt-8 hidden gap-4 md:grid ${noCommission ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
       {TRUST_FOOTER.filter(t => noCommission || t.icon !== 'percent').map(t => (
         <div key={t.title} className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4">
-          {'logos' in t ? <span className="flex shrink-0 -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={32} className="ring-2 ring-surface-lowest" />)}</span> : <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.cls}`}><Icon name={t.icon} size={22} /></span>}
+          {'logos' in t ? <span className="flex shrink-0 -space-x-2">{mobile.map(m => <PaymentLogo key={m} method={m} size={32} className="ring-2 ring-surface-lowest" />)}</span> : <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.cls}`}><Icon name={t.icon} size={22} /></span>}
           <div><div className="text-headline-sm text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
         </div>
       ))}

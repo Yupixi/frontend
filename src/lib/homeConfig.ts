@@ -2,7 +2,8 @@ import { gql } from '@apollo/client'
 
 // Home page content set in the back-office (« Page d'accueil », Backend
 // content/home-config.ts). DEFAULT_HOME mirrors the backend defaults: the
-// page renders with it until the query answers (no layout jump).
+// page renders with it until the query answers (no layout jump). Texts may
+// contain {{ville}} / {{pays}}, filled with the visitor's country (fillPlaces).
 export const HOME_CONFIG_QUERY = gql`
   query HomeConfig { homeConfig }
 `
@@ -34,21 +35,21 @@ export const DEFAULT_HOME: HomeConfig = {
     intervalSec: 6,
     slides: [
       {
-        image: '/stitch/hero-0.webp', badge: 'Plateforme N°1 à Abidjan', badgeIcon: 'local_fire_department', tone: 'red',
-        title: 'Achetez et vendez vos *pépites mode & sneakers* à Abidjan',
-        text: "Zéro frais, zéro commission. Des milliers de pièces uniques entre particuliers à Cocody, Marcory, Plateau et partout en Côte d'Ivoire.",
+        image: '/stitch/hero-0.webp', badge: 'Plateforme N°1 à {{ville}}', badgeIcon: 'local_fire_department', tone: 'red',
+        title: 'Achetez et vendez vos *pépites mode & sneakers* à {{ville}}',
+        text: 'Zéro frais, zéro commission. Des milliers de pièces uniques entre particuliers à {{ville}} et partout {{pays}}.',
         tags: ['✨ #ModeVintage', '👟 #SneakersRares', '👗 #WaxContemporain', '⚡ #VenteFlash'],
       },
       {
         image: '/stitch/hero-1.webp', badge: 'High-Tech & Bons Plans', badgeIcon: 'smartphone', tone: 'blue',
         title: 'Donnez une seconde vie à votre *High-Tech & Audio* au meilleur prix',
         text: 'Smartphones, casques, consoles et accessoires sans intermédiaire. Négociez directement sur le chat.',
-        tags: ['🎧 #CasquesSansFil', '📱 #iPhonesReconditionnés', '💻 #LaptopsPro', '🎮 #GamingAbidjan'],
+        tags: ['🎧 #CasquesSansFil', '📱 #iPhonesReconditionnés', '💻 #LaptopsPro', '🎮 #Gaming'],
       },
       {
         image: '/stitch/hero-2.webp', badge: 'Affaires en or', badgeIcon: 'diamond', tone: 'green',
         title: 'Trouvez les *meilleures affaires directes* 100% P2P',
-        text: 'Échangez en direct en lieu sécurisé avec Wave, Orange Money ou espèces. Remise en main propre sans surprise.',
+        text: 'Échangez en direct en lieu sécurisé par Mobile Money ou en espèces. Remise en main propre sans surprise.',
         tags: ['📍 #RemiseSécurisée', '🤝 #0Commission', '📲 #PaiementWave', '🛡️ #VendeursVérifiés'],
       },
     ],
@@ -62,7 +63,7 @@ export const DEFAULT_HOME: HomeConfig = {
   reassurance: [
     { icon: 'percent', title: '100% P2P & Gratuit', text: '0% de commission sur toutes vos ventes' },
     { icon: 'shield_with_heart', title: 'Remise en main propre', text: 'Vérifiez le produit avant paiement en lieu sécurisé' },
-    { icon: 'contactless', title: 'Paiements directs acceptés', text: 'Wave, Orange Money ou espèces sans intermédiaire' },
+    { icon: 'contactless', title: 'Paiements directs acceptés', text: 'Mobile Money ou espèces, sans intermédiaire' },
   ],
   mobileStrip: { title: '100% P2P • 0% Commission', text: 'Remise directe' },
   flashFallback: { title: 'Bons plans du moment', subtitle: 'Prix doux entre particuliers', text: 'Ventes flash et fins de dressing express, en direct des particuliers.' },
@@ -80,7 +81,7 @@ export const DEFAULT_HOME: HomeConfig = {
     steps: [
       { title: 'Dénichez votre pépite', text: 'Parcourez des centaines de pièces uniques publiées chaque jour à proximité de votre commune ou de votre lieu de travail.' },
       { title: 'Négociez en direct sur le chat', text: 'Échangez avec le vendeur via la messagerie instantanée, posez vos questions et fixez un prix équitable sans intermédiaire.' },
-      { title: 'Payez en main propre sécurisé', text: "Rendez-vous dans un lieu public. Testez l'article puis payez directement via Wave, Orange Money ou espèces." },
+      { title: 'Payez en main propre sécurisé', text: "Rendez-vous dans un lieu public. Testez l'article puis payez directement par Mobile Money ou en espèces." },
     ],
     badges: ['Profils et avis certifiés', '0 F de frais de plateforme', 'Équipe de modération active 7j/7'],
   },

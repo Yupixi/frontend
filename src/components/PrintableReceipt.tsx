@@ -4,6 +4,7 @@ import { thumbnailUrl } from '../lib/media'
 import { handoverProof } from '../lib/format'
 import type { HandoverOrder } from '../graphql/sellerTools'
 import { Claim } from '../lib/site'
+import { marketForCountry } from '../data/markets'
 
 type Props = {
   order: HandoverOrder
@@ -22,7 +23,9 @@ const fmtMoney = (n: number, currency: string) => `${n.toLocaleString('fr-FR').r
 // see `.print-doc` in index.css.
 export default function PrintableReceipt({ order: o, amount, payment, closedAt }: Props) {
   const currency = o.listing.currency
-  const ref = `${o.reference}-CI`
+  // Suffix and header: the listing's country.
+  const country = marketForCountry(o.listing.countryCode ?? 'CI')
+  const ref = `${o.reference}-${country?.code ?? 'CI'}`
   const rows: [string, string, string?][] = [
     ['Lieu de remise', o.meetup?.place ?? '—', 'Lieu public convenu entre les deux parties'],
     ['Date de la remise', fmtDate(closedAt), handoverProof(o.meetup)],
@@ -38,7 +41,7 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
         <header className="flex items-start justify-between border-0 border-b-2 border-solid border-[#FE0000] pb-4">
           <div>
             <img src="/logo-dilchap.png" alt="Dilchap" className="block h-10 w-auto" />
-            <div className="mt-1 text-[9pt] text-[#6b6363]">Marketplace — Côte d’Ivoire</div>
+            <div className="mt-1 text-[9pt] text-[#6b6363]">Marketplace — {country?.name ?? 'Afrique de l’Ouest'}</div>
           </div>
           <div className="text-right">
             <div className="text-[16pt] font-extrabold">Reçu de remise</div>

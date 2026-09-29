@@ -178,7 +178,7 @@ export function OpenDisputeModal({ conversationId, perspective, onClose, onOpene
 }
 
 export const ANTI_FRAUD_RULES = [
-  { icon: 'phonelink_lock', title: '1. Solde réel In-App', text: "Ne jamais céder l'article sur présentation d'un simple SMS. Vérifiez toujours le crédit effectif dans votre application Wave ou Orange Money." },
-  { icon: 'store', title: '2. Zones sécurisées', text: 'Privilégiez les galeries marchandes éclairées et sous vidéosurveillance (Playce, Cap Sud, Sococé, Cosmos Yopougon).' },
+  { icon: 'phonelink_lock', title: '1. Solde réel In-App', text: "Ne jamais céder l'article sur présentation d'un simple SMS. Vérifiez toujours le crédit effectif dans votre application Mobile Money." },
+  { icon: 'store', title: '2. Zones sécurisées', text: 'Privilégiez les galeries marchandes éclairées et sous vidéosurveillance.' },
   { icon: 'verified_user', title: '3. Code de validation', text: "Exigez le code de remise à 4 chiffres de l'acheteur, affiché sur son application Dilchap, avant de clôturer la vente." },
 ]

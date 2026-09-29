@@ -1,3 +1,5 @@
+import { isCountryCode } from '../data/markets'
+
 const LOCATION_KEY = 'yupixi_location'
 
 export type StoredLocation = {
@@ -13,7 +15,10 @@ export function getStoredLocation(): StoredLocation | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = localStorage.getItem(LOCATION_KEY)
-    return raw ? (JSON.parse(raw) as StoredLocation) : null
+    if (!raw) return null
+    const stored = JSON.parse(raw) as StoredLocation
+    // A country Dilchap doesn't serve (older choice): « Tous les pays ».
+    return stored.countryCode && !isCountryCode(stored.countryCode) ? { countryCode: null, city: null, source: stored.source } : stored
   } catch {
     return null
   }
@@ -39,8 +44,10 @@ export async function detectLocationFromIP(): Promise<StoredLocation | null> {
     if (!res.ok) return null
     const data = await res.json()
     if (!data.success) return null
+    // Outside the UEMOA countries: no country (« Tous les pays »).
+    if (!isCountryCode(data.country_code)) return { countryCode: null, city: null, source: 'ip' }
     return {
-      countryCode: typeof data.country_code === 'string' ? data.country_code : null,
+      countryCode: data.country_code,
       city: typeof data.city === 'string' ? data.city : null,
       source: 'ip',
     }

@@ -11,6 +11,7 @@ import { MY_FAVORITE_ENTRIES_QUERY, listingPlace, type FavoriteEntry } from '../
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import SellerBadge from '../../components/SellerBadge'
+import { useMarket } from '../../lib/countries'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -88,6 +89,7 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
 
 // "Mes Favoris & Annonces sauvegardées" (Stitch desktop + mobile).
 export default function Favorites({ onNavigate, onSelectListing, onToggleFavorite, onContactSeller, onSearchCategory, currentUser, onLogout }: Props) {
+  const market = useMarket()
   const { data, loading, refetch } = useQuery<{ myFavoriteEntries: FavoriteEntry[] }>(MY_FAVORITE_ENTRIES_QUERY, { fetchPolicy: 'cache-and-network' })
   // Removed entries disappear on tap; the list resyncs in the background.
   const [removed, setRemoved] = useState<ReadonlySet<string>>(() => new Set())
@@ -121,7 +123,7 @@ export default function Favorites({ onNavigate, onSelectListing, onToggleFavorit
       <div className="mx-auto max-w-[1180px] pb-8">
         <section className="flex flex-wrap items-start justify-between gap-4 md:rounded-3xl md:bg-surface-container-low md:p-6">
           <div className="max-w-xl">
-            <div className="hidden items-center gap-2 text-label-sm uppercase md:flex"><span className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-0.5 text-primary"><Icon name="favorite" size={13} /> Espace acheteur</span><span className="text-on-surface-variant">• Côte d'Ivoire</span></div>
+            <div className="hidden items-center gap-2 text-label-sm uppercase md:flex"><span className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-0.5 text-primary"><Icon name="favorite" size={13} /> Espace acheteur</span>{market && <span className="text-on-surface-variant">• {market.name}</span>}</div>
             <h1 className="m-0 mt-1 text-headline-lg-mobile text-on-surface md:text-headline-lg"><span className="max-md:hidden">Mes </span>Favoris<span className="hidden md:inline"> &amp; Annonces sauvegardées</span> <span className="rounded-full bg-primary-fixed px-2 align-middle text-label-lg text-primary md:hidden">{all.length}</span></h1>
             <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Retrouvez vos articles mis de côté et surveillez les baisses de prix en temps réel.</p>
           </div>

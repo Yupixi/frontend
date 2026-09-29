@@ -369,7 +369,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
           <ol className="m-0 mt-1 list-decimal pl-5 text-body-sm text-on-surface-variant">
             <li>Convenez toujours d'un rendez-vous dans un lieu public et fréquenté.</li>
             <li>Inspectez et essayez le produit (écoute, essayage, test) avant tout règlement.</li>
-            <li>Effectuez le paiement direct de la somme convenue<Claim> (0 F de frais)</Claim> par Wave, Orange Money ou espèces.</li>
+            <li>Effectuez le paiement direct de la somme convenue<Claim> (0 F de frais)</Claim> par Mobile Money ou espèces.</li>
           </ol>
         </div>
         {reportDone ? (

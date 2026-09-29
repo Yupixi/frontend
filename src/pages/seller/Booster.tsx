@@ -21,7 +21,7 @@ import { useBumpCost } from '../../lib/useBumpCost'
 import OfferCredits from '../../components/OfferCredits'
 import { packOperation } from '../../lib/priceOffers'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
-import PaymentLogo from '../../components/PaymentLogo'
+import PaymentLogo, { useMobileMethods } from '../../components/PaymentLogo'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -36,6 +36,7 @@ function formatDate(iso: string) {
 // (WalletPaySheet) and activated by the server at once.
 export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const noCommission = useNoCommissionClaims()
+  const mobile = useMobileMethods()
   const { data: listingsData, refetch: refetchListings } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 100 } })
   const live = (listingsData?.myListings.items ?? []).filter(l => l.status === 'APPROVED')
   const { data: packsData } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY)
@@ -398,7 +399,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           {[
             ...(noCommission ? [{ icon: <Percent size={19} />, title: '0% Commission', text: 'Vendez gratuitement sans frais cachés' }] : []),
             { icon: <Handshake size={19} />, title: 'Remise en main propre', text: 'Vérification directe de l’article' },
-            { icon: <span className="flex -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={26} className="ring-2 ring-surface-lowest" />)}</span>, title: 'Paiement direct Wave / OM', text: 'Transactions entre particuliers', bare: true },
+            { icon: <span className="flex -space-x-2">{mobile.map(m => <PaymentLogo key={m} method={m} size={26} className="ring-2 ring-surface-lowest" />)}</span>, title: 'Paiement direct Mobile Money', text: 'Transactions entre particuliers', bare: true },
             { icon: <ShieldCheck size={19} />, title: 'Mise en relation sécurisée', text: 'Profils vérifiés et signalement' },
           ].map(t => (
             <div key={t.title} className="flex items-start gap-3 rounded-xl bg-surface-container-low p-3">

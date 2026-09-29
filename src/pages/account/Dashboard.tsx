@@ -13,6 +13,7 @@ import { FOOTER_SETTINGS_QUERY } from '../../graphql/content'
 import type { AuthUser } from '../../graphql/auth'
 import Credits from '../../components/Credits'
 import PaymentLogo, { paymentLabel } from '../../components/PaymentLogo'
+import { useMethods } from '../../lib/countries'
 import { useNoCommissionClaims } from '../../lib/site'
 
 type Props = {
@@ -42,6 +43,8 @@ function Kpi({ label, short, icon, animated, value, sub, onClick, accent, classN
 // "Tableau de bord" (Stitch desktop + mobile): buyer and seller overview.
 export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase, onOpenConversation, onOpenHandover, currentUser, onLogout }: Props) {
   const noCommission = useNoCommissionClaims()
+  // Payment methods of the member's country.
+  const methods = useMethods(currentUser?.countryCode ?? null)
   const { data: salesData } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY)
   const { data: walletData } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
@@ -263,7 +266,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
               <div className="mt-3 flex flex-col gap-1">
                 {[
                   { icon: 'add_photo_alternate', title: 'Déposer une nouvelle annonce', sub: 'Photos, prix et point de remise', go: () => onNavigate('seller-post') },
-                  { icon: 'account_balance_wallet', title: 'Acheter des crédits', sub: 'Via Wave, Orange Money ou MTN', go: () => onNavigate('seller-wallet') },
+                  { icon: 'account_balance_wallet', title: 'Acheter des crédits', sub: 'Par Mobile Money', go: () => onNavigate('seller-wallet') },
                   { icon: 'receipt_long', title: "Consulter mes reçus d'achat", sub: 'Remises effectuées et reçus', go: () => onNavigate('buyer-receipts') },
                   ...(support ? [{ icon: 'support_agent', title: 'Support WhatsApp Dilchap', sub: `Assistance directe • ${support}`, go: () => window.open(`https://wa.me/${support.replace(/[^\d]/g, '')}`, '_blank') }] : []),
                 ].map(s => (
@@ -282,7 +285,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
             <section className="hidden rounded-2xl bg-tertiary-soft p-4 md:block">
               <div className="flex items-center gap-2 text-label-lg text-tertiary"><Icon name="verified_user" size={20} /> Sécurité anti-arnaque Dilchap</div>
               <p className="m-0 mt-1 text-body-sm text-on-surface">Ne payez jamais avant d'avoir inspecté l'article, et ne donnez votre code de remise qu'une fois l'article vérifié.</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">{['WAVE', 'ORANGE_MONEY', 'MTN_MOMO', 'CASH'].map(c => <span key={c} className="flex items-center gap-1.5 rounded-lg bg-surface-lowest py-1 pl-1 pr-2 text-label-sm text-on-surface"><PaymentLogo method={c} size={20} /> {paymentLabel(c)}</span>)}</div>
+              <div className="mt-2 flex flex-wrap gap-1.5">{methods.map(c => <span key={c} className="flex items-center gap-1.5 rounded-lg bg-surface-lowest py-1 pl-1 pr-2 text-label-sm text-on-surface"><PaymentLogo method={c} size={20} /> {paymentLabel(c)}</span>)}</div>
             </section>
             {upcoming && upcomingIsToday && (
               <section className="hidden rounded-2xl bg-surface-lowest p-4 shadow-sm md:block">

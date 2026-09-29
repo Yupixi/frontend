@@ -15,6 +15,7 @@ import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
 import Select from '../components/Select'
 import { PaymentLogos } from '../components/PaymentLogo'
+import { fillPlacesDeep, useMarket, useMethods } from '../lib/countries'
 import { ShopCard } from '../components/ShopCard'
 import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 import { HomePromotions } from '../components/campaign/CampaignTiles'
@@ -99,7 +100,11 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
 
   // Content and layout set in the back-office (« Page d'accueil »).
   const { data: homeData } = useQuery<{ homeConfig: HomeConfig }>(HOME_CONFIG_QUERY, { fetchPolicy: 'cache-and-network' })
-  const home = homeData?.homeConfig ?? DEFAULT_HOME
+  // {{ville}} / {{pays}} in the texts: the visitor's country.
+  const market = useMarket()
+  const methods = useMethods().filter(m => m !== 'CASH')
+  const rawHome = homeData?.homeConfig ?? DEFAULT_HOME
+  const home = useMemo(() => fillPlacesDeep(rawHome, market), [rawHome, market])
   const SLIDES = home.hero.slides
   const SLIDE_MS = Math.max(3, home.hero.intervalSec) * 1000
 
@@ -119,7 +124,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const recommended = recommendedData?.recommendedListings ?? []
   const withPhoto = recommended.filter(l => !!listingImage(l))
   // "Boutiques officielles" rail (most followed first).
-  const { data: shopsData } = useQuery<{ shops: { items: Shop[] } }>(SHOPS_QUERY, { variables: { sort: 'POPULAR', pageSize: 8 } })
+  const { data: shopsData } = useQuery<{ shops: { items: Shop[] } }>(SHOPS_QUERY, { variables: { sort: 'POPULAR', pageSize: 8, countryCode: location?.countryCode ?? undefined }, skip: locationPending })
   const shops = shopsData?.shops.items ?? []
   const pepites = [...(withPhoto.length ? withPhoto : recommended)].sort((a, b) => Number(isBoosted(b)) - Number(isBoosted(a)))
   const hasBoosted = pepites.some(isBoosted)
@@ -206,7 +211,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const card = (l: RemoteListing, featured?: boolean) => (
     <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} featured={featured} />
   )
-  const zone = location?.city ?? 'Toute la Côte d’Ivoire'
+  const zone = location?.city ?? market?.name ?? 'Tous les pays'
 
   const loadMore = canLoadMore && (
     <button
@@ -233,7 +238,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                     <div>
                       <p className="m-0 text-label-md font-bold text-on-surface">{item.title}</p>
                       <p className="m-0 text-body-sm text-on-surface-variant">{item.text}</p>
-                      {(item.icon === 'contactless' || item.icon === 'payments') && <PaymentLogos size={18} className="mt-1" />}
+                      {(item.icon === 'contactless' || item.icon === 'payments') && <PaymentLogos size={18} className="mt-1" methods={methods} />}
                     </div>
                   </div>
                 ))}
@@ -398,7 +403,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
             <div className="min-w-0 leading-tight">
               <div className="truncate text-label-sm font-bold text-on-surface">{home.mobileStrip.title}</div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={['WAVE', 'ORANGE_MONEY', 'MTN_MOMO']} /> ou espèces</div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={methods.slice(0, 3)} /> ou espèces</div>
             </div>
           </div>
           <Icon name="handshake" size={18} className="shrink-0 text-on-surface-variant" />

@@ -329,7 +329,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
         <div className="hidden items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-6 py-3 md:flex">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><ShieldCheck size={19} /></span>
           <p className="m-0 flex-1 text-body-sm text-on-surface-variant">
-            <b className="text-on-surface">Règle d'or Dilchap : remise en main propre<Claim> &amp; 0 F de frais</Claim></b> <Claim><span className="font-semibold text-tertiary">• 100% gratuit.</span> </Claim>Rencontrez-vous dans un lieu public et testez l'article avant tout paiement (espèces, Wave ou Orange Money).
+            <b className="text-on-surface">Règle d'or Dilchap : remise en main propre<Claim> &amp; 0 F de frais</Claim></b> <Claim><span className="font-semibold text-tertiary">• 100% gratuit.</span> </Claim>Rencontrez-vous dans un lieu public et testez l'article avant tout paiement (espèces ou Mobile Money).
           </p>
           <span className="flex shrink-0 items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1 text-label-sm text-tertiary"><Lock size={13} /> Échanges protégés</span>
         </div>
@@ -513,7 +513,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                     <div className="mb-2 rounded-xl border border-outline-variant p-3">
                       <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface"><MapPin size={16} className="text-primary" /> Proposer un lieu de rendez-vous</div>
                       <div className="grid gap-2 sm:grid-cols-[1fr_200px]">
-                        <input className="input" value={meetupPlace} onChange={e => setMeetupPlace(e.target.value)} placeholder="Ex : Playce Cocody (Carrefour)" />
+                        <input className="input" value={meetupPlace} onChange={e => setMeetupPlace(e.target.value)} placeholder={lists.meetupSpots[0] ? `Ex : ${lists.meetupSpots[0].name}` : 'Ex : centre commercial, station-service…'} />
                         <input className="input" type="datetime-local" value={meetupAt} onChange={e => setMeetupAt(e.target.value)} />
                       </div>
                       {meetupError && <p className="m-0 mt-1.5 text-body-sm text-primary">{meetupError}</p>}

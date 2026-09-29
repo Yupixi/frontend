@@ -7,6 +7,7 @@ import Price from './Price'
 import PaymentSheet from './PaymentSheet'
 import { PAYMENT_SETTINGS_QUERY, WALLET_BALANCE_QUERY, type PaymentIntent, type PaymentSettings, type WalletBalance } from '../graphql/payments'
 import { CREDIT_PACKS_QUERY, type CreditPack } from '../graphql/sellerHub'
+import { useAccountCountryCode, useCountry } from '../lib/countries'
 
 // "Acheter des crédits": a pack (credits offered on the bigger ones) or a
 // free number of credits at the credit price, both set in the back-office,
@@ -29,6 +30,9 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   const [choice, setChoice] = useState(pack ?? (suggested ? 'FREE' : ''))
   const [count, setCount] = useState(suggested ? String(Math.max(min, suggested)) : '')
   const [pay, setPay] = useState(false)
+  // Mobile Money collection is open per country (« Pays » in the BO).
+  const country = useCountry(useAccountCountryCode(), true)
+  const notHere = !!country && !country.payments
 
   // Whole credits only: "2.5" or "2,5" is refused with a message instead of
   // silently becoming 25.
@@ -39,6 +43,13 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   const credits = picked ? picked.credits + picked.bonusCredits : choice === 'FREE' && freeOk ? n : 0
   const amount = picked ? picked.price : choice === 'FREE' && freeOk ? n * value : 0
   const ok = credits > 0 && amount > 0 && !paymentsOff
+
+  if (notHere) return (
+    <BottomSheet open={open} onClose={onClose} title="Acheter des crédits" maxWidth="480px"
+      footer={<div className="border-0 border-t border-solid border-outline-variant px-4 pb-3 pt-3"><button type="button" onClick={onClose} className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border-none bg-primary text-label-lg text-white">Compris</button></div>}>
+      <p className="m-0 flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-md text-on-surface"><Icon name="schedule" size={20} className="shrink-0 text-primary" /> L’achat de crédits par Mobile Money arrive bientôt {country.inName}. En attendant, tout le reste de Dilchap fonctionne : annonces, messages, remise en main propre et paiement direct au vendeur.</p>
+    </BottomSheet>
+  )
 
   if (pay) return (
     <PaymentSheet open={open} onClose={() => { setPay(false); onClose() }} title="Acheter des crédits" amount={amount}
