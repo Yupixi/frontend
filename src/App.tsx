@@ -89,6 +89,19 @@ if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'm
 
 const NAV_STORAGE_KEY = 'yupixi_nav_state'
 
+// Dark theme chosen by the visitor, kept across visits (applied before the
+// first render so the page doesn't flash light).
+const THEME_KEY = 'yupixi_theme'
+function loadDark(): boolean {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark'
+  } catch {
+    return false
+  }
+}
+const savedDark = loadDark()
+document.documentElement.classList.toggle('dark', savedDark)
+
 function loadNavState(): Partial<NavState> {
   try {
     const raw = sessionStorage.getItem(NAV_STORAGE_KEY)
@@ -144,7 +157,7 @@ export default function App() {
   const pendingScroll = useRef(0)
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? savedNav.legalSlug ?? 'cgu')
   const [shopKey, setShopKey] = useState(sharedShopKey() ?? savedNav.shopKey ?? '')
-  const [dark, setDark] = useState(false)
+  const [dark, setDark] = useState(savedDark)
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? savedNav.selectedListingId ?? 'l1')
@@ -317,9 +330,12 @@ export default function App() {
     navigate('search')
   }
 
-  // Apply dark mode to document
+  // Apply dark mode to document, and remember the choice
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
+    try {
+      localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
+    } catch { /* private browsing: the choice lasts this visit only */ }
   }, [dark])
 
   // Native back/forward navigation through the browser history
