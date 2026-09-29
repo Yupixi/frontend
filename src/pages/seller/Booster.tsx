@@ -18,6 +18,8 @@ import Select from '../../components/Select'
 import BoosterMobile from './BoosterMobile'
 import Credits, { creditsLabel } from '../../components/Credits'
 import { useBumpCost } from '../../lib/useBumpCost'
+import OfferCredits from '../../components/OfferCredits'
+import { packOperation } from '../../lib/priceOffers'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
 import PaymentLogo from '../../components/PaymentLogo'
 
@@ -42,12 +44,12 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const history = boostsData?.myBoosts ?? []
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
   const credits = walletData?.myWallet.credits ?? 0
-  // A bump costs the "Remontée instantanée" price, in credits (BO).
-  const bumpCost = useBumpCost()
 
   const [listingId, setListingId] = useState('')
   useEffect(() => { if (!listingId && live[0]) setListingId(live[0].id) }, [live, listingId])
   const listing = live.find(l => l.id === listingId)
+  // A bump costs the "Remontée instantanée" price less the live offer.
+  const bumpCost = useBumpCost(false, listing?.id)
 
   const [bumpChoice, setBumpChoice] = useState<BoostPack>('BUMP_FLASH')
   const [featuredChoice, setFeaturedChoice] = useState<BoostPack>('FEATURED_48H')
@@ -93,7 +95,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
         {/* Price under the label: the cards are narrow in the 4-column grid. */}
         <span className="min-w-0 flex-1 text-body-sm">
           <span className="block font-semibold text-on-surface">{info.label}</span>
-          <span className="block whitespace-nowrap text-[11px] text-on-surface-variant"><b className="text-label-md text-on-surface"><Credits n={info.price} /></b>{sub && <> · {sub}</>}</span>
+          <span className="block whitespace-nowrap text-[11px] text-on-surface-variant"><b className="text-label-md text-on-surface"><OfferCredits op={packOperation(info.pack)} n={info.price} listingId={listing?.id} tag={false} /></b>{sub && <> · {sub}</>}</span>
         </span>
       </label>
     )
@@ -266,7 +268,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 <div className="mt-4 rounded-xl bg-surface-container-low p-3">
                   <div className="text-label-sm uppercase text-on-surface-variant">Tarif spécial tout-inclus</div>
                   <div className="flex items-baseline gap-2">
-                    <span className="whitespace-nowrap text-headline-md font-extrabold text-primary"><Credits n={turbo.price} /></span>
+                    <span className="whitespace-nowrap text-headline-md font-extrabold text-primary"><OfferCredits op="BOOST" n={turbo.price} listingId={listing?.id} /></span>
                     <span className="text-label-sm text-tertiary">pour 7 jours</span>
                   </div>
                 </div>
@@ -284,11 +286,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{urgent.description}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm">
                   <span className="text-on-surface-variant">Validité continue</span><span className="text-right font-semibold text-on-surface">{urgent.durationHours} heures</span>
-                  <span className="text-on-surface-variant">Tarif unique</span><span className="whitespace-nowrap text-right font-extrabold text-primary"><Credits n={urgent.price} /></span>
+                  <span className="text-on-surface-variant">Tarif unique</span><span className="whitespace-nowrap text-right font-extrabold text-primary"><OfferCredits op="BOOST" n={urgent.price} listingId={listing?.id} /></span>
                 </div>
                 <button disabled={!listing} onClick={() => activate('URGENT_72H')} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                   {/* One text node: flex gap would otherwise space out "(", amount, "F" and ")". */}
-                  <span>Prendre le badge (<Credits n={urgent.price} />)</span> <ArrowRight size={16} />
+                  <span>Prendre le badge (<OfferCredits op="BOOST" n={urgent.price} listingId={listing?.id} />)</span> <ArrowRight size={16} />
                 </button>
               </div>
             )}

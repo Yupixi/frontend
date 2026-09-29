@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import WalletPaySheet from './WalletPaySheet'
-import Credits from './Credits'
+import OfferCredits from './OfferCredits'
+import { packOperation } from '../lib/priceOffers'
 import { BOOST_PACKS_QUERY, type BoostPackInfo } from '../graphql/promotions'
 
 type BoostMenuProps = {
@@ -24,7 +25,7 @@ export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: B
       {(data?.boostPacks ?? []).map(p => (
         <button key={p.pack} onClick={() => setPicked(p)} className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-none bg-transparent px-2.5 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low disabled:opacity-60">
           <span className="truncate">{p.label}</span>
-          <span className="shrink-0 whitespace-nowrap text-primary"><Credits n={p.price} /></span>
+          <span className="shrink-0 whitespace-nowrap text-primary"><OfferCredits op={packOperation(p.pack)} n={p.price} listingId={listingId} tag={false} /></span>
         </button>
       ))}
       <WalletPaySheet
