@@ -67,7 +67,7 @@ export function CampaignFeatured({ c }: { c: LiveCampaign }) {
         </div>
         <EndsIn endsAt={c.endsAt} className="shrink-0 rounded-full bg-surface-container-low px-3 py-1 text-label-sm text-on-surface-variant" />
       </div>
-      <div className="relative mx-6 aspect-[16/7] overflow-hidden rounded-xl">
+      <div className="relative mx-6 aspect-[16/7] max-h-[300px] overflow-hidden rounded-xl">
         <Visual c={c} visual={card} />
       </div>
       <div className="mt-auto p-6 pt-4">
