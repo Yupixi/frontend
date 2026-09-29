@@ -27,7 +27,7 @@ export default function ReviewsMobile({ rep, reviews, currentUser, replying, onR
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0)
   const penalties = disputesData?.myDisputeStats.penalties ?? 0
   const response = formatResponseTime(rep?.responseTimeMinutes)
-  const profileUrl = currentUser ? `${window.location.origin}${window.location.pathname}?seller=${currentUser.id}` : ''
+  const profileUrl = currentUser ? `${window.location.origin}/vendeur/${currentUser.id}` : ''
   const badges = [
     { icon: 'schedule', title: 'Ponctuel', sub: `${rep?.confirmedMeetups ?? 0} RDV honorés` },
     { icon: 'task_alt', title: 'Conforme', sub: rep?.satisfactionRate != null ? `${Math.round(rep.satisfactionRate)}% d'avis positifs` : 'Pas encore d’avis' },

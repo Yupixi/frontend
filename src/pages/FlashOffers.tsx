@@ -94,7 +94,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
   const others = live.filter(c => c.id !== campaign.id)
   const cost = campaign.listingFee + campaign.entryFee
   const share = () => {
-    const url = `${window.location.origin}/?campaign=${campaign.slug}`
+    const url = `${window.location.origin}/bonnes-affaires/${campaign.slug}`
     if (navigator.share) void navigator.share({ title: campaign.name, url }).catch(() => undefined)
     else void navigator.clipboard?.writeText(url)
   }

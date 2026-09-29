@@ -54,7 +54,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
 
   const share = async () => {
     if (!currentUser) return
-    await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?seller=${currentUser.id}`)
+    await navigator.clipboard.writeText(`${window.location.origin}/vendeur/${currentUser.id}`)
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
   const publish = (id: string) => {

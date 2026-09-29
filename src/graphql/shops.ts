@@ -190,7 +190,7 @@ export function openNow(hours: OpeningHours[], now = new Date()) {
   return { open: false, until: null }
 }
 
-export const shopUrl = (slug: string) => `${window.location.origin}${window.location.pathname}?shop=${encodeURIComponent(slug)}`
+export const shopUrl = (slug: string) => `${window.location.origin}/boutique/${encodeURIComponent(slug)}`
 
 // The owner's online listings, for aisles / pinned items / stock.
 export const MY_SHOP_LISTINGS_QUERY = gql`

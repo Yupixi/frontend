@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 
@@ -58,12 +58,21 @@ function setMeta(attr: 'name' | 'property', key: string, value: string) {
   el.content = value
 }
 
-// Browser tab title, description and share tags from « Réglages du site ».
-// Set at runtime: search engines that run JavaScript (Google) read them;
-// link previews that don't (WhatsApp, Facebook) keep the static index.html.
-export function useSeo() {
+// Pages that set their own tab title (usePageTitle).
+const OWN_TITLE = ['listing-detail', 'shop', 'seller-profile']
+
+// Browser tab title, description and share tags from « Réglages du site »,
+// when the visitor moves to another page. The first page's come from the
+// storefront's server (Backend src/modules/seo): its title, description,
+// share image and structured data are already right for that URL and are
+// left as they are.
+export function useSeo(page: string) {
   const { seo, brand } = useSite()
+  const firstPage = useRef(page)
+  const moved = useRef(false)
+  if (page !== firstPage.current) moved.current = true
   useEffect(() => {
+    if (!moved.current || OWN_TITLE.includes(page)) return
     document.title = seo.title || brand.name
     setMeta('name', 'description', seo.description)
     setMeta('property', 'og:title', seo.title || brand.name)
@@ -71,5 +80,13 @@ export function useSeo() {
     setMeta('property', 'og:site_name', brand.name)
     setMeta('property', 'og:image', seo.image)
     setMeta('name', 'apple-mobile-web-app-title', brand.name)
-  }, [seo.title, seo.description, seo.image, brand.name])
+  }, [page, seo.title, seo.description, seo.image, brand.name])
+}
+
+// Tab title of a page about one thing (a listing, a shop, a member).
+export function usePageTitle(title: string | null | undefined) {
+  const { brand } = useSite()
+  useEffect(() => {
+    if (title) document.title = `${title} | ${brand.name}`
+  }, [title, brand.name])
 }

@@ -24,6 +24,7 @@ import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
 import { Claim, useNoCommissionClaims } from '../lib/site'
 import { useLists } from '../lib/lists'
+import { usePageTitle } from '../lib/site'
 
 
 type SellerProfileProps = {
@@ -72,6 +73,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   const { data: shopData, loading: shopLoading } = useQuery<{ shop: Shop }>(SHOP_QUERY, { variables: { key: sellerId }, errorPolicy: 'all' })
   const { data: profileData, loading, refetch: refetchProfile } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, { variables: { sellerId } })
   const seller = profileData?.sellerProfile
+  usePageTitle(seller?.fullName)
   const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId }, sort, pageSize: 100 },
   })
@@ -125,7 +127,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       .catch(() => undefined)
   }
   const share = async () => {
-    const url = `${window.location.origin}${window.location.pathname}?seller=${seller.id}`
+    const url = `${window.location.origin}/vendeur/${seller.id}`
     if (navigator.share) { try { await navigator.share({ title: seller.fullName, url }) } catch { /* cancelled */ } return }
     await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
