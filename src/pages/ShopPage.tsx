@@ -15,6 +15,7 @@ import { ShopLogo } from '../components/ShopCard'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { Claim } from '../lib/site'
 import { useLists } from '../lib/lists'
+import { useRules } from '../lib/rules'
 
 type Props = {
   shopKey: string
@@ -130,6 +131,7 @@ function ContactRow({ href, icon, label, value }: { href: string, icon: string, 
 }
 
 export default function ShopPage({ shopKey, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId, preloaded }: Props) {
+  const maxFeatured = useRules().SHOP_MAX_FEATURED
   const [tab, setTab] = useState<Tab>('home')
   const [aisle, setAisle] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -149,7 +151,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
     variables: { filter: { sellerId: ownerId }, sort, pageSize: 100 }, skip: !ownerId,
   })
   const { data: featured } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: { filter: { sellerId: ownerId, featuredOnly: true }, pageSize: 8 }, skip: !ownerId,
+    variables: { filter: { sellerId: ownerId, featuredOnly: true }, pageSize: maxFeatured }, skip: !ownerId,
   })
   const { data: promoData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId: ownerId, promoOnly: true }, pageSize: 12 }, skip: !ownerId,

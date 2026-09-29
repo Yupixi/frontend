@@ -34,8 +34,6 @@ export const SUPPORT_CATEGORIES: [SupportCategory, string][] = [
 ]
 export const CATEGORY_LABEL = Object.fromEntries(SUPPORT_CATEGORIES) as Record<SupportCategory, string>
 
-// Response target in hours, as enforced by the server.
-export const SLA_HOURS: Record<SupportPriority, number> = { URGENT: 2, HIGH: 24, NORMAL: 72 }
 
 export const MY_SUPPORT_TICKETS_QUERY = gql`query MySupportTickets { mySupportTickets }`
 export const CREATE_SUPPORT_TICKET_MUTATION = gql`mutation CreateSupportTicket($input: SupportTicketInput!) { createSupportTicket(input: $input) }`
