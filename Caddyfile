@@ -23,6 +23,19 @@
 	reverse_proxy {$SEO_BACKEND_URL:https://yupixi-backend-gahuiz-52bc79-82-29-184-109.sslip.io} {
 		header_up Host {upstream_hostport}
 		header_up X-Site-Host {hostport}
+		# The API's own security headers (helmet: CSP default-src 'self'…)
+		# would stop the page from calling the API: the storefront's apply.
+		header_down -Content-Security-Policy
+		header_down -Cross-Origin-Opener-Policy
+		header_down -Cross-Origin-Resource-Policy
+		header_down -Origin-Agent-Cluster
+		header_down -X-Frame-Options
+		header_down -X-XSS-Protection
+		header_down -X-DNS-Prefetch-Control
+		header_down -X-Download-Options
+		header_down -X-Permitted-Cross-Domain-Policies
+		header_down -Referrer-Policy
+		header_down -Strict-Transport-Security
 		transport http {
 			dial_timeout 3s
 			response_header_timeout 8s
