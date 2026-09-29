@@ -21,6 +21,7 @@ import {
 } from '../../graphql/listings'
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
+import { clearDraftPhotos, loadDraftPhotos, saveDraftPhotos } from '../../lib/draftPhotos'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
@@ -155,6 +156,21 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  // A new listing's photos are kept on the device with the text draft
+  // (IndexedDB): a refresh or a closed tab brings them back.
+  const photosRestored = useRef(isEditing)
+  useEffect(() => {
+    if (isEditing) return
+    let alive = true
+    void loadDraftPhotos().then(files => {
+      if (!alive) return
+      photosRestored.current = true
+      if (!files.length) return
+      setImageFiles(p => (p.length ? p : files))
+      setImagePreviews(p => (p.length ? p : files.map(f => URL.createObjectURL(f))))
+    })
+    return () => { alive = false }
+  }, [isEditing])
   const [existingMedia, setExistingMedia] = useState<{ id: string; url: string }[]>([])
   const [prefilled, setPrefilled] = useState(false)
   const initialForm = useRef<string | null>(null)
@@ -211,7 +227,12 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     setPrefilled(true)
   }, [existingData, isEditing, prefilled])
 
-  // Auto-save a draft of a new listing (photos excepted) every change.
+  useEffect(() => {
+    if (isEditing || result || !photosRestored.current) return
+    void saveDraftPhotos(imageFiles)
+  }, [imageFiles, isEditing, result])
+
+  // Auto-save a draft of a new listing every change (photos: above).
   useEffect(() => {
     if (isEditing || result) return
     const t = setTimeout(() => {
@@ -280,7 +301,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   ]
   // Mobile only: the form becomes a wizard, one card per screen, driven by
   // a sticky Précédent / Suivant bar. Desktop keeps the single long page.
-  const [step, setStep] = useState(0)
+  // The current step lives in the history entry, which survives a refresh.
+  const [step, setStep] = useState(() => {
+    const at = window.history.state?.wizardStep
+    return typeof at === 'number' ? Math.max(0, Math.min(4, at)) : 0
+  })
   const MOBILE_STEPS = ['Photos', 'Détails', 'Prix', 'Rencontre', 'Aperçu']
   // A job offer (no price) has no "état" either.
   const needsCondition = requiresPrice
@@ -415,7 +440,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       // "Publication directe" (BO): the listing comes back already live.
       let live = false
       if (submit && publishes) live = (await submitForReview({ variables: { id } })).data?.submitListingForReview.status === 'APPROVED'
-      if (!isEditing) { try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ } }
+      if (!isEditing) { try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ } void clearDraftPhotos() }
       let campaign: NonNullable<typeof result>['campaign']
       if (joining) {
         const { campaign: c, discountPercent } = campaignChoice
@@ -433,9 +458,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     }
   }
 
-  // New listings keep their text in the local draft; only picked photos (and
-  // an edit's changes) are lost when leaving.
-  const unsaved = imageFiles.length > 0 || (isEditing && initialForm.current != null && JSON.stringify(form) !== initialForm.current)
+  // A new listing's text and photos stay in the draft on this device; only
+  // an edit's changes are lost when leaving.
+  const unsaved = isEditing && (imageFiles.length > 0 || (initialForm.current != null && JSON.stringify(form) !== initialForm.current))
   unsavedRef.current = unsaved && !result
   // Shell back arrow (mobile) = the phone's back button: history.back()
   // walks the steps, and leaving from step 0 goes through the popstate
@@ -453,6 +478,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   }
 
   const reset = () => {
+    void clearDraftPhotos()
     setForm(EMPTY); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false); setCampaignChoice(null)
   }
 
@@ -516,9 +542,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   return (
     <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} onBack={shellBack}>
       <ConfirmSheet open={quitOpen} title="Quitter le dépôt ?" confirmLabel="Quitter" tone="danger" onConfirm={leave} onClose={() => setQuitOpen(false)}>
-        {imageFiles.length > 0
-          ? <>{imageFiles.length > 1 ? `Vos ${imageFiles.length} photos ne seront pas conservées.` : 'Votre photo ne sera pas conservée.'}{!isEditing && ' Le texte reste enregistré en brouillon sur cet appareil.'}</>
-          : 'Vos modifications non enregistrées seront perdues.'}
+        Vos modifications non enregistrées seront perdues.
       </ConfirmSheet>
       <div className="mx-auto max-w-[1160px] pb-6">
         {/* Heading */}
