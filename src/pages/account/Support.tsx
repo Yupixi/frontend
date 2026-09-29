@@ -11,6 +11,7 @@ import {
 } from '../../graphql/support'
 import type { AuthUser } from '../../graphql/auth'
 import { delayText, useRules } from '../../lib/rules'
+import { useMemberCountryCode } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void; focusTicketId?: string | null; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -73,8 +74,9 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
   const [sent, setSent] = useState('')
   const [create, { loading }] = useMutation(CREATE_SUPPORT_TICKET_MUTATION)
   const badge = currentUser?.badge ?? null
-  // Response target from « Règles de la marketplace ».
-  const rules = useRules()
+  // Response target from « Règles de la marketplace », of the member's
+  // account country.
+  const rules = useRules(useMemberCountryCode())
   const hours = badge === 'CERTIFIED' ? rules.SUPPORT_SLA_URGENT_HOURS : badge ? rules.SUPPORT_SLA_HIGH_HOURS : rules.SUPPORT_SLA_NORMAL_HOURS
   const tickets = data?.mySupportTickets ?? []
   const submit = () => {

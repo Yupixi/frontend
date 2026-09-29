@@ -11,7 +11,7 @@ export const LISTING_ADVICE_QUERY = gql`
 export type ListingAdvice = { code: string; level: 'BLOCKING' | 'WARNING' | 'TIP'; message: string }
 
 export const LISTING_ASSIST_AVAILABLE_QUERY = gql`
-  query ListingAssistAvailable { listingAssistAvailable listingAssistPrice }
+  query ListingAssistAvailable($country: String) { listingAssistAvailable listingAssistPrice(country: $country) }
 `
 export type ListingAssistOffer = { listingAssistAvailable: boolean; listingAssistPrice: number }
 

@@ -22,6 +22,7 @@ import { BOOST_PACKS_QUERY } from '../../graphql/promotions'
 import { creditsLabel } from '../../components/Credits'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { useNoCommissionClaims } from '../../lib/site'
+import { usePriceVars } from '../../lib/countries'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -69,9 +70,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const all = data?.myListings.items ?? []
   const { data: repData } = useQuery<{ myReputation: Reputation }>(MY_REPUTATION_QUERY)
   // Prices from "Tarifs & abonnements" (BO).
-  const flashPrice = useQuery<{ boostPacks: { pack: string; price: number }[] }>(BOOST_PACKS_QUERY).data?.boostPacks.find(p => p.pack === 'BUMP_FLASH')?.price
+  const flashPrice = useQuery<{ boostPacks: { pack: string; price: number }[] }>(BOOST_PACKS_QUERY, { variables: usePriceVars() }).data?.boostPacks.find(p => p.pack === 'BUMP_FLASH')?.price
   const rep = repData?.myReputation
-  const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
+  const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const credits = walletData?.myWallet.credits ?? 0
   const [deleteListing] = useMutation(DELETE_LISTING_MUTATION)
   const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)

@@ -9,13 +9,15 @@ const CAMPAIGN_FIELDS = `
   listings { id discountPercent salePrice listing { id title coverImageUrl } }
 `
 
+// `country`: the visitor's market — only the campaigns running there, with
+// their listings of that country; campaign(slug) is null elsewhere.
 export const LIVE_CAMPAIGNS_QUERY = gql`
-  query LiveCampaigns { activeCampaigns { ${CAMPAIGN_FIELDS} } }
+  query LiveCampaigns($country: String) { activeCampaigns(country: $country) { ${CAMPAIGN_FIELDS} } }
 `
 
 export const CAMPAIGN_PAGE_QUERY = gql`
-  query CampaignPage($slug: String!) {
-    campaign(slug: $slug) {
+  query CampaignPage($slug: String!, $country: String) {
+    campaign(slug: $slug, country: $country) {
       ${CAMPAIGN_FIELDS}
       status shopId openToShops entryFee listingFee minDiscountPercent
       categoryCounts { slug name icon count }

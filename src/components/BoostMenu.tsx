@@ -4,6 +4,7 @@ import WalletPaySheet from './WalletPaySheet'
 import OfferCredits from './OfferCredits'
 import { packOperation } from '../lib/priceOffers'
 import { BOOST_PACKS_QUERY, type BoostPackInfo } from '../graphql/promotions'
+import { usePriceVars } from '../lib/countries'
 
 type BoostMenuProps = {
   listingId: string
@@ -15,7 +16,7 @@ type BoostMenuProps = {
 // Quick picker over the backend's boost packs; the chosen pack is paid in
 // credits (WalletPaySheet) and activated at once.
 export default function BoostMenu({ listingId, onDone, variant = 'dropdown' }: BoostMenuProps) {
-  const { data } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY)
+  const { data } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY, { variables: usePriceVars() })
   const [picked, setPicked] = useState<BoostPackInfo | null>(null)
 
   return (

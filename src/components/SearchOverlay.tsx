@@ -5,6 +5,7 @@ import Price from './Price'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { CATEGORIES_QUERY, POPULAR_SEARCHES_QUERY, type PopularSearch, type RemoteCategory } from '../graphql/categories'
 import { thumbnailUrl } from '../lib/media'
+import { useMarketVars } from '../lib/countries'
 
 type Props = {
   query: string
@@ -65,7 +66,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   }, [])
 
   const q = query.trim()
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   // Empty categories would lead to a blank results page.
   const categories = (categoriesData?.categories ?? []).filter(c => c.listingsCount !== 0)
   const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 8 } })

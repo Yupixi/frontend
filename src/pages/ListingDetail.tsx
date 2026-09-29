@@ -54,7 +54,7 @@ import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
 import { Claim } from '../lib/site'
 import { useLists } from '../lib/lists'
-import { METHOD_LABELS } from '../lib/countries'
+import { countryVars, METHOD_LABELS } from '../lib/countries'
 import { listingPath, samePlace } from '../lib/routes'
 import { usePageTitle } from '../lib/site'
 
@@ -105,9 +105,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const [chatOpen, setChatOpen] = useState(false)
   const [offerOpen, setOfferOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const reportReasons = useLists().reportReasons.listing
   const [pickedReason, setReportReason] = useState('')
-  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   const [reportMessage, setReportMessage] = useState('')
   const [reportDone, setReportDone] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -117,6 +115,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
   const listing = data?.listing
+  // Report reasons of the listing's country (the market until it loads).
+  const reportReasons = useLists(listing?.countryCode || undefined).reportReasons.listing
+  const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   usePageTitle(listing?.title)
   // /annonce/<id> (or old words) → /annonce/<words of the title>-<id>.
   useEffect(() => {
@@ -138,7 +139,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     variables: { sellerId: sellerId ?? '' }, skip: !sellerId,
   })
   const seller = sellerData?.sellerProfile
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
+  // Attribute labels of the listing's category, as in its country.
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: countryVars(listing?.countryCode), skip: !listing })
 
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
   const [bumpListing, { loading: renewing }] = useMutation(BUMP_LISTING_MUTATION)

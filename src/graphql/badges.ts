@@ -28,9 +28,11 @@ export type MyBadge = {
   earlyAccessHours: number
 }
 
+// `country`: the payer's country for the plans' prices (usePriceVars;
+// default: the account's).
 export const MY_BADGE_QUERY = gql`
-  query MyBadge {
-    myBadge {
+  query MyBadge($country: String) {
+    myBadge(country: $country) {
       tier until trial lastTier identityVerified certifiedEligible sales reviews rating penalties
       criteria { minSales minReviews minRating }
       plans { product tier period days price }

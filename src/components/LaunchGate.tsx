@@ -2,13 +2,18 @@ import { useEffect, useState, type ReactNode } from 'react'
 import DilchapLogo from './DilchapLogo'
 import Icon from './Icon'
 import { useLaunch, type LaunchStatus } from '../lib/launch'
+import Flag from './Flag'
+import Select from './Select'
 import { useSite } from '../lib/site'
 import { marketForCountry } from '../data/markets'
-import { getStoredLocation } from '../lib/location'
+import { setStoredLocation } from '../lib/location'
+import { setMarketState, useCountries, useMarketCode } from '../lib/countries'
 
 // Before the launch date (BO › Contenu › Lancement) visitors see the launch
 // page; the team's secret link shows the site with a reminder banner. If
 // the API can't answer, the site is shown: never lock visitors out by error.
+// The launch can differ per country: the status follows the visitor's
+// market (useLaunch), so switching country shows or lifts the page.
 export default function LaunchGate({ children }: { children: ReactNode }) {
   const { status, loading, refetch } = useLaunch()
   if (loading) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
@@ -48,13 +53,22 @@ function useCountdown(target: string | null) {
 
 function LaunchPage({ status, onOpen }: { status: LaunchStatus, onOpen: () => void }) {
   const site = useSite()
+  const market = useMarketCode()
+  const countries = useCountries()
   const c = useCountdown(status.launchAt)
   // The date is reached: ask again, the site opens.
   useEffect(() => { if (c && c.left === 0) onOpen() }, [c?.left === 0]) // eslint-disable-line react-hooks/exhaustive-deps
   const date = status.launchAt
-    ? new Date(status.launchAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: marketForCountry(getStoredLocation()?.countryCode)?.timeZone ?? 'Africa/Abidjan' })
+    ? new Date(status.launchAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: marketForCountry(market)?.timeZone ?? 'Africa/Abidjan' })
     : null
   const socials = (['facebook', 'instagram', 'tiktok', 'youtube', 'whatsapp'] as const).filter(k => site.socials[k])
+  // Another country may already be open: the choice is kept as the
+  // visitor's pick, like the site's country picker, and the gate asks again.
+  const pickCountry = (code: string) => {
+    const countryCode = code || null
+    setStoredLocation({ countryCode, city: null, source: 'manual' })
+    setMarketState({ market: countryCode })
+  }
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-[#0f0d0d] px-4 py-10 text-center text-white">
@@ -97,7 +111,17 @@ function LaunchPage({ status, onOpen }: { status: LaunchStatus, onOpen: () => vo
           </div>
         )}
       </div>
-      <p className="relative z-10 m-0 mt-12 text-label-sm text-white/45">© {new Date().getFullYear()} {site.brand.name}</p>
+      {countries.length > 1 && (
+        <div className="relative z-10 mt-10 flex items-center gap-2 text-label-sm text-white/60">
+          {market ? <Flag code={market} size={16} /> : <Icon name="public" size={16} />}
+          <Select value={market ?? ''} onChange={e => pickCountry(e.target.value)} aria-label="Pays"
+            className="h-9 max-w-[220px] rounded-full border-none bg-white/10 px-3.5 text-label-md text-white ring-1 ring-white/15">
+            <option value="">Tous les pays</option>
+            {countries.map(ct => <option key={ct.code} value={ct.code}>{ct.name}</option>)}
+          </Select>
+        </div>
+      )}
+      <p className="relative z-10 m-0 mt-8 text-label-sm text-white/45">© {new Date().getFullYear()} {site.brand.name}</p>
     </main>
   )
 }

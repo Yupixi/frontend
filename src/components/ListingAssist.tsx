@@ -9,6 +9,7 @@ import {
   type ListingAdvice, type ListingAssistOffer, type ListingDraftSuggestion,
 } from '../graphql/listingAssist'
 import { WALLET_BALANCE_QUERY, type WalletBalance } from '../graphql/payments'
+import { usePriceVars } from '../lib/countries'
 
 const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
 
@@ -42,11 +43,11 @@ export function AssistButton({ cover, title, description, onApply }: {
   description: string
   onApply: (s: ListingDraftSuggestion) => void
 }) {
-  const { data } = useQuery<ListingAssistOffer>(LISTING_ASSIST_AVAILABLE_QUERY, { fetchPolicy: 'cache-and-network' })
+  const { data } = useQuery<ListingAssistOffer>(LISTING_ASSIST_AVAILABLE_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
   // Price less the live offer (« Offres & gratuités »), as the server takes it.
   const quote = useOfferPrice('AI_ASSIST', data?.listingAssistPrice ?? 0)
   const cost = quote?.price ?? 0
-  const { data: wallet, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { skip: !data?.listingAssistAvailable || !cost, fetchPolicy: 'cache-and-network' })
+  const { data: wallet, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), skip: !data?.listingAssistAvailable || !cost, fetchPolicy: 'cache-and-network' })
   const [assist, { loading }] = useMutation<{ assistListing: ListingDraftSuggestion }>(ASSIST_LISTING_MUTATION)
   const [error, setError] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(false)

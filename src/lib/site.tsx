@@ -1,14 +1,16 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
-import { useMarket } from './countries'
+import { countryVars, useCountry, useMarket, useMarketCode, useMemberCountryCode } from './countries'
+import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 
 // Site-wide settings set in the back-office (« Réglages du site », Backend
 // content/site-config.ts): brand, SEO, contacts, social and app links, and
 // the "0 % commission" promises shown across the app. DEFAULT_SITE mirrors
-// the backend defaults so nothing jumps while the query loads.
+// the backend defaults so nothing jumps while the query loads. The BO can
+// keep one version per country: `country` picks it (none = general).
 export const SITE_CONFIG_QUERY = gql`
-  query SiteConfig { siteConfig }
+  query SiteConfig($country: String) { siteConfig(country: $country) }
 `
 
 export type SiteConfig = {
@@ -33,9 +35,25 @@ export const DEFAULT_SITE: SiteConfig = {
   claims: { noCommission: true },
 }
 
+// The visitor's market version (« Tous les pays »: the general one). Each
+// country is cached apart; the previous one stays while another loads.
 export function useSite(): SiteConfig {
-  const { data } = useQuery<{ siteConfig: SiteConfig }>(SITE_CONFIG_QUERY, { fetchPolicy: 'cache-first' })
-  return data?.siteConfig ?? DEFAULT_SITE
+  const market = useMarketCode()
+  const { data, previousData } = useQuery<{ siteConfig: SiteConfig }>(SITE_CONFIG_QUERY, {
+    variables: countryVars(market),
+    fetchPolicy: 'cache-first',
+  })
+  return (data ?? previousData)?.siteConfig ?? DEFAULT_SITE
+}
+
+// Support number on member screens (sign-in help, dashboard, KYC): the
+// member's country's own (« Pays ») first, as in the footer, else its
+// footer version (BO « Pied de page »).
+export function useSupportPhone(): string | null {
+  const code = useMemberCountryCode()
+  const country = useCountry(code)
+  const { data, previousData } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY, { variables: countryVars(code) })
+  return country?.supportPhone || (data ?? previousData)?.footerSettings?.supportPhone || null
 }
 
 // "0 % commission / gratuit / zéro frais" promises: shown only while the
@@ -69,7 +87,8 @@ const OWN_TITLE = ['listing-detail', 'shop', 'seller-profile']
 // left as they are.
 export function useSeo(page: string) {
   const { seo: siteSeo, brand } = useSite()
-  // A country's own texts (« Pays » in the BO) win over the site's.
+  // A country's own texts (« Pays » in the BO) win over the site's (the
+  // market's version of « Réglages du site » when it has one).
   const market = useMarket()
   const seo = { ...siteSeo, title: market?.seoTitle || siteSeo.title, description: market?.seoDescription || siteSeo.description }
   const firstPage = useRef(page)

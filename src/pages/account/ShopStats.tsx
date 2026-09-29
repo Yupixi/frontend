@@ -7,6 +7,7 @@ import { AccountLayout } from './AccountLayout'
 import { MY_SHOP_QUERY, MY_SHOP_STATS_QUERY, type MyShopData, type ShopStats as Stats } from '../../graphql/shops'
 import { formatNumber } from '../../lib/format'
 import type { AuthUser } from '../../graphql/auth'
+import { usePriceVars } from '../../lib/countries'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -39,7 +40,7 @@ const csv = (s: Stats) => {
 // "Statistiques & Performances Boutique" — real counters only.
 export default function ShopStats({ onNavigate, onSelectListing, currentUser, onLogout }: Props) {
   const [days, setDays] = useState(30)
-  const { data: shopData } = useQuery<MyShopData>(MY_SHOP_QUERY)
+  const { data: shopData } = useQuery<MyShopData>(MY_SHOP_QUERY, { variables: usePriceVars() })
   const { data, loading } = useQuery<{ myShopStats: Stats }>(MY_SHOP_STATS_QUERY, { variables: { days } })
   const s = data?.myShopStats
   const shop = shopData?.myShop.shop

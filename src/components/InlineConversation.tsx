@@ -20,7 +20,7 @@ import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator 
 import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
 import { dateFormat } from '../lib/intl'
-import { useLists } from '../lib/lists'
+import { useMemberLists } from '../lib/lists'
 
 // Short chip labels so the row wraps instead of being cut off on phones;
 // the full sentence goes into the message box.
@@ -87,7 +87,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
   onAuthenticated: () => void
   onStarted: (conversationId: string) => void
 }) {
-  const quick = useLists().quickReplies.buyer.slice(0, 3)
+  const quick = useMemberLists().quickReplies.buyer.slice(0, 3)
   // A phone typed without its country code gets this country's.
   const home = useHomeCountry()
   const country = useMarket() ?? home
@@ -172,7 +172,7 @@ function messageDayLabel(iso: string): string {
 }
 
 function ThreadView({ conversationId, sellerName, onClose }: { conversationId: string, sellerName: string, onClose: () => void }) {
-  const quick = useLists().quickReplies.buyer.slice(0, 3)
+  const quick = useMemberLists().quickReplies.buyer.slice(0, 3)
   const [msg, setMsg] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { data, refetch } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, { variables: { id: conversationId } })

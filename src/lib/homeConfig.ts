@@ -4,8 +4,10 @@ import { gql } from '@apollo/client'
 // content/home-config.ts). DEFAULT_HOME mirrors the backend defaults: the
 // page renders with it until the query answers (no layout jump). Texts may
 // contain {{ville}} / {{pays}}, filled with the visitor's country (fillPlaces).
+// The BO can keep one version per country: `country` is the visitor's
+// market (none = general).
 export const HOME_CONFIG_QUERY = gql`
-  query HomeConfig { homeConfig }
+  query HomeConfig($country: String) { homeConfig(country: $country) }
 `
 
 export type HomeSectionKey = 'reassurance' | 'categories' | 'campaign' | 'pepites' | 'shops' | 'certified' | 'sellCta' | 'latest' | 'howItWorks'

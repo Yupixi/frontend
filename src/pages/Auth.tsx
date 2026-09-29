@@ -1,15 +1,14 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@apollo/client/react'
+import { useMutation } from '@apollo/client/react'
 import Icon from '../components/Icon'
 import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, type AuthPayload } from '../graphql/auth'
-import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 import { REQUEST_RECOVERY_MUTATION } from '../graphql/support'
 import { storeAccessToken } from '../lib/auth'
 import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
-import { useNoCommissionClaims } from '../lib/site'
+import { useNoCommissionClaims, useSupportPhone } from '../lib/site'
 import { placeOptions, useLists } from '../lib/lists'
 import { localNumberError, toIntl } from '../lib/dialing'
 import { useCountries, useHomeCountry, useMarket, useMethods, type Country } from '../lib/countries'
@@ -191,8 +190,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 // reaches the Dilchap support queue (matched to the account, with its badge
 // priority); WhatsApp stays available as a second way.
 function SupportRecovery({ onBack }: { onBack: () => void }) {
-  const { data } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
-  const phone = data?.footerSettings?.supportPhone
+  const phone = useSupportPhone()
   const [form, setForm] = useState({ name: '', contact: '', message: '' })
   const [done, setDone] = useState<{ reference: string } | null>(null)
   const [send, { loading, error }] = useMutation<{ requestAccountRecovery: { reference: string } }>(REQUEST_RECOVERY_MUTATION)
@@ -240,8 +238,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
   const noCommission = useNoCommissionClaims()
   // Methods of the visitor's country (every one for « Tous les pays »).
   const methods = useMethods()
-  const { data: footerData } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
-  const supportPhone = footerData?.footerSettings?.supportPhone
+  const supportPhone = useSupportPhone()
   const success = (payload: AuthPayload) => {
     storeAccessToken(payload.accessToken)
     onLogin()

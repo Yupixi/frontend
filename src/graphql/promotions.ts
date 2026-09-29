@@ -15,10 +15,11 @@ export type BoostPackInfo = {
   urgentBadge: boolean
 }
 
-// Pricing lives in the backend (BoostsService / boost-packs.ts).
+// Pricing lives in the backend (BoostsService / boost-packs.ts), per
+// country: `country` is the payer's (lib/countries usePriceVars).
 export const BOOST_PACKS_QUERY = gql`
-  query BoostPacks {
-    boostPacks { pack family label description price durationHours bumpCredits pinned autoBump urgentBadge }
+  query BoostPacks($country: String) {
+    boostPacks(country: $country) { pack family label description price durationHours bumpCredits pinned autoBump urgentBadge }
   }
 `
 

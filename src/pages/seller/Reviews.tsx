@@ -12,6 +12,7 @@ import { formatRelativeDate } from '../../lib/format'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import { BADGE_LABEL, MY_BADGE_QUERY, type MyBadge } from '../../graphql/badges'
+import { usePriceVars } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 const PAGE = 5
@@ -41,7 +42,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
   const max = Math.max(1, ...(rep?.distribution ?? []).map(d => d.count))
   const responseTime = formatResponseTime(rep?.responseTimeMinutes)
   // Same criteria as the server (BadgesService) for "Vendeur certifié".
-  const badge = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY).data?.myBadge
+  const badge = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY, { variables: usePriceVars() }).data?.myBadge
   const c = badge?.criteria
   const checks = badge && c ? [
     { ok: badge.identityVerified, label: 'Pièce d’identité validée par Dilchap' },

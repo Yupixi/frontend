@@ -1,9 +1,10 @@
 import { gql } from '@apollo/client'
 import type { RemoteListing } from './listings'
 
+// `country` (both): the visitor's market.
 export const ACTIVE_CAMPAIGN_QUERY = gql`
-  query ActiveCampaign {
-    activeCampaign {
+  query ActiveCampaign($country: String) {
+    activeCampaign(country: $country) {
       id
       name
       slug
@@ -65,8 +66,8 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
 // The site-wide announcement bar only needs the campaign's header — not its
 // full listing showcase (that's ACTIVE_CAMPAIGN_QUERY, Home/Flash Offers).
 export const ACTIVE_CAMPAIGN_BAR_QUERY = gql`
-  query ActiveCampaignBar {
-    activeCampaign {
+  query ActiveCampaignBar($country: String) {
+    activeCampaign(country: $country) {
       id
       name
       slug
@@ -80,8 +81,8 @@ export const ACTIVE_CAMPAIGN_BAR_QUERY = gql`
 export type ActiveCampaignBar = Pick<ActiveCampaign, 'id' | 'name' | 'slug' | 'description' | 'themeColor' | 'endsAt'>
 
 export const FOOTER_SETTINGS_QUERY = gql`
-  query FooterSettings {
-    footerSettings {
+  query FooterSettings($country: String) {
+    footerSettings(country: $country) {
       tagline
       quickLinks {
         label
@@ -125,9 +126,10 @@ export type ActiveCampaign = {
   listings: ActiveCampaignListing[]
 }
 
-// Legal & help pages edited in the Backoffice (CMS & Pages légales).
+// Legal & help pages edited in the Backoffice (CMS & Pages légales);
+// `country`: its own version when the pages are « par pays ».
 export const CONTENT_PAGE_QUERY = gql`
-  query ContentPage($slug: String!) { contentPage(slug: $slug) }
+  query ContentPage($slug: String!, $country: String) { contentPage(slug: $slug, country: $country) }
 `
 export type ContentPage = { slug: string; title: string; body: string; updatedAt: string }
 export const LEGAL_PAGES = [

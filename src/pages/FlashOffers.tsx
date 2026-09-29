@@ -8,7 +8,7 @@ import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
 import { CAMPAIGN_PAGE_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignPage, type LiveCampaign } from '../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { placeOptions, useLists } from '../lib/lists'
-import { useMarket } from '../lib/countries'
+import { useMarket, useMarketVars } from '../lib/countries'
 
 type FlashOffersProps = {
   // '' = the newest live campaign.
@@ -34,10 +34,10 @@ const select = 'h-10 shrink-0 cursor-pointer rounded-xl border border-solid bord
 // the campaign, top discounts, every offer, the sellers' invitation, and
 // the other live campaigns.
 export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavigate, onSelectListing, favorites, onToggleFavorite, onContactSeller, isLoggedIn }: FlashOffersProps) {
-  const { data: liveData, loading: liveLoading } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { fetchPolicy: 'cache-and-network' })
+  const { data: liveData, loading: liveLoading } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { variables: useMarketVars(), fetchPolicy: 'cache-and-network' })
   const live = (liveData?.activeCampaigns ?? []).filter(isLive)
   const slug = campaignSlug || live[0]?.slug || ''
-  const { data, loading } = useQuery<{ campaign: CampaignPage | null }>(CAMPAIGN_PAGE_QUERY, { variables: { slug }, skip: !slug })
+  const { data, loading } = useQuery<{ campaign: CampaignPage | null }>(CAMPAIGN_PAGE_QUERY, { variables: { slug, ...useMarketVars() }, skip: !slug })
   const campaign = data?.campaign && isLive(data.campaign) ? data.campaign : null
 
   const [search, setSearch] = useState('')

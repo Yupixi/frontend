@@ -8,6 +8,7 @@ import { requestOpenCampaign, requestOpenLink } from '../../lib/navigation'
 import { CAMPAIGN_TYPE_LABEL, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignVisual, type LiveCampaign } from '../../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../../graphql/listings'
 import { plainText } from '../../lib/format'
+import { useMarketVars } from '../../lib/countries'
 
 const DEFAULT_TINT = '#EB1100'
 const tintOf = (c: LiveCampaign) => c.themeColor || DEFAULT_TINT
@@ -134,7 +135,7 @@ export function CampaignBanner({ c }: { c: LiveCampaign }) {
 }
 
 function useLiveCampaigns() {
-  const { data } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { fetchPolicy: 'cache-and-network' })
+  const { data } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { variables: useMarketVars(), fetchPolicy: 'cache-and-network' })
   return (data?.activeCampaigns ?? []).filter(isLive)
 }
 

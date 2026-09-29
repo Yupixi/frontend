@@ -9,12 +9,11 @@ import { MY_LISTINGS_QUERY, type MyListingRow } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
 import { MY_REPUTATION_QUERY, MY_SALES_ORDERS_QUERY, MY_WALLET_QUERY, type SalesOrder, type WalletSummary } from '../../graphql/sellerHub'
 import { MY_BUYER_DISPUTES_QUERY, MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, SELLER_STATS_QUERY, disputeIsOpen, type Dispute, type DisputeStats, type PurchaseOrder, type SellerStats } from '../../graphql/sellerTools'
-import { FOOTER_SETTINGS_QUERY } from '../../graphql/content'
 import type { AuthUser } from '../../graphql/auth'
 import Credits from '../../components/Credits'
 import PaymentLogo, { paymentLabel } from '../../components/PaymentLogo'
-import { useMethods } from '../../lib/countries'
-import { useNoCommissionClaims } from '../../lib/site'
+import { useMethods, usePriceVars } from '../../lib/countries'
+import { useNoCommissionClaims, useSupportPhone } from '../../lib/site'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -47,14 +46,14 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
   const methods = useMethods(currentUser?.countryCode ?? null)
   const { data: salesData } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY)
-  const { data: walletData } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
+  const { data: walletData } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const { data: repData } = useQuery<{ myReputation: { averageRating: number; reviewsCount: number; salesCount: number; isVerified: boolean } }>(MY_REPUTATION_QUERY)
   const { data: convData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const { data: disputeStats } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)
   const { data: buyerDisputes } = useQuery<{ myBuyerDisputes: Dispute[] }>(MY_BUYER_DISPUTES_QUERY)
   const { data: listingsData } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 50 } })
   const { data: statsData } = useQuery<{ sellerStats: SellerStats }>(SELLER_STATS_QUERY, { variables: { days: 7 } })
-  const { data: footerData } = useQuery<{ footerSettings: { supportPhone: string | null } | null }>(FOOTER_SETTINGS_QUERY)
+  const support = useSupportPhone()
 
   const sales = salesData?.mySalesOrders ?? []
   const purchases = purchasesData?.myPurchaseOrders ?? []
@@ -71,7 +70,6 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
   const wallet = walletData?.myWallet
   const stats = statsData?.sellerStats
   const firstName = currentUser?.fullName.split(' ')[0] ?? ''
-  const support = footerData?.footerSettings?.supportPhone
 
   const upcoming: Upcoming | undefined = [
     // Only deals still to hand over — a finished or disputed sale must not be

@@ -22,6 +22,7 @@ import OfferCredits from '../../components/OfferCredits'
 import { packOperation } from '../../lib/priceOffers'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
 import PaymentLogo, { useMobileMethods } from '../../components/PaymentLogo'
+import { usePriceVars } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -39,11 +40,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const mobile = useMobileMethods()
   const { data: listingsData, refetch: refetchListings } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 100 } })
   const live = (listingsData?.myListings.items ?? []).filter(l => l.status === 'APPROVED')
-  const { data: packsData } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY)
+  const { data: packsData } = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY, { variables: usePriceVars() })
   const packs = packsData?.boostPacks ?? []
   const { data: boostsData, refetch: refetchBoosts } = useQuery<{ myBoosts: RemoteBoost[] }>(MY_BOOSTS_QUERY)
   const history = boostsData?.myBoosts ?? []
-  const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
+  const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const credits = walletData?.myWallet.credits ?? 0
 
   const [listingId, setListingId] = useState('')
