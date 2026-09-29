@@ -21,6 +21,7 @@ import { Claim } from '../../lib/site'
 import RichTextEditor from '../../components/RichTextEditor'
 import { richHtml } from '../../lib/richText'
 import { plainText } from '../../lib/format'
+import { usePriceVars } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onOpenShop: (slug: string) => void }
 type Tab = 'sales' | 'campaigns' | 'bundles' | 'posts'
@@ -136,7 +137,7 @@ function ItemPicker({ listings, aisles, picks, onChange, minPercent, priceMode }
 export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenShop }: Props) {
   const [tab, setTab] = useState<Tab>('sales')
   const [editor, setEditor] = useState<null | 'sale' | 'bundle' | 'post' | { bundle: ShopBundle, reactivate?: boolean } | { post: ShopPost } | { campaign: OpenCampaign, retry?: PromoItem } | { sale: ShopSale, relaunch?: boolean }>(null)
-  const { data: shopData } = useQuery<MyShopData>(MY_SHOP_QUERY)
+  const { data: shopData } = useQuery<MyShopData>(MY_SHOP_QUERY, { variables: usePriceVars() })
   const { data, loading, refetch } = useQuery<ShopPromos>(MY_SHOP_PROMOS_QUERY, { fetchPolicy: 'cache-and-network' })
   const { data: ld } = useQuery<{ myListings: { items: ShopListing[] } }>(MY_SHOP_LISTINGS_QUERY)
   const shop = shopData?.myShop.shop

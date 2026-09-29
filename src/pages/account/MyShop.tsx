@@ -18,7 +18,7 @@ import { uploadImages, uploadShopDocument } from '../../lib/upload'
 import OfferCredits from '../../components/OfferCredits'
 import type { AuthUser } from '../../graphql/auth'
 import { useLists } from '../../lib/lists'
-import { useHomeCountry, type Country } from '../../lib/countries'
+import { useHomeCountry, usePriceVars, type Country } from '../../lib/countries'
 import type { ShopLegalIdType } from '../../graphql/shops'
 import { useRules } from '../../lib/rules'
 import RichTextEditor from '../../components/RichTextEditor'
@@ -256,7 +256,7 @@ const BENEFITS: [string, string, string][] = [
 ]
 
 export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }: Props) {
-  const { data, loading, refetch } = useQuery<MyShopData>(MY_SHOP_QUERY, { fetchPolicy: 'cache-and-network' })
+  const { data, loading, refetch } = useQuery<MyShopData>(MY_SHOP_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
   const { data: cats } = useQuery<{ categories: { id: string, name: string }[] }>(CATEGORIES_QUERY)
   const [wizard, setWizard] = useState(false)
   const [step, setStep] = useState(0)
@@ -575,7 +575,8 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
   shop: MyShopT, plan: ShopPlan, categories: { id: string, name: string }[], onRenew: () => void, paidMsg: string
   onNavigate: (p: any) => void, onOpenShop: (slug: string) => void, refetch: () => void, pay: React.ReactNode
 }) {
-  const maxFeatured = useRules().SHOP_MAX_FEATURED
+  // Limits of the shop's country (those the server applies).
+  const maxFeatured = useRules(shop.countryCode || undefined).SHOP_MAX_FEATURED
   const [tab, setTab] = useState<Tab>('stock')
   const daysLeft = Math.max(0, Math.ceil((new Date(shop.paidUntil!).getTime() - Date.now()) / 86_400_000))
   const { data: ld, refetch: refetchListings } = useQuery<{ myListings: { items: ShopListing[], totalCount: number } }>(MY_SHOP_LISTINGS_QUERY, { fetchPolicy: 'cache-and-network' })
@@ -641,7 +642,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
       <div className="mt-4">
         {tab === 'stock' && <StockTab shop={shop} listings={listings} onChanged={() => { void refetchListings(); refetch() }} onNavigate={onNavigate} />}
         {tab === 'aisles' && <AislesTab shop={shop} onChanged={() => { refetch(); void refetchListings() }} />}
-        {tab === 'featured' && <FeaturedTab listings={listings} onChanged={() => { void refetchListings(); refetch() }} />}
+        {tab === 'featured' && <FeaturedTab listings={listings} countryCode={shop.countryCode} onChanged={() => { void refetchListings(); refetch() }} />}
         {tab === 'profile' && <ProfileTab shop={shop} categories={categories} onSaved={refetch} />}
       </div>
       {pay}
@@ -806,8 +807,8 @@ function AislesTab({ shop, onChanged }: { shop: MyShopT, onChanged: () => void }
   )
 }
 
-function FeaturedTab({ listings, onChanged }: { listings: ShopListing[], onChanged: () => void }) {
-  const maxFeatured = useRules().SHOP_MAX_FEATURED
+function FeaturedTab({ listings, countryCode, onChanged }: { listings: ShopListing[], countryCode: string, onChanged: () => void }) {
+  const maxFeatured = useRules(countryCode || undefined).SHOP_MAX_FEATURED
   const [pin, { loading }] = useMutation(SET_LISTING_FEATURED_MUTATION)
   const [error, setError] = useState('')
   const [picking, setPicking] = useState(false)

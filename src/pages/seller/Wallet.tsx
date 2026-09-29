@@ -15,7 +15,7 @@ import {
 import type { AuthUser } from '../../graphql/auth'
 import type { WalletSettings } from '../../graphql/payments'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
-import { METHOD_LABELS, methodsSentence, useAccountCountryCode, useCountry } from '../../lib/countries'
+import { METHOD_LABELS, methodsSentence, useAccountCountryCode, useCountry, usePriceVars } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -50,9 +50,9 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
   // where the BO opened them (« Pays »).
   const country = useCountry(useAccountCountryCode(), true)
   const mobile = methodsSentence((country?.methods ?? ['WAVE', 'ORANGE_MONEY']).filter(m => m !== 'CASH'))
-  const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary; walletSettings: WalletSettings }>(MY_WALLET_QUERY)
+  const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary; walletSettings: WalletSettings }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const wallet = walletData?.myWallet
-  const { data: packsData } = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY)
+  const { data: packsData } = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY, { variables: usePriceVars() })
   const packs = packsData?.creditPacks ?? []
   const [filter, setFilter] = useState('all')
   const [page, setPage] = useState(1)

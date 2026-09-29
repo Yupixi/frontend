@@ -8,6 +8,7 @@ import Credits from '../../components/Credits'
 import OfferCredits from '../../components/OfferCredits'
 import { BADGE_LABEL, MY_BADGE_QUERY, type BadgePlan, type BadgeTier, type MyBadge } from '../../graphql/badges'
 import { delayText, useRules, type MarketplaceRules } from '../../lib/rules'
+import { useMemberCountryCode, usePriceVars } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onProfileUpdated: (u: AuthUser) => void }
 
@@ -29,9 +30,10 @@ const tiers = (r: MarketplaceRules): { tier: BadgeTier, tone: string, soft: stri
 // Paid badges, "like Facebook": identity check first, then a monthly or
 // yearly subscription paid in credits.
 export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfileUpdated }: Props) {
-  const rules = useRules()
+  // Support targets of the member's account country.
+  const rules = useRules(useMemberCountryCode())
   const client = useApolloClient()
-  const { data, refetch } = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY, { fetchPolicy: 'cache-and-network' })
+  const { data, refetch } = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
   const [period, setPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY')
   const [paying, setPaying] = useState<BadgePlan | null>(null)
   const [paidMsg, setPaidMsg] = useState('')

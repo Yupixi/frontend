@@ -7,6 +7,7 @@ import Price from './Price'
 import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
 import { WALLET_BALANCE_QUERY, type WalletBalance } from '../graphql/payments'
 import { applyOffer, offerLabel, usePriceOffers } from '../lib/priceOffers'
+import { usePriceVars } from '../lib/countries'
 
 // "Vendre pour {campagne}" on the campaign page: the wizard opens with that
 // campaign ticked.
@@ -37,7 +38,7 @@ export default function CampaignOptIn({ price, currency, categoryId, value, onCh
   const offers = usePriceOffers()
   // What joining really costs, the live offer applied (as the server does).
   const costOf = (c: OpenCampaign) => applyOffer(offers, 'CAMPAIGN', campaignCost(c), categoryId)
-  const { data: wallet, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { fetchPolicy: 'cache-and-network' })
+  const { data: wallet, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
   const [topUp, setTopUp] = useState(false)
   // Credits bought by Mobile Money land once the payment is confirmed,
   // usually while the seller is in the payment app: re-read the balance

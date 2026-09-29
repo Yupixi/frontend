@@ -134,7 +134,6 @@ function ContactRow({ href, icon, label, value }: { href: string, icon: string, 
 }
 
 export default function ShopPage({ shopKey, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId, preloaded }: Props) {
-  const maxFeatured = useRules().SHOP_MAX_FEATURED
   const [tab, setTab] = useState<Tab>('home')
   const [aisle, setAisle] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -151,6 +150,8 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   // Report reasons of the shop's country (the market until it loads).
   const reportReasons = useLists(shop?.countryCode || undefined).reportReasons.shop
   const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
+  // Limits of the shop's country (those the server applies).
+  const maxFeatured = useRules(shop?.countryCode || undefined).SHOP_MAX_FEATURED
   const ownerId = shop?.owner.id
   const { data: all } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId: ownerId }, sort, pageSize: 100 }, skip: !ownerId,

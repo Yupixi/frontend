@@ -39,9 +39,11 @@ export const TRACK_SHOP_VISIT_MUTATION = gql`
   mutation TrackShopVisit($key: String!) { trackShopVisit(key: $key) }
 `
 
+// `country`: the payer's country for the plan's price (usePriceVars;
+// default: the account's).
 export const MY_SHOP_QUERY = gql`
-  query MyShop {
-    myShop {
+  query MyShop($country: String) {
+    myShop(country: $country) {
       identityVerified
       plan { price credits days }
       shop { ${MY_SHOP_FIELDS} }

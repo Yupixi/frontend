@@ -9,6 +9,7 @@ import {
   type PaymentRequest, type PurchaseResult, type WalletBalance,
 } from '../graphql/payments'
 import { offerLabel, operationOf, useOfferPrice } from '../lib/priceOffers'
+import { usePriceVars } from '../lib/countries'
 
 type Props = {
   open: boolean
@@ -32,7 +33,7 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
   const op = request ? operationOf(request.kind, request.product) : null
   const offer = useOfferPrice(op ?? 'BOOST', base, categoryId, request?.listingId)
   const amount = op && offer ? offer.price : base
-  const { data, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { skip: !open, fetchPolicy: 'network-only' })
+  const { data, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), skip: !open, fetchPolicy: 'network-only' })
   const [buy, { loading }] = useMutation<{ purchaseWithWallet: PurchaseResult }>(PURCHASE_WITH_WALLET_MUTATION)
   const [error, setError] = useState('')
   const [topUp, setTopUp] = useState(false)

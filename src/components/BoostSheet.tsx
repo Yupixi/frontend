@@ -8,6 +8,7 @@ import { MY_WALLET_QUERY } from '../graphql/sellerHub'
 import { useBumpCost } from '../lib/useBumpCost'
 import { creditsLabel } from './Credits'
 import { requestNavigate } from '../lib/navigation'
+import { usePriceVars } from '../lib/countries'
 
 type Props = {
   open: boolean
@@ -20,7 +21,7 @@ type Props = {
 // listing back at the top of the catalogue, or sends the seller to buy
 // credits.
 export default function BoostSheet({ open, onClose, listing, onBumped }: Props) {
-  const { data, loading } = useQuery<{ myWallet: { credits: number } }>(MY_WALLET_QUERY, { skip: !open, fetchPolicy: 'cache-and-network' })
+  const { data, loading } = useQuery<{ myWallet: { credits: number } }>(MY_WALLET_QUERY, { variables: usePriceVars(), skip: !open, fetchPolicy: 'cache-and-network' })
   // A bump costs the "Remontée instantanée" price, in credits (BO).
   const cost = useBumpCost(!open, listing.id)
   const [bump, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION, { refetchQueries: [MY_WALLET_QUERY] })

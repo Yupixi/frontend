@@ -15,6 +15,7 @@ import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
 import { useMemberLists } from '../../lib/lists'
 import { useRules } from '../../lib/rules'
+import { useMemberCountryCode } from '../../lib/countries'
 
 type Props = {
   orderId: string
@@ -43,7 +44,7 @@ const steps = (h: number) => [
 
 // "Déclarer un litige sur votre commande" (desktop + mobile mockups).
 export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpened, onOpenConversation, currentUser, onLogout }: Props) {
-  const answerHours = useRules().DISPUTE_ANSWER_HOURS
+  const answerHours = useRules(useMemberCountryCode()).DISPUTE_ANSWER_HOURS
   const { disputeReasons } = useMemberLists()
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY, { skip: !!orderId })
   const { data, loading } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId })

@@ -254,8 +254,8 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountCountry])
   useLayoutEffect(() => {
-    setMarketState({ market: marketLocation?.countryCode ?? null, account: accountCountry })
-  }, [marketLocation?.countryCode, accountCountry])
+    setMarketState({ market: marketLocation?.countryCode ?? null, account: accountCountry, signedIn: isLoggedIn })
+  }, [marketLocation?.countryCode, accountCountry, isLoggedIn])
 
   useEffect(() => {
     const onUpdateAvailable = () => setShowUpdateBanner(true)

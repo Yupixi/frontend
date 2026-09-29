@@ -7,7 +7,7 @@ import Price from './Price'
 import PaymentSheet from './PaymentSheet'
 import { PAYMENT_SETTINGS_QUERY, WALLET_BALANCE_QUERY, type PaymentIntent, type PaymentSettings, type WalletBalance } from '../graphql/payments'
 import { CREDIT_PACKS_QUERY, type CreditPack } from '../graphql/sellerHub'
-import { useAccountCountryCode, useCountry } from '../lib/countries'
+import { useAccountCountryCode, useCountry, usePriceVars } from '../lib/countries'
 
 // "Acheter des crédits": a pack (credits offered on the bigger ones) or a
 // free number of credits at the credit price, both set in the back-office,
@@ -20,8 +20,8 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   suggested?: number
   pack?: string
 }) {
-  const settings = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { skip: !open }).data?.walletSettings
-  const packs = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY, { skip: !open }).data?.creditPacks ?? []
+  const settings = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), skip: !open }).data?.walletSettings
+  const packs = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY, { variables: usePriceVars(), skip: !open }).data?.creditPacks ?? []
   const paymentsOff = useQuery<PaymentSettings>(PAYMENT_SETTINGS_QUERY, { skip: !open }).data?.paymentSettings.environment === 'disabled'
   const value = settings?.creditValue ?? 0
   const min = settings?.topupMin ?? 1

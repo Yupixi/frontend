@@ -40,8 +40,9 @@ export const PURCHASE_WITH_WALLET_MUTATION = gql`
   mutation PurchaseWithWallet($input: PurchaseInput!) { purchaseWithWallet(input: $input) }
 `
 export type PurchaseResult = { label: string; cost: number; credits: number }
+// `country`: the payer's country (lib/countries usePriceVars).
 export const WALLET_BALANCE_QUERY = gql`
-  query WalletBalance { myWallet { credits } walletSettings }
+  query WalletBalance($country: String) { myWallet { credits } walletSettings(country: $country) }
 `
 // creditValue: F CFA price of one credit; topupMin/Max: bounds of a free
 // purchase, in credits (all set in the back-office).

@@ -1,11 +1,13 @@
 import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
+import { countryVars, useMarketCode } from './countries'
 
 // Limits and delays set in the back-office (« Règles de la marketplace »,
 // Backend src/modules/rules/rules.defs.ts). DEFAULT_RULES mirrors the
-// backend defaults so the copy is right while the query loads.
+// backend defaults so the copy is right while the query loads. The BO can
+// set them per country: `country` picks that country's values.
 export const MARKETPLACE_RULES_QUERY = gql`
-  query MarketplaceRules { marketplaceRules }
+  query MarketplaceRules($country: String) { marketplaceRules(country: $country) }
 `
 
 export const DEFAULT_RULES = {
@@ -21,9 +23,18 @@ export const DEFAULT_RULES = {
 }
 export type MarketplaceRules = typeof DEFAULT_RULES
 
-export function useRules(): MarketplaceRules {
-  const { data } = useQuery<{ marketplaceRules: Partial<MarketplaceRules> }>(MARKETPLACE_RULES_QUERY, { fetchPolicy: 'cache-first' })
-  return { ...DEFAULT_RULES, ...data?.marketplaceRules }
+// Rules of the country the server applies them in: pass the listing's
+// country (photos, lifetime), the shop's (aisles, featured, posts) or the
+// member's account country (useMemberCountryCode: support SLA, disputes,
+// KYC, saved searches); omitted → the visitor's market. Each country is
+// cached apart; the previous values stay while another country loads.
+export function useRules(countryCode?: string | null): MarketplaceRules {
+  const market = useMarketCode()
+  const { data, previousData } = useQuery<{ marketplaceRules: Partial<MarketplaceRules> }>(MARKETPLACE_RULES_QUERY, {
+    variables: countryVars(countryCode === undefined ? market : countryCode),
+    fetchPolicy: 'cache-first',
+  })
+  return { ...DEFAULT_RULES, ...(data ?? previousData)?.marketplaceRules }
 }
 
 // "moins de 2 h", "moins de 24 h", "moins de 3 jours".

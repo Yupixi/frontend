@@ -12,7 +12,7 @@ import { MY_BUYER_DISPUTES_QUERY, MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUE
 import type { AuthUser } from '../../graphql/auth'
 import Credits from '../../components/Credits'
 import PaymentLogo, { paymentLabel } from '../../components/PaymentLogo'
-import { useMethods } from '../../lib/countries'
+import { useMethods, usePriceVars } from '../../lib/countries'
 import { useNoCommissionClaims, useSupportPhone } from '../../lib/site'
 
 type Props = {
@@ -46,7 +46,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
   const methods = useMethods(currentUser?.countryCode ?? null)
   const { data: salesData } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY)
-  const { data: walletData } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY)
+  const { data: walletData } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const { data: repData } = useQuery<{ myReputation: { averageRating: number; reviewsCount: number; salesCount: number; isVerified: boolean } }>(MY_REPUTATION_QUERY)
   const { data: convData } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const { data: disputeStats } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)

@@ -5,13 +5,14 @@ import { AccountLayout } from './AccountLayout'
 import { CampaignJoin, CampaignsTab } from './ShopPromos'
 import { MY_SHOP_LISTINGS_QUERY, MY_SHOP_QUERY, OPEN_CAMPAIGNS_QUERY, type MyShopData, type OpenCampaign, type PromoItem, type ShopListing } from '../../graphql/shops'
 import type { AuthUser } from '../../graphql/auth'
+import { usePriceVars } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
 // Dilchap campaigns (Black Friday, fêtes…) for sellers with an active paid
 // badge; official shops get the same tab in "Promotions & Soldes".
 export default function SellerCampaigns({ onNavigate, currentUser, onLogout }: Props) {
-  const shop = useQuery<MyShopData>(MY_SHOP_QUERY).data?.myShop.shop
+  const shop = useQuery<MyShopData>(MY_SHOP_QUERY, { variables: usePriceVars() }).data?.myShop.shop
   const official = !!shop?.isOfficial
   const eligible = !!currentUser?.badge || official
   const { data, refetch } = useQuery<{ openShopCampaigns: OpenCampaign[] }>(OPEN_CAMPAIGNS_QUERY, { skip: !eligible, fetchPolicy: 'cache-and-network' })

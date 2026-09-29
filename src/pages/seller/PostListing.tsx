@@ -143,7 +143,6 @@ const QUICK_PICKS = 6
 // "Déposer une annonce" mockup: one guided form (photos → infos → prix →
 // modalités d'échange) with a sticky earnings/preview column.
 export default function PostListing({ onNavigate, currentUser, onLogout, listingId }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string }) {
-  const maxPhotos = useRules().LISTING_MAX_PHOTOS
   // Listing country: the seller's by default, any active one allowed.
   const home = useHomeCountry()
   const countries = useCountries()
@@ -154,6 +153,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const draft = useRef(isEditing ? null : loadDraft())
   const [form, setForm] = useState<Form>(() => ({ ...EMPTY, ...placeDefaults(home), ...(draft.current?.form ?? {}) }))
   const lists = useLists(form.countryCode)
+  // Limits of the listing's country (the server applies those).
+  const maxPhotos = useRules(form.countryCode || undefined).LISTING_MAX_PHOTOS
   const country = countries.find(c => c.code === form.countryCode) ?? marketForCountry(form.countryCode) ?? home
   // Until the seller writes anything, a new listing follows the account's
   // country (known once the session is restored), or leaves an inactive one.

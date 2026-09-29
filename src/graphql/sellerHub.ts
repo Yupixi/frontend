@@ -2,11 +2,12 @@ import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 // ─── Porte-monnaie ──────────────────────────────────────────────────────────
+// `country`: the payer's country (lib/countries usePriceVars).
 export const CREDIT_PACKS_QUERY = gql`
-  query CreditPacks { creditPacks { pack label tagline price credits bonusCredits perks } }
+  query CreditPacks($country: String) { creditPacks(country: $country) { pack label tagline price credits bonusCredits perks } }
 `
 export const MY_WALLET_QUERY = gql`
-  query MyWallet { myWallet { credits totalSales salesCount confirmationRate averageRating reviewsCount } walletSettings }
+  query MyWallet($country: String) { myWallet { credits totalSales salesCount confirmationRate averageRating reviewsCount } walletSettings(country: $country) }
 `
 export const MY_WALLET_TRANSACTIONS_QUERY = gql`
   query MyWalletTransactions($types: [WalletTransactionType!], $page: Int, $pageSize: Int) {
