@@ -201,7 +201,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
             onClick={() => { try { sessionStorage.setItem(POST_CAMPAIGN_KEY, campaign.id) } catch { /* private mode */ } onNavigate('seller-post') }}
             className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-lg font-bold text-white hover:bg-primary-dark"
           >
-            <Icon name="add_circle" size={19} /> Vendre pour cette campagne
+            <Icon name="add_circle" size={19} /> <span className="max-[380px]:hidden">Vendre pour cette campagne</span><span className="min-[381px]:hidden">Participer</span>
           </button>
         </section>
       )}
