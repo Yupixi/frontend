@@ -705,3 +705,23 @@ input, textarea, [contenteditable='true'], .ProseMirror {
   .camp-kb-a { opacity: 1 !important; }
   .camp-kb-b { display: none !important; }
 }
+
+/* Launch page (LaunchGate): the glows behind the countdown drift slowly. */
+@media (prefers-reduced-motion: no-preference) {
+  .launch-glow-a { animation: launchGlowA 14s ease-in-out infinite alternate; }
+  .launch-glow-b { animation: launchGlowB 18s ease-in-out infinite alternate; }
+  .launch-glow-c { animation: launchGlowC 22s ease-in-out infinite alternate; }
+}
+@keyframes launchGlowA {
+  0% { transform: translate(-50%, 0) scale(1); opacity: .4; }
+  50% { transform: translate(-35%, 60px) scale(1.2); opacity: .6; }
+  100% { transform: translate(-65%, 20px) scale(.95); opacity: .38; }
+}
+@keyframes launchGlowB {
+  0% { transform: translate(0, 0) scale(1); opacity: .3; }
+  100% { transform: translate(-120px, -90px) scale(1.3); opacity: .5; }
+}
+@keyframes launchGlowC {
+  0% { transform: translate(0, 0) scale(1.1); opacity: .25; }
+  100% { transform: translate(110px, -70px) scale(.9); opacity: .42; }
+}
