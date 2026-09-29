@@ -2,14 +2,13 @@ import EmptyState from '../components/EmptyState'
 import { Fragment, useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Search, Timer, Flame, Loader2,
+  ArrowLeft, ArrowRight, ChevronRight, Search, Flame, Loader2,
   MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
 import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type ListingSort, type RemoteListing } from '../graphql/listings'
-import { ACTIVE_CAMPAIGN_QUERY, type ActiveCampaign } from '../graphql/content'
 import { DEFAULT_HOME, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
 import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
 import type { StoredLocation } from '../lib/location'
@@ -18,6 +17,7 @@ import Select from '../components/Select'
 import { PaymentLogos } from '../components/PaymentLogo'
 import { ShopCard } from '../components/ShopCard'
 import { SHOPS_QUERY, type Shop } from '../graphql/shops'
+import { HomePromotions } from '../components/campaign/CampaignTiles'
 
 // promo: only items on sale (shop sales and Dilchap campaigns).
 export type SearchPreset = { city?: string, maxPrice?: number, promo?: boolean }
@@ -60,27 +60,6 @@ const TILE_TINTS = [
   'bg-surface-container-high text-on-surface',
 ]
 
-// "04h : 22m : 13s" until the given time (or tonight's midnight), ticking
-// every second — only <LiveClock> re-renders, not the page.
-function useClock(endsAt?: string | null) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  const midnight = new Date(now); midnight.setHours(24, 0, 0, 0)
-  const end = endsAt ? new Date(endsAt).getTime() : midnight.getTime()
-  const ms = Math.max(0, end - now)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const days = Math.floor(ms / 86_400_000)
-  const hms = `${pad(Math.floor(ms / 3_600_000) % 24)}h : ${pad(Math.floor(ms / 60_000) % 60)}m : ${pad(Math.floor(ms / 1000) % 60)}s`
-  return days > 0 ? `${days}j ${hms}` : hms
-}
-
-function LiveClock({ endsAt }: { endsAt?: string | null }) {
-  return <>{useClock(endsAt)}</>
-}
-
 function Accent({ children }: { children: React.ReactNode }) {
   return <span className="bg-gradient-to-r from-red-500 to-amber-400 bg-clip-text font-extrabold text-transparent">{children}</span>
 }
@@ -91,30 +70,6 @@ function Title({ text }: { text: string }) {
 }
 
 const MAX_PRICES = [20_000, 50_000, 150_000, 500_000]
-
-// hh:mm:ss (or "Xj hh:mm") until a campaign's end — ticks every second.
-function useCountdown(endsAt?: string | null) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (!endsAt) return
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [endsAt])
-  if (!endsAt) return null
-  const ms = Math.max(0, new Date(endsAt).getTime() - now)
-  const days = Math.floor(ms / 86_400_000)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const h = pad(Math.floor(ms / 3_600_000) % 24), m = pad(Math.floor(ms / 60_000) % 60), sec = pad(Math.floor(ms / 1000) % 60)
-  return days > 0 ? `${days}j ${h}h ${m}m` : `${h}h ${m}m ${sec}s`
-}
-
-// The ticking state lives here, so only this badge re-renders every second
-// — not the whole page and its cards.
-function Countdown({ endsAt, className, iconSize }: { endsAt: string, className: string, iconSize: number }) {
-  const countdown = useCountdown(endsAt)
-  if (!countdown) return null
-  return <span className={className}><Timer size={iconSize} /> {countdown}</span>
-}
 
 function SectionHeading({ title, action }: { title: React.ReactNode, action?: React.ReactNode }) {
   return (
@@ -152,10 +107,6 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const categories = categoriesData?.categories ?? []
   const topCategories = [...categories].sort((a, b) => (b.listingsCount ?? 0) - (a.listingsCount ?? 0)).slice(0, 7)
 
-  const { data: campaignData } = useQuery<{ activeCampaign: ActiveCampaign | null }>(ACTIVE_CAMPAIGN_QUERY)
-  const campaign = campaignData?.activeCampaign
-  const bestDiscount = Math.max(0, ...(campaign?.listings ?? []).map(l => l.discountPercent ?? 0))
-  const campaignColor = campaign?.themeColor || 'var(--primary)'
 
   // Pépites à la Une — the recommendation algorithm, boosted listings first.
   const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
@@ -257,11 +208,6 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   )
   const zone = location?.city ?? 'Toute la Côte d’Ivoire'
 
-  // Mobile deals banner: only for a live campaign (BO), never invented copy.
-  const deals = campaign
-    ? { tag: campaign.name, title: bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : 'Offres à prix cassés', text: campaign.description }
-    : null
-
   const loadMore = canLoadMore && (
     <button
       onClick={() => setPage(p => p + 1)}
@@ -274,10 +220,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
 
   const visibleOrder = home.sections.filter(x => x.visible).map(x => x.key)
   // Desktop: the reassurance band sits full width under the header when it
-  // comes first, inline otherwise; the mobile campaign banner has its
-  // desktop twin next to the hero.
+  // comes first, inline otherwise.
   const bandOnTop = visibleOrder[0] === 'reassurance'
-  const desktopOrder = visibleOrder.filter(k => k !== 'campaign' && !(k === 'reassurance' && bandOnTop))
+  const desktopOrder = visibleOrder.filter(k => !(k === 'reassurance' && bandOnTop))
   const mobileOrder = visibleOrder.filter(k => k !== 'sellCta' && k !== 'howItWorks')
   const reassuranceBand = (top: boolean) => (
     <section className={top ? 'bg-surface-lowest shadow-sm' : 'mt-10 rounded-2xl bg-surface-lowest shadow-sm'}>
@@ -301,6 +246,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             </section>
   )
   const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = {
+    campaign: <HomePromotions desktop renderCard={l => card(l)} />,
     categories: <>
           {topCategories.length > 0 && (
             <section className="mt-10">
@@ -478,27 +424,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           </section>
         )}
     </>,
-    campaign: <>
-        {deals && <section
-          className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary-dark to-primary-container p-4 text-white shadow-md"
-          style={campaign?.themeColor ? { background: campaign.themeColor } : undefined}
-        >
-          <div className="pointer-events-none absolute -bottom-8 right-0 h-36 w-36 rounded-full bg-white/10 blur-xl" />
-          <div className="relative flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate rounded-full bg-white px-2.5 py-0.5 text-label-sm font-extrabold uppercase tracking-wide text-primary" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>{deals.tag}</span>
-              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-label-sm tabular-nums backdrop-blur-sm">{campaign?.endsAt && <><Icon name="timer" size={14} /> <LiveClock endsAt={campaign.endsAt} /></>}</span>
-            </div>
-            <div className="mt-1 flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="m-0 text-headline-md font-extrabold leading-tight text-white">{deals.title}</h2>
-                {deals.text && <p className="m-0 mt-0.5 text-body-sm text-white/90">{deals.text}</p>}
-              </div>
-              <button onClick={() => onNavigate('flash-offers')} className="shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none bg-white px-4 py-2 text-label-md font-bold text-primary shadow active:scale-95" style={campaign?.themeColor ? { color: campaign.themeColor } : undefined}>Profiter</button>
-            </div>
-          </div>
-        </section>}
-    </>,
+    campaign: <HomePromotions desktop={false} renderCard={l => card(l)} />,
     pepites: <>
         {pepites.length > 0 && (
           <section className="mb-8">
@@ -561,7 +487,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         <div className="mx-auto max-w-[1320px] px-12">
           {/* 2. Hero slider + search / flash card */}
           <section className="mt-6 grid grid-cols-12 items-stretch gap-6">
-            <div className="relative col-span-8 flex min-h-[500px] flex-col justify-between overflow-hidden rounded-2xl p-10 shadow-md">
+            <div className="relative col-span-12 flex min-h-[460px] flex-col justify-between overflow-hidden rounded-2xl p-10 shadow-md">
               {SLIDES.map((s, i) => (
                 <div key={`${i}-${s.image}`} className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ${i === slide % SLIDES.length ? 'opacity-100' : 'opacity-0'}`}>
                   {i <= slidesReached && <img src={s.image} alt="" fetchPriority={i === 0 ? 'high' : 'low'} decoding="async" className="h-full w-full scale-105 object-cover" />}
@@ -637,36 +563,6 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               </div>
             </div>
 
-            {/* Flash card — the live campaign */}
-            <div className="relative col-span-4 flex flex-col justify-between overflow-hidden rounded-2xl p-10 text-white shadow-md" style={{ background: campaignColor }}>
-              <div className="pointer-events-none absolute inset-0">
-                <img src="/stitch/flash-bg.webp" alt="" loading="lazy" decoding="async" className="h-full w-full object-cover opacity-25" />
-                <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${campaignColor} 30%, transparent)` }} />
-              </div>
-              <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-xl" />
-              <div className="relative z-10">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="rounded bg-white/20 px-2.5 py-1 text-label-sm font-extrabold uppercase">{campaign ? 'Exclusivité flash' : 'Bons plans'}</span>
-                  {campaign?.endsAt && (
-                    <Countdown endsAt={campaign.endsAt} iconSize={16} className="flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1 text-label-sm tabular-nums text-primary-fixed backdrop-blur-sm" />
-                  )}
-                </div>
-                <h2 className="m-0 mt-2 text-headline-lg font-bold leading-tight">{campaign?.name ?? home.flashFallback.title}</h2>
-                <p className="m-0 mt-1 text-headline-md font-black text-primary-fixed">{bestDiscount > 0 ? `Jusqu'à -${bestDiscount}%` : campaign ? 'Prix doux entre particuliers' : home.flashFallback.subtitle}</p>
-                <p className="m-0 mt-2 text-body-sm text-white/80">{campaign?.description || home.flashFallback.text}</p>
-              </div>
-              <div className="relative z-10 mt-6 rounded-xl bg-white/10 p-4 backdrop-blur-md">
-                {campaign && (
-                  <div className="mb-3 flex items-center justify-between text-body-sm">
-                    <span>Articles en promotion</span>
-                    <span className="font-bold">{campaign.listings.length}</span>
-                  </div>
-                )}
-                <button onClick={() => onNavigate('flash-offers')} className="flex w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border-none bg-white py-2.5 text-label-lg font-bold shadow hover:bg-primary-fixed" style={{ color: campaignColor }}>
-                  Voir la sélection <ArrowRight size={18} />
-                </button>
-              </div>
-            </div>
           </section>
 
           {/* The other sections, in the order set in the back-office. */}

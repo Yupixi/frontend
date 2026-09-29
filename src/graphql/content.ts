@@ -69,6 +69,7 @@ export const ACTIVE_CAMPAIGN_BAR_QUERY = gql`
     activeCampaign {
       id
       name
+      slug
       description
       themeColor
       endsAt
@@ -76,7 +77,7 @@ export const ACTIVE_CAMPAIGN_BAR_QUERY = gql`
   }
 `
 
-export type ActiveCampaignBar = Pick<ActiveCampaign, 'id' | 'name' | 'description' | 'themeColor' | 'endsAt'>
+export type ActiveCampaignBar = Pick<ActiveCampaign, 'id' | 'name' | 'slug' | 'description' | 'themeColor' | 'endsAt'>
 
 export const FOOTER_SETTINGS_QUERY = gql`
   query FooterSettings {
