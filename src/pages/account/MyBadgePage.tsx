@@ -6,26 +6,29 @@ import { AccountLayout } from './AccountLayout'
 import { ME_QUERY, type AuthUser } from '../../graphql/auth'
 import Credits from '../../components/Credits'
 import { BADGE_LABEL, MY_BADGE_QUERY, type BadgePlan, type BadgeTier, type MyBadge } from '../../graphql/badges'
+import { delayText, useRules, type MarketplaceRules } from '../../lib/rules'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onProfileUpdated: (u: AuthUser) => void }
 
 const fdate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 const card = 'rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5'
 
-const TIERS: { tier: BadgeTier, tone: string, soft: string, perks: string[] }[] = [
+// Support delays from « Règles de la marketplace ».
+const tiers = (r: MarketplaceRules): { tier: BadgeTier, tone: string, soft: string, perks: string[] }[] => [
   {
     tier: 'VERIFIED', tone: 'text-verified', soft: 'bg-verified-soft',
-    perks: ['Coche bleue sur votre profil, annonces et messages', 'Support prioritaire : réponse en moins de 24 h', 'Examen renforcé des signalements vous visant'],
+    perks: ['Coche bleue sur votre profil, annonces et messages', `Support prioritaire : réponse en ${delayText(r.SUPPORT_SLA_HIGH_HOURS)}`, 'Examen renforcé des signalements vous visant'],
   },
   {
     tier: 'CERTIFIED', tone: 'text-tertiary', soft: 'bg-tertiary-soft',
-    perks: ['Coche verte « Vendeur certifié » partout', 'Support ultra-prioritaire : moins de 2 h', 'Crédits offerts chaque mois', 'Statistiques avancées et prix du marché', 'Mise en avant et page vendeur personnalisée'],
+    perks: ['Coche verte « Vendeur certifié » partout', `Support ultra-prioritaire : ${delayText(r.SUPPORT_SLA_URGENT_HOURS)}`, 'Crédits offerts chaque mois', 'Statistiques avancées et prix du marché', 'Mise en avant et page vendeur personnalisée'],
   },
 ]
 
 // Paid badges, "like Facebook": identity check first, then a monthly or
 // yearly subscription paid in credits.
 export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfileUpdated }: Props) {
+  const rules = useRules()
   const client = useApolloClient()
   const { data, refetch } = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY, { fetchPolicy: 'cache-and-network' })
   const [period, setPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY')
@@ -72,7 +75,7 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
             ['Avis & réputation', true, true],
             ['Statistiques annonces', 'Basiques', 'Avancées'],
             ['Support', 'Prioritaire', 'Ultra-prioritaire'],
-            ['Délai cible du support', '< 24 h', '< 2 h'],
+            ['Délai cible du support', `< ${rules.SUPPORT_SLA_HIGH_HOURS} h`, `< ${rules.SUPPORT_SLA_URGENT_HOURS} h`],
             ['Assistance litiges', 'Standard', 'Prioritaire'],
             ['Récupération de compte', 'Prioritaire', 'Prioritaire+'],
             ['Protection contre les faux signalements', 'Examen renforcé', 'Examen prioritaire'],
@@ -115,7 +118,7 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
     </div>
 
     <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-      {TIERS.map(t => {
+      {tiers(rules).map(t => {
         const p = plan(t.tier)
         const c = cta(t.tier)
         const current = b.tier === t.tier

@@ -18,6 +18,7 @@ import { uploadImages, uploadShopDocument } from '../../lib/upload'
 import Credits from '../../components/Credits'
 import type { AuthUser } from '../../graphql/auth'
 import { useLists } from '../../lib/lists'
+import { useRules } from '../../lib/rules'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -232,7 +233,7 @@ const BENEFITS: [string, string, string][] = [
   ['verified', 'Badge Boutique officielle', 'Distinct du badge Vendeur certifié, sur votre page et toutes vos annonces.'],
   ['storefront', 'Visibilité renforcée', 'Présence dans l’annuaire des boutiques et sur l’accueil.'],
   ['category', 'Rayons personnalisés', 'Organisez vos articles en rayons sur votre page.'],
-  ['push_pin', 'Articles phares', 'Épinglez jusqu’à 8 articles en tête de votre vitrine.'],
+  ['push_pin', 'Articles phares', 'Épinglez vos meilleurs articles en tête de votre vitrine.'],
   ['inventory_2', 'Gestion du stock', 'Plusieurs exemplaires par annonce, décomptés à chaque vente conclue.'],
   ['monitoring', 'Statistiques boutique', 'Visites de votre page, abonnés gagnés, articles les plus vus.'],
 ]
@@ -556,6 +557,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
   shop: MyShopT, plan: ShopPlan, categories: { id: string, name: string }[], onRenew: () => void, paidMsg: string
   onNavigate: (p: any) => void, onOpenShop: (slug: string) => void, refetch: () => void, pay: React.ReactNode
 }) {
+  const maxFeatured = useRules().SHOP_MAX_FEATURED
   const [tab, setTab] = useState<Tab>('stock')
   const daysLeft = Math.max(0, Math.ceil((new Date(shop.paidUntil!).getTime() - Date.now()) / 86_400_000))
   const { data: ld, refetch: refetchListings } = useQuery<{ myListings: { items: ShopListing[], totalCount: number } }>(MY_SHOP_LISTINGS_QUERY, { fetchPolicy: 'cache-and-network' })
@@ -612,7 +614,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
         <div className="flex gap-1 overflow-x-auto rounded-xl bg-surface-container p-1 pr-8 [scrollbar-width:none] md:pr-1">
           {tabs.map(([k, icon, label]) => (
             <button key={k} onClick={() => setTab(k)} className={`flex h-10 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none px-3.5 text-label-md md:flex-1 md:justify-center ${tab === k ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
-              <Icon name={icon} size={17} /> {label}{k === 'featured' && ` (${shop.featuredCount}/8)`}
+              <Icon name={icon} size={17} /> {label}{k === 'featured' && ` (${shop.featuredCount}/${maxFeatured})`}
             </button>
           ))}
         </div>
@@ -787,6 +789,7 @@ function AislesTab({ shop, onChanged }: { shop: MyShopT, onChanged: () => void }
 }
 
 function FeaturedTab({ listings, onChanged }: { listings: ShopListing[], onChanged: () => void }) {
+  const maxFeatured = useRules().SHOP_MAX_FEATURED
   const [pin, { loading }] = useMutation(SET_LISTING_FEATURED_MUTATION)
   const [error, setError] = useState('')
   const [picking, setPicking] = useState(false)
@@ -796,7 +799,7 @@ function FeaturedTab({ listings, onChanged }: { listings: ShopListing[], onChang
   return (
     <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface">Articles phares</h2><p className="m-0 text-body-sm text-on-surface-variant">Mis en avant tout en haut de votre page ({featured.length} sur 8 épinglés).</p></div>
+        <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface">Articles phares</h2><p className="m-0 text-body-sm text-on-surface-variant">Mis en avant tout en haut de votre page ({featured.length} sur {maxFeatured} épinglés).</p></div>
         {featured.length < 8 && others.length > 0 && <button onClick={() => setPicking(true)} className="flex h-10 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name="add" size={18} /> Ajouter</button>}
       </div>
       {error && <p className="m-0 mt-2 text-body-sm text-primary">{error}</p>}

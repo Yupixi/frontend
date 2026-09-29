@@ -6,17 +6,17 @@ import SellerBadge from '../../components/SellerBadge'
 import { AccountLayout } from './AccountLayout'
 import { BADGE_LABEL } from '../../graphql/badges'
 import {
-  CATEGORY_LABEL, CLOSE_SUPPORT_TICKET_MUTATION, CREATE_SUPPORT_TICKET_MUTATION, MY_SUPPORT_TICKETS_QUERY, REPLY_SUPPORT_TICKET_MUTATION, SLA_HOURS,
+  CATEGORY_LABEL, CLOSE_SUPPORT_TICKET_MUTATION, CREATE_SUPPORT_TICKET_MUTATION, MY_SUPPORT_TICKETS_QUERY, REPLY_SUPPORT_TICKET_MUTATION,
   SUPPORT_CATEGORIES, type SupportCategory, type SupportTicket,
 } from '../../graphql/support'
 import type { AuthUser } from '../../graphql/auth'
+import { delayText, useRules } from '../../lib/rules'
 
 type Props = { onNavigate: (p: any) => void; focusTicketId?: string | null; currentUser?: AuthUser | null; onLogout: () => void }
 
 const card = 'rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5'
 const inputCls = 'h-11 w-full min-w-0 rounded-xl border-none bg-surface-container-low px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary'
 const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const delay = (h: number) => (h < 24 ? `moins de ${h} h` : h === 24 ? 'moins de 24 h' : `moins de ${h / 24} jours`)
 
 const STATUS: Record<SupportTicket['status'], [string, string]> = {
   OPEN: ['bg-amber-100 text-amber-800', 'En attente de réponse'],
@@ -73,7 +73,9 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
   const [sent, setSent] = useState('')
   const [create, { loading }] = useMutation(CREATE_SUPPORT_TICKET_MUTATION)
   const badge = currentUser?.badge ?? null
-  const hours = SLA_HOURS[badge === 'CERTIFIED' ? 'URGENT' : badge ? 'HIGH' : 'NORMAL']
+  // Response target from « Règles de la marketplace ».
+  const rules = useRules()
+  const hours = badge === 'CERTIFIED' ? rules.SUPPORT_SLA_URGENT_HOURS : badge ? rules.SUPPORT_SLA_HIGH_HOURS : rules.SUPPORT_SLA_NORMAL_HOURS
   const tickets = data?.mySupportTickets ?? []
   const submit = () => {
     setError('')
@@ -89,8 +91,8 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
       <section className={`${card} mt-4 flex flex-col gap-3 sm:flex-row sm:items-center`}>
         <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${badge === 'CERTIFIED' ? 'bg-tertiary-soft text-tertiary' : badge ? 'bg-verified-soft text-verified' : 'bg-surface-container text-on-surface-variant'}`}><Icon name="support_agent" size={26} /></span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5 text-label-lg text-on-surface">Délai de réponse : {delay(hours)} {badge && <SellerBadge tier={badge} variant="pill" short />}</div>
-          <div className="text-body-sm text-on-surface-variant">{badge === 'CERTIFIED' ? 'Support ultra-prioritaire inclus dans votre badge Vendeur certifié.' : badge ? `Support prioritaire inclus dans votre badge ${BADGE_LABEL[badge]}.` : 'Avec un badge : réponse en moins de 24 h (Compte vérifié) ou 2 h (Vendeur certifié).'}</div>
+          <div className="flex flex-wrap items-center gap-1.5 text-label-lg text-on-surface">Délai de réponse : {delayText(hours)} {badge && <SellerBadge tier={badge} variant="pill" short />}</div>
+          <div className="text-body-sm text-on-surface-variant">{badge === 'CERTIFIED' ? 'Support ultra-prioritaire inclus dans votre badge Vendeur certifié.' : badge ? `Support prioritaire inclus dans votre badge ${BADGE_LABEL[badge]}.` : `Avec un badge : réponse en ${delayText(rules.SUPPORT_SLA_HIGH_HOURS)} (Compte vérifié) ou ${delayText(rules.SUPPORT_SLA_URGENT_HOURS)} (Vendeur certifié).`}</div>
         </div>
         {!badge && <button onClick={() => onNavigate('seller-badge')} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="verified" size={17} fill className="text-verified" /> Voir les badges</button>}
       </section>

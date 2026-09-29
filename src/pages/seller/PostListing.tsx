@@ -26,8 +26,8 @@ import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
 import { useLists } from '../../lib/lists'
+import { useRules } from '../../lib/rules'
 
-const MAX_PHOTOS = 8
 const TITLE_MAX = 80
 const DRAFT_KEY = 'dilchap_listing_draft'
 
@@ -142,6 +142,7 @@ const QUICK_PICKS = 6
 // "Déposer une annonce" mockup: one guided form (photos → infos → prix →
 // modalités d'échange) with a sticky earnings/preview column.
 export default function PostListing({ onNavigate, currentUser, onLogout, listingId }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string }) {
+  const maxPhotos = useRules().LISTING_MAX_PHOTOS
   const lists = useLists()
   const isEditing = !!listingId
   const noCommission = useNoCommissionClaims()
@@ -257,7 +258,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const photoCount = existingMedia.length + imageFiles.length
   const addFiles = (files: FileList | null) => {
     if (!files) return
-    const picked = Array.from(files).slice(0, MAX_PHOTOS - photoCount)
+    const picked = Array.from(files).slice(0, maxPhotos - photoCount)
     setImageFiles(p => [...p, ...picked])
     setImagePreviews(p => [...p, ...picked.map(f => URL.createObjectURL(f))])
   }
@@ -565,8 +566,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className={`flex min-w-0 flex-col gap-5 ${step === 4 ? 'max-lg:hidden' : ''}`}>
             {/* Photos */}
-            <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${MAX_PHOTOS} photos${noCommission ? ' gratuites' : ''}. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
-              aside={<span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface-variant">{photoCount} / {MAX_PHOTOS} ajoutées</span>}>
+            <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${maxPhotos} photos${noCommission ? ' gratuites' : ''}. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
+              aside={<span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface-variant">{photoCount} / {maxPhotos} ajoutées</span>}>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {allPhotos.map((p, i) => (
                   <div key={p.key} className="relative aspect-square overflow-hidden rounded-xl bg-surface-container-low">
@@ -575,7 +576,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     <button onClick={p.remove} className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-black/55 text-white" aria-label="Retirer"><X size={15} /></button>
                   </div>
                 ))}
-                {photoCount < MAX_PHOTOS && (
+                {photoCount < maxPhotos && (
                   <button
                     onClick={() => fileInput.current?.click()}
                     onDragOver={e => e.preventDefault()}

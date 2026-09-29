@@ -14,6 +14,7 @@ import {
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
 import { useLists } from '../../lib/lists'
+import { useRules } from '../../lib/rules'
 
 type Props = {
   orderId: string
@@ -33,14 +34,16 @@ const REASONS: { value: DisputeReason; icon: string }[] = [
   { value: 'COUNTERFEIT', icon: 'new_releases' },
   { value: 'OTHER', icon: 'help' },
 ]
-const STEPS = [
-  { title: 'Échange amiable (24h)', text: 'Le vendeur est averti immédiatement et peut proposer une remise ou l’annulation.' },
-  { title: 'Intervention Dilchap', text: "Sans accord sous 24h, un médiateur Dilchap analyse les preuves et contacte les deux parties." },
+// Answer delay from « Règles de la marketplace ».
+const steps = (h: number) => [
+  { title: `Échange amiable (${h} h)`, text: 'Le vendeur est averti immédiatement et peut proposer une remise ou l’annulation.' },
+  { title: 'Intervention Dilchap', text: `Sans accord sous ${h} h, un médiateur Dilchap analyse les preuves et contacte les deux parties.` },
   { title: 'Décision finale', text: 'Vente finalisée, remise accordée ou achat annulé : aucun paiement n’est dû avant la décision.' },
 ]
 
 // "Déclarer un litige sur votre commande" (desktop + mobile mockups).
 export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpened, onOpenConversation, currentUser, onLogout }: Props) {
+  const answerHours = useRules().DISPUTE_ANSWER_HOURS
   const { disputeReasons } = useLists()
   const { data: purchasesData } = useQuery<{ myPurchaseOrders: PurchaseOrder[] }>(MY_PURCHASE_ORDERS_QUERY, { skip: !!orderId })
   const { data, loading } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId })
@@ -180,7 +183,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
                 <section className="hidden rounded-2xl bg-surface-lowest p-4 shadow-sm md:block">
                   <h3 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="balance" size={22} className="text-tertiary" /> Comment fonctionne la médiation ?</h3>
                   <ol className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
-                    {STEPS.map((s, i) => (
+                    {steps(answerHours).map((s, i) => (
                       <li key={s.title} className="flex gap-3">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-outline-variant text-label-sm text-primary">{i + 1}</span>
                         <div><div className="text-label-md text-on-surface">{s.title}</div><div className="text-body-sm text-on-surface-variant">{s.text}</div></div>
