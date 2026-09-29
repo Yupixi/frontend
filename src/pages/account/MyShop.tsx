@@ -18,6 +18,8 @@ import { uploadImages, uploadShopDocument } from '../../lib/upload'
 import OfferCredits from '../../components/OfferCredits'
 import type { AuthUser } from '../../graphql/auth'
 import { useLists } from '../../lib/lists'
+import { useHomeCountry, type Country } from '../../lib/countries'
+import type { ShopLegalIdType } from '../../graphql/shops'
 import { useRules } from '../../lib/rules'
 import RichTextEditor from '../../components/RichTextEditor'
 import { plainText } from '../../lib/format'
@@ -38,12 +40,16 @@ type Form = {
   name: string; categoryId: string; description: string; logoUrl: string; bannerUrl: string; city: string; commune: string
   address: string; phone: string; whatsapp: string; email: string; website: string; facebook: string; instagram: string; tiktok: string
   hours: (OpeningHours | null)[]
-  legalIdType: 'RCCM' | 'NCC'; legalIdNumber: string; legalDocKey: string; legalDocName: string; consent: boolean
+  legalIdType: ShopLegalIdType; legalIdNumber: string; legalDocKey: string; legalDocName: string; consent: boolean
 }
+// OHADA RCCM shape (country-city-year-form-number), neutral digits.
+const rccmExample = (c: Country) => `${c.code}-XXX-AAAA-B-00000`
+
 const DEFAULT_HOURS: (OpeningHours | null)[] = DAYS.map((_, day) => (day < 6 ? { day, open: day === 5 ? '10:00' : '09:00', close: day === 5 ? '20:00' : '19:30' } : null))
-const formFrom = (s?: MyShopT | null): Form => ({
+// A new shop starts in the owner's main city.
+const formFrom = (s: MyShopT | null | undefined, mainCity: string): Form => ({
   name: s?.name ?? '', categoryId: s?.category?.id ?? '', description: s?.description ?? '', logoUrl: s?.logoUrl ?? '', bannerUrl: s?.bannerUrl ?? '',
-  city: s?.city ?? 'Abidjan', commune: s?.commune ?? '', address: s?.address ?? '', phone: s?.phone ?? '', whatsapp: s?.whatsapp ?? '',
+  city: s?.city ?? mainCity, commune: s?.commune ?? '', address: s?.address ?? '', phone: s?.phone ?? '', whatsapp: s?.whatsapp ?? '',
   email: s?.email ?? '', website: s?.website ?? '', facebook: s?.facebook ?? '', instagram: s?.instagram ?? '', tiktok: s?.tiktok ?? '',
   hours: s ? DAYS.map((_, day) => s.openingHours.find(h => h.day === day) ?? null) : DEFAULT_HOURS,
   legalIdType: s?.legalIdType ?? 'RCCM', legalIdNumber: s?.legalIdNumber ?? '', legalDocKey: '', legalDocName: '', consent: false,
@@ -137,7 +143,10 @@ function HoursEditor({ hours, onChange }: { hours: (OpeningHours | null)[], onCh
 }
 
 function IdentityFields({ form, set, categories, withName }: { form: Form, set: (p: Partial<Form>) => void, categories: { id: string, name: string }[], withName: boolean }) {
-  const lists = useLists()
+  // Owner's country: its towns and the districts of its main city.
+  const country = useHomeCountry()
+  const lists = useLists(country.code)
+  const inMain = form.city === lists.mainCity
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -152,7 +161,7 @@ function IdentityFields({ form, set, categories, withName }: { form: Form, set: 
       </div>
       {withName && (
         <Field label="Nom commercial officiel" required hint="Tel qu’enregistré">
-          <IconInput icon="storefront" value={form.name} onChange={e => set({ name: e.target.value })} placeholder="Ex : Kicks Station Babi" maxLength={60} />
+          <IconInput icon="storefront" value={form.name} onChange={e => set({ name: e.target.value })} placeholder="Ex : Kicks Station" maxLength={60} />
         </Field>
       )}
       <Field label="Secteur d’activité" required>
@@ -168,12 +177,12 @@ function IdentityFields({ form, set, categories, withName }: { form: Form, set: 
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Ville" required>
-          <Select value={form.city} onChange={e => set({ city: e.target.value, commune: e.target.value === 'Abidjan' ? form.commune : '' })} className={`${inputCls} cursor-pointer`}>
+          <Select value={form.city} onChange={e => set({ city: e.target.value, commune: e.target.value === lists.mainCity ? form.commune : '' })} className={`${inputCls} cursor-pointer`}>
             {[...new Set([form.city, ...lists.cities].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
         </Field>
-        <Field label={form.city === 'Abidjan' ? 'Commune' : 'Quartier'}>
-          {form.city === 'Abidjan' ? (
+        <Field label={inMain && country.code === 'CI' ? 'Commune' : 'Quartier'}>
+          {inMain && lists.communes.length > 0 ? (
             <Select value={form.commune} onChange={e => set({ commune: e.target.value })} className={`${inputCls} cursor-pointer`}>
               <option value="">Choisir</option>
               {[...new Set([form.commune, ...lists.communes].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
@@ -186,15 +195,16 @@ function IdentityFields({ form, set, categories, withName }: { form: Form, set: 
 }
 
 function ContactFields({ form, set }: { form: Form, set: (p: Partial<Form>) => void }) {
+  const country = useHomeCountry()
   return (
     <div className="flex flex-col gap-4">
       <section className="flex flex-col gap-3 rounded-2xl bg-surface-lowest/60 p-4 shadow-sm">
         <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="storefront" size={19} className="text-primary" /> Coordonnées</h3>
-        <Field label="Adresse du magasin / showroom"><IconInput icon="location_on" value={form.address} onChange={e => set({ address: e.target.value })} placeholder="Rue des Majorettes, Marcory Zone 4" maxLength={200} /></Field>
-        <Field label="Téléphone"><IconInput icon="call" type="tel" value={form.phone} onChange={e => set({ phone: e.target.value })} placeholder="07 00 00 00 00" maxLength={20} /></Field>
-        <Field label="WhatsApp"><IconInput icon="chat" type="tel" value={form.whatsapp} onChange={e => set({ whatsapp: e.target.value })} placeholder="+225 07 00 00 00 00" maxLength={20} /></Field>
-        <Field label="E-mail"><IconInput icon="mail" type="email" value={form.email} onChange={e => set({ email: e.target.value })} placeholder="contact@maboutique.ci" /></Field>
-        <Field label="Site web" hint="Facultatif"><IconInput icon="language" value={form.website} onChange={e => set({ website: e.target.value })} placeholder="www.maboutique.ci" maxLength={200} /></Field>
+        <Field label="Adresse du magasin / showroom"><IconInput icon="location_on" value={form.address} onChange={e => set({ address: e.target.value })} placeholder="Rue, quartier, point de repère" maxLength={200} /></Field>
+        <Field label="Téléphone"><IconInput icon="call" type="tel" value={form.phone} onChange={e => set({ phone: e.target.value })} placeholder={country.phoneExample} maxLength={20} /></Field>
+        <Field label="WhatsApp"><IconInput icon="chat" type="tel" value={form.whatsapp} onChange={e => set({ whatsapp: e.target.value })} placeholder={`+${country.dialCode} ${country.phoneExample}`} maxLength={20} /></Field>
+        <Field label="E-mail"><IconInput icon="mail" type="email" value={form.email} onChange={e => set({ email: e.target.value })} placeholder="contact@maboutique.com" /></Field>
+        <Field label="Site web" hint="Facultatif"><IconInput icon="language" value={form.website} onChange={e => set({ website: e.target.value })} placeholder="www.maboutique.com" maxLength={200} /></Field>
       </section>
       <section className="flex flex-col gap-3 rounded-2xl bg-surface-lowest/60 p-4 shadow-sm">
         <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="share" size={19} className="text-primary" /> Réseaux sociaux</h3>
@@ -250,7 +260,8 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
   const { data: cats } = useQuery<{ categories: { id: string, name: string }[] }>(CATEGORIES_QUERY)
   const [wizard, setWizard] = useState(false)
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState<Form>(() => formFrom(null))
+  const owner = useHomeCountry()
+  const [form, setForm] = useState<Form>(() => formFrom(null, owner.mainCity))
   const [error, setError] = useState('')
   const [docBusy, setDocBusy] = useState(false)
   const [paying, setPaying] = useState(false)
@@ -265,7 +276,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
   const plan = me?.plan
   const categories = cats?.categories ?? []
   const set = (p: Partial<Form>) => setForm(f => ({ ...f, ...p }))
-  const start = () => { setForm(formFrom(shop)); setStep(0); setError(''); setWizard(true) }
+  const start = () => { setForm(formFrom(shop, owner.mainCity)); setStep(0); setError(''); setWizard(true) }
   const back = () => (step === 0 ? setWizard(false) : setStep(s => s - 1))
 
   const layout = (children: React.ReactNode, opts: { hideNav?: boolean, wide?: boolean } = {}) => (
@@ -338,15 +349,15 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
         <h1 className="m-0 text-headline-lg text-on-surface">Document légal d’entreprise</h1>
         <p className="m-0 mb-4 mt-1 text-body-md text-on-surface-variant">Le justificatif d’immatriculation de votre entreprise, vérifié par l’équipe Dilchap.</p>
         <div role="radiogroup" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-container p-1">
-          {(['RCCM', 'NCC'] as const).map(t => (
+          {(['RCCM', owner.taxId] as const).map(t => (
             <button key={t} role="radio" aria-checked={form.legalIdType === t} type="button" onClick={() => set({ legalIdType: t })} className={`flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none text-label-lg ${form.legalIdType === t ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
               <Icon name={t === 'RCCM' ? 'description' : 'receipt_long'} size={18} /> {t}
             </button>
           ))}
         </div>
-        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{form.legalIdType === 'RCCM' ? 'Registre du Commerce et du Crédit Mobilier (ex. CI-ABJ-2024-B-14892).' : 'Numéro de Compte Contribuable délivré par la DGI.'}</p>
+        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{form.legalIdType === 'RCCM' ? `Registre du Commerce et du Crédit Mobilier (ex. ${rccmExample(owner)}).` : `${owner.taxIdLabel}, tel qu’indiqué sur votre attestation fiscale.`}</p>
         <div className="mt-4"><Field label={`Numéro ${form.legalIdType}`} required>
-          <IconInput icon="badge" value={form.legalIdNumber} onChange={e => set({ legalIdNumber: e.target.value.toUpperCase() })} placeholder={form.legalIdType === 'RCCM' ? 'CI-ABJ-2024-B-14892' : '1234567 A'} maxLength={40} autoComplete="off" />
+          <IconInput icon="badge" value={form.legalIdNumber} onChange={e => set({ legalIdNumber: e.target.value.toUpperCase() })} placeholder={form.legalIdType === 'RCCM' ? rccmExample(owner) : `Numéro ${owner.taxId}`} maxLength={40} autoComplete="off" />
         </Field></div>
         <div className="mb-1.5 mt-4 flex items-center justify-between text-label-md text-on-surface">Justificatif <span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="lock" size={14} /> Stockage privé</span></div>
         <input ref={docInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic" hidden onChange={e => { void pickDoc(e.target.files?.[0]); e.target.value = '' }} />
@@ -425,7 +436,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
         </div>
         <div className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container text-on-surface-variant"><Icon name="description" size={20} /></span>
-          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Document d’entreprise</div><div className="text-body-sm text-on-surface-variant">Extrait RCCM ou attestation NCC, à importer pendant la demande (PDF ou photo).</div></div>
+          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Document d’entreprise</div><div className="text-body-sm text-on-surface-variant">Extrait RCCM ou attestation {owner.taxId}, à importer pendant la demande (PDF ou photo).</div></div>
         </div>
       </div>
       <button disabled={!me.identityVerified} onClick={start} className="mt-6 flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white shadow-md disabled:cursor-not-allowed disabled:opacity-45">
@@ -842,7 +853,8 @@ function FeaturedTab({ listings, onChanged }: { listings: ShopListing[], onChang
 }
 
 function ProfileTab({ shop, categories, onSaved }: { shop: MyShopT, categories: { id: string, name: string }[], onSaved: () => void }) {
-  const [form, setForm] = useState<Form>(() => formFrom(shop))
+  const owner = useHomeCountry()
+  const [form, setForm] = useState<Form>(() => formFrom(shop, owner.mainCity))
   const [save, { loading }] = useMutation(UPDATE_SHOP_PROFILE_MUTATION)
   const [msg, setMsg] = useState<{ ok: boolean, text: string } | null>(null)
   const set = (p: Partial<Form>) => { setMsg(null); setForm(f => ({ ...f, ...p })) }

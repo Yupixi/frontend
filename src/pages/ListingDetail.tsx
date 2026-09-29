@@ -54,6 +54,7 @@ import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
 import { Claim } from '../lib/site'
 import { useLists } from '../lib/lists'
+import { METHOD_LABELS } from '../lib/countries'
 import { listingPath, samePlace } from '../lib/routes'
 import { usePageTitle } from '../lib/site'
 
@@ -76,13 +77,7 @@ type ListingDetailProps = {
 }
 
 
-export const PAYMENT_LABELS: Record<string, string> = {
-  CASH: 'Espèces en main propre',
-  WAVE: 'Wave',
-  ORANGE_MONEY: 'Orange Money',
-  MTN_MOMO: 'MTN MoMo',
-  MOOV_MONEY: 'Moov Money',
-}
+export const PAYMENT_LABELS: Record<string, string> = { ...METHOD_LABELS, CASH: 'Espèces en main propre' }
 
 const TABS = [
   { key: 'description', label: 'Description du vendeur', short: 'Description' },

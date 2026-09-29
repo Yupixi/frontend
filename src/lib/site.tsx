@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
+import { useMarket } from './countries'
 
 // Site-wide settings set in the back-office (« Réglages du site », Backend
 // content/site-config.ts): brand, SEO, contacts, social and app links, and
@@ -22,8 +23,8 @@ export type SiteConfig = {
 export const DEFAULT_SITE: SiteConfig = {
   brand: { name: 'Dilchap', logoUrl: '', tagline: 'La marketplace de confiance' },
   seo: {
-    title: "Dilchap — Marketplace Côte d'Ivoire",
-    description: "Achetez et vendez près de chez vous en Côte d'Ivoire : annonces, négociation sur le chat et remise en main propre.",
+    title: 'Dilchap — Marketplace d’Afrique de l’Ouest',
+    description: 'Achetez et vendez près de chez vous, de Dakar à Niamey : annonces, négociation sur le chat et remise en main propre.',
     image: '',
   },
   contact: { email: '', hours: '', address: '' },
@@ -67,7 +68,10 @@ const OWN_TITLE = ['listing-detail', 'shop', 'seller-profile']
 // share image and structured data are already right for that URL and are
 // left as they are.
 export function useSeo(page: string) {
-  const { seo, brand } = useSite()
+  const { seo: siteSeo, brand } = useSite()
+  // A country's own texts (« Pays » in the BO) win over the site's.
+  const market = useMarket()
+  const seo = { ...siteSeo, title: market?.seoTitle || siteSeo.title, description: market?.seoDescription || siteSeo.description }
   const firstPage = useRef(page)
   const moved = useRef(false)
   if (page !== firstPage.current) moved.current = true

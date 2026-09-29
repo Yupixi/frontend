@@ -8,6 +8,7 @@ import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
 import { CAMPAIGN_PAGE_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignPage, type LiveCampaign } from '../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { placeOptions, useLists } from '../lib/lists'
+import { useMarket } from '../lib/countries'
 
 type FlashOffersProps = {
   // '' = the newest live campaign.
@@ -49,6 +50,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
   const [pages, setPages] = useState(1)
   useEffect(() => setPages(1), [query, category, city, minDiscount, sort])
   const places = placeOptions(useLists())
+  const market = useMarket()
 
   const filter = useMemo(() => campaign && ({
     campaignId: campaign.id,
@@ -189,7 +191,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="storefront" size={22} /></span>
             <div>
               <p className="m-0 text-label-sm font-bold uppercase tracking-wider text-primary">Espace vendeurs</p>
-              <h2 className="m-0 text-headline-sm font-bold text-on-surface">Vous vendez à Abidjan ?</h2>
+              <h2 className="m-0 text-headline-sm font-bold text-on-surface">{market ? `Vous vendez à ${market.mainCity} ?` : 'Vous vendez ?'}</h2>
               <p className="m-0 mt-1 max-w-2xl text-body-sm text-on-surface-variant">
                 Participez à « {campaign.name} » et mettez vos articles devant tous les acheteurs de la campagne
                 {cost > 0 ? ` (${[campaign.entryFee ? `${campaign.entryFee} crédits d’inscription` : '', campaign.listingFee ? `${campaign.listingFee} crédits par article` : ''].filter(Boolean).join(' + ')})` : ' — participation gratuite'}

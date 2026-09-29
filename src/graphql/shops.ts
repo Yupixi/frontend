@@ -6,7 +6,7 @@ import { gql } from '@apollo/client'
 const SHOP_FIELDS = `
   id slug name description logoUrl bannerUrl
   category { id slug name icon }
-  city commune address phone whatsapp email website facebook instagram tiktok
+  countryCode city commune address phone whatsapp email website facebook instagram tiktok
   openingHours { day open close }
   legalIdType legalIdMasked approvedAt isOfficial
   owner { id fullName avatarUrl badge createdAt }
@@ -27,8 +27,8 @@ export const SHOP_QUERY = gql`
 `
 
 export const SHOPS_QUERY = gql`
-  query Shops($search: String, $categorySlug: String, $city: String, $sort: ShopSort, $page: Int, $pageSize: Int) {
-    shops(search: $search, categorySlug: $categorySlug, city: $city, sort: $sort, page: $page, pageSize: $pageSize) {
+  query Shops($search: String, $categorySlug: String, $countryCode: String, $city: String, $sort: ShopSort, $page: Int, $pageSize: Int) {
+    shops(search: $search, categorySlug: $categorySlug, countryCode: $countryCode, city: $city, sort: $sort, page: $page, pageSize: $pageSize) {
       total page pageSize
       items { ${SHOP_FIELDS} }
     }
@@ -104,6 +104,7 @@ export type Shop = {
   logoUrl: string | null
   bannerUrl: string | null
   category: ShopCategory | null
+  countryCode: string
   city: string
   commune: string | null
   address: string | null
@@ -115,7 +116,7 @@ export type Shop = {
   instagram: string | null
   tiktok: string | null
   openingHours: OpeningHours[]
-  legalIdType: 'RCCM' | 'NCC'
+  legalIdType: ShopLegalIdType
   legalIdMasked: string
   approvedAt: string | null
   isOfficial: boolean
@@ -130,6 +131,10 @@ export type Shop = {
   aisles: ShopAisle[]
   highlights: ShopHighlight[]
 }
+
+// RCCM (OHADA, every country) or the owner's country tax id.
+export type ShopLegalIdType = 'RCCM' | 'NCC' | 'NINEA' | 'IFU' | 'NIF'
+export const LEGAL_ID_SHORT: Record<ShopLegalIdType, string> = { RCCM: 'RCCM', NCC: 'NCC', NINEA: 'NINEA', IFU: 'IFU', NIF: 'NIF' }
 
 export type ShopStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED'
 export type ShopRejectReason = 'DOC_UNREADABLE' | 'DOC_INVALID' | 'NAME_MISMATCH' | 'NUMBER_MISMATCH' | 'OWNER_MISMATCH' | 'BRAND_MISUSE' | 'INCOMPLETE' | 'OTHER'
@@ -172,7 +177,7 @@ export const REJECT_LABELS: Record<ShopRejectReason, string> = {
   DOC_UNREADABLE: 'Document illisible',
   DOC_INVALID: 'Document non valable',
   NAME_MISMATCH: 'Nom commercial différent du document',
-  NUMBER_MISMATCH: 'Numéro RCCM / NCC différent du document',
+  NUMBER_MISMATCH: 'Numéro RCCM / fiscal différent du document',
   OWNER_MISMATCH: 'Gérant non rattaché à l’entreprise',
   BRAND_MISUSE: 'Utilisation d’une marque sans autorisation',
   INCOMPLETE: 'Demande incomplète',
@@ -181,13 +186,20 @@ export const REJECT_LABELS: Record<ShopRejectReason, string> = {
 
 export const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
-// Côte d'Ivoire runs on UTC all year: "open now" from the opening hours.
-export function openNow(hours: OpeningHours[], now = new Date()) {
-  const day = (now.getUTCDay() + 6) % 7
-  const hm = `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`
+// "Open now" from the opening hours, at the shop's local time (Bénin and
+// Niger are UTC+1, the other UEMOA countries UTC all year).
+export function openNow(hours: OpeningHours[], timeZone = 'Africa/Abidjan', now = new Date()) {
+  let local: Record<string, string>
+  try {
+    local = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now).map(p => [p.type, p.value]))
+  } catch {
+    local = { weekday: now.toUTCString().slice(0, 3), hour: String(now.getUTCHours()).padStart(2, '0'), minute: String(now.getUTCMinutes()).padStart(2, '0') }
+  }
+  const day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(local.weekday)
+  const hm = `${local.hour}:${local.minute}`
   const today = hours.find(h => h.day === day)
-  if (today && hm >= today.open && hm < today.close) return { open: true, until: today.close }
-  return { open: false, until: null }
+  if (today && hm >= today.open && hm < today.close) return { open: true, until: today.close, day }
+  return { open: false, until: null as string | null, day }
 }
 
 export const shopUrl = (slug: string) => `${window.location.origin}/boutique/${encodeURIComponent(slug)}`

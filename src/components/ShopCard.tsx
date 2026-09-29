@@ -2,6 +2,7 @@ import Icon from './Icon'
 import Price from './Price'
 import { openNow, type Shop } from '../graphql/shops'
 import { formatNumber } from '../lib/format'
+import { marketForCountry } from '../data/markets'
 
 export function ShopLogo({ shop, size = 'md' }: { shop: Pick<Shop, 'name' | 'logoUrl'>, size?: 'sm' | 'md' | 'lg' }) {
   const cls = size === 'lg' ? 'h-24 w-24 rounded-2xl text-headline-lg md:h-28 md:w-28' : size === 'md' ? 'h-14 w-14 rounded-xl text-headline-sm' : 'h-10 w-10 rounded-lg text-label-lg'
@@ -14,7 +15,7 @@ export function ShopLogo({ shop, size = 'md' }: { shop: Pick<Shop, 'name' | 'log
 
 // Directory / home card ("Voir la boutique").
 export function ShopCard({ shop, onOpen, onFollow, compact }: { shop: Shop, onOpen: () => void, onFollow?: () => void, compact?: boolean }) {
-  const now = openNow(shop.openingHours)
+  const now = openNow(shop.openingHours, marketForCountry(shop.countryCode)?.timeZone)
   return (
     <div onClick={onOpen} className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm transition-shadow hover:shadow-card-hover">
       <div className="relative h-24 bg-surface-container md:h-28">

@@ -15,6 +15,7 @@ import {
 import type { AuthUser } from '../../graphql/auth'
 import type { WalletSettings } from '../../graphql/payments'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
+import { METHOD_LABELS, methodsSentence, useAccountCountryCode, useCountry } from '../../lib/countries'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 
@@ -25,7 +26,7 @@ const FILTERS: { key: string, label: string, types?: WalletTxType[] }[] = [
   { key: 'out', label: 'Dépenses', types: ['CREDIT_SPENT', 'BOOST_PURCHASE', 'SHOP_SUBSCRIPTION', 'BADGE_SUBSCRIPTION', 'CAMPAIGN_ENTRY'] },
   { key: 'sales', label: 'Ventes déclarées', types: ['SALE'] },
 ]
-const METHOD_LABEL: Record<string, string> = { WAVE: 'Wave', ORANGE_MONEY: 'Orange Money', MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money', CASH: 'Espèces en main propre', CREDITS: 'Crédits', DIRECT: 'Remise directe', WALLET: 'Crédits', DILCHAP: 'Équipe Dilchap' }
+const METHOD_LABEL: Record<string, string> = { ...METHOD_LABELS, CASH: 'Espèces en main propre', CREDITS: 'Crédits', DIRECT: 'Remise directe', WALLET: 'Crédits', DILCHAP: 'Équipe Dilchap' }
 const TX_META: Record<WalletTxType, { icon: string, box: string, status: string, statusCls: string }> = {
   BOOST_PURCHASE: { icon: 'rocket_launch', box: 'bg-primary-fixed text-primary', status: 'Actif', statusCls: 'bg-tertiary-soft text-tertiary' },
   CREDIT_SPENT: { icon: 'bolt', box: 'bg-surface-container text-on-surface', status: 'Validé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
@@ -45,6 +46,10 @@ const TX_META: Record<WalletTxType, { icon: string, box: string, status: string,
 // badges, the shop plan and campaign fees.
 export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
   const noCommission = useNoCommissionClaims()
+  // Member's country: its payment methods; credits by Mobile Money only
+  // where the BO opened them (« Pays »).
+  const country = useCountry(useAccountCountryCode(), true)
+  const mobile = methodsSentence((country?.methods ?? ['WAVE', 'ORANGE_MONEY']).filter(m => m !== 'CASH'))
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary; walletSettings: WalletSettings }>(MY_WALLET_QUERY)
   const wallet = walletData?.myWallet
   const { data: packsData } = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY)
@@ -147,8 +152,8 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
               <span className="hidden md:inline">Engagement Transparence Dilchap</span>
               <Claim><span className="hidden rounded bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary md:inline">Garanti sans frais cachés</span></Claim>
             </div>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant md:hidden">Vos acheteurs vous payent directement (main à la main, Wave, Orange Money). Dilchap ne retient pas vos fonds.</p>
-            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Dilchap ne retient pas vos fonds. Vos acheteurs vous payent directement de la main à la main ou via votre portefeuille mobile habituel (Wave, Orange Money, Moov).<Claim> Vos gains restent intégralement vôtres.</Claim></p>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant md:hidden">Vos acheteurs vous payent directement (main à la main, {mobile}). Dilchap ne retient pas vos fonds.</p>
+            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Dilchap ne retient pas vos fonds. Vos acheteurs vous payent directement de la main à la main ou via votre portefeuille mobile habituel ({mobile}).<Claim> Vos gains restent intégralement vôtres.</Claim></p>
           </div>
           <Claim><span className="hidden shrink-0 items-center gap-1.5 rounded-lg bg-surface-lowest px-3 py-2.5 text-label-md text-on-surface md:flex"><CheckCircle2 size={16} className="text-tertiary" /> 0% commission sur chaque vente</span></Claim>
         </section>
@@ -160,10 +165,11 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
               <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Acheter des crédits</h2>
               <p className="m-0 text-body-sm text-on-surface-variant">Packs avec crédits offerts, ou <button onClick={() => setBuying('')} className="cursor-pointer border-none bg-transparent p-0 text-body-sm font-semibold text-primary underline">la quantité de votre choix</button>.</p>
             </div>
-            <div className="hidden items-center gap-2 text-label-sm text-on-surface-variant md:flex">
+            {country?.payments !== false && <div className="hidden items-center gap-2 text-label-sm text-on-surface-variant md:flex">
               Paiement mobile : <PaymentLogos size={26} />
-            </div>
+            </div>}
           </div>
+          {country && !country.payments && <p className="m-0 mb-3 flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface"><Icon name="schedule" size={18} className="shrink-0 text-primary" /> L’achat de crédits par Mobile Money arrive bientôt {country.inName}. En attendant, tout le reste de Dilchap fonctionne : annonces, messages, remise en main propre et paiement direct au vendeur.</p>}
           {/* Mobile: compact pack rows, as in the mockup */}
           <div className="flex flex-col gap-2 md:hidden">
             {packs.map(p => {

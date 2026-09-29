@@ -105,7 +105,7 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
               {SUPPORT_CATEGORIES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </Select>
           </label>
-          <label className="mt-3 block"><span className="mb-1.5 block text-label-md text-on-surface">Titre</span><input value={subject} onChange={e => setSubject(e.target.value.slice(0, 120))} placeholder="Ex : paiement Wave non pris en compte" className={inputCls} /></label>
+          <label className="mt-3 block"><span className="mb-1.5 block text-label-md text-on-surface">Titre</span><input value={subject} onChange={e => setSubject(e.target.value.slice(0, 120))} placeholder="Ex : paiement Mobile Money non pris en compte" className={inputCls} /></label>
           <label className="mt-3 block"><span className="mb-1.5 flex justify-between text-label-md text-on-surface">Message <span className="text-label-sm font-normal text-on-surface-variant">{message.length} / 3000</span></span><textarea value={message} onChange={e => setMessage(e.target.value.slice(0, 3000))} rows={5} placeholder="Décrivez la situation (référence de paiement, annonce concernée…)" className="w-full resize-y rounded-xl border-none bg-surface-container-low p-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" /></label>
           {error && <p className="m-0 mt-2 text-body-sm text-primary">{error}</p>}
           {sent && <p className="m-0 mt-2 flex items-start gap-1.5 rounded-xl bg-tertiary-soft px-3 py-2 text-body-sm text-tertiary"><Icon name="check_circle" size={17} className="mt-0.5 shrink-0" /> {sent}</p>}

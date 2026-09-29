@@ -16,6 +16,7 @@ import PaymentLogo from '../../components/PaymentLogo'
 import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
 import { placeOptions, useLists } from '../../lib/lists'
+import { METHOD_LABELS, useCountries, useCountry, type PaymentMethodCode } from '../../lib/countries'
 
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
@@ -51,13 +52,14 @@ const ALERTS = [
   { key: 'campaigns', icon: 'campaign', title: 'Campagnes promos Dilchap', sub: 'Opportunités de visibilité collective (Black Friday, braderies P2P).' },
 ]
 const DEFAULT_ALERTS: Alerts = Object.fromEntries(ALERTS.map(a => [a.key, { push: true, whatsapp: false, email: a.key !== 'advice' }]))
-const PAYMENTS = [
-  { code: 'WAVE', icon: 'qr_code_2', title: "Wave Côte d'Ivoire", sub: 'QR code ou transfert direct' },
-  { code: 'ORANGE_MONEY', icon: 'smartphone', title: 'Orange Money CI', sub: 'Transfert direct au numéro du vendeur' },
-  { code: 'MTN_MOMO', icon: 'account_balance_wallet', title: 'MTN MoMo', sub: 'Réception instantanée sur compte mobile' },
-  { code: 'MOOV_MONEY', icon: 'account_balance_wallet', title: 'Moov Money', sub: 'Réception instantanée sur compte mobile' },
-  { code: 'CASH', icon: 'payments', title: 'Espèces en main', sub: 'Appoint exact recommandé lors de la remise' },
-]
+// Payment methods of the member's country (« Pays »), cash last.
+const PAYMENT_SUB: Partial<Record<PaymentMethodCode, string>> = {
+  WAVE: 'QR code ou transfert direct',
+  CASH: 'Appoint exact recommandé lors de la remise',
+}
+const paymentsFor = (methods: PaymentMethodCode[]) => [...methods.filter(m => m !== 'CASH'), 'CASH' as const].map(code => ({
+  code, title: code === 'CASH' ? 'Espèces en main' : METHOD_LABELS[code], sub: PAYMENT_SUB[code] ?? 'Transfert direct au numéro du vendeur',
+}))
 
 function Toggle({ on, onChange, label, tone = 'primary' }: { on: boolean; onChange: (v: boolean) => void; label: string; tone?: 'primary' | 'tertiary' }) {
   return (
@@ -127,7 +129,7 @@ function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
         <button type="button" disabled={!certified || busy} onClick={() => input.current?.click()} className="absolute bottom-2 right-2 flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface shadow-sm disabled:opacity-60"><Icon name={busy ? 'progress_activity' : 'photo_camera'} size={17} className={busy ? 'animate-spin' : ''} /> {v.coverUrl ? 'Changer la couverture' : 'Ajouter une couverture'}</button>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-        {([['website', 'language', 'Site web', 'www.maboutique.ci'], ['facebook', 'thumb_up', 'Facebook', 'facebook.com/maboutique'], ['instagram', 'photo_camera', 'Instagram', 'instagram.com/maboutique'], ['tiktok', 'music_note', 'TikTok', 'tiktok.com/@maboutique']] as const).map(([k, icon, label, ph]) => (
+        {([['website', 'language', 'Site web', 'www.maboutique.com'], ['facebook', 'thumb_up', 'Facebook', 'facebook.com/maboutique'], ['instagram', 'photo_camera', 'Instagram', 'instagram.com/maboutique'], ['tiktok', 'music_note', 'TikTok', 'tiktok.com/@maboutique']] as const).map(([k, icon, label, ph]) => (
           <label key={k} className="block"><span className="mb-1.5 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name={icon} size={16} className="text-on-surface-variant" /> {label}</span>
             <input value={v[k]} disabled={!certified} onChange={e => setV(x => ({ ...x, [k]: e.target.value.slice(0, 200) }))} placeholder={ph} className={field} />
           </label>
@@ -147,13 +149,12 @@ function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
 // les modifications" / unsaved-changes bar), plus the security & account
 // actions that apply immediately.
 export default function Settings({ onNavigate, currentUser, onLogout, onProfileUpdated, dark, onToggleDark, onViewShop }: Props) {
-  const lists = useLists()
   const { data, refetch } = useQuery<SettingsData>(SELLER_SETTINGS_QUERY)
   const me = data?.me
   const rep = data?.myReputation
 
   const initial = useMemo(() => me && ({
-    fullName: me.fullName, city: me.city ?? '', bio: me.bio ?? '', phone: me.phone ?? '', email: me.email, avatarUrl: me.avatarUrl ?? '',
+    fullName: me.fullName, countryCode: me.countryCode ?? 'CI', city: me.city ?? '', bio: me.bio ?? '', phone: me.phone ?? '', email: me.email, avatarUrl: me.avatarUrl ?? '',
     meetupSpots: me.meetupSpots, paymentMethods: me.paymentMethods,
     alerts: { ...DEFAULT_ALERTS, ...(me.notificationPreferences?.alerts ?? {}) } as Alerts,
     quiet: { enabled: false, start: '22:00', end: '07:00', ...(me.notificationPreferences?.quietHours ?? {}) } as Quiet,
@@ -162,6 +163,16 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
   useEffect(() => { setForm(initial) }, [initial])
   const dirty = !!form && !!initial && JSON.stringify(form) !== JSON.stringify(initial)
   const set = <K extends keyof NonNullable<typeof form>>(k: K, v: NonNullable<typeof form>[K]) => setForm(f => (f ? { ...f, [k]: v } : f))
+  // Account country: its towns, meetup spots and payment methods.
+  const countries = useCountries()
+  const country = useCountry(form?.countryCode ?? me?.countryCode ?? 'CI', true)
+  const lists = useLists(country?.code ?? null)
+  const payments = paymentsFor(country?.methods ?? ['WAVE', 'ORANGE_MONEY', 'MTN_MOMO', 'MOOV_MONEY', 'CASH'])
+  // Another country: other towns, spots and methods to pick again.
+  const changeCountry = (code: string) => {
+    const next = countries.find(c => c.code === code)
+    setForm(f => f && next ? { ...f, countryCode: code, city: '', meetupSpots: [], paymentMethods: f.paymentMethods.filter(m => (next.methods as string[]).includes(m)) } : f)
+  }
 
   const [tab, setTab] = useState('profil')
   const [newSpot, setNewSpot] = useState('')
@@ -204,7 +215,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
       const { data: res } = await updateProfile({
         variables: {
           input: {
-            fullName: form.fullName.trim(), city: form.city || null, bio: form.bio.trim() || null, phone: form.phone.trim() || null,
+            fullName: form.fullName.trim(), countryCode: form.countryCode !== me.countryCode ? form.countryCode : undefined, city: form.city || null, bio: form.bio.trim() || null, phone: form.phone.trim() || null,
             email: emailChanged ? form.email.trim() : undefined, currentPassword: emailChanged ? emailPw : undefined, avatarUrl: form.avatarUrl || null,
             meetupSpots: form.meetupSpots, paymentMethods: form.paymentMethods,
           },
@@ -318,7 +329,13 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 </div>
                 <div id="settings-profil-form" className="mt-4 grid scroll-mt-24 gap-4 sm:grid-cols-2">
                   <label className="text-label-md text-on-surface">Nom officiel de la boutique<input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={`${field} mt-1`} /></label>
-                  <label className="text-label-md text-on-surface">Commune principale de référence
+                  <label className="text-label-md text-on-surface">Pays
+                    <Select value={form.countryCode} onChange={e => changeCountry(e.target.value)} className={`${field} mt-1`}>
+                      {!countries.some(c => c.code === form.countryCode) && <option value={form.countryCode}>{country?.name ?? form.countryCode}</option>}
+                      {countries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                    </Select>
+                  </label>
+                  <label className="text-label-md text-on-surface">Ville / commune principale
                     <Select value={form.city} onChange={e => set('city', e.target.value)} className={`${field} mt-1`}>
                       <option value="">—</option>
                       {[...new Set([form.city, ...placeOptions(lists)].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
@@ -329,7 +346,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     <span className="block text-right text-label-sm text-on-surface-variant">{form.bio.length}/250 caractères</span>
                   </label>
                   <label className="text-label-md text-on-surface">Numéro WhatsApp &amp; Appels
-                    <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="chat" size={18} className="text-tertiary" /><input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+225 07 00 00 00 00" className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
+                    <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="chat" size={18} className="text-tertiary" /><input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder={country ? `+${country.dialCode} ${country.phoneExample}` : ''} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
                   </label>
                   <label className="text-label-md text-on-surface">Adresse e-mail transactionnelle
                     <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="mail" size={18} className="text-on-surface-variant" /><input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
@@ -404,7 +421,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <Icon name="bedtime" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Plage horaire silencieuse (Ne pas déranger)</div>
-                    <div className="text-body-sm text-on-surface-variant">Suspendre les notifications push entre {form.quiet.start.replace(':', 'h')} et {form.quiet.end.replace(':', 'h')} (heure d'Abidjan).</div>
+                    <div className="text-body-sm text-on-surface-variant">Suspendre les notifications push entre {form.quiet.start.replace(':', 'h')} et {form.quiet.end.replace(':', 'h')} (heure locale).</div>
                   </div>
                   <span className="flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-label-sm">
                     <input type="time" value={form.quiet.start} onChange={e => set('quiet', { ...form.quiet, start: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" /> –
@@ -436,7 +453,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 </div>
                 <div className="mt-5 text-label-md text-on-surface">Modes de règlement acceptés à la remise</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                  {PAYMENTS.map(p => {
+                  {payments.map(p => {
                     const on = form.paymentMethods.includes(p.code)
                     return (
                       <label key={p.code} className={`relative flex cursor-pointer flex-col gap-1 rounded-xl border p-3 ${on ? 'border-primary/40 bg-surface-lowest' : 'border-outline-variant bg-surface-container-low'}`}>
@@ -550,7 +567,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
               <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-label-lg text-primary"><Icon name="lightbulb" size={20} /> Règles d'or Dilchap</div>
                 <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
-                  {['Fixez toujours les remises dans des centres commerciaux très éclairés (Playce, Cap Sud, Sococé).', 'Encouragez Wave ou Orange Money instantanés sur place après examen de l’objet par l’acheteur.', 'Ne livrez jamais sans acompte dans des lieux isolés.'].map(r => (
+                  {['Fixez toujours les remises dans des lieux publics très éclairés (centres commerciaux, stations-service…).', 'Encouragez le paiement Mobile Money instantané sur place après examen de l’objet par l’acheteur.', 'Ne livrez jamais sans acompte dans des lieux isolés.'].map(r => (
                     <li key={r} className="flex gap-1.5"><Icon name="check" size={16} className="shrink-0 text-tertiary" /> {r}</li>
                   ))}
                 </ul>

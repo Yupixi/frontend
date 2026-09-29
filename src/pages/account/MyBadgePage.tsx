@@ -200,7 +200,7 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
       </ul>
     </section>
 
-    <p className="m-0 mt-4 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" /> Payé en crédits (achetés par Wave, Orange, MTN, Moov). Sans renouvellement, le badge disparaît à la date de fin ; votre identité reste vérifiée.</p>
+    <p className="m-0 mt-4 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" /> Payé en crédits (achetés par Mobile Money). Sans renouvellement, le badge disparaît à la date de fin ; votre identité reste vérifiée.</p>
 
     <WalletPaySheet
       open={!!paying}

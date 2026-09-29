@@ -3,7 +3,7 @@ import BottomSheet from './BottomSheet'
 import { formatNumber } from '../lib/format'
 import type { ListingFacets, ListingSort } from '../graphql/listings'
 import type { RemoteCategory } from '../graphql/categories'
-import PaymentLogo from './PaymentLogo'
+import PaymentLogo, { useMobileMethods } from './PaymentLogo'
 import { useLists } from '../lib/lists'
 
 // "Filtres de recherche" mobile bottom sheet (Stitch mockup). Filters
@@ -62,6 +62,7 @@ function Section({ icon, title, sub, children }: { icon: string; title: string; 
 
 export default function FilterSheet({ open, state, onChange, onReset, onClose, facets, categories, total, nearCity }: Props) {
   const lists = useLists()
+  const mobile = useMobileMethods()
   const conditionHint = (v: string) => lists.conditions.find(c => c.value === v)?.hint
   const hist = facets?.priceHistogram ?? []
   const maxCount = Math.max(1, ...hist.map(b => b.count))
@@ -197,12 +198,12 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
           <Section icon="shield" title="Vendeurs de confiance">
             {([
               ['verifiedOnly', 'verified_user', 'Vendeurs vérifiés uniquement', 'Badge Compte vérifié ou Vendeur certifié'],
-              ['shopsOnly', 'storefront', 'Boutiques officielles uniquement', 'Entreprises vérifiées (RCCM / NCC)'],
+              ['shopsOnly', 'storefront', 'Boutiques officielles uniquement', 'Entreprises vérifiées (RCCM ou identifiant fiscal)'],
               ['handoverOnly', 'storefront', 'Remise en main propre privilégiée', 'Point de rendez-vous public indiqué'],
-              ['mobileMoneyOnly', 'account_balance_wallet', 'Wave & Orange Money acceptés', 'Paiement mobile direct à la remise'],
+              ['mobileMoneyOnly', 'account_balance_wallet', 'Mobile Money accepté', 'Paiement mobile direct à la remise'],
             ] as const).map(([key, icon, title, sub]) => (
               <label key={key} className="relative flex cursor-pointer items-center gap-3 py-2">
-                {key === 'mobileMoneyOnly' ? <span className="flex shrink-0 -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={22} className="ring-2 ring-surface-lowest" />)}</span> : <Icon name={icon} size={20} className="text-tertiary" />}
+                {key === 'mobileMoneyOnly' ? <span className="flex shrink-0 -space-x-2">{mobile.map(m => <PaymentLogo key={m} method={m} size={22} className="ring-2 ring-surface-lowest" />)}</span> : <Icon name={icon} size={20} className="text-tertiary" />}
                 <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">{title}</span><span className="block text-body-sm text-on-surface-variant">{sub}</span></span>
                 <input type="checkbox" className="peer sr-only" checked={state[key]} onChange={() => onChange({ [key]: !state[key] } as Partial<SheetState>)} />
                 <span className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-tertiary peer-checked:after:translate-x-5" />

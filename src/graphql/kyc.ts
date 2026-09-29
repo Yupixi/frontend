@@ -35,10 +35,10 @@ export const SUBMIT_KYC_MUTATION = gql`
 `
 
 export const KYC_DOCS: { key: KycDocType; icon: string; label: string; sub: string; text: string; back: boolean }[] = [
-  { key: 'CNI', icon: 'badge', label: 'Carte Nationale d’Identité', sub: 'CNI ivoirienne', text: 'Carte ONECI en cours de validité (nouveau ou ancien format).', back: true },
-  { key: 'PASSPORT', icon: 'menu_book', label: 'Passeport', sub: 'Biométrique', text: 'Passeport ivoirien ou d’un autre pays, en cours de validité (page photo).', back: false },
-  { key: 'DRIVING_LICENSE', icon: 'directions_car', label: 'Permis de conduire', sub: 'Format carte', text: 'Permis de conduire ivoirien au format carte sécurisée.', back: true },
-  { key: 'RESIDENT_CARD', icon: 'contact_emergency', label: 'Carte de résident', sub: 'Titre de séjour', text: 'Carte de résident en cours de validité pour les non-nationaux.', back: true },
+  { key: 'CNI', icon: 'badge', label: 'Carte nationale d’identité', sub: 'CNI', text: 'Carte nationale d’identité de votre pays, en cours de validité.', back: true },
+  { key: 'PASSPORT', icon: 'menu_book', label: 'Passeport', sub: 'Biométrique', text: 'Passeport de n’importe quel pays, en cours de validité (page photo).', back: false },
+  { key: 'DRIVING_LICENSE', icon: 'directions_car', label: 'Permis de conduire', sub: 'Format carte', text: 'Permis de conduire au format carte, en cours de validité.', back: true },
+  { key: 'RESIDENT_CARD', icon: 'contact_emergency', label: 'Carte de résident ou consulaire', sub: 'Titre de séjour', text: 'Carte de résident, titre de séjour ou carte consulaire en cours de validité.', back: true },
 ]
 
 export const KYC_REJECT_LABELS: Record<KycRejectReason, string> = {

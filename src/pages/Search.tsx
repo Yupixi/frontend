@@ -13,7 +13,8 @@ import {
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
 import { setAuthReason } from '../lib/authReason'
-import { PaymentLogos } from '../components/PaymentLogo'
+import { PaymentLogos, useMobileMethods } from '../components/PaymentLogo'
+import { useMarketCode } from '../lib/countries'
 import { useNoCommissionClaims } from '../lib/site'
 
 const PAGE_SIZE = 18
@@ -142,6 +143,8 @@ export default function SearchPage({
   const [shopsOnly, setShopsOnly] = useState(false)
   const [handoverOnly, setHandoverOnly] = useState(false)
   const [mobileMoneyOnly, setMobileMoneyOnly] = useState(false)
+  const mobile = useMobileMethods()
+  const countryCode = useMarketCode()
   const [promoOnly, setPromoOnly] = useState(!!initialPromoOnly)
   useEffect(() => { if (initialPromoOnly) setPromoOnly(true) }, [initialPromoOnly])
   const [categorySlugs, setCategorySlugs] = useState<string[]>([])
@@ -173,6 +176,8 @@ export default function SearchPage({
   useEffect(() => { setSubcategories([]) }, [categoryFilter])
 
   const filter: ListingFilterInput = useMemo(() => ({
+    // Listings of the visitor's country (all for « Tous les pays »).
+    ...(countryCode ? { countryCode } : {}),
     ...(search ? { search } : {}),
     ...(categoryFilter ? { categorySlug: categoryFilter } : {}),
     ...(subcategories.length ? { subcategorySlugs: subcategories } : {}),
@@ -188,7 +193,7 @@ export default function SearchPage({
     ...(categorySlugs.length ? { categorySlugs } : {}),
     ...(appliedPrice.min ? { minPrice: Number(appliedPrice.min) } : {}),
     ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
-  }), [search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
+  }), [countryCode, search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
@@ -241,7 +246,7 @@ export default function SearchPage({
     ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs vérifiés', clear: () => setVerifiedOnly(false) }] : []),
     ...(shopsOnly ? [{ key: 'shops', label: 'Boutiques officielles', clear: () => setShopsOnly(false) }] : []),
     ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
-    ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Wave & Orange Money', clear: () => setMobileMoneyOnly(false) }] : []),
+    ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Mobile Money', clear: () => setMobileMoneyOnly(false) }] : []),
     ...categorySlugs.map(v => ({ key: `cats-${v}`, label: categories.find(c => c.slug === v)?.name ?? v, clear: () => setCategorySlugs(s => s.filter(x => x !== v)) })),
   ]
 
@@ -274,7 +279,7 @@ export default function SearchPage({
           <Icon name="storefront" size={19} className="text-tertiary" />
           <span className="flex flex-col">
             <span className="text-label-md text-on-surface">Boutiques officielles</span>
-            <span className="text-label-sm text-on-surface-variant">Entreprises vérifiées (RCCM / NCC)</span>
+            <span className="text-label-sm text-on-surface-variant">Entreprises vérifiées (RCCM ou identifiant fiscal)</span>
           </span>
         </span>
         <input type="checkbox" className="peer sr-only" checked={shopsOnly} onChange={() => setShopsOnly(v => !v)} />
@@ -372,7 +377,7 @@ export default function SearchPage({
 
       <FilterBlock title="Vendeurs de confiance">
         <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
-        <CheckRow checked={mobileMoneyOnly} label="Wave & Orange Money acceptés" logos={['WAVE', 'ORANGE_MONEY']} onChange={() => setMobileMoneyOnly(v => !v)} />
+        <CheckRow checked={mobileMoneyOnly} label="Mobile Money accepté" logos={mobile} onChange={() => setMobileMoneyOnly(v => !v)} />
         <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> {noCommission ? '0 % de commission, paiement à la remise' : 'Paiement à la remise'}</div>
       </FilterBlock>
 

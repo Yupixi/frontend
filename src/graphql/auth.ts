@@ -9,6 +9,7 @@ export const REGISTER_MUTATION = gql`
         id
         email
         fullName
+        countryCode
       }
     }
   }
@@ -22,6 +23,7 @@ export const LOGIN_MUTATION = gql`
         id
         email
         fullName
+        countryCode
       }
     }
   }
@@ -40,6 +42,7 @@ export const GUEST_LOGIN_MUTATION = gql`
         email
         fullName
         isGuest
+        countryCode
       }
     }
   }
@@ -53,6 +56,7 @@ export const ME_QUERY = gql`
       fullName
       phone
       city
+      countryCode
       avatarUrl
       notificationPreferences
       isGuest
@@ -78,6 +82,8 @@ export type AuthUser = {
   fullName: string
   phone?: string | null
   city?: string | null
+  // UEMOA country of the account (CI, SN…).
+  countryCode?: string | null
   avatarUrl?: string | null
   notificationPreferences?: Record<string, unknown>
   isGuest?: boolean

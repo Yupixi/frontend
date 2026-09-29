@@ -145,6 +145,7 @@ export const UPDATE_PROFILE_MUTATION = gql`
       fullName
       phone
       city
+      countryCode
       avatarUrl
     }
   }

@@ -1,7 +1,7 @@
 import AnimatedIcon from './AnimatedIcon'
 import { useEffect, useState } from 'react'
 import Icon from './Icon'
-import { MARKETS } from '../data/markets'
+import { useCountries } from '../lib/countries'
 import type { StoredLocation } from '../lib/location'
 
 type LocationPillProps = {
@@ -16,10 +16,14 @@ type LocationPillProps = {
 export default function LocationPill({ location, onChange, compact }: LocationPillProps) {
   const [open, setOpen] = useState(false)
   const [city, setCity] = useState(location?.city ?? '')
-  const market = location?.countryCode ? MARKETS.find(m => m.countryCode === location.countryCode) : undefined
-  const label = market ? (location?.city ? `${location.city}, ${market.country}` : market.country) : 'Tous les pays'
-  // Mobile header pill (Stitch "Abidjan ▾"): the city alone, else the country.
-  const shortLabel = location?.city || market?.country || 'Tous pays'
+  // Only the active UEMOA countries (Backoffice « Pays »).
+  const countries = useCountries()
+  const market = location?.countryCode ? countries.find(m => m.code === location.countryCode) : undefined
+  const label = market ? (location?.city ? `${location.city}, ${market.name}` : market.name) : 'Tous les pays'
+  // Mobile header pill (Stitch "Ville ▾"): the city alone, else the country.
+  const shortLabel = location?.city || market?.name || 'Tous pays'
+  // Suggestions: the country's towns and the districts of its main city.
+  const suggestions = market ? [...new Set([...market.cities, ...market.districts])] : []
 
   useEffect(() => setCity(location?.city ?? ''), [location?.city])
 
@@ -58,17 +62,23 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
           <div className={`z-30 max-h-[380px] overflow-y-auto rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float ${compact ? 'fixed left-4 right-4 top-16' : 'absolute right-0 top-full mt-2 w-64'}`}>
             <div className="px-2 pb-1 pt-1 text-label-sm uppercase text-on-surface-variant">Pays</div>
             <button onClick={() => pick(null)} className={option(!market)}>Tous les pays{!market && <Icon name="check" size={17} />}</button>
-            {MARKETS.map(m => (
-              <button key={m.countryCode} onClick={() => pick(m.countryCode)} className={option(market?.countryCode === m.countryCode)}>
-                {m.country}{market?.countryCode === m.countryCode && <Icon name="check" size={17} />}
+            {countries.map(m => (
+              <button key={m.code} onClick={() => pick(m.code)} className={option(market?.code === m.code)}>
+                <span className="flex items-center gap-2"><span aria-hidden>{m.flag}</span>{m.name}</span>{market?.code === m.code && <Icon name="check" size={17} />}
               </button>
             ))}
             {market && (
               <div className="mt-2 border-0 border-t border-solid border-outline-variant px-1 pb-1 pt-3">
                 <label className="mb-1.5 block text-label-sm text-on-surface-variant">Ville ou commune</label>
                 <div className="flex gap-1.5">
-                  <input value={city} onChange={e => setCity(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCity()} placeholder="Ex : Cocody" className="min-w-0 flex-1 rounded-lg border border-transparent bg-surface-container-low px-2.5 py-2 text-body-sm text-on-surface outline-none focus:border-primary" />
+                  <input value={city} onChange={e => setCity(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCity()} list="location-pill-cities" placeholder={`Ex : ${market.districts[0] ?? market.mainCity}`} className="min-w-0 flex-1 rounded-lg border border-transparent bg-surface-container-low px-2.5 py-2 text-body-sm text-on-surface outline-none focus:border-primary" />
                   <button onClick={applyCity} className="cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white">OK</button>
+                  <datalist id="location-pill-cities">{suggestions.map(c => <option key={c} value={c} />)}</datalist>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {market.cities.slice(0, 6).map(c => (
+                    <button key={c} onClick={() => { setCity(c); onChange({ countryCode: market.code, city: c, source: 'manual' }); setOpen(false) }} className={`cursor-pointer rounded-full border-none px-2.5 py-1 text-label-sm ${location?.city === c ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>{c}</button>
+                  ))}
                 </div>
               </div>
             )}

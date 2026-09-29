@@ -236,7 +236,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><ShieldCheck size={22} /></span>
           <div className="flex-1">
             <div className="flex items-center gap-2 text-headline-sm text-on-surface">Règles d'or pour vos remises en main propre <span className="rounded bg-tertiary-soft px-1.5 text-label-sm text-tertiary">Sécurité Dilchap</span></div>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Ne donnez jamais l'objet avant d'avoir vérifié la réception des fonds sur votre compte Wave ou Orange Money (ne vous fiez jamais à un SMS transféré). Privilégiez les espaces publics et lumineux.</p>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Ne donnez jamais l'objet avant d'avoir vérifié la réception des fonds sur votre compte Mobile Money (ne vous fiez jamais à un SMS transféré). Privilégiez les espaces publics et lumineux.</p>
           </div>
         </section>
         <ConfirmSheet

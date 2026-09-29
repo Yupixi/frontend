@@ -11,6 +11,7 @@ import {
   type RemoteMessage,
 } from '../graphql/messaging'
 import { GUEST_LOGIN_MUTATION } from '../graphql/auth'
+import { useHomeCountry, useMarket } from '../lib/countries'
 import type { AuthPayload } from '../graphql/auth'
 import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import { storeAccessToken, getAccessToken, getGuestSecret, storeGuestSecret } from '../lib/auth'
@@ -87,6 +88,9 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
   onStarted: (conversationId: string) => void
 }) {
   const quick = useLists().quickReplies.buyer.slice(0, 3)
+  // A phone typed without its country code gets this country's.
+  const home = useHomeCountry()
+  const country = useMarket() ?? home
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -106,7 +110,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
     setError(null)
     setSending(true)
     try {
-      const { data } = await guestLogin({ variables: { input: { fullName, email: email.trim() || undefined, phone: phone.trim() || undefined, guestSecret: getGuestSecret() ?? undefined } } })
+      const { data } = await guestLogin({ variables: { input: { fullName, email: email.trim() || undefined, phone: phone.trim() || undefined, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } } })
       if (!data) throw new Error()
       storeAccessToken(data.guestLogin.accessToken)
       storeGuestSecret(data.guestLogin.guestSecret)
@@ -143,7 +147,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
       <p className="m-0 flex gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="shrink-0 text-tertiary" /> Pas besoin de compte : indiquez comment le vendeur peut vous identifier (e-mail ou téléphone).</p>
       {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{error}</p>}
       {withIcon('person', <input className={`${field} pl-10 pr-3`} placeholder="Votre nom" value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} />)}
-      {withIcon('call', <input className={`${field} pl-10 pr-3`} type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={e => setPhone(e.target.value)} />)}
+      {withIcon('call', <input className={`${field} pl-10 pr-3`} type="tel" placeholder={`Téléphone ${country.flag} +${country.dialCode} (optionnel)`} value={phone} onChange={e => setPhone(e.target.value)} />)}
       {withIcon('mail', <input className={`${field} pl-10 pr-3`} type="email" placeholder="E-mail (optionnel)" value={email} onChange={e => setEmail(e.target.value)} />)}
       <div className="flex flex-wrap gap-1.5">
         {quick.map(q => <button key={q} type="button" onClick={() => setMessage(q)} className={chip}>{q}</button>)}

@@ -1,7 +1,11 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js/mobile'
 import type { PaymentProvider } from '../graphql/payments'
 
-// Paytic only collects in Côte d'Ivoire; same rules as the server.
+// Per-country helpers (dial code, national length) live in lib/dialing.
+export { localNumberError, toIntl } from './dialing'
+
+// Credits by Mobile Money (Paytic) only collect in Côte d'Ivoire; same
+// rules as the server.
 const COUNTRY = 'CI'
 
 // Mobile prefixes of each network (10-digit plan). Wave works on any network.

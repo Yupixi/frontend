@@ -9,6 +9,7 @@ import type { MyListingRow } from '../../graphql/listings'
 import type { BoostPack, BoostPackInfo } from '../../graphql/promotions'
 import { creditsLabel } from '../../components/Credits'
 import PaymentLogo from '../../components/PaymentLogo'
+import { useAccountCountryCode, useCountry } from '../../lib/countries'
 import { Claim } from '../../lib/site'
 import OfferCredits from '../../components/OfferCredits'
 import { packOperation, useOfferPrice } from '../../lib/priceOffers'
@@ -34,6 +35,9 @@ const days = (hours: number) => Math.round(hours / 24)
 // its stats, impact simulator, then the packs as tap-to-confirm tiles.
 export default function BoosterMobile({ live, listing, onSelectListing, packs, credits, busy, done, error, onChoose, onBump, onNavigate }: Props) {
   const [picking, setPicking] = useState(false)
+  // Credits are bought by Mobile Money only where the BO opened it.
+  const country = useCountry(useAccountCountryCode(), true)
+  const buysHere = country?.payments !== false
   const pack = (p: BoostPack) => packs.find(x => x.pack === p)
   const turbo = pack('TURBO_7D')
   const urgent = pack('URGENT_72H')
@@ -210,8 +214,8 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           <span className="flex min-w-0 items-center gap-1.5 text-label-md text-on-surface"><Icon name="security" size={18} className="text-tertiary" /> Payé en crédits</span>
           <span className="shrink-0 whitespace-nowrap text-label-sm text-on-surface-variant">Activation immédiate</span>
         </div>
-        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Vos boosts sont payés en crédits, achetés sans carte bancaire via votre portefeuille mobile favori.</p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{buysHere ? 'Vos boosts sont payés en crédits, achetés sans carte bancaire via votre portefeuille mobile favori.' : `Vos boosts sont payés en crédits. L’achat de crédits par Mobile Money arrive bientôt ${country?.inName ?? ''}.`}</p>
+        {buysHere && <div className="mt-3 grid grid-cols-2 gap-2">
           {[
             { code: 'WAVE', name: 'Wave', sub: 'Confirmation dans l’app' },
             { code: 'ORANGE_MONEY', name: 'Orange Money', sub: 'Code #144*82#' },
@@ -226,7 +230,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
               </span>
             </div>
           ))}
-        </div>
+        </div>}
       </section>
 
       <Claim><section className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4">

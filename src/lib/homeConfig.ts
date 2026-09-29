@@ -2,7 +2,8 @@ import { gql } from '@apollo/client'
 
 // Home page content set in the back-office (« Page d'accueil », Backend
 // content/home-config.ts). DEFAULT_HOME mirrors the backend defaults: the
-// page renders with it until the query answers (no layout jump).
+// page renders with it until the query answers (no layout jump). Texts may
+// contain {{ville}} / {{pays}}, filled with the visitor's country (fillPlaces).
 export const HOME_CONFIG_QUERY = gql`
   query HomeConfig { homeConfig }
 `
@@ -34,16 +35,16 @@ export const DEFAULT_HOME: HomeConfig = {
     intervalSec: 6,
     slides: [
       {
-        image: '/stitch/hero-0.webp', badge: 'Plateforme N°1 à Abidjan', badgeIcon: 'local_fire_department', tone: 'red',
-        title: 'Achetez et vendez vos *pépites mode & sneakers* à Abidjan',
-        text: "Zéro frais, zéro commission. Des milliers de pièces uniques entre particuliers à Cocody, Marcory, Plateau et partout en Côte d'Ivoire.",
+        image: '/stitch/hero-0.webp', badge: 'Plateforme N°1 à {{ville}}', badgeIcon: 'local_fire_department', tone: 'red',
+        title: 'Achetez et vendez vos *pépites mode & sneakers* à {{ville}}',
+        text: 'Zéro frais, zéro commission. Des milliers de pièces uniques entre particuliers à {{ville}} et partout {{pays}}.',
         tags: ['✨ #ModeVintage', '👟 #SneakersRares', '👗 #WaxContemporain', '⚡ #VenteFlash'],
       },
       {
         image: '/stitch/hero-1.webp', badge: 'High-Tech & Bons Plans', badgeIcon: 'smartphone', tone: 'blue',
         title: 'Donnez une seconde vie à votre *High-Tech & Audio* au meilleur prix',
         text: 'Smartphones, casques, consoles et accessoires sans intermédiaire. Négociez directement sur le chat.',
-        tags: ['🎧 #CasquesSansFil', '📱 #iPhonesReconditionnés', '💻 #LaptopsPro', '🎮 #GamingAbidjan'],
+        tags: ['🎧 #CasquesSansFil', '📱 #iPhonesReconditionnés', '💻 #LaptopsPro', '🎮 #Gaming'],
       },
       {
         image: '/stitch/hero-2.webp', badge: 'Affaires en or', badgeIcon: 'diamond', tone: 'green',

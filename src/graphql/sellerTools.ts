@@ -126,7 +126,7 @@ export const SALES_ORDER_QUERY = gql`
       buyer { id fullName avatarUrl city badge buyerRating buyerReviewsCount }
       seller { id fullName avatarUrl city badge averageRating reviewsCount }
       listing {
-        id title price currency condition brand size coverImageUrl paymentMethods meetupSpot city locationLabel
+        id title price currency condition brand size coverImageUrl paymentMethods meetupSpot countryCode city locationLabel
         category { name }
       }
     }
@@ -157,7 +157,7 @@ export type HandoverOrder = {
   seller: { id: string; fullName: string; avatarUrl: string | null; city: string | null; badge?: BadgeTier | null; averageRating: number; reviewsCount: number }
   listing: {
     id: string; title: string; price: number | null; currency: string; condition: string | null; brand: string | null; size: string | null
-    coverImageUrl: string | null; paymentMethods: string[]; meetupSpot: string | null; city: string; locationLabel: string | null; category: { name: string }
+    coverImageUrl: string | null; paymentMethods: string[]; meetupSpot: string | null; countryCode?: string; city: string; locationLabel: string | null; category: { name: string }
   }
 }
 
@@ -165,7 +165,7 @@ export type HandoverOrder = {
 export const SELLER_SETTINGS_QUERY = gql`
   query SellerSettings {
     me {
-      id email phone fullName avatarUrl city bio isVerified badge verifiedAt meetupSpots paymentMethods vacationMode notificationPreferences createdAt
+      id email phone fullName avatarUrl city countryCode bio isVerified badge verifiedAt meetupSpots paymentMethods vacationMode notificationPreferences createdAt
       coverUrl website facebook instagram tiktok
     }
     myReputation {
@@ -176,7 +176,7 @@ export const SELLER_SETTINGS_QUERY = gql`
 export const UPDATE_SELLER_PROFILE_MUTATION = gql`
   mutation UpdateSellerProfile($input: UpdateProfileInput!) {
     updateProfile(input: $input) {
-      id email phone fullName avatarUrl city bio isVerified badge boostCredits coverUrl meetupSpots paymentMethods vacationMode notificationPreferences
+      id email phone fullName avatarUrl city countryCode bio isVerified badge boostCredits coverUrl meetupSpots paymentMethods vacationMode notificationPreferences
     }
   }
 `

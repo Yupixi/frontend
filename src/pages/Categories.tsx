@@ -9,7 +9,8 @@ import {
 import type { SearchPreset } from './Home'
 import Select from '../components/Select'
 import { thumbnailUrl } from '../lib/media'
-import PaymentLogo from '../components/PaymentLogo'
+import PaymentLogo, { useMobileMethods } from '../components/PaymentLogo'
+import { METHOD_LABELS, useMarket, type PaymentMethodCode } from '../lib/countries'
 import { Claim, useNoCommissionClaims } from '../lib/site'
 import { useLists } from '../lib/lists'
 import { requestOpenCampaign } from '../lib/navigation'
@@ -25,14 +26,17 @@ type CategoriesProps = {
 // Tile accents cycle like the mockup (red / neutral / green).
 const TONES = ['bg-primary-fixed text-primary', 'bg-primary-fixed/60 text-primary', 'bg-tertiary-soft text-tertiary', 'bg-surface-container text-on-surface', 'bg-primary-fixed text-primary', 'bg-tertiary-soft text-tertiary']
 const TRUST = [
-  { icon: 'verified_user', title: '0% Commission Vendeur', text: 'Gardez l’intégralité de vos gains. Vendez et achetez sans frais cachés partout en Côte d’Ivoire.', cls: 'bg-primary-fixed text-primary' },
-  { icon: 'payments', logos: true, title: 'Wave & Orange Money', text: 'Vous payez le vendeur directement, après avoir vérifié l’article sur place.', cls: 'bg-tertiary-soft text-tertiary' },
+  { icon: 'verified_user', title: '0% Commission Vendeur', text: 'Gardez l’intégralité de vos gains. Vendez et achetez sans frais cachés, près de chez vous.', cls: 'bg-primary-fixed text-primary' },
+  { icon: 'payments', logos: true, title: 'Mobile Money ou espèces', text: 'Vous payez le vendeur directement, après avoir vérifié l’article sur place.', cls: 'bg-tertiary-soft text-tertiary' },
   { icon: 'handshake', title: 'Remise en main propre sûre', text: 'Points de rencontre publics et validation par code de remise à 4 chiffres.', cls: 'bg-primary-fixed text-primary' },
 ]
 
 // "Toutes les catégories" (Stitch desktop mockup; stacks on mobile).
 export default function Categories({ onNavigate, onCategorySelect, onSearch }: CategoriesProps) {
   const lists = useLists()
+  // Visitor's country (none for « Tous les pays ») and its mobile wallets.
+  const market = useMarket()
+  const mobile = useMobileMethods()
   const noCommission = useNoCommissionClaims()
   const { data, loading } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY)
   const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 10 } })
@@ -51,16 +55,16 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-fixed/50 via-surface-container-low to-tertiary-soft/60 p-5 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary-fixed px-2.5 py-0.5 text-label-sm uppercase text-primary"><Icon name="verified" size={13} /> Répertoire officiel Côte d'Ivoire</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary-fixed px-2.5 py-0.5 text-label-sm uppercase text-primary"><Icon name="verified" size={13} /> Répertoire officiel{market ? ` · ${market.name}` : ''}</span>
             <h1 className="m-0 mt-2 text-headline-md text-on-surface md:text-headline-lg">Explorez tout l'univers Dilchap</h1>
             <p className="m-0 mt-1 text-body-md text-on-surface-variant">
               {/* A small count reads as "empty site": only brag once it's meaningful. */}
-              {total >= 100 ? `Plus de ${formatNumber(total)} trouvailles` : 'Des trouvailles'} vérifiées et négociées entre particuliers, à Abidjan et partout en Côte d'Ivoire.
+              {total >= 100 ? `Plus de ${formatNumber(total)} trouvailles` : 'Des trouvailles'} vérifiées et négociées entre particuliers, {market ? `à ${market.mainCity} et partout ${market.inName}` : 'près de chez vous, en Afrique de l’Ouest'}.
             </p>
           </div>
           <div className="hidden items-center gap-3 rounded-2xl bg-surface-lowest px-4 py-3 shadow-sm md:flex">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="verified_user" size={22} /></span>
-            <div><div className="text-label-lg text-on-surface">100% Sécurisé</div><div className="text-label-sm text-on-surface-variant">Wave • Orange • Main propre</div></div>
+            <div><div className="text-label-lg text-on-surface">100% Sécurisé</div><div className="text-label-sm text-on-surface-variant">{[...mobile.map(m => METHOD_LABELS[m as PaymentMethodCode]), 'Main propre'].join(' • ')}</div></div>
           </div>
         </div>
         <form onSubmit={e => { e.preventDefault(); explore() }} className="mt-5 flex flex-col gap-2 rounded-2xl bg-surface-lowest p-2 shadow-sm md:flex-row md:items-center">
@@ -71,7 +75,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2.5 md:w-60">
             <Icon name="location_on" size={18} className="text-primary" />
             <Select value={city} onChange={e => setCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-body-md text-on-surface outline-none">
-              <option value="">Toute la Côte d'Ivoire</option>
+              <option value="">{market ? `Toutes les villes · ${market.name}` : 'Toutes les villes'}</option>
               {lists.cities.map(c => <option key={c} value={c}>{c}</option>)}
             </Select>
           </label>
@@ -153,7 +157,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
       {popular.length > 0 && (
         <section className="mt-8 rounded-2xl bg-surface-container-low p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="trending_up" size={21} className="text-primary" /> Recherches les plus populaires en Côte d'Ivoire</h2>
+            <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="trending_up" size={21} className="text-primary" /> Recherches les plus populaires</h2>
             <span className="text-label-sm uppercase text-on-surface-variant">7 derniers jours</span>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -190,7 +194,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
       <section className={`mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 ${noCommission ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
         {TRUST.filter(t => noCommission || t.icon !== 'verified_user').map(t => (
           <div key={t.title} className="flex items-start gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
-            {'logos' in t ? <span className="flex shrink-0 -space-x-2">{['WAVE', 'ORANGE_MONEY'].map(m => <PaymentLogo key={m} method={m} size={32} className="ring-2 ring-surface-lowest" />)}</span> : <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.cls}`}><Icon name={t.icon} size={22} /></span>}
+            {'logos' in t ? <span className="flex shrink-0 -space-x-2">{mobile.map(m => <PaymentLogo key={m} method={m} size={32} className="ring-2 ring-surface-lowest" />)}</span> : <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.cls}`}><Icon name={t.icon} size={22} /></span>}
             <div><div className="text-headline-sm text-on-surface">{t.title}</div><div className="text-body-sm text-on-surface-variant">{t.text}</div></div>
           </div>
         ))}
