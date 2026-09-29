@@ -96,3 +96,33 @@ export function PushBanner({ status, enabling, onEnable, onDismiss }: { status: 
     </div>
   )
 }
+
+// Signed up but the address isn't confirmed yet: publishing, paying and
+// contacting a seller wait for the link e-mailed at sign-up. "Plus tard"
+// hides it for this visit only.
+export function VerifyEmailBanner({ email, onResend, sending, sent, error, onDismiss }: {
+  email: string
+  onResend: () => void
+  sending: boolean
+  sent: boolean
+  error?: string | null
+  onDismiss: () => void
+}) {
+  return (
+    <div role="status" className="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-[9998] mx-auto max-w-xl">
+      <div className={`${card} flex-wrap sm:flex-nowrap`}>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="mail" size={21} /></span>
+        <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-auto">
+          <div className="text-label-lg text-on-surface">Confirmez votre adresse e-mail</div>
+          <div className="break-words text-body-sm text-on-surface-variant">
+            {error ?? (sent ? <>Nouvel e-mail envoyé à <b className="font-semibold">{email}</b>.</> : <>Ouvrez le lien envoyé à <b className="font-semibold">{email}</b> pour publier, acheter et contacter les vendeurs.</>)}
+          </div>
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
+          <button onClick={onResend} disabled={sending || sent} className={primaryBtn}>{sending ? 'Envoi…' : sent ? 'Envoyé' : 'Renvoyer'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}

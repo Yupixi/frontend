@@ -5,6 +5,7 @@ import { apolloClient } from './lib/apollo'
 import { registerServiceWorker } from './lib/serviceWorker'
 import App from './App'
 import LaunchGate from './components/LaunchGate'
+import EmailLinkPage, { isEmailLinkPath } from './components/EmailLinkPage'
 import './index.css'
 
 registerServiceWorker()
@@ -12,9 +13,14 @@ registerServiceWorker()
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ApolloProvider client={apolloClient}>
-      <LaunchGate>
-        <App />
-      </LaunchGate>
+      {/* The links of our e-mails work even before the launch. */}
+      {isEmailLinkPath(window.location.pathname) ? (
+        <EmailLinkPage />
+      ) : (
+        <LaunchGate>
+          <App />
+        </LaunchGate>
+      )}
     </ApolloProvider>
   </React.StrictMode>,
 )
