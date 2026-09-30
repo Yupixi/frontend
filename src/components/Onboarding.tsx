@@ -1,9 +1,11 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { MY_ONBOARDING_QUERY, type Announcement, type Onboarding as OnboardingData } from '../graphql/help'
+import { lazyPage } from '../lib/lazyPage'
+import ErrorBoundary from './ErrorBoundary'
 import { markTourSeen, startTour, tourRunning, WELCOME_TOUR } from '../lib/tourControl'
 
-const AnnouncementDialog = lazy(() => import('./AnnouncementDialog'))
+const AnnouncementDialog = lazyPage(() => import('./AnnouncementDialog'))
 
 // Screens nothing may cover: signing in, the listing wizard.
 const QUIET_PAGES = ['auth', 'seller-post', 'seller-edit']
@@ -44,16 +46,19 @@ export default function Onboarding({ page, enabled }: { page: string, enabled: b
     setAnnouncement(null)
   }
   return (
-    <Suspense fallback={null}>
-      <AnnouncementDialog
-        announcement={announcement}
-        onLater={close}
-        onDiscover={() => {
-          const tour = announcement.tourId
-          close()
-          if (tour) void startTour(tour)
-        }}
-      />
-    </Suspense>
+    // An announcement that can't load is simply not shown.
+    <ErrorBoundary fallback={null}>
+      <Suspense fallback={null}>
+        <AnnouncementDialog
+          announcement={announcement}
+          onLater={close}
+          onDiscover={() => {
+            const tour = announcement.tourId
+            close()
+            if (tour) void startTour(tour)
+          }}
+        />
+      </Suspense>
+    </ErrorBoundary>
   )
 }

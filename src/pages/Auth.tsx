@@ -191,6 +191,10 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 // priority); WhatsApp stays available as a second way.
 function SupportRecovery({ onBack }: { onBack: () => void }) {
   const phone = useSupportPhone()
+  // A number typed without its dial code is read in the visitor's country
+  // (the server would otherwise take it as Ivorian).
+  const home = useHomeCountry()
+  const country = useMarket() ?? home
   const [form, setForm] = useState({ name: '', contact: '', message: '' })
   const [done, setDone] = useState<{ reference: string } | null>(null)
   const [send, { loading, error }] = useMutation<{ requestAccountRecovery: { reference: string } }>(REQUEST_RECOVERY_MUTATION)
@@ -198,7 +202,7 @@ function SupportRecovery({ onBack }: { onBack: () => void }) {
   const ok = form.name.trim().length >= 2 && form.contact.trim().length >= 6 && form.message.trim().length >= 10
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    void send({ variables: { input: { name: form.name.trim(), message: form.message.trim(), ...(isEmail ? { email: form.contact.trim() } : { phone: form.contact.trim() }) } } })
+    void send({ variables: { input: { name: form.name.trim(), message: form.message.trim(), ...(isEmail ? { email: form.contact.trim() } : { phone: toIntl(form.contact, country) ?? form.contact.trim() }) } } })
       .then(r => r.data && setDone(r.data.requestAccountRecovery))
   }
   return (

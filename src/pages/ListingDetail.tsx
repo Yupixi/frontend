@@ -1,6 +1,5 @@
 import AnimatedIcon from '../components/AnimatedIcon'
 import { useEffect, useRef, useState } from 'react'
-import DOMPurify from 'dompurify'
 import { gql } from '@apollo/client'
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
 import {
@@ -47,6 +46,7 @@ import { getAccessToken } from '../lib/auth'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { formatRelativeDate } from '../lib/format'
 import { thumbnailUrl } from '../lib/media'
+import { richHtml } from '../lib/richText'
 import Select from '../components/Select'
 import Icon from '../components/Icon'
 import PaymentLogo from '../components/PaymentLogo'
@@ -176,7 +176,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const isOwner = !!currentUser && listing.seller.id === currentUser.id
   const isExpired = listing.status === 'EXPIRED'
   const isSold = listing.status === 'SOLD'
-  const canContact = !isOwner && !isExpired && !isSold
+  // Only a published listing can be contacted about: a draft, one under
+  // review, refused or paused (reached by a direct link) shows no CTA.
+  const canContact = !isOwner && listing.status === 'APPROVED'
   const saving = listing.originalPrice && listing.price != null && listing.originalPrice > listing.price
     ? Math.round((1 - listing.price / listing.originalPrice) * 100) : 0
   const location = listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
@@ -292,7 +294,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     )
   ) : !canContact ? (
     <p className="m-0 flex items-start gap-2 rounded-lg bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
-      <Archive size={17} className="mt-0.5 shrink-0" /> {isSold ? 'Cet article a déjà été vendu.' : "Cette annonce a expiré : le vendeur ne peut plus être contacté à son sujet."}
+      <Archive size={17} className="mt-0.5 shrink-0" /> {isSold ? 'Cet article a déjà été vendu.' : isExpired ? "Cette annonce a expiré : le vendeur ne peut plus être contacté à son sujet." : "Cette annonce n’est pas en ligne : le vendeur ne peut pas être contacté à son sujet."}
     </p>
   ) : null
 
@@ -473,7 +475,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             <div className="lg:p-6">
               <section className={tab === 'description' ? '' : 'lg:hidden'}>
                 <h2 className="m-0 mb-3 text-label-lg text-on-surface lg:hidden">Description de l'article</h2>
-                <div className="selectable rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface max-lg:border max-lg:border-solid max-lg:border-outline-variant/60 max-lg:p-4 lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(listing.description) }} />
+                <div className="rich-text selectable rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface max-lg:border max-lg:border-solid max-lg:border-outline-variant/60 max-lg:p-4 lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: richHtml(listing.description) }} />
                 <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</p>
               </section>
               <section className={tab === 'specs' ? 'hidden lg:block' : 'hidden'}>

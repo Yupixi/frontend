@@ -54,7 +54,14 @@
 
 	header {
 		X-Frame-Options DENY
-		Content-Security-Policy "frame-ancestors 'none'"
+		# Only directives nothing in the app needs to cross: no page of
+		# another site may frame it; a form (e.g. a fake « confirm your
+		# payment » inside a listing description) can only post to Dilchap;
+		# no <base> hijacking relative links; no plugins. img-src/script-src/
+		# connect-src are left open on purpose: listing photos (MinIO host of
+		# each environment, older external URLs), Google Fonts, map tiles,
+		# ipwho.is, Lottie and the analytics tag would each need listing.
+		Content-Security-Policy "frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'"
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 	}

@@ -23,7 +23,7 @@ import {
 } from '../../graphql/listings'
 import { getAccessToken } from '../../lib/auth'
 import { uploadImages } from '../../lib/upload'
-import { clearDraftPhotos, loadDraftPhotos, saveDraftPhotos } from '../../lib/draftPhotos'
+import { clearDraftPhotos, listingDraftKey, loadDraftPhotos, saveDraftPhotos } from '../../lib/draftPhotos'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
@@ -33,7 +33,6 @@ import { useRules } from '../../lib/rules'
 import HelpLink from '../../components/HelpLink'
 
 const TITLE_MAX = 80
-const DRAFT_KEY = 'dilchap_listing_draft'
 
 
 const methodLabel = (m: PaymentMethodCode) => (m === 'CASH' ? 'Espèces en main propre' : METHOD_LABELS[m])
@@ -76,7 +75,7 @@ const EMPTY: Form = {
 
 function loadDraft(): { form: Form, savedAt: string } | null {
   try {
-    const raw = localStorage.getItem(DRAFT_KEY)
+    const raw = localStorage.getItem(listingDraftKey())
     return raw ? JSON.parse(raw) : null
   } catch { return null }
 }
@@ -197,6 +196,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [boosted, setBoosted] = useState(false)
   const [campaignChoice, setCampaignChoice] = useState<CampaignChoice | null>(null)
   const [uploading, setUploading] = useState(false)
+  // Listing created by an earlier try of this form, and the photos already
+  // attached to the listing (see save).
+  const created = useRef<{ id?: string; attached?: File[] }>({})
   const fileInput = useRef<HTMLInputElement>(null)
 
   // Categories open in the listing's country (the BO can limit a category
@@ -264,7 +266,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     const t = setTimeout(() => {
       try {
         const at = new Date().toISOString()
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, savedAt: at }))
+        localStorage.setItem(listingDraftKey(), JSON.stringify({ form, savedAt: at }))
         setSavedAt(at)
       } catch { /* storage unavailable */ }
     }, 800)
@@ -457,23 +459,28 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         deliveryAvailable: form.deliveryAvailable,
         attributes: form.attributes,
       }
-      let id = listingId
+      // A new try after a partial failure (photos, submission) goes on with
+      // the listing already created instead of creating a duplicate, and
+      // doesn't attach the same photos twice.
+      let id = listingId ?? created.current.id
       if (id) await updateListing({ variables: { id, input } })
       else {
         const { data } = await createListing({ variables: { input } })
         id = data?.createListing.id
         if (!id) throw new Error('La création a échoué')
+        created.current = { id }
       }
-      if (imageFiles.length) {
+      if (imageFiles.length && created.current.attached !== imageFiles) {
         setUploading(true)
         const urls = await uploadImages(imageFiles)
         setUploading(false)
         await attachMedia({ variables: { listingId: id, urls } })
+        created.current = { ...created.current, attached: imageFiles }
       }
       // "Publication directe" (BO): the listing comes back already live.
       let live = false
       if (submit && publishes) live = (await submitForReview({ variables: { id } })).data?.submitListingForReview.status === 'APPROVED'
-      if (!isEditing) { try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ } void clearDraftPhotos() }
+      if (!isEditing) { try { localStorage.removeItem(listingDraftKey()) } catch { /* ignore */ } void clearDraftPhotos() }
       let campaign: NonNullable<typeof result>['campaign']
       if (joining) {
         const { campaign: c, discountPercent } = campaignChoice
@@ -515,6 +522,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   }
 
   const reset = () => {
+    created.current = {}
     void clearDraftPhotos()
     setForm({ ...EMPTY, ...placeDefaults(home) }); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false); setCampaignChoice(null)
   }

@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v17'
+const VERSION = 'v18'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -203,10 +203,27 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// Help centre screenshots (/aide/…) keep their names when re-captured: not
-// cache-first, they go through the network-first branch below.
-function isStaticAsset(url) {
+// Build output with a content hash in its name (Vite chunks, the icon font
+// subset): a cache hit is always right. Fixed names in public/ (logo,
+// payment logos, icons, help screenshots) can change under the same name.
+function isHashedAsset(url) {
+  return url.origin === self.location.origin && (url.pathname.startsWith('/assets/') || /^\/fonts\/.+-[0-9a-f]{8}\.woff2$/.test(url.pathname))
+}
+function isPublicFile(url) {
   return url.origin === self.location.origin && !url.pathname.startsWith('/aide/') && /\.(js|css|png|jpg|jpeg|svg|webp|woff2?|ico)$/i.test(url.pathname)
+}
+
+// Every deploy adds new chunk names and orphans the old ones: keep only the
+// most recent entries (Cache Storage lists keys in insertion order), so the
+// origin's storage — which also holds the listing draft photos — never
+// fills up to the point the browser evicts it all.
+const STATIC_MAX_ENTRIES = 250
+async function trimStaticCache() {
+  const cache = await caches.open(STATIC_CACHE)
+  // Only build files: the app shell and the offline page stay.
+  const keys = (await cache.keys()).filter((key) => isHashedAsset(new URL(key.url)))
+  const extra = keys.length - STATIC_MAX_ENTRIES
+  if (extra > 0) await Promise.all(keys.slice(0, extra).map((key) => cache.delete(key)))
 }
 
 // A missing file comes back as the app shell (SPA fallback, status 200):
@@ -248,9 +265,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Hashed static assets (JS/CSS/images/fonts): cache-first — their
-  // filenames change on every build, so a cache hit is always correct.
-  if (isStaticAsset(url)) {
+  // Hashed build files: cache-first — their names change on every build,
+  // so a cache hit is always correct.
+  if (isHashedAsset(url)) {
     event.respondWith(
       (async () => {
         const cached = await caches.match(request)
@@ -259,9 +276,36 @@ self.addEventListener('fetch', (event) => {
           const response = await fetch(request)
           if (response && response.status === 200 && !isShellFallback(response)) {
             const cache = await caches.open(STATIC_CACHE)
-            cache.put(request, response.clone()).catch(() => {})
+            event.waitUntil(cache.put(request, response.clone()).then(trimStaticCache).catch(() => {}))
           }
           return response
+        } catch {
+          return new Response(null, { status: 504 })
+        }
+      })(),
+    )
+    return
+  }
+
+  // Other files of public/ (fixed names): the cached copy at once, refreshed
+  // in the background for the next time (a new logo shows up on the visit
+  // after the deploy instead of never).
+  if (isPublicFile(url)) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(STATIC_CACHE)
+        const cached = await cache.match(request)
+        const refresh = fetch(request)
+          .then((response) => {
+            if (response && response.status === 200 && !isShellFallback(response)) cache.put(request, response.clone()).catch(() => {})
+            return response
+          })
+        if (cached) {
+          event.waitUntil(refresh.catch(() => {}))
+          return cached
+        }
+        try {
+          return await refresh
         } catch {
           return new Response(null, { status: 504 })
         }
