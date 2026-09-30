@@ -15,6 +15,7 @@ import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
 import SellerBadge from '../../components/SellerBadge'
 import PhoneVerifyCard from '../../components/PhoneVerifyCard'
+import HelpLink from '../../components/HelpLink'
 import { Claim } from '../../lib/site'
 import { placeOptions, useLists } from '../../lib/lists'
 import { METHOD_LABELS, useCountries, useCountry, type PaymentMethodCode } from '../../lib/countries'
@@ -139,7 +140,7 @@ function HandleCard({ handle, changedAt, onSaved }: { handle: string | null | un
           <input value={v} disabled={locked} onChange={e => setV(e.target.value.replace(/\s/g, '').slice(0, 30))} placeholder="nom-de-votre-boutique" aria-label="Adresse de votre page" className="h-full min-w-0 flex-1 border-none bg-transparent pr-3 text-body-md text-on-surface outline-none disabled:opacity-60" />
         </span>
       </label>
-      <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{locked ? `Modifiable à nouveau le ${next!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.` : 'Modifiable une fois tous les 30 jours. L’ancienne adresse continue de mener à votre page. Les noms de marques sont réservés à leurs titulaires.'}</p>
+      <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{locked ? `Modifiable à nouveau le ${next!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.` : 'Modifiable une fois tous les 30 jours. L’ancienne adresse continue de mener à votre page. Les noms de marques sont réservés à leurs titulaires.'} <HelpLink article="mon-adresse-pseudo" className="ml-1 align-middle" /></p>
       {format && <p className="m-0 mt-1 text-body-sm text-primary">{format}</p>}
       {msg && <p className={`m-0 mt-2 text-body-sm ${msg.ok ? 'text-tertiary' : 'text-primary'}`}>{msg.text}</p>}
       <div className="mt-3 flex justify-end">

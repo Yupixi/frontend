@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from './Icon'
+import HelpLink from './HelpLink'
 import {
   PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, type PhoneChannelData,
 } from '../graphql/phoneVerification'
@@ -77,6 +78,7 @@ export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: 
             : wantsSms
               ? 'Vérifiez votre numéro pour recevoir les alertes « WhatsApp / SMS » que vous avez activées.'
               : 'Vérifiez votre numéro pour pouvoir recevoir des alertes par WhatsApp / SMS.'}
+          {sentTo == null && <HelpLink article="alertes-sms-whatsapp" className="ml-1 align-middle" />}
         </span>
         {sentTo == null && (
           <button type="button" disabled={sending} onClick={send} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white disabled:opacity-60">
