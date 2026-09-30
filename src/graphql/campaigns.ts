@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import type { FeeTier } from '../lib/campaignFees'
 
 // A live Dilchap campaign as the home promotions module and the campaign
 // page show it: identity, window, figures, and a few items for the photos
@@ -19,7 +20,7 @@ export const CAMPAIGN_PAGE_QUERY = gql`
   query CampaignPage($slug: String!, $country: String) {
     campaign(slug: $slug, country: $country) {
       ${CAMPAIGN_FIELDS}
-      status shopId openToShops entryFee listingFee minDiscountPercent sellerConditions sellerTerms
+      status shopId openToShops entryFee listingFee minDiscountPercent sellerConditions sellerTerms feeTiers { status entryFee listingFee }
       categoryCounts { slug name icon count }
     }
   }
@@ -48,6 +49,8 @@ export type LiveCampaign = {
 
 export type CampaignPage = LiveCampaign & {
   status: string; shopId: string | null; openToShops: boolean; entryFee: number; listingFee: number; minDiscountPercent: number | null
+  // Lower fees for sellers holding a status (the cheapest applicable one wins).
+  feeTiers: FeeTier[]
   // Every condition of participation in plain words, and the team's terms (rich text).
   sellerConditions: string[]; sellerTerms: string | null
   categoryCounts: { slug: string; name: string; icon: string | null; count: number }[]
