@@ -180,6 +180,9 @@ export default function App() {
   // below); the app restores it itself, the browser's automatic restoration
   // would fight it (it runs before the restored page has rendered).
   const pendingScroll = useRef(0)
+  // Bumped on every navigation, so going from one listing (seller, shop…)
+  // to another of the same page type also lands at the top.
+  const [navSeq, setNavSeq] = useState(0)
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? initialRoute?.legalSlug ?? savedNav.legalSlug ?? 'cgu')
   const [shopKey, setShopKey] = useState(sharedShopKey() ?? initialRoute?.shopKey ?? savedNav.shopKey ?? '')
   const [campaignSlug, setCampaignSlug] = useState(sharedCampaignSlug() ?? initialRoute?.campaignSlug ?? savedNav.campaignSlug ?? '')
@@ -444,6 +447,7 @@ export default function App() {
       // Back/forward lands where the visitor was on that page.
       pendingScroll.current = typeof st?.scrollY === 'number' ? st.scrollY : 0
       startTransition(() => {
+        setNavSeq((n) => n + 1)
         if (st && typeof st.__yupixiPage === 'string') {
           // Restore the selection the entry was pushed with too — otherwise
           // "back" to an order or listing shows whatever was selected last.
@@ -487,7 +491,7 @@ export default function App() {
     const top = pendingScroll.current
     pendingScroll.current = 0
     window.scrollTo({ top, behavior: 'instant' })
-  }, [page])
+  }, [page, navSeq])
 
   // The address bar follows the page: public pages have their own URL
   // (shareable, indexed), account pages sit under /compte.
@@ -537,7 +541,7 @@ export default function App() {
     window.history.replaceState({ ...window.history.state, scrollY: window.scrollY }, '')
     // A transition keeps the current page on screen while the next page's
     // chunk loads, instead of flashing the Suspense fallback.
-    startTransition(() => setPage(p))
+    startTransition(() => { setPage(p); setNavSeq((n) => n + 1) })
     window.history.pushState(historyEntry(p, sel), '')
   }
 
