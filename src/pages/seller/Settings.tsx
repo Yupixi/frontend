@@ -14,6 +14,7 @@ import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import PaymentLogo from '../../components/PaymentLogo'
 import SellerBadge from '../../components/SellerBadge'
+import PhoneVerifyCard from '../../components/PhoneVerifyCard'
 import { Claim } from '../../lib/site'
 import { placeOptions, useLists } from '../../lib/lists'
 import { METHOD_LABELS, useCountries, useCountry, type PaymentMethodCode } from '../../lib/countries'
@@ -422,6 +423,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <span className="flex-1 text-body-sm text-on-surface">{pushStatus === 'subscribed' ? 'Notifications push actives sur cet appareil.' : pushStatus === 'permission-denied' ? 'Notifications bloquées dans le navigateur — autorisez-les dans ses réglages.' : pushStatus === 'ios-install-required' ? "Sur iPhone, ajoutez Dilchap à l'écran d'accueil pour recevoir les notifications." : 'Notifications push non activées sur cet appareil.'}</span>
                   {['available', 'permission-required', 'error'].includes(pushStatus) && <button onClick={() => void subscribeToPush(true).then(setPushStatus)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white">Activer</button>}
                 </div>
+                <PhoneVerifyCard wantsSms={ALERTS.some(a => form.alerts[a.key]?.whatsapp)} unsavedPhone={form.phone.trim() !== (me.phone ?? '')} />
                 {/* The card adapts to its own width (container query): full channel
                     matrix when it fits, otherwise one row per alert with 3 switches. */}
                 <div className="@container">
@@ -469,7 +471,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </table>
                 </div>
                 </div>
-                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Push et e-mail suivent ces choix (au plus un e-mail par jour pour les messages en attente) ; WhatsApp/SMS dès l'ouverture de ce canal. Les e-mails de sécurité et les reçus d'achat sont toujours envoyés.</p>
+                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Push et e-mail suivent ces choix (au plus un e-mail par jour pour les messages en attente) ; WhatsApp/SMS vers votre numéro vérifié, pour les messages, offres, remises et litiges (un seul SMS par conversation à la fois). Les e-mails de sécurité et les reçus d'achat sont toujours envoyés.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="bedtime" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1">
