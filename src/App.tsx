@@ -164,8 +164,12 @@ function sharedListingId(): string | null {
 // The page the address opens (/annonce/…, /categorie/…, /boutique/…; see
 // lib/routes). /compte = an account page, restored from the session.
 const initialRoute = parsePath(window.location.pathname)
+// A remembered page with an address of its own (/aide, /legal…) is not an
+// account page: /compte then opens the dashboard.
 const routePage = (): Page | null =>
-  !initialRoute ? null : initialRoute.page === 'account' ? (savedNav.page ?? 'home') : initialRoute.page
+  !initialRoute ? null
+    : initialRoute.page === 'account' ? (savedNav.page && pathFor(savedNav.page) === '/compte' ? savedNav.page : 'buyer-dashboard')
+      : initialRoute.page
 const initialSearch = initialRoute?.page === 'search'
 
 export default function App() {

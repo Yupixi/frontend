@@ -124,7 +124,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
             const sellerProposed = m?.status === 'PROPOSED' && m.proposedById !== currentUser?.id
             // `short` is the one-line mobile chip: "RDV Aujourd'hui 14h30 • Playce".
             const header = dispute
-              ? { cls: 'bg-primary-fixed/50', chip: 'bg-primary text-white', icon: 'warning', text: o.disputeStatus === 'IN_MEDIATION' ? 'Litige en cours de médiation' : 'Litige en cours', short: 'Litige en cours • Fonds sécurisés' }
+              ? { cls: 'bg-primary-fixed/50', chip: 'bg-primary text-white', icon: 'warning', text: o.disputeStatus === 'IN_MEDIATION' ? 'Litige en cours de médiation' : 'Litige en cours', short: 'Litige en cours • Suivi par Dilchap' }
               : done
                 ? { cls: 'bg-tertiary-soft/60', chip: 'bg-tertiary-soft text-tertiary', icon: 'check_circle', text: 'Remise effectuée avec succès', short: 'Remise effectuée avec succès' }
                 : confirmed
