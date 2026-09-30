@@ -23,6 +23,9 @@ type Props = {
   onCancelReply?: () => void
   onTyping?: () => void
   disabled?: boolean
+  // Support chat: no voice notes, fewer photos per message.
+  noVoice?: boolean
+  maxPhotos?: number
 }
 
 // Hardware keyboard + mouse: Enter sends, Shift+Enter breaks the line.
@@ -32,7 +35,7 @@ const enterSends = () => typeof window !== 'undefined' && window.matchMedia('(ho
 // Messaging field: auto-growing multi-line text, photos (picker, paste,
 // drag & drop — uploaded right away, previewed with remove), quoted reply,
 // Enter to send on desktop.
-const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ value, onChange, onSend, placeholder, replyTo, onCancelReply, onTyping, disabled }, ref) {
+const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ value, onChange, onSend, placeholder, replyTo, onCancelReply, onTyping, disabled, noVoice, maxPhotos = MAX_PHOTOS }, ref) {
   const field = useRef<HTMLTextAreaElement>(null)
   const picker = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -58,9 +61,9 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
   const addFiles = (list: FileList | File[]) => {
     const files = Array.from(list).filter(f => f.type.startsWith('image/'))
     if (!files.length) return
-    const room = MAX_PHOTOS - photos.length
-    if (room <= 0) { setError(`${MAX_PHOTOS} photos maximum par message.`); return }
-    if (files.length > room) setError(`${MAX_PHOTOS} photos maximum par message.`)
+    const room = maxPhotos - photos.length
+    if (room <= 0) { setError(`${maxPhotos} photos maximum par message.`); return }
+    if (files.length > room) setError(`${maxPhotos} photos maximum par message.`)
     else setError(null)
     const added = files.slice(0, room).map(f => ({ key: `${f.name}-${f.size}-${Math.random()}`, preview: URL.createObjectURL(f), file: f }))
     setPhotos(p => [...p, ...added.map(({ key, preview }) => ({ key, preview }))])
@@ -80,7 +83,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
   const ready = photos.filter(p => p.url).map(p => p.url!)
   const canSend = !disabled && !sending && !uploading && (!!value.trim() || ready.length > 0)
   // Empty field: the send button becomes the microphone.
-  const voiceMode = !value.trim() && photos.length === 0
+  const voiceMode = !noVoice && !value.trim() && photos.length === 0
 
   const sendVoice = async (rec: VoiceRecording | null) => {
     if (!rec) return
@@ -147,7 +150,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
               <button type="button" onClick={() => removePhoto(p.key)} aria-label="Retirer la photo" className="absolute right-1 top-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-none bg-black/60 p-0 text-white"><Icon name="close" size={14} /></button>
             </div>
           ))}
-          {photos.length < MAX_PHOTOS && (
+          {photos.length < maxPhotos && (
             <button type="button" onClick={() => picker.current?.click()} aria-label="Ajouter une photo" className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-transparent text-on-surface-variant"><Icon name="add" size={22} /></button>
           )}
         </div>
@@ -171,7 +174,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
 
       <form onSubmit={e => { e.preventDefault(); void send() }} className="flex items-end gap-2">
         <input ref={picker} type="file" accept="image/*" multiple hidden onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = '' }} />
-        <button type="button" disabled={disabled || photos.length >= MAX_PHOTOS} onClick={() => picker.current?.click()} aria-label="Joindre des photos" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40">
+        <button type="button" disabled={disabled || photos.length >= maxPhotos} onClick={() => picker.current?.click()} aria-label="Joindre des photos" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40">
           <Icon name="add_photo_alternate" size={22} />
         </button>
         <div className="flex min-h-11 min-w-0 flex-1 items-center rounded-3xl bg-surface-container px-4 py-2 transition-colors focus-within:bg-surface-container-high">
