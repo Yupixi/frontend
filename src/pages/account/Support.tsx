@@ -12,6 +12,7 @@ import {
 import type { AuthUser } from '../../graphql/auth'
 import { delayText, useRules } from '../../lib/rules'
 import { useMemberCountryCode } from '../../lib/countries'
+import { requestOpenHelp } from '../../lib/navigation'
 
 type Props = { onNavigate: (p: any) => void; focusTicketId?: string | null; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -89,6 +90,20 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
     <AccountLayout active="support" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title="Aide & support">
       <h1 className="m-0 text-headline-lg text-on-surface">Aide & support</h1>
       <p className="m-0 mt-1 text-body-md text-on-surface-variant">Écrivez à l’équipe Dilchap : vous suivez la réponse ici et recevez une notification.</p>
+
+      {/* The guides often answer before the team does. */}
+      <a
+        href="/aide"
+        onClick={e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); requestOpenHelp('') }}
+        className={`${card} mt-4 flex items-center gap-3 no-underline transition-shadow hover:shadow-md`}
+      >
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="menu_book" size={24} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-label-lg text-on-surface">Centre d’aide</span>
+          <span className="block text-body-sm text-on-surface-variant">Des guides pas à pas pour vendre, acheter, payer et se retrouver.</span>
+        </span>
+        <Icon name="chevron_right" size={20} className="shrink-0 text-on-surface-variant" />
+      </a>
 
       <section className={`${card} mt-4 flex flex-col gap-3 sm:flex-row sm:items-center`}>
         <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${badge === 'CERTIFIED' ? 'bg-tertiary-soft text-tertiary' : badge ? 'bg-verified-soft text-verified' : 'bg-surface-container text-on-surface-variant'}`}><Icon name="support_agent" size={26} /></span>

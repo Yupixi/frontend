@@ -49,6 +49,7 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
       <button
         onClick={() => setOpen(o => !o)}
         title={label}
+        data-tour="country"
         className={`flex cursor-pointer items-center justify-center rounded-xl border-none text-label-md text-on-surface ${compact ? 'h-9 gap-1 rounded-full bg-surface-container pl-2 pr-1.5 hover:bg-surface-container-high' : 'h-10 gap-1.5 bg-surface-container-low px-3 hover:bg-surface-container'}`}
       >
         {market ? <Flag code={market.code} size={compact ? 11 : 13} className="mx-0.5" /> : <AnimatedIcon name="location" fallback="location_on" size={compact ? 16 : 18} className="text-primary" playOnView={300} playOnInteract trigger={label} />}

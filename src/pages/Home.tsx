@@ -416,7 +416,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     </>,
     categories: <>
         {categories.length > 0 && (
-          <section className="mb-8">
+          <section data-tour="categories" className="mb-8">
             <SectionHeading
               title="Explorer par rayon"
               action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir <ChevronRight size={16} /></button>}

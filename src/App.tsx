@@ -7,7 +7,7 @@ import EmailVerifyPrompt, { verifyPromptDismissed } from './components/EmailVeri
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { parsePath, pathFor, samePlace } from './lib/routes'
-import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT } from './lib/navigation'
+import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -16,6 +16,8 @@ import Home, { type SearchPreset } from './pages/Home'
 import { lazyPage, preloadPages } from './lib/lazyPage'
 import { useSeo } from './lib/site'
 import { ACCOUNT_COUNTRY_KEY, rememberedAccountCountry, setMarketState, useCountries } from './lib/countries'
+import Onboarding from './components/Onboarding'
+import { noteTourPage } from './lib/tourControl'
 
 // Home is the landing page and ships in the entry chunk; every other page is
 // its own chunk so a first visit only downloads what it renders (recharts,
@@ -56,6 +58,7 @@ const PostListing = lazyPage(() => import('./pages/seller/PostListing'))
 const SellerListings = lazyPage(() => import('./pages/seller/MyListings'))
 const SellerPremium = lazyPage(() => import('./pages/seller/Booster'))
 const Legal = lazyPage(() => import('./pages/Legal'))
+const Help = lazyPage(() => import('./pages/Help'))
 
 // Admin BO control lives in the dedicated Backoffice app (real, GraphQL-wired)
 // — this Frontend app never had a real admin surface, just a mock
@@ -68,7 +71,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops'
+  | 'legal' | 'shop' | 'shops' | 'help'
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -86,6 +89,7 @@ type NavState = {
   legalSlug?: string
   shopKey?: string
   campaignSlug?: string
+  helpSlug?: string
 }
 const LOCATION_WAIT_MS = 700
 
@@ -172,6 +176,8 @@ export default function App() {
   const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? initialRoute?.legalSlug ?? savedNav.legalSlug ?? 'cgu')
   const [shopKey, setShopKey] = useState(sharedShopKey() ?? initialRoute?.shopKey ?? savedNav.shopKey ?? '')
   const [campaignSlug, setCampaignSlug] = useState(sharedCampaignSlug() ?? initialRoute?.campaignSlug ?? savedNav.campaignSlug ?? '')
+  // Centre d'aide article shown ('' = the help centre's home).
+  const [helpSlug, setHelpSlug] = useState(initialRoute?.page === 'help' ? (initialRoute.helpSlug ?? '') : (savedNav.helpSlug ?? ''))
   const [dark, setDark] = useState(savedDark)
   // Tab title, description and share tags when moving between pages.
   useSeo(page)
@@ -403,6 +409,7 @@ export default function App() {
           if (st.legalSlug) setLegalSlug(st.legalSlug)
           if (st.shopKey) setShopKey(st.shopKey)
           if (typeof st.campaignSlug === 'string') setCampaignSlug(st.campaignSlug)
+          if (typeof st.helpSlug === 'string') setHelpSlug(st.helpSlug)
           setPage(st.__yupixiPage)
         } else {
           setPage('home')
@@ -413,7 +420,7 @@ export default function App() {
     // carry no state, or a stale one: tag it with the page actually shown,
     // so coming back to it restores that page rather than home.
     if (window.history.state?.__yupixiPage !== page) {
-      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, shopKey, campaignSlug }, '')
+      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, shopKey, campaignSlug, helpSlug }, '')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -440,23 +447,26 @@ export default function App() {
   // The address bar follows the page: public pages have their own URL
   // (shareable, indexed), account pages sit under /compte.
   useEffect(() => {
-    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, searchTerm })
+    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, searchTerm, helpSlug })
     const here = window.location.pathname + window.location.search
     if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(window.history.state, '', path)
-  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, searchTerm])
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, searchTerm, helpSlug])
+
+  // Tours tied to a page know where the member is.
+  useEffect(() => { noteTourPage(page) }, [page])
 
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
     }
     sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug])
 
-  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string }
+  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string; helpSlug?: string }
   const historyEntry = (p: Page, sel: Selection = {}) => ({
     __yupixiPage: p,
-    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey, campaignSlug,
+    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
     ...sel,
   })
 
@@ -490,9 +500,18 @@ export default function App() {
   const navigateRef = useRef(navigate)
   navigateRef.current = navigate
   useEffect(() => {
-    const onRequest = (e: Event) => navigateRef.current((e as CustomEvent<Page>).detail)
+    const onRequest = (e: Event) => {
+      const p = (e as CustomEvent<Page>).detail
+      if (p === 'help') openHelpRef.current('')
+      else navigateRef.current(p)
+    }
+    const onHelp = (e: Event) => openHelpRef.current((e as CustomEvent<string>).detail ?? '')
     window.addEventListener(NAVIGATE_EVENT, onRequest)
-    return () => window.removeEventListener(NAVIGATE_EVENT, onRequest)
+    window.addEventListener(OPEN_HELP_EVENT, onHelp)
+    return () => {
+      window.removeEventListener(NAVIGATE_EVENT, onRequest)
+      window.removeEventListener(OPEN_HELP_EVENT, onHelp)
+    }
   }, [])
 
   // Message notifications open the thread itself: in-app bell/page
@@ -552,6 +571,7 @@ export default function App() {
     if (route?.page === 'shop' && route.shopKey) return openShop(route.shopKey)
     if (route?.page === 'legal' && route.legalSlug) return openLegal(route.legalSlug)
     if (route?.page === 'flash-offers') return openCampaignRef.current(route.campaignSlug ?? '')
+    if (route?.page === 'help') return openHelpRef.current(route.helpSlug ?? '')
     if (route?.page === 'search' && route.category) return navigateToCategory(route.category)
     if (route && route.page !== 'account') return navigate(route.page)
     const conversation = q.get('conversation')
@@ -575,6 +595,14 @@ export default function App() {
     setLegalSlug(slug)
     navigate('legal', { legalSlug: slug })
   }
+
+  // Centre d'aide: an article, '' = its home.
+  const openHelp = (slug: string) => {
+    setHelpSlug(slug)
+    navigate('help', { helpSlug: slug })
+  }
+  const openHelpRef = useRef(openHelp)
+  openHelpRef.current = openHelp
 
   // A given campaign page ('' = the newest live one).
   const openCampaign = (slug: string) => {
@@ -704,6 +732,8 @@ export default function App() {
         return <Categories onNavigate={navigate} onCategorySelect={navigateToCategory} onSearch={searchFromHome} />
       case 'legal':
         return <Legal slug={legalSlug} onOpenLegal={openLegal} onNavigate={navigate} />
+      case 'help':
+        return <Help slug={helpSlug} onOpenArticle={openHelp} onNavigate={navigate} />
       case 'flash-offers':
         return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:
@@ -740,6 +770,9 @@ export default function App() {
 
   // Signed up, address not confirmed yet: one top prompt at a time (the
   // update banner first), not over the listing form.
+  // Welcome tour / « Nouveau » announcements of signed-in members.
+  const onboarding = <Onboarding page={page} enabled={isLoggedIn && !!currentUser && !currentUser.isGuest} />
+
   const verifyPrompt = isLoggedIn && currentUser && !currentUser.isGuest && !currentUser.emailVerifiedAt && !verifyLater && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'
     ? <EmailVerifyPrompt email={currentUser.email} onDismiss={() => setVerifyLater(true)} />
     : null
@@ -819,6 +852,7 @@ export default function App() {
         <PaymentReturn isLoggedIn={isLoggedIn} />
         {verifyPrompt}
         <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+        {onboarding}
       </div>
     )
   }
@@ -852,6 +886,7 @@ export default function App() {
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
       <PaymentReturn isLoggedIn={isLoggedIn} />
+      {onboarding}
     </div>
   )
 }

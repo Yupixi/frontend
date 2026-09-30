@@ -39,7 +39,8 @@ import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteCon
 import { formatRelativeDate, plainText } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 import { syncAppBadge } from '../lib/pushNotifications'
-import { requestOpenCampaign } from '../lib/navigation'
+import { requestOpenCampaign, requestOpenHelp } from '../lib/navigation'
+import { replayTours } from '../lib/tourControl'
 import { useSite } from '../lib/site'
 import OfferBanner from './OfferBanner'
 
@@ -49,7 +50,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops'
+  | 'legal' | 'shop' | 'shops' | 'help'
 
 
 type LayoutProps = {
@@ -196,6 +197,13 @@ export default function Layout({
     setTimeout(() => setToastMessage(null), 3000)
   }
 
+  // Centre d'aide links: real addresses (/aide), opened in the app.
+  const openHelp = (slug: string) => (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+    e.preventDefault()
+    requestOpenHelp(slug)
+  }
+
   const openSearchOverlay = () => {
     setSearch('')
     setSearchOverlayOpen(true)
@@ -272,6 +280,8 @@ export default function Layout({
             <button onClick={() => onNavigate('categories')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Toutes les catégories</button>
             <span className="text-outline-variant">•</span>
             <button onClick={() => requestOpenCampaign('')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Bonnes affaires</button>
+            <span className="text-outline-variant">•</span>
+            <a href="/aide" data-tour="help" onClick={openHelp('')} className="flex items-center gap-1 text-label-sm text-on-surface-variant no-underline hover:text-on-surface"><Icon name="help" size={15} /> Aide</a>
           </div>
         </div>
 
@@ -283,7 +293,7 @@ export default function Layout({
 
           {/* Desktop search — opens the overlay (suggestions, recent
               searches, categories) rather than being a bare input. */}
-          <div className="hidden min-w-0 max-w-3xl flex-1 items-center rounded-xl bg-surface-container-low p-1 lg:flex">
+          <div data-tour="search" className="hidden min-w-0 max-w-3xl flex-1 items-center rounded-xl bg-surface-container-low p-1 lg:flex">
             {onLocationChange && (
               <>
                 <LocationPill location={location} onChange={onLocationChange} />
@@ -309,13 +319,14 @@ export default function Layout({
             {onLocationChange && isMobile && (
               <LocationPill location={location} onChange={onLocationChange} compact />
             )}
-            <button onClick={openSearchOverlay} className={`${iconBtn} lg:hidden`} title="Rechercher">
+            <button onClick={openSearchOverlay} data-tour="search" className={`${iconBtn} lg:hidden`} title="Rechercher">
               <Search size={21} />
             </button>
 
             {!currentUser?.isGuest && (
               <button
                 onClick={() => { onNavigate('seller-post'); triggerToast('Création d\'une nouvelle annonce') }}
+                data-tour="sell"
                 className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-lg text-white transition-all hover:bg-primary-dark active:scale-95 lg:flex"
               >
                 <PlusCircle size={19} />
@@ -334,7 +345,7 @@ export default function Layout({
 
                   {/* Messages — short preview dropdown */}
                   <div ref={msgMenuRef} className="relative">
-                    <button onClick={() => { setMsgMenuOpen(o => !o); setNotifMenuOpen(false); setUserMenuOpen(false) }} className={iconBtn} title="Messages">
+                    <button onClick={() => { setMsgMenuOpen(o => !o); setNotifMenuOpen(false); setUserMenuOpen(false) }} data-tour="messages" className={iconBtn} title="Messages">
                       <MessageCircle size={22} />
                       {unreadMsgCount > 0 && <span className="notif-dot" style={{ background: 'var(--tertiary)' }}>{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>}
                     </button>
@@ -443,6 +454,8 @@ export default function Layout({
                 <div ref={userMenuRef} className="relative">
                   <button
                     onClick={() => { setUserMenuOpen(o => !o); setNotifMenuOpen(false); setMsgMenuOpen(false) }}
+                    // Phones: the tour points at the « Compte » tab instead.
+                    data-tour={isMobile ? undefined : 'account'}
                     className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent py-1 pl-1 pr-1 transition-colors hover:bg-surface-container-low lg:pr-2"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-[14px] font-bold text-white">
@@ -479,6 +492,26 @@ export default function Layout({
                         </button>
                       ))}
 
+                      {!currentUser?.isGuest && (
+                        <>
+                          <a
+                            href="/aide"
+                            onClick={e => { setUserMenuOpen(false); openHelp('')(e) }}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-label-md text-on-surface no-underline hover:bg-surface-container-low"
+                          >
+                            <Icon name="help" size={17} className="text-on-surface-variant" />
+                            Centre d’aide
+                          </a>
+                          <button
+                            onClick={() => { setUserMenuOpen(false); void replayTours() }}
+                            className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
+                          >
+                            <Icon name="replay" size={17} className="text-on-surface-variant" />
+                            Revoir la visite guidée
+                          </button>
+                        </>
+                      )}
+
                       <button
                         onClick={() => { onToggleDark(); setUserMenuOpen(false) }}
                         className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
@@ -513,7 +546,7 @@ export default function Layout({
 
         {/* Category nav — real categories, desktop only (mobile reaches
             them from the home rail and the search page). */}
-        <nav className="hidden h-11 items-center gap-8 overflow-x-auto whitespace-nowrap px-4 [scrollbar-width:none] lg:flex lg:px-12">
+        <nav data-tour="categories" className="hidden h-11 items-center gap-8 overflow-x-auto whitespace-nowrap px-4 [scrollbar-width:none] lg:flex lg:px-12">
           {[
             { key: 'home', label: 'Nouveautés', active: currentPage === 'home', onClick: () => onNavigate('home') },
             ...navCategories.map(c => ({
@@ -647,6 +680,9 @@ export default function Layout({
               {site.contact.email && <a href={`mailto:${site.contact.email}`} className="mt-1 block text-body-sm text-primary no-underline hover:underline">{site.contact.email}</a>}
               {site.contact.address && <p className="mb-0 mt-1 text-body-sm text-on-surface-variant">{site.contact.address}</p>}
               <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
+                <li>
+                  <a href="/aide" onClick={openHelp('')} className="text-body-sm text-on-surface-variant no-underline hover:text-primary">Aide &amp; FAQ</a>
+                </li>
                 {LEGAL_PAGES.map(p => (
                   <li key={p.slug}>
                     <button onClick={() => onOpenLegal?.(p.slug)} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">{p.label}</button>
@@ -690,17 +726,18 @@ export default function Layout({
           {[
             // anim: Iconsax Lottie (src/assets/lottie) — plays when the tab
             // becomes active and on press; ms: Material fallback.
+            // tour: data-tour anchor of the guided tours (lib/tours).
             { label: 'Accueil', anim: 'nav-home', ms: 'home', page: 'home' as Page },
             { label: 'Recherche', anim: 'empty-search', ms: 'search', page: 'search' as Page },
-            { label: 'Vendre', anim: 'nav-add', ms: 'add', page: 'seller-post' as Page, primary: true },
-            { label: 'Messages', anim: 'empty-messages', ms: 'chat', page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount },
-            { label: 'Compte', anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page },
+            { label: 'Vendre', anim: 'nav-add', ms: 'add', page: 'seller-post' as Page, primary: true, tour: 'sell' },
+            { label: 'Messages', anim: 'empty-messages', ms: 'chat', page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount, tour: 'messages' },
+            { label: 'Compte', anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page, tour: 'account' },
           ].map(item => {
             const isActive = currentPage === item.page
 
             if (item.primary) {
               return (
-                <button key={item.label} onClick={() => onNavigate(item.page)} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
+                <button key={item.label} onClick={() => onNavigate(item.page)} data-tour={item.tour} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
                   <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]">
                     <AnimatedIcon name={item.anim} fallback={item.ms} size={28} className="text-white" playOnInteract preload />
                   </span>
@@ -713,6 +750,7 @@ export default function Layout({
               <button
                 key={item.label}
                 onClick={() => onNavigate(item.page)}
+                data-tour={item.tour}
                 className={`relative flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}
               >
                 <span className="relative">

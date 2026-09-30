@@ -23,6 +23,12 @@ export const OPEN_CAMPAIGN_EVENT = 'yupixi:open-campaign'
 export const requestOpenCampaign = (slug: string) =>
   window.dispatchEvent(new CustomEvent<string>(OPEN_CAMPAIGN_EVENT, { detail: slug }))
 
+// Opens the Centre d’aide: an article by its key, '' = the help centre's home.
+export const OPEN_HELP_EVENT = 'yupixi:open-help'
+
+export const requestOpenHelp = (slug = '') =>
+  window.dispatchEvent(new CustomEvent<string>(OPEN_HELP_EVENT, { detail: slug }))
+
 // Opens an official shop (notification of a followed shop: `/?shop=<slug>`).
 export const OPEN_SHOP_EVENT = 'yupixi:open-shop'
 

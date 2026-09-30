@@ -130,7 +130,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               <h1 className="m-0 mt-3 text-headline-lg-mobile text-on-surface md:text-[40px] md:font-extrabold md:leading-[48px]">Boostez vos ventes &amp; dominez le fil d'affichage</h1>
               <p className="m-0 mt-2 text-body-md text-on-surface-variant">Vendez plus vite grâce aux options de visibilité ciblées.<Claim> <b className="text-tertiary">100% du produit de la vente reste pour vous</b> (0% de commission Dilchap).</Claim></p>
             </div>
-            <div className="rounded-2xl bg-surface-lowest p-4 border border-outline-variant">
+            <div data-tour="boost-credits" className="rounded-2xl bg-surface-lowest p-4 border border-outline-variant">
               <div className="flex items-center justify-between">
                 <span className="text-label-sm uppercase text-on-surface-variant">État de votre visibilité</span>
                 <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${visible ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>● {visible ? 'Actif' : 'Standard'}</span>
@@ -160,7 +160,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
         )}
 
         {/* Step 1 */}
-        <section className="mt-8">
+        <section data-tour="boost-listing" className="mt-8">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-label-sm uppercase text-primary">Étape 1 sur 2</div>
@@ -218,7 +218,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
         </section>
 
         {/* Step 2 */}
-        <section className="mt-8">
+        <section data-tour="boost-packs" className="mt-8">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-label-sm uppercase text-primary">Étape 2 sur 2</div>

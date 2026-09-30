@@ -17,6 +17,7 @@ import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
 import { placeOptions, useLists } from '../../lib/lists'
 import { METHOD_LABELS, useCountries, useCountry, type PaymentMethodCode } from '../../lib/countries'
+import { replayTours } from '../../lib/tourControl'
 
 type Props = {
   onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void
@@ -531,6 +532,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <Icon name={dark ? 'dark_mode' : 'light_mode'} size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">Apparence</div><div className="text-body-sm text-on-surface-variant">{dark ? 'Mode sombre activé' : 'Mode clair activé'}</div></div>
                   <Toggle label="Mode sombre" on={dark} onChange={onToggleDark} />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
+                  <Icon name="menu_book" size={22} className="text-on-surface-variant" />
+                  <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">Visite guidée</div><div className="text-body-sm text-on-surface-variant">Revoyez les essentiels de Dilchap, et les nouveautés déjà présentées.</div></div>
+                  <button onClick={() => void replayTours()} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container"><Icon name="replay" size={17} /> Revoir la visite guidée</button>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary-fixed/30 p-3">
                   <div className="min-w-[12rem] flex-1">
