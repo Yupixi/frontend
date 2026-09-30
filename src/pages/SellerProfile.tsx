@@ -54,9 +54,11 @@ const memberSince = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', {
 // dilchap.com/@handle: the member's id first, then their profile.
 export default function SellerProfile(props: SellerProfileProps) {
   const byHandle = props.sellerId.startsWith('@')
-  const { data, loading } = useQuery<{ sellerIdByHandle: string | null }>(SELLER_ID_BY_HANDLE_QUERY, { variables: { handle: props.sellerId }, skip: !byHandle })
+  const { data, loading, error } = useQuery<{ sellerIdByHandle: string | null }>(SELLER_ID_BY_HANDLE_QUERY, { variables: { handle: props.sellerId }, skip: !byHandle })
   if (!byHandle) return <SellerProfileView {...props} />
   if (loading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
+  // Too many lookups from this connection (rate limit): not « unknown ».
+  if (error) return <div className="p-12 text-center text-on-surface-variant">Trop de pages ouvertes d’un coup : réessayez dans une minute.</div>
   const id = data?.sellerIdByHandle
   if (!id) return (
     <div className="p-12 text-center">
