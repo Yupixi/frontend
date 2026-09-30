@@ -151,7 +151,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
             ) : (
               <>
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                  <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="pin" size={22} className="text-primary" /> Code Handshake Secret</h2>
+                  <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="pin" size={22} className="text-primary" /> Code de remise secret</h2>
                   <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Demandez à {buyerFirst} de vous dicter son code à 4 chiffres affiché dans son application Dilchap.</p>
                   {frozen && (
                     <div role="status" className="mt-3 flex items-start gap-2 rounded-xl bg-primary-fixed/60 p-3 text-body-sm text-on-surface">

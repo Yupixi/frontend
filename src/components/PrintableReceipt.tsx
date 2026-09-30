@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { thumbnailUrl } from '../lib/media'
-import { handoverProof } from '../lib/format'
+import { handoverHeadline, handoverProof } from '../lib/format'
 import type { HandoverOrder } from '../graphql/sellerTools'
 import { Claim } from '../lib/site'
 import { marketForCountry } from '../data/markets'
@@ -52,7 +52,7 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
 
         {/* Status */}
         <div className="mt-4 flex items-center justify-between rounded-lg bg-[#e7f4ec] px-4 py-2.5 text-[#0f6b3a]">
-          <span className="flex items-center gap-1.5 text-[11pt] font-bold"><Icon name="verified" size={18} /> Remise validée par code sécurisé</span>
+          <span className="flex items-center gap-1.5 text-[11pt] font-bold"><Icon name="verified" size={18} /> {handoverHeadline(o.meetup)}</span>
           <span className="text-[9pt] font-semibold uppercase tracking-wide">Transaction clôturée</span>
         </div>
 

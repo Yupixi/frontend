@@ -47,13 +47,19 @@ const TABS = [
   { id: 'securite', icon: 'verified_user', label: 'Sécurité & Identité', short: 'Sécurité' },
   { id: 'compte', icon: 'tune', label: 'Gestion du compte', short: 'Compte' },
 ]
+// `sms`: the categories the server may send by WhatsApp / SMS (Backend
+// channel-events: messages & offers, meet-ups & disputes). The others never do.
 const ALERTS = [
-  { key: 'messages', icon: 'forum', title: 'Nouveaux messages & Offres directes', sub: "Alerte instantanée dès qu'un acheteur négocie ou pose une question sur un article." },
-  { key: 'meetups', icon: 'calendar_clock', title: 'Confirmations & Rappels Remises', sub: 'Rendez-vous proposés, confirmés et litiges sur vos remises.' },
-  { key: 'boosts', icon: 'rocket_launch', title: 'Performance & Fin des Boosts', sub: "Expiration d'un boost ou remontée en tête avec bilan des vues." },
-  { key: 'advice', icon: 'insights', title: "Conseils & Pics d'affluence", sub: 'Nouvelles annonces correspondant à vos recherches et pics de recherche.' },
-  { key: 'campaigns', icon: 'campaign', title: 'Campagnes promos Dilchap', sub: 'Opportunités de visibilité collective (Black Friday, braderies P2P).' },
+  { key: 'messages', sms: true, icon: 'forum', title: 'Nouveaux messages & Offres directes', sub: "Alerte instantanée dès qu'un acheteur négocie ou pose une question sur un article." },
+  { key: 'meetups', sms: true, icon: 'calendar_clock', title: 'Confirmations & Rappels Remises', sub: 'Rendez-vous proposés, confirmés et litiges sur vos remises.' },
+  { key: 'boosts', sms: false, icon: 'rocket_launch', title: 'Performance & Fin des Boosts', sub: "Expiration d'un boost ou remontée en tête avec bilan des vues." },
+  { key: 'advice', sms: false, icon: 'insights', title: "Conseils & Pics d'affluence", sub: 'Nouvelles annonces correspondant à vos recherches et pics de recherche.' },
+  { key: 'campaigns', sms: false, icon: 'campaign', title: 'Campagnes promos Dilchap', sub: 'Opportunités de visibilité collective (Black Friday, braderies P2P).' },
 ]
+const NO_SMS_HINT = 'Pas de WhatsApp / SMS pour ces alertes : seuls les messages, offres, remises et litiges en envoient.'
+// Paid alerts (WhatsApp / SMS) wait for the morning when the member's own
+// quiet hours are off (Backend channels.service DEFAULT_QUIET_HOURS).
+const SMS_NIGHT = { start: '21:00', end: '07:00' }
 const DEFAULT_ALERTS: Alerts = Object.fromEntries(ALERTS.map(a => [a.key, { push: true, whatsapp: false, email: a.key !== 'advice' }]))
 // Payment methods of the member's country (« Pays »), cash last.
 const PAYMENT_SUB: Partial<Record<PaymentMethodCode, string>> = {
@@ -64,9 +70,9 @@ const paymentsFor = (methods: PaymentMethodCode[]) => [...methods.filter(m => m 
   code, title: code === 'CASH' ? 'Espèces en main' : METHOD_LABELS[code], sub: PAYMENT_SUB[code] ?? 'Transfert direct au numéro du vendeur',
 }))
 
-function Toggle({ on, onChange, label, tone = 'primary' }: { on: boolean; onChange: (v: boolean) => void; label: string; tone?: 'primary' | 'tertiary' }) {
+function Toggle({ on, onChange, label, tone = 'primary', disabled, title }: { on: boolean; onChange: (v: boolean) => void; label: string; tone?: 'primary' | 'tertiary'; disabled?: boolean; title?: string }) {
   return (
-    <button role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-none p-0 transition-colors ${on ? (tone === 'tertiary' ? 'bg-tertiary' : 'bg-primary') : 'bg-surface-container-high'}`}>
+    <button role="switch" aria-checked={on} aria-label={label} title={title} disabled={disabled} onClick={() => onChange(!on)} className={`relative h-6 w-11 shrink-0 rounded-full border-none p-0 transition-colors ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} ${on ? (tone === 'tertiary' ? 'bg-tertiary' : 'bg-primary') : 'bg-surface-container-high'}`}>
       <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
     </button>
   )
@@ -210,7 +216,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
     fullName: me.fullName, countryCode: me.countryCode ?? 'CI', city: me.city ?? '', bio: me.bio ?? '', phone: me.phone ?? '', email: me.email, avatarUrl: me.avatarUrl ?? '',
     meetupSpots: me.meetupSpots, paymentMethods: me.paymentMethods,
     alerts: { ...DEFAULT_ALERTS, ...(me.notificationPreferences?.alerts ?? {}) } as Alerts,
-    quiet: { enabled: false, start: '22:00', end: '07:00', ...(me.notificationPreferences?.quietHours ?? {}) } as Quiet,
+    quiet: { enabled: false, ...SMS_NIGHT, ...(me.notificationPreferences?.quietHours ?? {}) } as Quiet,
   }), [me])
   const [form, setForm] = useState(initial)
   useEffect(() => { setForm(initial) }, [initial])
@@ -424,7 +430,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <span className="flex-1 text-body-sm text-on-surface">{pushStatus === 'subscribed' ? 'Notifications push actives sur cet appareil.' : pushStatus === 'permission-denied' ? 'Notifications bloquées dans le navigateur — autorisez-les dans ses réglages.' : pushStatus === 'ios-install-required' ? "Sur iPhone, ajoutez Dilchap à l'écran d'accueil pour recevoir les notifications." : 'Notifications push non activées sur cet appareil.'}</span>
                   {['available', 'permission-required', 'error'].includes(pushStatus) && <button onClick={() => void subscribeToPush(true).then(setPushStatus)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white">Activer</button>}
                 </div>
-                <PhoneVerifyCard wantsSms={ALERTS.some(a => form.alerts[a.key]?.whatsapp)} unsavedPhone={form.phone.trim() !== (me.phone ?? '')} />
+                <PhoneVerifyCard wantsSms={ALERTS.some(a => a.sms && form.alerts[a.key]?.whatsapp)} unsavedPhone={form.phone.trim() !== (me.phone ?? '')} />
                 {/* The card adapts to its own width (container query): full channel
                     matrix when it fits, otherwise one row per alert with 3 switches. */}
                 <div className="@container">
@@ -439,7 +445,9 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                         {([['push', 'Push'], ['whatsapp', 'WhatsApp'], ['email', 'E-mail']] as [Channel, string][]).map(([ch, label]) => (
                           <label key={ch} className="flex min-w-0 flex-col items-center gap-1.5 whitespace-nowrap rounded-lg bg-surface-container-low px-1 py-2 text-label-sm text-on-surface-variant sm:flex-row sm:justify-between sm:gap-2 sm:px-2.5 sm:py-1.5">
                             {label}
-                            <Toggle label={`${a.title} — ${label}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />
+                            {ch === 'whatsapp' && !a.sms
+                              ? <Toggle label={`${a.title} — ${label} : non disponible`} title={NO_SMS_HINT} disabled on={false} onChange={() => {}} />
+                              : <Toggle label={`${a.title} — ${label}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />}
                           </label>
                         ))}
                       </div>
@@ -463,7 +471,9 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                           </td>
                           {(['push', 'whatsapp', 'email'] as Channel[]).map(ch => (
                             <td key={ch} className="px-3 py-3 text-center">
-                              <span className="inline-flex"><Toggle label={`${a.title} — ${ch}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} /></span>
+                              <span className="inline-flex">{ch === 'whatsapp' && !a.sms
+                                ? <Toggle label={`${a.title} — WhatsApp / SMS : non disponible`} title={NO_SMS_HINT} disabled on={false} onChange={() => {}} />
+                                : <Toggle label={`${a.title} — ${ch}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />}</span>
                             </td>
                           ))}
                         </tr>
@@ -472,12 +482,16 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </table>
                 </div>
                 </div>
-                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Push et e-mail suivent ces choix (au plus un e-mail par jour pour les messages en attente) ; WhatsApp/SMS vers votre numéro vérifié, pour les messages, offres, remises et litiges (un seul SMS par conversation à la fois). Les e-mails de sécurité et les reçus d'achat sont toujours envoyés.</p>
+                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Push et e-mail suivent ces choix (au plus un e-mail par jour pour les messages en attente) ; WhatsApp/SMS vers votre numéro vérifié, uniquement pour les messages, offres, remises et litiges (un seul SMS par conversation à la fois) : les boosts, conseils et campagnes n'en envoient jamais. Les e-mails de sécurité et les reçus d'achat sont toujours envoyés.</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="bedtime" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Plage horaire silencieuse (Ne pas déranger)</div>
-                    <div className="text-body-sm text-on-surface-variant">Suspendre les notifications push entre {form.quiet.start.replace(':', 'h')} et {form.quiet.end.replace(':', 'h')} (heure locale).</div>
+                    <div className="text-body-sm text-on-surface-variant">
+                      {form.quiet.enabled
+                        ? `Notifications push et alertes WhatsApp / SMS retenues entre ${form.quiet.start.replace(':', 'h')} et ${form.quiet.end.replace(':', 'h')} (heure locale), puis envoyées à la fin de la plage.`
+                        : `Désactivée : les notifications push arrivent à toute heure. Les alertes WhatsApp / SMS restent retenues la nuit, de ${SMS_NIGHT.start.replace(':', 'h')} à ${SMS_NIGHT.end.replace(':', 'h')} (heure locale).`}
+                    </div>
                   </div>
                   <span className="flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-label-sm">
                     <input type="time" value={form.quiet.start} onChange={e => set('quiet', { ...form.quiet, start: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" /> –

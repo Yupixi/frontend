@@ -7,6 +7,7 @@ import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
 import { BuyerTabs } from './BuyerShared'
 import { MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, disputeIsOpen, type DisputeStats, type PurchaseOrder } from '../../graphql/sellerTools'
+import { handoverByCode } from '../../lib/format'
 import { RESPOND_TO_MEETUP_MUTATION } from '../../graphql/messaging'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
@@ -164,7 +165,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
                     {dispute ? (
                       <p className="m-0 mt-2 text-body-sm text-on-surface"><span className="mr-1 inline-block h-2 w-2 rounded-full bg-primary" />Médiation Dilchap en cours. Aucun paiement n'est dû avant l'accord.</p>
                     ) : done ? (
-                      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Remise en main propre{m ? ` • ${m.place}` : ''}{m?.handedOverAt ? ' • code validé' : ''}</p>
+                      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Remise en main propre{m ? ` • ${m.place}` : ''}{handoverByCode(m) ? ' • code validé' : m?.handedOverAt ? ' • confirmée par le vendeur' : ''}</p>
                     ) : m ? (
                       <div className="mt-2 rounded-lg bg-surface-lowest p-2 text-body-sm">
                         <div className="text-label-sm text-on-surface-variant">{confirmed ? 'Lieu de remise' : `Créneau proposé par ${m.proposedById === currentUser?.id ? 'vous' : o.seller.fullName.split(' ')[0]}`}</div>

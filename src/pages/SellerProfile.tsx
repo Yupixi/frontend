@@ -198,17 +198,18 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
           </button>
         </div>
         <div className="px-4 pb-5 md:px-6">
-          <div className="-mt-10 flex flex-col gap-4 md:-mt-12 md:flex-row md:items-end md:justify-between">
-            {/* Mobile: name below the avatar — side by side, the -mt pulls
-                the name up over the dark cover where it can't be read. */}
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-              <div className="relative w-fit shrink-0">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            {/* Only the avatar overlaps the cover: the name and details stay
+                below it (the positioned cover would paint over them). Mobile:
+                name below the avatar; from md, side by side. */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
+              <div className="relative -mt-10 w-fit shrink-0 md:-mt-12">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-solid border-surface-lowest bg-surface-container-high text-headline-lg text-primary md:h-28 md:w-28">
                   {seller.avatarUrl ? <img src={seller.avatarUrl} alt={seller.fullName} className="h-full w-full object-cover" /> : seller.fullName.charAt(0).toUpperCase()}
                 </div>
                 {seller.badge && <span className={`absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest text-white ${seller.badge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}><BadgeCheck size={15} /></span>}
               </div>
-              <div className="min-w-0 md:pb-1">
+              <div className="min-w-0 md:pt-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="m-0 text-headline-md text-on-surface md:text-headline-lg">{seller.fullName}</h1>
                   <SellerBadge tier={seller.badge} variant="pill" size={15} />
@@ -222,7 +223,7 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
               </div>
             </div>
             {currentUserId !== seller.id && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 md:pt-3">
                 <button onClick={contact} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-4 py-2.5 text-label-lg text-white hover:bg-primary-dark"><MessageSquare size={18} /> Contacter en direct</button>
                 <button onClick={contact} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-surface-container-high px-4 py-2.5 text-label-lg text-on-surface hover:bg-surface-container-highest"><Calendar size={18} /> Proposer un RDV</button>
                 <button onClick={toggleFollow} className={`flex cursor-pointer items-center gap-1.5 rounded-lg border-none px-3 py-2.5 text-label-md ${seller.isFollowedByMe ? 'bg-tertiary-soft text-tertiary' : 'bg-primary-fixed text-primary'}`}>

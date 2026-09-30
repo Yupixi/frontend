@@ -27,6 +27,16 @@ export const handoverProof = (m: { handedOverAt: string | null; handoverMethod?:
     : m.handoverMethod === 'SELLER_DECLARED' ? 'Remise confirmée par le vendeur'
       : 'Validée par le code de remise à 4 chiffres'
 
+// The 4-digit code was really typed (not a seller declaration, nor a deal
+// closed by mediation or without a meet-up): only then may a receipt say
+// « validée par code ».
+export const handoverByCode = (m: { handedOverAt: string | null; handoverMethod?: 'CODE' | 'SELLER_DECLARED' | null } | null | undefined) =>
+  !!m?.handedOverAt && m.handoverMethod !== 'SELLER_DECLARED'
+
+// Receipt headline matching how the sale was actually closed.
+export const handoverHeadline = (m: Parameters<typeof handoverByCode>[0]) =>
+  handoverByCode(m) ? 'Remise validée par code sécurisé' : m?.handedOverAt ? 'Remise confirmée par le vendeur' : 'Vente conclue'
+
 // Listing descriptions are rich text (HTML from the editor): card excerpts
 // need the words only.
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'", nbsp: ' ' }
