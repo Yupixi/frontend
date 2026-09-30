@@ -1,4 +1,5 @@
 import AnimatedIcon from '../components/AnimatedIcon'
+import SupportAboutButton from '../components/SupportAboutButton'
 import { useEffect, useRef, useState } from 'react'
 import { gql } from '@apollo/client'
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
@@ -572,6 +573,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             )}
 
             <div className="mt-5 flex flex-col gap-2">
+              {/* The seller's own listing: the support opens with it attached. */}
+              {isOwner && <SupportAboutButton about={{ kind: 'LISTING', id: listing.id }} what="cette annonce" className="order-last" />}
               {ownerPanel ?? (
                 chatOpen ? (
                   <InlineConversation sellerId={listing.seller.id} listingId={listing.id} sellerName={listing.seller.fullName} onAuthenticated={onAuthenticated} onClose={() => setChatOpen(false)} />
@@ -685,6 +688,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             ) : (
               <button onClick={openReport} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent text-body-sm text-on-surface-variant hover:text-primary"><Flag size={13} /> Signaler cette annonce</button>
             )}
+            {/* Phones: the buying panel is the bottom bar, the link lives here. */}
+            {isOwner && <SupportAboutButton about={{ kind: 'LISTING', id: listing.id }} what="cette annonce" className="mt-3 lg:hidden" />}
           </div>
         </aside>
       </div>

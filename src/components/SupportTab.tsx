@@ -5,6 +5,7 @@ import type { AuthUser } from '../graphql/auth'
 import { MY_SUPPORT_UNREAD_QUERY, SUPPORT_TICKET_UPDATED_SUBSCRIPTION } from '../graphql/support'
 import { useSupportPhone } from '../lib/site'
 import { lazyPage } from '../lib/lazyPage'
+import { OPEN_SUPPORT_EVENT, type SupportAbout } from '../lib/navigation'
 import ErrorBoundary, { ErrorScreen } from './ErrorBoundary'
 
 // Only the panel is lazy: the tab itself (unread badge) is in every page.
@@ -26,6 +27,19 @@ type Props = {
 // full screen, closed by the back button like the other sheets.
 export default function SupportTab({ page, isLoggedIn, currentUser, onNavigate }: Props) {
   const [open, setOpen] = useState(false)
+  // « Contacter le support à propos de… » (listing, purchase, receipt,
+  // payment, dispute): opens the tab on a new conversation about it.
+  const [about, setAbout] = useState<(SupportAbout & { nonce: number }) | null>(null)
+  useEffect(() => {
+    const onRequest = (e: Event) => {
+      const detail = (e as CustomEvent<SupportAbout>).detail
+      if (!detail) return
+      setAbout({ ...detail, nonce: Date.now() })
+      setOpen(true)
+    }
+    window.addEventListener(OPEN_SUPPORT_EVENT, onRequest)
+    return () => window.removeEventListener(OPEN_SUPPORT_EVENT, onRequest)
+  }, [])
   const member = isLoggedIn && !currentUser?.isGuest
   const { data, refetch } = useQuery<{ mySupportUnread: number }>(MY_SUPPORT_UNREAD_QUERY, { skip: !member, pollInterval: 120_000 })
   useSubscription(SUPPORT_TICKET_UPDATED_SUBSCRIPTION, { skip: !member, onData: () => void refetch() })
@@ -48,7 +62,7 @@ export default function SupportTab({ page, isLoggedIn, currentUser, onNavigate }
     }
   }, [open])
   // Leaving the page (a link in a reply…) closes it.
-  useEffect(() => { setOpen(false) }, [page])
+  useEffect(() => { setOpen(false); setAbout(null) }, [page])
 
   if (HIDDEN.has(page)) return null
   return (
@@ -74,7 +88,7 @@ export default function SupportTab({ page, isLoggedIn, currentUser, onNavigate }
                 // A panel that fails (chunk gone after a deploy…) stays inside
                 // the panel: the page and the tab keep working.
                 <ErrorBoundary fallback={<SupportError onClose={() => setOpen(false)} />}>
-                  <Suspense fallback={<p className="m-auto text-body-sm text-on-surface-variant">Chargement…</p>}><SupportCenter currentUser={currentUser} onClose={() => setOpen(false)} /></Suspense>
+                  <Suspense fallback={<p className="m-auto text-body-sm text-on-surface-variant">Chargement…</p>}><SupportCenter currentUser={currentUser} onClose={() => setOpen(false)} about={about} /></Suspense>
                 </ErrorBoundary>
               )
               : <LoggedOut onClose={() => setOpen(false)} onLogin={() => onNavigate('auth')} />}

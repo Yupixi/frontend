@@ -21,6 +21,7 @@ arrow_forward ArrowRight
 arrow_outward ExportSquare
 arrow_upward ArrowUp
 article DocumentText
+attach_file Paperclip2
 auto_awesome MagicStar
 autorenew Refresh2
 badge Personalcard

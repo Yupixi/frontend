@@ -29,6 +29,14 @@ export const OPEN_HELP_EVENT = 'yupixi:open-help'
 export const requestOpenHelp = (slug = '') =>
   window.dispatchEvent(new CustomEvent<string>(OPEN_HELP_EVENT, { detail: slug }))
 
+// « Contacter le support à propos de… »: opens the « Support » tab on a new
+// conversation with that object of the member already attached.
+export const OPEN_SUPPORT_EVENT = 'yupixi:open-support'
+export type SupportAbout = { kind: 'LISTING' | 'DEAL' | 'PAYMENT' | 'DISPUTE' | 'CONVERSATION'; id: string }
+
+export const requestSupport = (about: SupportAbout) =>
+  window.dispatchEvent(new CustomEvent<SupportAbout>(OPEN_SUPPORT_EVENT, { detail: about }))
+
 // Opens an official shop (notification of a followed shop: `/?shop=<slug>`).
 export const OPEN_SHOP_EVENT = 'yupixi:open-shop'
 

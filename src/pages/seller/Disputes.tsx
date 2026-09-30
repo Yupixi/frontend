@@ -1,4 +1,5 @@
 import EmptyState from '../../components/EmptyState'
+import SupportAboutButton from '../../components/SupportAboutButton'
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -178,7 +179,10 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
           <div className="mt-3"><DisputeTimeline d={d} perspective="SELLER" /></div>
         </div>
 
-        <ResponsePanel key={d.id + d.status} d={d} onDone={onDone} />
+        <div className="flex min-w-0 flex-col gap-3">
+          <ResponsePanel key={d.id + d.status} d={d} onDone={onDone} />
+          <SupportAboutButton about={{ kind: 'DISPUTE', id: d.id }} what="ce litige" />
+        </div>
       </div>
     </section>
   )
