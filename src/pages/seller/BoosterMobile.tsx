@@ -61,7 +61,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
   return (
     <div className="flex flex-col gap-4 pb-6">
       {/* Credits banner */}
-      <section className="rounded-2xl bg-surface-container-low p-4">
+      <section data-tour="boost-credits" className="rounded-2xl bg-surface-container-low p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5 text-label-md text-on-surface"><Icon name="rocket_launch" size={18} className="text-primary" /> Boost &amp; Visibilité</span>
           <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary-fixed px-2.5 py-1 text-label-sm text-primary"><Icon name="stars" size={14} /> {creditsLabel(credits)} restant{credits > 1 ? 's' : ''}</span>
@@ -83,7 +83,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
 
       {/* Selected listing */}
       {listing ? (
-        <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+        <section data-tour="boost-listing" className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <div className="flex items-center justify-between gap-2">
             <span className="text-label-sm uppercase text-on-surface-variant">Article sélectionné</span>
             {live.length > 0 && (
@@ -121,7 +121,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
       )}
 
       {/* Packs */}
-      <div className="mt-2 flex items-center justify-between">
+      <div data-tour="boost-packs" className="mt-2 flex items-center justify-between">
         <h2 className="m-0 text-headline-sm text-on-surface">Formules disponibles</h2>
         <span className="text-label-sm text-on-surface-variant">Durée garantie</span>
       </div>

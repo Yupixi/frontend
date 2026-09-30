@@ -30,6 +30,7 @@ import PaymentLogo from '../../components/PaymentLogo'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
 import { useLists } from '../../lib/lists'
 import { useRules } from '../../lib/rules'
+import HelpLink from '../../components/HelpLink'
 
 const TITLE_MAX = 80
 const DRAFT_KEY = 'dilchap_listing_draft'
@@ -589,7 +590,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               {!isEditing && <span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Enregistrement auto activé</span>}
             </div>
             <h1 className="m-0 hidden text-headline-lg text-on-surface lg:block">{isEditing ? "Modifier l'annonce" : 'Déposer une annonce'}</h1>
-            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant lg:block">Vendez vos articles rapidement{noCommission ? ", sans commission cachée, et recevez l'intégralité de vos gains." : '.'}</p>
+            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant lg:block">Vendez vos articles rapidement{noCommission ? ", sans commission cachée, et recevez l'intégralité de vos gains." : '.'} <HelpLink article="vendre-un-article" className="ml-1 align-middle" /></p>
           </div>
           {hhmm && !isEditing && (
             <span className="hidden items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface lg:flex"><Icon name="bookmark" size={17} /> Brouillon sauvegardé ({hhmm})</span>
@@ -600,7 +601,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="mb-4 lg:hidden">
           <div className="mb-2 flex items-center justify-between text-label-md">
             <span className="text-on-surface">Étape {step + 1} / {MOBILE_STEPS.length} · <span className="text-primary">{MOBILE_STEPS[step]}</span></span>
-            {hhmm && !isEditing && <span className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="bookmark" size={14} /> Brouillon enregistré à {hhmm}</span>}
+            {hhmm && !isEditing ? <span className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="bookmark" size={14} /> Brouillon enregistré à {hhmm}</span> : step === 0 && <HelpLink article="vendre-un-article" />}
           </div>
           {/* 24px-high hit area around each 6px bar, so past steps are tappable. */}
           <div className="flex gap-1.5">

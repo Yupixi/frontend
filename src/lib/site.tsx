@@ -78,7 +78,7 @@ function setMeta(attr: 'name' | 'property', key: string, value: string) {
 }
 
 // Pages that set their own tab title (usePageTitle).
-const OWN_TITLE = ['listing-detail', 'shop', 'seller-profile']
+const OWN_TITLE = ['listing-detail', 'shop', 'seller-profile', 'help']
 
 // Browser tab title, description and share tags from « Réglages du site »,
 // when the visitor moves to another page. The first page's come from the

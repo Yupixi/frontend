@@ -20,6 +20,7 @@
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "dompurify": "^3.4.13",
+    "driver.js": "^1.8.0",
     "graphql": "^17.0.2",
     "graphql-ws": "^6.2.1",
     "libphonenumber-js": "^1.13.14",

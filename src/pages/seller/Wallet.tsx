@@ -7,6 +7,7 @@ import Price from '../../components/Price'
 import BuyCreditsSheet from '../../components/BuyCreditsSheet'
 import Credits from '../../components/Credits'
 import PaymentLogo, { PAYMENT_BRANDS, PaymentLogos } from '../../components/PaymentLogo'
+import HelpLink from '../../components/HelpLink'
 import { AccountLayout } from '../account/AccountLayout'
 import {
   CREDIT_PACKS_QUERY, MY_WALLET_QUERY, MY_WALLET_TRANSACTIONS_QUERY,
@@ -163,7 +164,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2 md:mb-4 md:gap-3">
             <div>
               <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Acheter des crédits</h2>
-              <p className="m-0 text-body-sm text-on-surface-variant">Packs avec crédits offerts, ou <button onClick={() => setBuying('')} className="cursor-pointer border-none bg-transparent p-0 text-body-sm font-semibold text-primary underline">la quantité de votre choix</button>.</p>
+              <p className="m-0 text-body-sm text-on-surface-variant">Packs avec crédits offerts, ou <button onClick={() => setBuying('')} className="cursor-pointer border-none bg-transparent p-0 text-body-sm font-semibold text-primary underline">la quantité de votre choix</button>. <HelpLink article="acheter-des-credits" className="ml-1 align-middle" /></p>
             </div>
             {country?.payments !== false && <div className="hidden items-center gap-2 text-label-sm text-on-surface-variant md:flex">
               Paiement mobile : <PaymentLogos size={26} />

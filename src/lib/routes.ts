@@ -5,7 +5,7 @@
 
 export type RoutePage =
   | 'home' | 'listing-detail' | 'seller-profile' | 'shop' | 'shops' | 'categories'
-  | 'search' | 'flash-offers' | 'legal' | 'auth'
+  | 'search' | 'flash-offers' | 'legal' | 'auth' | 'help'
 
 export type Route = {
   page: RoutePage | 'account'
@@ -15,6 +15,8 @@ export type Route = {
   legalSlug?: string
   campaignSlug?: string
   category?: string
+  // Centre d’aide: an article's key ('' = the help centre's home).
+  helpSlug?: string
 }
 
 // URL-safe words from a title: "Télé Samsung 55\"" → "tele-samsung-55"
@@ -53,6 +55,7 @@ export function pathFor(page: string, s: Omit<Route, 'page'> & { searchTerm?: st
     case 'flash-offers': return s.campaignSlug ? `/bonnes-affaires/${enc(s.campaignSlug)}` : '/bonnes-affaires'
     case 'legal': return s.legalSlug ? `/legal/${enc(s.legalSlug)}` : '/'
     case 'auth': return '/connexion'
+    case 'help': return s.helpSlug ? `/aide/${enc(s.helpSlug)}` : '/aide'
     default: return '/compte'
   }
 }
@@ -75,6 +78,7 @@ export function parsePath(pathname: string): Route | null {
   if (head === 'bonnes-affaires') return { page: 'flash-offers', campaignSlug: key ?? '' }
   if (head === 'legal' && key) return { page: 'legal', legalSlug: key }
   if (head === 'connexion') return { page: 'auth' }
+  if (head === 'aide') return { page: 'help', helpSlug: key ?? '' }
   if (head === 'compte') return { page: 'account' }
   return null
 }

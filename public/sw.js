@@ -1,6 +1,6 @@
 // Bump on every deploy that changes cached assets — old-named caches are
 // swept in `activate`.
-const VERSION = 'v16'
+const VERSION = 'v17'
 
 // Set by the app (see src/lib/activeConversation.ts) whenever a conversation
 // thread mounts/unmounts on screen — lets the push handler below know not
@@ -203,9 +203,15 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// Help centre screenshots (/aide/…) keep their names when re-captured: not
+// cache-first, they go through the network-first branch below.
 function isStaticAsset(url) {
-  return url.origin === self.location.origin && /\.(js|css|png|jpg|jpeg|svg|webp|woff2?|ico)$/i.test(url.pathname)
+  return url.origin === self.location.origin && !url.pathname.startsWith('/aide/') && /\.(js|css|png|jpg|jpeg|svg|webp|woff2?|ico)$/i.test(url.pathname)
 }
+
+// A missing file comes back as the app shell (SPA fallback, status 200):
+// never keep that under a file's name.
+const isShellFallback = (response) => (response.headers.get('content-type') || '').includes('text/html')
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
@@ -251,7 +257,7 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached
         try {
           const response = await fetch(request)
-          if (response && response.status === 200) {
+          if (response && response.status === 200 && !isShellFallback(response)) {
             const cache = await caches.open(STATIC_CACHE)
             cache.put(request, response.clone()).catch(() => {})
           }
@@ -271,7 +277,7 @@ self.addEventListener('fetch', (event) => {
     (async () => {
       try {
         const response = await fetch(request)
-        if (response && response.status === 200 && url.origin === self.location.origin) {
+        if (response && response.status === 200 && url.origin === self.location.origin && !isShellFallback(response)) {
           const cache = await caches.open(PAGE_CACHE)
           cache.put(request, response.clone()).catch(() => {})
         }
