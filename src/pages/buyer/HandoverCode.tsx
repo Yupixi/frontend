@@ -132,7 +132,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                     <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={22} className="text-tertiary" /> Checklist avant de payer</h2>
                     <span className="rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">{checks.filter(Boolean).length}/{CHECKS.length} validés</span>
                   </div>
-                  <HelpLink article="remise-en-main-propre" className="mt-1" />
+                  <HelpLink article="rendez-vous-et-code-de-remise" className="mt-1" />
                   <div className="mt-3 flex flex-col gap-2">
                     {CHECKS.map((c, i) => (
                       <label key={c.title} className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3">

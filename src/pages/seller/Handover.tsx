@@ -188,7 +188,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
 
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                   <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={22} className="text-tertiary" /> Contrôle physique conjoint</h2>
-                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Cochez les points vérifiés ensemble pour sceller la vente : <HelpLink article="remise-en-main-propre" className="ml-1 align-middle" /></p>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Cochez les points vérifiés ensemble pour sceller la vente : <HelpLink article="rendez-vous-et-code-de-remise" className="ml-1 align-middle" /></p>
                   <div className="mt-3 flex flex-col gap-2">
                     {CHECKS.map((c, i) => (
                       <CheckRow key={c} checked={checks[i]} onChange={v => setChecks(prev => prev.map((x, j) => (j === i ? v : x)))} className="bg-surface-container-low">{c}</CheckRow>
