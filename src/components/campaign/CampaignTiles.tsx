@@ -162,7 +162,7 @@ function DealsRail({ c, renderCard }: { c: LiveCampaign; renderCard: (l: RemoteL
 // Home « Promotions en cours »: phone carousel / desktop featured card +
 // the others, then the main campaign's best deals and its banner.
 export function HomePromotions({ desktop, renderCard }: { desktop: boolean; renderCard: (l: RemoteListing) => React.ReactNode }) {
-  const campaigns = useLiveCampaigns()
+  const campaigns = useLiveCampaigns().filter(c => c.featuredOnHome !== false)
   const [active, setActive] = useState(0)
   const track = useRef<HTMLDivElement>(null)
   if (!campaigns.length) return null

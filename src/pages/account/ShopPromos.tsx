@@ -11,7 +11,7 @@ import {
   CREATE_SHOP_POST_MUTATION, CREATE_SHOP_SALE_MUTATION, END_SHOP_SALE_MUTATION, JOIN_CAMPAIGN_MUTATION, MY_SHOP_LISTINGS_QUERY,
   MY_SHOP_PROMOS_QUERY, MY_SHOP_QUERY, PROMO_STATE_LABEL, SAVE_SHOP_BUNDLE_MUTATION, STOP_SHOP_BUNDLE_MUTATION, DELETE_SHOP_BUNDLE_MUTATION,
   UPDATE_SHOP_SALE_MUTATION, WITHDRAW_CAMPAIGN_ENTRY_MUTATION,
-  type BundleTier, type MyShopData, type OpenCampaign, type PromoItem, type PromoState, type ShopListing, type ShopPromos, type ShopSale, type ShopBundle, type ShopPost,
+  type BundleTier, type CampaignAction, type MyShopData, type OpenCampaign, type PromoItem, type PromoState, type ShopListing, type ShopPromos, type ShopSale, type ShopBundle, type ShopPost,
 } from '../../graphql/shops'
 import { uploadImages } from '../../lib/upload'
 import { formatNumber } from '../../lib/format'
@@ -38,7 +38,7 @@ function StatePill({ state }: { state: PromoState }) {
 }
 
 function EntryPill({ status }: { status: PromoItem['status'] }) {
-  const [cls, label] = status === 'APPROVED' ? ['bg-tertiary-soft text-tertiary', 'Acceptée'] : status === 'REJECTED' ? ['bg-primary-fixed text-primary', 'Refusée'] : status === 'AWAITING_PAYMENT' ? ['bg-amber-100 text-amber-800', 'À régler'] : ['bg-surface-container text-on-surface-variant', 'En attente']
+  const [cls, label] = status === 'APPROVED' ? ['bg-tertiary-soft text-tertiary', 'Acceptée'] : status === 'REJECTED' ? ['bg-primary-fixed text-primary', 'Refusée'] : status === 'AWAITING_PAYMENT' ? ['bg-amber-100 text-amber-800', 'À régler'] : status === 'WAITLISTED' ? ['bg-amber-100 text-amber-800', 'Liste d’attente'] : ['bg-surface-container text-on-surface-variant', 'En attente']
   return <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${cls}`}>{label}</span>
 }
 
@@ -151,7 +151,7 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
   )
   if (!shopData || (loading && !data)) return layout(<p className="text-body-md text-on-surface-variant">Chargement…</p>)
   if (!official) return layout(
-    <Empty icon="storefront" title="Réservé aux Boutiques officielles" text="Soldes, campagnes Dilchap, offres groupées et annonces aux abonnés sont inclus dans l’abonnement Boutique officielle." action={<button onClick={() => onNavigate('seller-shop')} className="mt-2 flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="storefront" size={18} /> Ma Boutique officielle</button>} />,
+    <Empty icon="storefront" title="Réservé aux Boutiques officielles" text="Soldes, offres groupées et annonces aux abonnés sont inclus dans l’abonnement Boutique officielle. Les campagnes Dilchap ont leur propre page, avec les conditions de chacune." action={<div className="mt-2 flex flex-wrap justify-center gap-2"><button onClick={() => onNavigate('seller-shop')} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="storefront" size={18} /> Ma Boutique officielle</button><button onClick={() => onNavigate('seller-campaigns')} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container px-4 text-label-md text-on-surface"><Icon name="campaign" size={18} /> Campagnes Dilchap</button></div>} />,
   )
   const d = data!
   const done = () => { setEditor(null); void refetch() }
@@ -225,7 +225,7 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
 
     <div className="mt-4">
       {tab === 'sales' && <SalesTab sales={d.myShopSales} onCreate={() => setEditor('sale')} onEdit={sale => setEditor({ sale })} onRelaunch={sale => setEditor({ sale, relaunch: true })} onChanged={() => void refetch()} />}
-      {tab === 'campaigns' && <CampaignsTab campaigns={d.openShopCampaigns} onJoin={(c, retry) => setEditor({ campaign: c, retry })} onChanged={() => void refetch()} />}
+      {tab === 'campaigns' && <CampaignsTab campaigns={d.openShopCampaigns} onJoin={(c, retry) => setEditor({ campaign: c, retry })} onChanged={() => void refetch()} onNavigate={onNavigate} />}
       {tab === 'bundles' && <BundlesTab bundles={d.myShopBundles} listings={listings} onCreate={() => setEditor('bundle')} onEdit={(bundle, reactivate) => setEditor({ bundle, reactivate })} onChanged={() => void refetch()} />}
       {tab === 'posts' && <PostsTab posts={d.myShopPosts} quota={d.myShopPostQuota} onCreate={() => setEditor('post')} onDuplicate={post => setEditor({ post })} onOpenShop={() => onOpenShop(shop!.slug)} />}
     </div>
@@ -442,7 +442,63 @@ function DueBox({ c, onPay }: { c: OpenCampaign, onPay: () => void }) {
   )
 }
 
-export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: OpenCampaign[], onJoin: (c: OpenCampaign, retry?: PromoItem) => void, onChanged: () => void }) {
+// Every condition of a campaign, as set by the Dilchap team (folded after
+// the first few), and the team's own terms.
+export function CampaignConditions({ c }: { c: OpenCampaign }) {
+  const [all, setAll] = useState(false)
+  const lines = c.sellerConditions
+  const shown = all ? lines : lines.slice(0, 4)
+  return (
+    <div className="mt-3 rounded-xl bg-surface-container-low p-3 text-body-sm">
+      <div className="flex items-center gap-2 text-label-md text-on-surface"><Icon name="checklist" size={18} className="shrink-0 text-primary" /> Conditions de participation</div>
+      <ul className="m-0 mt-1.5 list-none space-y-1 p-0 text-on-surface-variant">
+        {shown.map(l => <li key={l} className="flex items-start gap-1.5"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current" /> <span className="min-w-0">{l}</span></li>)}
+      </ul>
+      {lines.length > 4 && <button type="button" onClick={() => setAll(a => !a)} className="mt-1 cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">{all ? 'Voir moins' : `Voir les ${lines.length} conditions`}</button>}
+      {c.sellerTerms && (all || lines.length <= 4) && <div className="rich-text mt-2 text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(c.sellerTerms) }} />}
+    </div>
+  )
+}
+
+const ACTION_BUTTON: Record<CampaignAction, { page: string; icon: string; label: string }> = {
+  BADGE: { page: 'seller-badge', icon: 'verified', label: 'Obtenir un badge' },
+  KYC: { page: 'seller-kyc', icon: 'badge', label: 'Vérifier mon identité' },
+  SHOP: { page: 'seller-shop', icon: 'storefront', label: 'Ouvrir ma Boutique officielle' },
+}
+
+// « Vous pouvez vous inscrire », or exactly what is missing and the button
+// that gets it (the server decides; this only shows its answer).
+export function Eligibility({ c, onNavigate }: { c: OpenCampaign, onNavigate: (p: any) => void }) {
+  if (!c.eligible)
+    return (
+      <div className="mb-2 rounded-xl bg-primary-fixed/50 p-3 text-body-sm">
+        <p className="m-0 flex items-start gap-2 text-on-surface"><Icon name="lock" size={18} className="mt-0.5 shrink-0 text-primary" />
+          <span className="min-w-0">{c.ineligibleMessage && <span className="block">{c.ineligibleMessage}</span>}<b className="font-semibold">Il vous faut : </b>{c.missing.join(' ; ')}.</span>
+        </p>
+        {c.actions.length > 0 && (
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {c.actions.map(a => (
+              <button key={a} onClick={() => onNavigate(ACTION_BUTTON[a].page)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-3 text-label-md text-white"><Icon name={ACTION_BUTTON[a].icon} size={18} /> {ACTION_BUTTON[a].label}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  if (c.blockedReason)
+    return <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-tertiary-soft px-3 py-2.5 text-body-sm text-on-surface"><Icon name="lock_clock" size={18} className="mt-0.5 shrink-0 text-tertiary" /> <span className="min-w-0">{c.blockedReason}</span></p>
+  const left = [
+    c.placesLeft != null ? (c.placesLeft > 0 ? `${c.placesLeft} place${c.placesLeft > 1 ? 's' : ''} restante${c.placesLeft > 1 ? 's' : ''}` : 'Campagne complète : liste d’attente') : '',
+    c.sellerLimitLeft != null ? `vous pouvez inscrire ${c.sellerLimitLeft} annonce${c.sellerLimitLeft > 1 ? 's' : ''}` : '',
+  ].filter(Boolean).join(' · ')
+  return (
+    <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-tertiary-soft px-3 py-2 text-body-sm text-on-surface">
+      <Icon name="check_circle" size={18} fill className="mt-0.5 shrink-0 text-tertiary" />
+      <span className="min-w-0"><b className="font-semibold">Vous pouvez vous inscrire</b>{left && <span className="block text-on-surface-variant">{left}</span>}</span>
+    </p>
+  )
+}
+
+export function CampaignsTab({ campaigns, onJoin, onChanged, onNavigate }: { campaigns: OpenCampaign[], onJoin: (c: OpenCampaign, retry?: PromoItem) => void, onChanged: () => void, onNavigate: (p: any) => void }) {
   const [withdraw] = useMutation(WITHDRAW_CAMPAIGN_ENTRY_MUTATION)
   const [openId, setOpenId] = useState<string | null>(() => campaigns.find(c => c.myItems.length)?.id ?? null)
   const [paying, setPaying] = useState<OpenCampaign | null>(null)
@@ -458,28 +514,23 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
             <div className="flex flex-wrap items-center justify-between gap-2"><span className="whitespace-nowrap rounded-md bg-surface-container px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">Campagne Dilchap</span><span className="flex flex-wrap items-center gap-1.5">{c.earlyAccessUntil && <span className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified" size={13} fill /> Avant-première</span>}<StatePill state={c.state} /></span></div>
             <h3 className="m-0 mt-2 text-headline-sm text-on-surface">{c.name}</h3>
             <p className="m-0 mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="calendar_month" size={15} /> Du {fdate(c.startsAt)} au {fdate(c.endsAt)}</p>
-            <div className="mt-3 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm">
-              <Icon name="percent" size={18} className="mt-0.5 shrink-0 text-primary" />
-              <div className="min-w-0"><div className="text-label-md text-on-surface">Conditions de participation</div><div className="text-on-surface-variant">{c.minDiscountPercent ? `Remise minimale demandée : ${c.minDiscountPercent} % sur chaque article inscrit.` : 'Pas de remise minimale.'} Chaque article est vérifié par l’équipe Dilchap.</div></div>
-            </div>
+            <CampaignConditions c={c} />
             <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">À régler en crédits, seulement pour les articles acceptés.</span>}</span></p>
             {c.description && <div className="rich-text mt-2 text-body-sm text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(c.description) }} />}
             <div className="mt-auto pt-3">
+              <Eligibility c={c} onNavigate={onNavigate} />
               {c.myItems.length > 0 ? (
                 <>
                   <DueBox c={c} onPay={() => setPaying(c)} />
                   <p className="m-0 mb-2 flex items-center gap-1.5 rounded-xl bg-primary-fixed/40 px-3 py-2 text-body-sm text-on-surface"><Icon name="info" size={16} className="shrink-0 text-primary" /> {c.myItems.length} article{c.myItems.length > 1 ? 's' : ''} inscrit{c.myItems.length > 1 ? 's' : ''} : {n(c, 'APPROVED')} actif{n(c, 'APPROVED') > 1 ? 's' : ''}{n(c, 'AWAITING_PAYMENT') ? `, ${n(c, 'AWAITING_PAYMENT')} à régler` : ''}, {n(c, 'PENDING')} en attente, {n(c, 'REJECTED')} refusé{n(c, 'REJECTED') > 1 ? 's' : ''}</p>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <button onClick={() => setOpenId(c.id)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-3 text-label-md text-white"><Icon name="checklist" size={18} /> Gérer mes articles</button>
-                    <button onClick={() => onJoin(c)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="add" size={18} /> Inscrire d’autres articles</button>
+                    <button onClick={() => onJoin(c)} disabled={!c.canJoin} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface disabled:cursor-default disabled:opacity-50"><Icon name="add" size={18} /> Inscrire d’autres articles</button>
                   </div>
                 </>
               ) : (
                 <>
-                  <p className="m-0 mb-2 flex items-center gap-1.5 rounded-xl bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant"><Icon name="radio_button_unchecked" size={16} className="shrink-0" /> Vous n’êtes pas encore inscrit</p>
-                  {c.canJoin
-                    ? <button onClick={() => onJoin(c)} className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary text-label-md text-white"><Icon name="add_circle" size={18} /> Participer à cette campagne</button>
-                    : <p className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft px-3 py-2.5 text-body-sm text-on-surface"><Icon name="lock_clock" size={18} className="mt-0.5 shrink-0 text-tertiary" /> <span>Avant-première réservée aux Vendeurs certifiés. Ouverture à tous les vendeurs le {c.earlyAccessUntil ? new Date(c.earlyAccessUntil).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—'}.</span></p>}
+                  {c.canJoin && <button onClick={() => onJoin(c)} className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary text-label-md text-white"><Icon name="add_circle" size={18} /> {c.placesLeft === 0 && c.waitlist ? 'S’inscrire sur la liste d’attente' : 'S’inscrire'}</button>}
                 </>
               )}
             </div>
@@ -507,14 +558,14 @@ export function CampaignsTab({ campaigns, onJoin, onChanged }: { campaigns: Open
                 </div>
                 <div className="flex shrink-0 items-center gap-2 sm:justify-end">
                   <EntryPill status={i.status} />
-                  {i.status === 'REJECTED' && <button onClick={() => onJoin(detail, i)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name="replay" size={16} /> Réajuster la remise</button>}
-                  {i.status === 'PENDING' && <button onClick={() => void withdraw({ variables: { entryId: i.entryId } }).then(onChanged)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface"><Icon name="close" size={16} /> Retirer</button>}
+                  {i.status === 'REJECTED' && detail.canJoin && <button onClick={() => onJoin(detail, i)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name="replay" size={16} /> Réajuster la remise</button>}
+                  {(i.status === 'PENDING' || i.status === 'WAITLISTED') && <button onClick={() => void withdraw({ variables: { entryId: i.entryId } }).then(onChanged)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface"><Icon name="close" size={16} /> Retirer</button>}
                 </div>
                 {i.status === 'REJECTED' && i.rejectReason && <p className="m-0 flex basis-full items-start gap-1 text-body-sm text-primary"><Icon name="warning" size={15} className="mt-0.5 shrink-0" /> <span>{i.rejectReason}</span></p>}
               </div>
             ))}
           </div>
-          <button onClick={() => onJoin(detail)} className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add_circle" size={18} /> Inscrire un article supplémentaire</button>
+          {detail.canJoin && <button onClick={() => onJoin(detail)} className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add_circle" size={18} /> Inscrire un article supplémentaire</button>}
         </section>
       )}
       <WalletPaySheet
@@ -535,18 +586,20 @@ export function CampaignJoin({ campaign, retry, listings, aisles, onDone, onCanc
   const [error, setError] = useState('')
   const [join, { loading }] = useMutation(JOIN_CAMPAIGN_MUTATION)
   const min = campaign.minDiscountPercent ?? 0
-  const ok = picks.length > 0 && picks.every(p => p.percent >= min)
+  const ok = picks.length > 0 && picks.every(p => p.percent >= min) && (campaign.sellerLimitLeft == null || picks.length <= campaign.sellerLimitLeft)
   return (
     <>
       <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> Retour aux campagnes</button>
       <h1 className="m-0 text-headline-lg text-on-surface">{retry ? 'Réajuster la remise' : `Participer à « ${campaign.name} »`}</h1>
-      <p className="m-0 mt-1 text-body-md text-on-surface-variant">Du {fdate(campaign.startsAt)} au {fdate(campaign.endsAt)}. Vos articles sont vérifiés par l’équipe Dilchap avant la campagne.</p>
+      <p className="m-0 mt-1 text-body-md text-on-surface-variant">Du {fdate(campaign.startsAt)} au {fdate(campaign.endsAt)}. {campaign.validation === 'AUTO' ? 'Vos articles sont acceptés dès l’inscription s’ils remplissent les conditions.' : 'Vos articles sont vérifiés par l’équipe Dilchap avant la campagne.'}{campaign.sellerLimitLeft != null ? ` Vous pouvez inscrire ${campaign.sellerLimitLeft} article${campaign.sellerLimitLeft > 1 ? 's' : ''}.` : ''}{campaign.placesLeft === 0 && campaign.waitlist ? ' La campagne est complète : vos articles iront sur la liste d’attente.' : ''}</p>
+      <CampaignConditions c={campaign} />
       <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-surface-lowest p-3 text-body-sm shadow-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(campaign)}</span>{(campaign.entryFee > 0 || campaign.listingFee > 0) && <span className="text-on-surface-variant">Rien à payer maintenant : vous réglerez uniquement les articles acceptés{campaign.entryFeePaid ? ' (participation déjà réglée)' : ''}.</span>}</span></p>
       {retry?.rejectReason && <p className="m-0 mt-3 flex items-start gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="warning" size={17} className="shrink-0" /> Motif du refus : {retry.rejectReason}</p>}
       <section className={`${card} mt-4`}>
         <ItemPicker listings={listings.filter(l => !already.has(l.id))} aisles={aisles} picks={picks} onChange={setPicks} minPercent={campaign.minDiscountPercent} />
       </section>
-      {error && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {error}</p>}
+      {campaign.sellerLimitLeft != null && picks.length > campaign.sellerLimitLeft && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {campaign.sellerLimitLeft} article{campaign.sellerLimitLeft > 1 ? 's' : ''} au maximum pour cette campagne.</p>}
+      {error && <p className="m-0 mt-3 flex items-start gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} className="mt-0.5 shrink-0" /> <span className="min-w-0">{error}</span></p>}
       <div className="mt-4 flex gap-3 lg:justify-end">
         <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">Annuler</button>
         <button disabled={!ok || loading} onClick={() => void join({ variables: { input: { campaignId: campaign.id, items: picks.map(p => ({ listingId: p.listingId, discountPercent: p.percent })) } } }).then(onDone).catch((e: Error) => setError(e.message))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="send" size={19} /> {loading ? 'Envoi…' : `Soumettre ${picks.length} article${picks.length > 1 ? 's' : ''}`}</button>
