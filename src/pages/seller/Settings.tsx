@@ -102,6 +102,8 @@ const deviceLabel = (ua: string | null) => {
 // once per 30 days; brand names are protected).
 function HandleCard({ handle, changedAt, onSaved }: { handle: string | null | undefined; changedAt: string | null | undefined; onSaved: () => void }) {
   const [v, setV] = useState(handle ?? '')
+  // Saved (or refetched): the field shows the address now in use.
+  useEffect(() => { setV(handle ?? '') }, [handle])
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [copied, setCopied] = useState(false)
   const [update, { loading }] = useMutation(UPDATE_SELLER_PROFILE_MUTATION)
@@ -408,7 +410,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 </div>
               </Card>
 
-              {me && <HandleCard key={`h-${me.handle ?? ''}`} handle={me.handle} changedAt={me.handleChangedAt} onSaved={() => void refetch()} />}
+              {me && <HandleCard key={`h-${me.id}`} handle={me.handle} changedAt={me.handleChangedAt} onSaved={() => void refetch()} />}
 
               {me && <SellerPageCard key={me.id} me={me} certified={currentUser?.badge === 'CERTIFIED'} onSaved={() => void refetch()} onUpgrade={() => onNavigate('seller-badge')} />}
 
