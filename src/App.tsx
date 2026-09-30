@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
+import SupportTab from './components/SupportTab'
 import PaymentReturn from './components/PaymentReturn'
 import EmailVerifyPrompt, { verifyPromptDismissed } from './components/EmailVerifyPrompt'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
@@ -849,6 +850,7 @@ export default function App() {
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
+        <SupportTab page={accountPage} isLoggedIn={isLoggedIn} currentUser={currentUser} onNavigate={navigate} />
         <PaymentReturn isLoggedIn={isLoggedIn} />
         {verifyPrompt}
         <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
@@ -885,6 +887,7 @@ export default function App() {
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
+      <SupportTab page={page} isLoggedIn={isLoggedIn} currentUser={currentUser} onNavigate={navigate} />
       <PaymentReturn isLoggedIn={isLoggedIn} />
       {onboarding}
     </div>
