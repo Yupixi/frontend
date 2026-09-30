@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
-import { handoverProof } from '../../lib/format'
+import { handoverByCode, handoverHeadline, handoverProof } from '../../lib/format'
 import PrintableReceipt from '../../components/PrintableReceipt'
 import { ListingCard } from '../../components/ListingCard'
 import { AccountLayout } from '../account/AccountLayout'
@@ -31,7 +31,8 @@ const TAGS = ['Article 100% conforme', 'Ponctuel au rendez-vous', 'Vendeur très
 const RATING_LABEL = ['', 'Décevant', 'Moyen', 'Correct', 'Très bien', 'Remise parfaite']
 
 // "Remise validée par code sécurisé" / "Reçu de remise réussie": receipt
-// of a concluded hand-over + review of the seller + similar items.
+// of a concluded hand-over + review of the seller + similar items. The
+// code is only mentioned when it was really used (handoverByCode).
 export default function Receipt({ orderId, onNavigate, onSelectListing, favorites, onToggleFavorite, currentUser, onLogout }: Props) {
   const noCommission = useNoCommissionClaims()
   const { data, loading } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId })
@@ -82,9 +83,9 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
             {/* Mobile hero */}
             <div className="mb-4 text-center md:hidden">
               <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-tertiary text-white ring-8 ring-tertiary-soft"><AnimatedIcon name="check" fallback="check_circle" size={40} playOnMount /></span>
-              <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified_user" size={14} /> Handshake scellé & sécurisé</span>
+              <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified_user" size={14} /> {handoverByCode(o.meetup) ? 'Remise scellée par code' : 'Vente conclue'}</span>
               <h1 className="m-0 mt-2 text-headline-md text-on-surface">Félicitations pour votre achat !</h1>
-              <p className="m-0 text-body-md text-on-surface-variant">La remise en main propre a été scellée avec succès.</p>
+              <p className="m-0 text-body-md text-on-surface-variant">{handoverByCode(o.meetup) ? 'La remise en main propre a été scellée avec succès.' : 'La vente est conclue.'}</p>
             </div>
             {/* Desktop header */}
             <div className="mb-5 hidden flex-wrap items-center justify-between gap-3 md:flex print:flex">
@@ -92,7 +93,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={24} /></span>
                 <div>
                   <span className="rounded-full bg-tertiary-soft px-2.5 py-0.5 text-label-sm uppercase text-tertiary">Transaction clôturée • Paiement confirmé</span>
-                  <h1 className="m-0 mt-1 text-headline-lg text-on-surface">Remise validée par code sécurisé</h1>
+                  <h1 className="m-0 mt-1 text-headline-lg text-on-surface">{handoverHeadline(o.meetup)}</h1>
                 </div>
               </div>
               <div className="flex gap-2 print:hidden">
@@ -106,7 +107,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                 <div className="hidden flex-wrap items-center justify-between gap-2 bg-tertiary px-5 py-4 text-white md:flex print:flex">
                   <div className="flex items-center gap-3">
                     <Icon name="verified" size={26} />
-                    <div><div className="text-label-sm uppercase text-white/80">Code de remise validé</div><div className="text-headline-sm">Remise effectuée avec succès !</div></div>
+                    <div><div className="text-label-sm uppercase text-white/80">{handoverByCode(o.meetup) ? 'Code de remise validé' : handoverHeadline(o.meetup)}</div><div className="text-headline-sm">Remise effectuée avec succès !</div></div>
                   </div>
                   <span className="rounded-full bg-white/15 px-2.5 py-1 text-label-sm uppercase">Transaction 100% locale</span>
                 </div>

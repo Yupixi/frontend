@@ -75,7 +75,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                   <div className={`text-headline-sm ${confirmed ? 'text-tertiary' : 'text-on-surface'}`}>{done ? 'Remise effectuée' : frozen ? 'Commande en médiation' : confirmed ? 'Rendez-vous confirmé & sécurisé' : o.meetup ? 'Rendez-vous à confirmer' : 'Rendez-vous à planifier'}</div>
                   <div className="text-body-sm text-on-surface-variant">{done ? 'La vente a été clôturée avec votre code.' : frozen ? 'Aucun paiement ni remise avant la décision du médiateur.' : confirmed ? "Protection acheteur active jusqu'à la remise." : 'Proposez un lieu et une heure au vendeur dans le chat.'}</div>
                 </div>
-                {confirmed && !done && <span className="hidden items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm text-tertiary sm:flex"><span className="h-2 w-2 rounded-full bg-tertiary" /> {frozen ? 'Code gelé' : 'Handshake actif'}</span>}
+                {confirmed && !done && <span className="hidden items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm text-tertiary sm:flex"><span className="h-2 w-2 rounded-full bg-tertiary" /> {frozen ? 'Code gelé' : 'Code de remise actif'}</span>}
               </section>}
 
               {/* Code — three unambiguous states: frozen by a dispute, not issued
@@ -99,7 +99,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div className={`text-label-sm uppercase ${done ? 'text-primary' : 'text-white/80 md:text-primary'}`}>Protocole de libération</div>
-                    <h2 className="m-0 text-headline-md">Code Handshake Secret</h2>
+                    <h2 className="m-0 text-headline-md">Code de remise secret</h2>
                     <p className={`m-0 text-body-sm ${done ? 'text-on-surface-variant' : 'text-white/80 md:text-on-surface-variant'}`}>La remise physique valide la vente.</p>
                   </div>
                   {o.meetup && <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-label-sm ${done ? 'bg-surface-container text-on-surface' : 'bg-white/15 md:bg-surface-container'}`}><Icon name="schedule" size={15} /> RDV {new Date(o.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}

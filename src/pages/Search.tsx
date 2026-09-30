@@ -267,7 +267,7 @@ export default function SearchPage({
           <BadgeCheck size={19} className="text-tertiary" />
           <span className="flex flex-col">
             <span className="text-label-md text-on-surface">Vendeurs vérifiés</span>
-            <span className="text-label-sm text-tertiary">Identité vérifiée par Dilchap</span>
+            <span className="text-label-sm text-tertiary">Badge Compte vérifié ou Vendeur certifié</span>
           </span>
         </span>
         <input type="checkbox" className="peer sr-only" checked={verifiedOnly} onChange={() => setVerifiedOnly(v => !v)} />
