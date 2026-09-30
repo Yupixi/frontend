@@ -20,7 +20,7 @@ export const MY_WALLET_TRANSACTIONS_QUERY = gql`
 
 export type CreditPack = { pack: string; label: string; tagline: string; price: number; credits: number; bonusCredits: number; perks: string[] }
 export type WalletSummary = { credits: number; totalSales: number; salesCount: number; confirmationRate: number | null; averageRating: number; reviewsCount: number }
-export type WalletTxType = 'CREDIT_PURCHASE' | 'CREDIT_SPENT' | 'BOOST_PURCHASE' | 'SALE' | 'SHOP_SUBSCRIPTION' | 'BADGE_SUBSCRIPTION' | 'CAMPAIGN_ENTRY' | 'WALLET_TOPUP' | 'WALLET_ADJUSTMENT' | 'CREDIT_GRANT'
+export type WalletTxType = 'CREDIT_PURCHASE' | 'CREDIT_SPENT' | 'BOOST_PURCHASE' | 'SALE' | 'SHOP_SUBSCRIPTION' | 'BADGE_SUBSCRIPTION' | 'CAMPAIGN_ENTRY' | 'WALLET_TOPUP' | 'WALLET_ADJUSTMENT' | 'CREDIT_GRANT' | 'CREDIT_REFUND'
 export type WalletTx = { id: string; type: WalletTxType; amount: number; credits: number; label: string; method: string | null; createdAt: string; listing: { id: string; title: string } | null }
 
 // ─── Commandes & Envois ─────────────────────────────────────────────────────

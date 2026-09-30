@@ -23,16 +23,18 @@ type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLo
 const PAGE_SIZE = 5
 const FILTERS: { key: string, label: string, types?: WalletTxType[] }[] = [
   { key: 'all', label: 'Tous' },
-  { key: 'in', label: 'Crédits reçus', types: ['CREDIT_PURCHASE', 'CREDIT_GRANT', 'WALLET_ADJUSTMENT', 'WALLET_TOPUP'] },
+  { key: 'in', label: 'Crédits reçus', types: ['CREDIT_PURCHASE', 'CREDIT_GRANT', 'CREDIT_REFUND', 'WALLET_ADJUSTMENT', 'WALLET_TOPUP'] },
   { key: 'out', label: 'Dépenses', types: ['CREDIT_SPENT', 'BOOST_PURCHASE', 'SHOP_SUBSCRIPTION', 'BADGE_SUBSCRIPTION', 'CAMPAIGN_ENTRY'] },
   { key: 'sales', label: 'Ventes déclarées', types: ['SALE'] },
 ]
 const METHOD_LABEL: Record<string, string> = { ...METHOD_LABELS, CASH: 'Espèces en main propre', CREDITS: 'Crédits', DIRECT: 'Remise directe', WALLET: 'Crédits', DILCHAP: 'Équipe Dilchap' }
-const TX_META: Record<WalletTxType, { icon: string, box: string, status: string, statusCls: string }> = {
+// A type the backend adds later falls back to FALLBACK_META (never a blank page).
+const TX_META: Partial<Record<WalletTxType, { icon: string, box: string, status: string, statusCls: string }>> = {
   BOOST_PURCHASE: { icon: 'rocket_launch', box: 'bg-primary-fixed text-primary', status: 'Actif', statusCls: 'bg-tertiary-soft text-tertiary' },
   CREDIT_SPENT: { icon: 'bolt', box: 'bg-surface-container text-on-surface', status: 'Validé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
   CREDIT_PURCHASE: { icon: 'add_card', box: 'bg-tertiary-soft text-tertiary', status: 'Payé', statusCls: 'bg-tertiary-soft text-tertiary' },
   CREDIT_GRANT: { icon: 'redeem', box: 'bg-tertiary-soft text-tertiary', status: 'Offert', statusCls: 'bg-tertiary-soft text-tertiary' },
+  CREDIT_REFUND: { icon: 'undo', box: 'bg-tertiary-soft text-tertiary', status: 'Remboursé', statusCls: 'bg-tertiary-soft text-tertiary' },
   SALE: { icon: 'handshake', box: 'bg-tertiary-soft text-tertiary', status: 'Encaissé', statusCls: 'bg-tertiary-soft text-tertiary' },
   SHOP_SUBSCRIPTION: { icon: 'storefront', box: 'bg-primary-fixed text-primary', status: 'Payé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
   BADGE_SUBSCRIPTION: { icon: 'verified', box: 'bg-verified-soft text-verified', status: 'Payé', statusCls: 'bg-surface-container-high text-on-surface-variant' },
@@ -40,6 +42,7 @@ const TX_META: Record<WalletTxType, { icon: string, box: string, status: string,
   WALLET_TOPUP: { icon: 'add_card', box: 'bg-tertiary-soft text-tertiary', status: 'Crédité', statusCls: 'bg-tertiary-soft text-tertiary' },
   WALLET_ADJUSTMENT: { icon: 'tune', box: 'bg-surface-container text-on-surface', status: 'Ajusté', statusCls: 'bg-surface-container-high text-on-surface-variant' },
 }
+const FALLBACK_META = { icon: 'bolt', box: 'bg-surface-container text-on-surface', status: 'Validé', statusCls: 'bg-surface-container-high text-on-surface-variant' }
 
 // "Porte-monnaie & Solde publicitaire" mockup. Dilchap never holds sale
 // funds: sales are declarative (deals concluded in chat). Credits, bought
@@ -238,7 +241,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           <div className="flex flex-col gap-2 px-3 md:hidden">
             {txs.length === 0 && <EmptyState icon="empty-wallet" fallback="account_balance_wallet" tone="neutral" title="Aucune opération pour le moment" text="Vos achats de crédits et vos boosts apparaîtront ici." />}
             {txs.map(t => {
-              const meta = TX_META[t.type]
+              const meta = TX_META[t.type] ?? FALLBACK_META
               return (
                 <div key={t.id} className="flex items-start gap-3 rounded-xl bg-surface-lowest p-3">
                   <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${meta.box}`}><Icon name={meta.icon} size={19} /></span>
@@ -268,7 +271,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
               <tbody>
                 {txs.length === 0 && <tr><td colSpan={6} className="px-5 py-8 text-center text-on-surface-variant">Aucune opération pour le moment.</td></tr>}
                 {txs.map(t => {
-                  const meta = TX_META[t.type]
+                  const meta = TX_META[t.type] ?? FALLBACK_META
                   return (
                     <tr key={t.id} className="border-0 border-t border-solid border-outline-variant">
                       <td className="px-5 py-4 text-on-surface-variant">{new Date(t.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
