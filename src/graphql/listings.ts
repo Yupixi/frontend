@@ -140,8 +140,8 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
 `
 
 export const SIMILAR_LISTINGS_QUERY = gql`
-  query SimilarListings($listingId: String!, $limit: Float) {
-    similarListings(listingId: $listingId, limit: $limit) {
+  query SimilarListings($listingId: String!, $limit: Float, $countryCode: String) {
+    similarListings(listingId: $listingId, limit: $limit, countryCode: $countryCode) {
       id
       title
       description

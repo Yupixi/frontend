@@ -11,3 +11,9 @@ export const SAVE_PUSH_SUBSCRIPTION_MUTATION = gql`
     savePushSubscription(input: $input)
   }
 `
+
+export const REMOVE_PUSH_SUBSCRIPTION_MUTATION = gql`
+  mutation RemovePushSubscription($endpoint: String!) {
+    removePushSubscription(endpoint: $endpoint)
+  }
+`

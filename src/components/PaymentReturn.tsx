@@ -19,21 +19,42 @@ export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
   })
   const [intent, setIntent] = useState<PaymentIntent | null>(null)
   const [open, setOpen] = useState(!!id)
+  // The status could not be read (network): the sheet says so instead of
+  // closing without a word.
+  const [unreachable, setUnreachable] = useState(false)
 
   useEffect(() => {
     if (!id || !isLoggedIn) return
     let stop = false
     let tries = 0
+    let failures = 0
+    let timer: number | undefined
     const tick = () => {
       void client.query<{ payment: PaymentIntent }>({ query: PAYMENT_QUERY, variables: { id }, fetchPolicy: 'network-only' }).then(({ data }) => {
         if (stop || !data) return
+        failures = 0
+        setUnreachable(false)
         setIntent(data.payment)
-        if (OPEN.includes(data.payment.status) && ++tries < 60) window.setTimeout(tick, 3000)
-        else try { sessionStorage.removeItem(PENDING_PAYMENT_KEY) } catch { /* ignore */ }
-      }).catch(() => setOpen(false))
+        if (OPEN.includes(data.payment.status) && ++tries < 60) timer = window.setTimeout(tick, 3000)
+        else {
+          try { sessionStorage.removeItem(PENDING_PAYMENT_KEY) } catch { /* ignore */ }
+          // Credits added (or not): the balance and history shown anywhere
+          // come from the server again, not from the cache (queries on
+          // screen refetch at once, the others on their next display).
+          client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'myWallet' })
+          client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'myWalletTransactions' })
+          client.cache.gc()
+        }
+      }).catch(() => {
+        if (stop) return
+        // A dropped connection on the way back from the operator: keep
+        // checking a while, slower each time.
+        if (++failures <= 5) timer = window.setTimeout(tick, 3000 * 2 ** (failures - 1))
+        else setUnreachable(true)
+      })
     }
     tick()
-    return () => { stop = true }
+    return () => { stop = true; window.clearTimeout(timer) }
   }, [id, isLoggedIn, client])
 
   const close = () => {
@@ -54,7 +75,8 @@ export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
     }>
       <div className="flex flex-col items-center gap-3 py-4 text-center">
         <PaymentLogo method={method} size={56} />
-        {waiting && <><Icon name="progress_activity" size={32} className="animate-spin text-primary" /><p className="m-0 text-headline-sm text-on-surface">Confirmation du paiement…</p><p className="m-0 text-body-sm text-on-surface-variant">Nous attendons la confirmation de l’opérateur.</p></>}
+        {waiting && unreachable && <><Icon name="wifi_off" size={32} className="text-on-surface-variant" /><p className="m-0 text-headline-sm text-on-surface">Vérification impossible</p><p className="m-0 text-body-sm text-on-surface-variant">Nous n’arrivons pas à joindre Dilchap. Votre solde sera mis à jour dès la confirmation de l’opérateur.</p></>}
+        {waiting && !unreachable && <><Icon name="progress_activity" size={32} className="animate-spin text-primary" /><p className="m-0 text-headline-sm text-on-surface">Confirmation du paiement…</p><p className="m-0 text-body-sm text-on-surface-variant">Nous attendons la confirmation de l’opérateur.</p></>}
         {intent?.status === 'SUCCESS' && <><span className="flex h-14 w-14 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={36} fill /></span><p className="m-0 text-headline-sm text-on-surface">Paiement confirmé</p><p className="m-0 text-body-sm text-on-surface-variant">{intent.credits ? `${intent.credits} crédits ajoutés à votre solde.` : 'Vos crédits sont ajoutés à votre solde.'} Réf. {intent.reference}</p></>}
         {intent?.status === 'FAILED' && <><span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={36} /></span><p className="m-0 text-headline-sm text-on-surface">Paiement non abouti</p><p className="m-0 text-body-sm text-on-surface-variant">{intent.failedReason ?? 'Aucun montant n’a été débité.'}</p></>}
         {intent?.status === 'FULFILMENT_FAILED' && <><Icon name="support_agent" size={36} className="text-primary" /><p className="m-0 text-headline-sm text-on-surface">Paiement reçu</p><p className="m-0 text-body-sm text-on-surface-variant">L’activation a échoué ; notre équipe s’en occupe. Réf. {intent.reference}</p></>}

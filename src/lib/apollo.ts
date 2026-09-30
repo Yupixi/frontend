@@ -63,6 +63,26 @@ let refreshPromise: Promise<string | null> | null = null
 export async function refreshAccessToken(): Promise<string | null> {
   // The cookie is invisible from here: the stored (possibly expired) access
   // token is what says there's a session worth refreshing.
+  if (!getAccessToken() && !getLegacyRefreshToken()) return null
+  const refused = getAccessToken()
+  // Two tabs refreshing at once spent the same refresh token twice: the
+  // server refused the second and every tab got signed out. One refresh at a
+  // time across tabs; a tab that waited takes the token the other one got.
+  const locks = (navigator as Navigator & { locks?: LockManager }).locks
+  if (!locks?.request) return doRefresh()
+  try {
+    return await locks.request('dilchap-token-refresh', async () => {
+      const current = getAccessToken()
+      const exp = current ? tokenExpiry(current) : null
+      if (current && current !== refused && (exp == null || exp * 1000 > Date.now() + 10_000)) return current
+      return doRefresh()
+    })
+  } catch {
+    return doRefresh()
+  }
+}
+
+async function doRefresh(): Promise<string | null> {
   const legacy = getLegacyRefreshToken()
   if (!getAccessToken() && !legacy) return null
 
@@ -90,7 +110,17 @@ export async function refreshAccessToken(): Promise<string | null> {
     storeGuestSecret(tokens.guestSecret)
     return tokens.accessToken as string
   } catch {
+    // Network error, API restarting (502 page): the session is still good.
     return null
+  }
+}
+
+// The refresh could not reach the server (the tokens are still stored): the
+// caller sees a network error, not « unauthenticated », and keeps the session.
+export class RefreshUnavailableError extends Error {
+  constructor() {
+    super('Session refresh unavailable (network)')
+    this.name = 'RefreshUnavailableError'
   }
 }
 
@@ -104,7 +134,7 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
     refreshPromise.then((newToken) => {
       refreshPromise = null
       if (!newToken) {
-        observer.error(error)
+        observer.error(getAccessToken() ? new RefreshUnavailableError() : error)
         return
       }
       operation.setContext(({ headers }: { headers?: Record<string, string> }) => ({

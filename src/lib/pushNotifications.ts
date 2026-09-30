@@ -1,6 +1,7 @@
-import { apolloClient } from './apollo'
+import { print } from 'graphql'
+import { apolloClient, GRAPHQL_URL } from './apollo'
 import { registerServiceWorker } from './serviceWorker'
-import { VAPID_PUBLIC_KEY_QUERY, SAVE_PUSH_SUBSCRIPTION_MUTATION } from '../graphql/push'
+import { VAPID_PUBLIC_KEY_QUERY, SAVE_PUSH_SUBSCRIPTION_MUTATION, REMOVE_PUSH_SUBSCRIPTION_MUTATION } from '../graphql/push'
 
 // VAPID public keys are base64url — the Push API wants a raw Uint8Array.
 function urlBase64ToUint8Array(base64url: string): Uint8Array {
@@ -93,6 +94,32 @@ export async function subscribeToPush(requestPermission = false): Promise<PushSu
     return 'subscribed'
   } catch {
     return 'error'
+  }
+}
+
+// Sign-out (or an expired session): this device stops receiving the
+// account's notifications — messages, offers, disputes of the previous member
+// on a shared phone. The server forgets the endpoint when we still hold the
+// session's token (sent as is: this must not go through the refresh logic
+// of the Apollo link, which could sign the member back in); the browser
+// subscription is dropped either way. A next sign-in subscribes again.
+export async function unsubscribeFromPush(accessToken: string | null): Promise<void> {
+  try {
+    if (!('serviceWorker' in navigator)) return
+    const registration = await navigator.serviceWorker.getRegistration()
+    const subscription = await registration?.pushManager?.getSubscription()
+    if (!subscription) return
+    if (accessToken) {
+      await fetch(GRAPHQL_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ query: print(REMOVE_PUSH_SUBSCRIPTION_MUTATION), variables: { endpoint: subscription.endpoint } }),
+      }).catch(() => undefined)
+    }
+    await subscription.unsubscribe()
+  } catch {
+    // Best effort: signing out never waits on this.
   }
 }
 

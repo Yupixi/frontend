@@ -15,6 +15,30 @@
     <meta name="apple-mobile-web-app-title" content="Dilchap" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
     <title><!-- figma:title --></title>
+    <script>
+      // Stale page during a deploy: this HTML may name the previous build's
+      // entry script or stylesheet, now gone (404) — a blank page. Reload
+      // (at most 3 times in 2 minutes, a little later each time) until the
+      // new build's HTML comes back. Stands down once the app has started
+      // (src/main.tsx); lazy chunks are handled by src/lib/lazyPage.ts.
+      (function () {
+        var KEY = 'dilchap_stale_build_reload'
+        addEventListener('error', function (e) {
+          var el = e.target
+          if (window.__dilchapBooted || !el || !el.tagName) return
+          var url = el.tagName === 'SCRIPT' ? el.src : el.tagName === 'LINK' ? el.href : ''
+          if (!url || url.indexOf('/assets/') < 0) return
+          var now = Date.now(), log
+          try {
+            log = JSON.parse(sessionStorage.getItem(KEY) || '[]').filter(function (t) { return now - t < 120000 })
+            if (log.length >= 3) return
+            log.push(now)
+            sessionStorage.setItem(KEY, JSON.stringify(log))
+          } catch (_) { return }
+          setTimeout(function () { location.reload() }, (log.length - 1) * 10000)
+        }, true)
+      })()
+    </script>
     <!-- figma:head-end -->
   </head>
   <body>

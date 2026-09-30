@@ -1,8 +1,10 @@
 import { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition } from 'react'
-import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
+import { useApolloClient, useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
+import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
 import SupportTab from './components/SupportTab'
+import ErrorBoundary from './components/ErrorBoundary'
 import PaymentReturn from './components/PaymentReturn'
 import EmailVerifyPrompt, { verifyPromptDismissed } from './components/EmailVerifyPrompt'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
@@ -12,7 +14,7 @@ import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
-import { subscribeToPush, type PushSubscriptionResult } from './lib/pushNotifications'
+import { subscribeToPush, unsubscribeFromPush, type PushSubscriptionResult } from './lib/pushNotifications'
 import Home, { type SearchPreset } from './pages/Home'
 import { lazyPage, preloadPages } from './lib/lazyPage'
 import { useSeo } from './lib/site'
@@ -280,8 +282,20 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const [fetchMe] = useLazyQuery<{ me: AuthUser }>(ME_QUERY)
+  const client = useApolloClient()
+  // Always asked to the server: a cached `me` could be the previous
+  // account's (shared phone, sign-out then sign-in in the same tab).
+  const [fetchMe] = useLazyQuery<{ me: AuthUser }>(ME_QUERY, { fetchPolicy: 'network-only' })
   const [logoutMutation] = useMutation<{ logout: boolean }>(LOGOUT_MUTATION)
+
+  // Account whose data the Apollo cache holds. Another account signing in
+  // (guest → member, or after an expired session) starts from an empty cache.
+  const cacheOwner = useRef<string | null>(null)
+  const acceptUser = (me: AuthUser) => {
+    if (cacheOwner.current && cacheOwner.current !== me.id) void client.resetStore().catch(() => undefined)
+    cacheOwner.current = me.id
+    setCurrentUser(me)
+  }
 
   // A silent token refresh can fail well after mount (token expired/revoked
   // mid-session) — apollo.ts clears storage but has no way to touch React
@@ -290,6 +304,11 @@ export default function App() {
     const onSessionExpired = () => {
       setIsLoggedIn(false)
       setCurrentUser(null)
+      // Nothing of that account stays on screen or on this device: its
+      // cached data (identity, balance, favorites…) and its notifications.
+      cacheOwner.current = null
+      void client.clearStore().catch(() => undefined)
+      void unsubscribeFromPush(null)
     }
     window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
@@ -304,32 +323,53 @@ export default function App() {
 
   // Restore the session on load: a stored access token doesn't mean it's
   // still valid, so confirm with `me` (the Apollo error link transparently
-  // refreshes an expired token before this rejects).
+  // refreshes an expired token before this rejects). Only the server saying
+  // so ends the session: a network error (weak signal, API redeploying) keeps
+  // it and tries again, with a growing delay or as soon as the device is
+  // back online.
   useEffect(() => {
     if (!getAccessToken()) return
     let cancelled = false
-    fetchMe()
-      .then(({ data }) => {
-        if (cancelled) return
-        if (data?.me) {
-          setCurrentUser(data.me)
-          setIsLoggedIn(true)
-          // Refresh an existing subscription after restoring the session.
-          // A new permission prompt must be triggered from the settings UI.
-          void subscribeToPush(false).then(result => { if (!cancelled) setPushStatus(result) })
-        } else {
-          clearTokens()
-          setIsLoggedIn(false)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          clearTokens()
-          setIsLoggedIn(false)
-        }
-      })
+    let done = false
+    let attempt = 0
+    let retry: ReturnType<typeof setTimeout> | undefined
+    const restore = () => {
+      clearTimeout(retry)
+      fetchMe()
+        .then(({ data }) => {
+          if (cancelled) return
+          done = true
+          if (data?.me) {
+            acceptUser(data.me)
+            setIsLoggedIn(true)
+            // Refresh an existing subscription after restoring the session.
+            // A new permission prompt must be triggered from the settings UI.
+            void subscribeToPush(false).then(result => { if (!cancelled) setPushStatus(result) })
+          } else {
+            clearTokens()
+            setIsLoggedIn(false)
+          }
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return
+          // Refresh refused (apollo.ts cleared the tokens), or the server
+          // answered with an error: signed out.
+          if (!getAccessToken() || CombinedGraphQLErrors.is(error)) {
+            done = true
+            clearTokens()
+            setIsLoggedIn(false)
+            return
+          }
+          retry = setTimeout(restore, Math.min(30_000, 2_000 * 2 ** attempt++))
+        })
+    }
+    const onOnline = () => { if (!done && !cancelled) restore() }
+    window.addEventListener('online', onOnline)
+    restore()
     return () => {
       cancelled = true
+      clearTimeout(retry)
+      window.removeEventListener('online', onOnline)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -465,7 +505,7 @@ export default function App() {
     const state: NavState = {
       page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
     }
-    sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state))
+    try { sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state)) } catch { /* storage blocked: no restore after a reload */ }
   }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug])
 
   type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string; helpSlug?: string }
@@ -672,7 +712,7 @@ export default function App() {
   // to catch up after tokens are already stored.
   const handleAuthenticated = () => {
     setIsLoggedIn(true)
-    void fetchMe().then(({ data }) => data?.me && setCurrentUser(data.me))
+    void fetchMe().then(({ data }) => { if (data?.me) acceptUser(data.me) }, () => undefined)
     // Permission must be requested by a direct click, not after the async login.
     setPushDismissed(false)
     void subscribeToPush(false).then(setPushStatus)
@@ -710,13 +750,24 @@ export default function App() {
   }
 
   const logout = () => {
+    // This device stops receiving the account's notifications (needs the
+    // token, taken before it is cleared).
+    const pushDone = unsubscribeFromPush(getAccessToken())
     // Best-effort: revoke the session server-side and clear the refresh
     // cookie. Local state is cleared regardless of the result.
-    void logoutMutation({ variables: { refreshToken: getLegacyRefreshToken() } }).catch(() => undefined)
+    const revoked = logoutMutation({ variables: { refreshToken: getLegacyRefreshToken() } }).catch(() => undefined)
     clearTokens()
     setIsLoggedIn(false)
     setCurrentUser(null)
+    cacheOwner.current = null
     replacePage('home')
+    // Empty the Apollo cache (identity, balance, favorites, conversations…)
+    // so the next account never sees them — once the logout request is on
+    // its way (clearing the store cancels requests in flight), at most 3 s.
+    const settled = Promise.allSettled([revoked, pushDone])
+    void Promise.race([settled, new Promise(r => setTimeout(r, 3000))])
+      .then(() => client.clearStore())
+      .catch(() => undefined)
   }
 
   const renderPage = () => {
@@ -755,20 +806,28 @@ export default function App() {
   // default case (the dashboard) and was never actually reachable.
   // Sign-in is a full-screen step (Stitch mobile "Connexion & Inscription"),
   // without the storefront header, bottom nav and footer around it.
+  // What the page shows: a page that failed to render gets another chance
+  // as soon as the visitor goes elsewhere (page or item), see ErrorBoundary.
+  const pageKey = [page, selectedListingId, selectedSellerId, shopKey, campaignSlug, legalSlug, helpSlug, categoryFilter, searchTerm, selectedOrderId, selectedDisputeId].join('|')
+
   if (page === 'auth') {
     const close = () => (window.history.length > 1 ? window.history.back() : navigate('home'))
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
-        <Auth
-          onNavigate={navigate}
-          onClose={close}
-          onLogin={() => {
-            handleAuthenticated()
-            // Replace the auth entry so "back" doesn't reopen the login form.
-            replacePage(authReturn && authReturn !== 'auth' ? authReturn : 'home')
-            setAuthReturn(null)
-          }}
-        />
+        {/* No Suspense here on purpose: while its chunk loads, the page the
+            visitor comes from stays up (navigation is a transition). */}
+        <ErrorBoundary resetKey={pageKey} fullScreen>
+          <Auth
+            onNavigate={navigate}
+            onClose={close}
+            onLogin={() => {
+              handleAuthenticated()
+              // Replace the auth entry so "back" doesn't reopen the login form.
+              replacePage(authReturn && authReturn !== 'auth' ? authReturn : 'home')
+              setAuthReturn(null)
+            }}
+          />
+        </ErrorBoundary>
       </div>
     )
   }
@@ -853,7 +912,10 @@ export default function App() {
     })()
     return (
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
-        <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
+        {/* Only the page: the Support tab, banners… stay mounted. */}
+        <ErrorBoundary resetKey={pageKey} fullScreen>
+          <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
+        </ErrorBoundary>
         <SupportTab page={accountPage} isLoggedIn={isLoggedIn} currentUser={currentUser} onNavigate={navigate} />
         <PaymentReturn isLoggedIn={isLoggedIn} />
         {verifyPrompt}
@@ -882,7 +944,9 @@ export default function App() {
         onLocationChange={changeLocation}
         onOpenLegal={openLegal}
       >
-        <Suspense fallback={<PageFallback />}>{renderPage()}</Suspense>
+        <ErrorBoundary resetKey={pageKey}>
+          <Suspense fallback={<PageFallback />}>{renderPage()}</Suspense>
+        </ErrorBoundary>
       </Layout>
       <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}

@@ -2,9 +2,18 @@
 // is published (or the draft reset): a refresh or a closed tab no longer
 // asks for them again. localStorage holds the text draft but can't take
 // images (a few MB each); IndexedDB stores the files as they are.
+import { sessionUserId } from './auth'
+
 const DB = 'dilchap_drafts'
 const STORE = 'files'
-const KEY = 'listing_photos'
+// Drafts belong to the account that wrote them (a shared phone: the next
+// member never sees, nor publishes, someone else's text and photos).
+const LEGACY_PHOTOS_KEY = 'listing_photos'
+const LEGACY_TEXT_KEY = 'dilchap_listing_draft'
+const owner = () => sessionUserId() ?? 'anonymous'
+const photosKey = () => `${LEGACY_PHOTOS_KEY}:${owner()}`
+// localStorage key of the text draft (see PostListing).
+export const listingDraftKey = () => `${LEGACY_TEXT_KEY}:${owner()}`
 
 type Stored = { name: string; type: string; lastModified: number; blob: Blob }
 
@@ -29,11 +38,13 @@ function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<
 // Unavailable storage (private mode, quota) only means photos aren't kept.
 export function saveDraftPhotos(files: File[]): Promise<void> {
   const rows: Stored[] = files.map(f => ({ name: f.name, type: f.type, lastModified: f.lastModified, blob: f }))
-  return run<unknown>('readwrite', s => (rows.length ? s.put(rows, KEY) : s.delete(KEY)) as IDBRequest<unknown>).then(() => undefined, () => undefined)
+  const key = photosKey()
+  return run<unknown>('readwrite', s => (rows.length ? s.put(rows, key) : s.delete(key)) as IDBRequest<unknown>).then(() => undefined, () => undefined)
 }
 
 export function loadDraftPhotos(): Promise<File[]> {
-  return run<Stored[] | undefined>('readonly', s => s.get(KEY)).then(
+  dropLegacyDraft()
+  return run<Stored[] | undefined>('readonly', s => s.get(photosKey())).then(
     rows => (rows ?? []).map(r => new File([r.blob], r.name, { type: r.type, lastModified: r.lastModified })),
     () => [],
   )
@@ -41,4 +52,13 @@ export function loadDraftPhotos(): Promise<File[]> {
 
 export function clearDraftPhotos(): Promise<void> {
   return saveDraftPhotos([])
+}
+
+// Drafts saved before they were per account: nobody can tell whose they are.
+let legacyDropped = false
+function dropLegacyDraft() {
+  if (legacyDropped) return
+  legacyDropped = true
+  try { localStorage.removeItem(LEGACY_TEXT_KEY) } catch { /* storage blocked */ }
+  void run<unknown>('readwrite', s => s.delete(LEGACY_PHOTOS_KEY) as IDBRequest<unknown>).catch(() => undefined)
 }

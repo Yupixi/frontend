@@ -1,11 +1,14 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useQuery, useSubscription } from '@apollo/client/react'
 import Icon from './Icon'
 import type { AuthUser } from '../graphql/auth'
 import { MY_SUPPORT_UNREAD_QUERY, SUPPORT_TICKET_UPDATED_SUBSCRIPTION } from '../graphql/support'
 import { useSupportPhone } from '../lib/site'
+import { lazyPage } from '../lib/lazyPage'
+import ErrorBoundary, { ErrorScreen } from './ErrorBoundary'
 
-const SupportCenter = lazy(() => import('./SupportCenter'))
+// Only the panel is lazy: the tab itself (unread badge) is in every page.
+const SupportCenter = lazyPage(() => import('./SupportCenter'))
 
 // Pages where the tab would sit on a form's own bottom bar, or is the page.
 const HIDDEN = new Set(['support', 'auth', 'seller-post', 'seller-edit'])
@@ -67,12 +70,30 @@ export default function SupportTab({ page, isLoggedIn, currentUser, onNavigate }
           <div className="absolute inset-0 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />
           <div className="safe-pt relative flex h-full w-full flex-col overflow-hidden bg-surface-lowest lg:h-[min(680px,calc(100dvh-2rem))] lg:w-[400px] lg:rounded-2xl lg:border lg:border-solid lg:border-outline-variant/60 lg:shadow-2xl animate-[slideUp_0.25s_cubic-bezier(0.16,1,0.3,1)]">
             {member
-              ? <Suspense fallback={<p className="m-auto text-body-sm text-on-surface-variant">Chargement…</p>}><SupportCenter currentUser={currentUser} onClose={() => setOpen(false)} /></Suspense>
+              ? (
+                // A panel that fails (chunk gone after a deploy…) stays inside
+                // the panel: the page and the tab keep working.
+                <ErrorBoundary fallback={<SupportError onClose={() => setOpen(false)} />}>
+                  <Suspense fallback={<p className="m-auto text-body-sm text-on-surface-variant">Chargement…</p>}><SupportCenter currentUser={currentUser} onClose={() => setOpen(false)} /></Suspense>
+                </ErrorBoundary>
+              )
               : <LoggedOut onClose={() => setOpen(false)} onLogin={() => onNavigate('auth')} />}
           </div>
         </div>
       )}
     </>
+  )
+}
+
+function SupportError({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-0 border-b border-solid border-outline-variant/60 px-4 py-3">
+        <span className="flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="support_agent" size={20} className="text-primary" /> Support Dilchap</span>
+        <button type="button" onClick={onClose} aria-label="Fermer le support" className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant"><Icon name="close" size={19} /></button>
+      </div>
+      <div className="flex-1"><ErrorScreen error={null} compact /></div>
+    </div>
   )
 }
 

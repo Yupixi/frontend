@@ -4,7 +4,7 @@ import Icon from '../components/Icon'
 import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, type AuthPayload } from '../graphql/auth'
 import { REQUEST_RECOVERY_MUTATION } from '../graphql/support'
-import { storeAccessToken } from '../lib/auth'
+import { getGuestSecret, storeAccessToken } from '../lib/auth'
 import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
@@ -112,7 +112,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     void register({
-      variables: { input: { fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(), phone: toIntl(form.phone, country), city: form.city || undefined, password: form.password, countryCode: country.code } },
+      variables: { input: { fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(), phone: toIntl(form.phone, country), city: form.city || undefined, password: form.password, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
     }).then(r => r.data && onSuccess(r.data.register)).catch(() => undefined)
   }
   return (
@@ -191,6 +191,10 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
 // priority); WhatsApp stays available as a second way.
 function SupportRecovery({ onBack }: { onBack: () => void }) {
   const phone = useSupportPhone()
+  // A number typed without its dial code is read in the visitor's country
+  // (the server would otherwise take it as Ivorian).
+  const home = useHomeCountry()
+  const country = useMarket() ?? home
   const [form, setForm] = useState({ name: '', contact: '', message: '' })
   const [done, setDone] = useState<{ reference: string } | null>(null)
   const [send, { loading, error }] = useMutation<{ requestAccountRecovery: { reference: string } }>(REQUEST_RECOVERY_MUTATION)
@@ -198,7 +202,7 @@ function SupportRecovery({ onBack }: { onBack: () => void }) {
   const ok = form.name.trim().length >= 2 && form.contact.trim().length >= 6 && form.message.trim().length >= 10
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    void send({ variables: { input: { name: form.name.trim(), message: form.message.trim(), ...(isEmail ? { email: form.contact.trim() } : { phone: form.contact.trim() }) } } })
+    void send({ variables: { input: { name: form.name.trim(), message: form.message.trim(), ...(isEmail ? { email: form.contact.trim() } : { phone: toIntl(form.contact, country) ?? form.contact.trim() }) } } })
       .then(r => r.data && setDone(r.data.requestAccountRecovery))
   }
   return (
