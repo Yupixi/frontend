@@ -68,7 +68,9 @@ export default function RichTextEditor({ content, onChange, placeholder, minHeig
 
   // A value set from outside (saved data loaded after the first render).
   useEffect(() => {
-    if (editor && !editor.isFocused && toHtml(content) !== editor.getHTML() && !(editor.isEmpty && !content)) editor.commands.setContent(toHtml(content), { emitUpdate: false })
+    // A destroyed editor (page restored from a draft, effects replayed) has
+    // no schema left: reading its HTML would blank the page.
+    if (editor && !editor.isDestroyed && !editor.isFocused &&toHtml(content) !== editor.getHTML() && !(editor.isEmpty && !content)) editor.commands.setContent(toHtml(content), { emitUpdate: false })
   }, [editor, content])
 
   if (!editor) return null
