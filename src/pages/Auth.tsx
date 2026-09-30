@@ -266,21 +266,23 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
             </p>
           )}
 
-          {mode !== 'forgot' && (
-            <div className="mt-6 grid grid-cols-2 gap-1 rounded-2xl bg-surface-container-low p-1">
-              {([['login', 'Connexion'], ['register', 'Inscription']] as const).map(([key, label]) => (
-                <button key={key} onClick={() => setMode(key)} className={`flex cursor-pointer items-center justify-center rounded-xl border-none py-2.5 text-label-lg ${mode === key ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+          {mode !== 'forgot' && <h1 className="m-0 mt-6 text-headline-md text-on-surface">{mode === 'login' ? 'Connexion' : 'Créer un compte'}</h1>}
 
           <div className="mt-6">
             {mode === 'login' && <LoginForm onSuccess={success} onForgot={() => setMode('forgot')} />}
             {mode === 'register' && <RegisterForm onSuccess={success} />}
             {mode === 'forgot' && <ForgotPassword onBack={() => setMode('login')} />}
           </div>
+
+          {/* Switch between logging in and signing up, under the form. */}
+          {mode !== 'forgot' && (
+            <div className="mt-4 flex flex-col gap-2">
+              <span className="flex items-center gap-3 text-label-sm text-on-surface-variant"><span className="h-px flex-1 bg-outline-variant" />{mode === 'login' ? 'Pas encore inscrit ?' : 'Déjà inscrit ?'}<span className="h-px flex-1 bg-outline-variant" /></span>
+              <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-solid border-outline-variant bg-surface-lowest py-3.5 text-label-lg text-on-surface hover:bg-surface-container-low">
+                <Icon name={mode === 'login' ? 'person_add' : 'login'} size={19} /> {mode === 'login' ? 'Créer un compte' : 'Se connecter'}
+              </button>
+            </div>
+          )}
 
           {/* Mobile trust strip */}
           <div className="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-surface-container-low p-3 text-center lg:hidden">
