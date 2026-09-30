@@ -98,6 +98,54 @@ const deviceLabel = (ua: string | null) => {
   return { icon: mobile ? 'smartphone' : 'laptop_mac', name: `${os} • ${browser}` }
 }
 
+// Short public address dilchap.com/@handle, saved on its own (changeable
+// once per 30 days; brand names are protected).
+function HandleCard({ handle, changedAt, onSaved }: { handle: string | null | undefined; changedAt: string | null | undefined; onSaved: () => void }) {
+  const [v, setV] = useState(handle ?? '')
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [update, { loading }] = useMutation(UPDATE_SELLER_PROFILE_MUTATION)
+  const host = window.location.host
+  const clean = v.trim().replace(/^@+/, '').toLowerCase()
+  const next = changedAt ? new Date(new Date(changedAt).getTime() + 30 * 86_400_000) : null
+  const locked = !!next && next > new Date()
+  const format = !clean || /^[a-z0-9](?:[a-z0-9_-]{1,28})[a-z0-9]$/.test(clean) ? null : 'Lettres sans accent, chiffres, « _ » ou « - », 3 à 30 caractères.'
+  const link = handle ? `${window.location.origin}/@${handle}` : ''
+  const save = () => {
+    setMsg(null)
+    void update({ variables: { input: { handle: clean } } })
+      .then(() => { setMsg({ ok: true, text: 'Adresse enregistrée : partagez-la à vos clients.' }); onSaved() })
+      .catch((e: Error) => setMsg({ ok: false, text: e.message }))
+  }
+  const copy = async () => {
+    if (!link) return
+    if (navigator.share) { try { await navigator.share({ url: link }) } catch { /* cancelled */ } return }
+    await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <Card id="adresse" icon="link" title="Adresse de votre page" sub="Un lien court à partager à vos clients (WhatsApp, cartes de visite, réseaux).">
+      {handle && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-surface-container-low p-3">
+          <span className="min-w-0 flex-1 break-all text-label-lg text-on-surface">{host}/@{handle}</span>
+          <button type="button" onClick={() => void copy()} className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name={copied ? 'check' : 'content_copy'} size={16} /> {copied ? 'Copié' : 'Copier le lien'}</button>
+        </div>
+      )}
+      <label className="block"><span className="mb-1.5 block text-label-md text-on-surface">Personnaliser</span>
+        <span className="flex h-11 items-center overflow-hidden rounded-xl bg-surface-container-low focus-within:outline focus-within:outline-2 focus-within:outline-primary">
+          <span className="shrink-0 pl-3 text-body-md text-on-surface-variant">{host}/@</span>
+          <input value={v} disabled={locked} onChange={e => setV(e.target.value.replace(/\s/g, '').slice(0, 30))} placeholder="nom-de-votre-boutique" aria-label="Adresse de votre page" className="h-full min-w-0 flex-1 border-none bg-transparent pr-3 text-body-md text-on-surface outline-none disabled:opacity-60" />
+        </span>
+      </label>
+      <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{locked ? `Modifiable à nouveau le ${next!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.` : 'Modifiable une fois tous les 30 jours. L’ancienne adresse continue de mener à votre page. Les noms de marques sont réservés à leurs titulaires.'}</p>
+      {format && <p className="m-0 mt-1 text-body-sm text-primary">{format}</p>}
+      {msg && <p className={`m-0 mt-2 text-body-sm ${msg.ok ? 'text-tertiary' : 'text-primary'}`}>{msg.text}</p>}
+      <div className="mt-3 flex justify-end">
+        <button type="button" disabled={loading || locked || !!format || !clean || clean === handle} onClick={save} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50"><Icon name="save" size={17} /> Enregistrer l’adresse</button>
+      </div>
+    </Card>
+  )
+}
+
 // "Page vendeur personnalisée" ("Vendeur certifié"): cover photo and links
 // shown on the public seller page. Saved on its own.
 function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
@@ -359,6 +407,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   )}
                 </div>
               </Card>
+
+              {me && <HandleCard key={`h-${me.handle ?? ''}`} handle={me.handle} changedAt={me.handleChangedAt} onSaved={() => void refetch()} />}
 
               {me && <SellerPageCard key={me.id} me={me} certified={currentUser?.badge === 'CERTIFIED'} onSaved={() => void refetch()} onUpgrade={() => onNavigate('seller-badge')} />}
 
