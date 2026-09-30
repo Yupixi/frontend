@@ -15,7 +15,7 @@ import {
 } from '../../graphql/shops'
 import { uploadImages } from '../../lib/upload'
 import { formatNumber } from '../../lib/format'
-import { creditsLabel } from '../../components/Credits'
+import { feeText } from '../../lib/campaignFees'
 import type { AuthUser } from '../../graphql/auth'
 import { Claim } from '../../lib/site'
 import RichTextEditor from '../../components/RichTextEditor'
@@ -423,13 +423,8 @@ function SaleEditor({ listings, aisles, onDone, onCancel, followers, sale, relau
 // ─── Dilchap campaigns ────────────────────────────────────────────────────
 
 // "Gratuite", "20 crédits de participation + 5 crédits par article accepté"…
-export const feeText = (c: OpenCampaign) => {
-  const f = creditsLabel
-  if (c.entryFee && c.listingFee) return `${f(c.entryFee)} de participation + ${f(c.listingFee)} par article accepté`
-  if (c.entryFee) return `${f(c.entryFee)} de participation (forfait)`
-  if (c.listingFee) return `${f(c.listingFee)} par article accepté`
-  return 'Participation gratuite'
-}
+// (shared with the public campaign page).
+export { feeText }
 
 function DueBox({ c, onPay }: { c: OpenCampaign, onPay: () => void }) {
   if (c.amountDue <= 0) return null
@@ -498,6 +493,32 @@ export function Eligibility({ c, onNavigate }: { c: OpenCampaign, onNavigate: (p
   )
 }
 
+// « 2 actifs, 1 à régler, 1 en attente de validation, 3 en liste d’attente,
+// 1 refusé » — only the non-empty ones (actifs always).
+const countOf = (c: OpenCampaign, s: PromoItem['status']) => c.myItems.filter(i => i.status === s).length
+export function entryCounts(c: OpenCampaign) {
+  const plural = (k: number, one: string, many: string) => `${k} ${k > 1 ? many : one}`
+  const approved = countOf(c, 'APPROVED'), due = countOf(c, 'AWAITING_PAYMENT'), pending = countOf(c, 'PENDING'), waiting = countOf(c, 'WAITLISTED'), rejected = countOf(c, 'REJECTED')
+  return [
+    plural(approved, 'actif', 'actifs'),
+    due ? `${due} à régler` : '',
+    pending ? `${pending} en attente de validation` : '',
+    waiting ? `${waiting} en liste d’attente` : '',
+    rejected ? plural(rejected, 'refusé', 'refusés') : '',
+  ].filter(Boolean)
+}
+
+// Under « Ma participation »: what happens to the items, by validation mode.
+function participationLine(c: OpenCampaign) {
+  const k = c.myItems.length
+  const items = `${k} article${k > 1 ? 's' : ''} inscrit${k > 1 ? 's' : ''}`
+  const waiting = countOf(c, 'WAITLISTED')
+  const list = waiting ? ` ; ${waiting} en liste d’attente prendr${waiting > 1 ? 'ont' : 'a'} les prochaines places libérées` : ''
+  return c.validation === 'AUTO'
+    ? `${items} : acceptés automatiquement s’ils remplissent les conditions${list}.`
+    : `${items} : vérifiés par l’équipe Dilchap avant d’être mis en avant${list}.`
+}
+
 export function CampaignsTab({ campaigns, onJoin, onChanged, onNavigate }: { campaigns: OpenCampaign[], onJoin: (c: OpenCampaign, retry?: PromoItem) => void, onChanged: () => void, onNavigate: (p: any) => void }) {
   const [withdraw] = useMutation(WITHDRAW_CAMPAIGN_ENTRY_MUTATION)
   const [openId, setOpenId] = useState<string | null>(() => campaigns.find(c => c.myItems.length)?.id ?? null)
@@ -522,7 +543,7 @@ export function CampaignsTab({ campaigns, onJoin, onChanged, onNavigate }: { cam
               {c.myItems.length > 0 ? (
                 <>
                   <DueBox c={c} onPay={() => setPaying(c)} />
-                  <p className="m-0 mb-2 flex items-center gap-1.5 rounded-xl bg-primary-fixed/40 px-3 py-2 text-body-sm text-on-surface"><Icon name="info" size={16} className="shrink-0 text-primary" /> {c.myItems.length} article{c.myItems.length > 1 ? 's' : ''} inscrit{c.myItems.length > 1 ? 's' : ''} : {n(c, 'APPROVED')} actif{n(c, 'APPROVED') > 1 ? 's' : ''}{n(c, 'AWAITING_PAYMENT') ? `, ${n(c, 'AWAITING_PAYMENT')} à régler` : ''}, {n(c, 'PENDING')} en attente, {n(c, 'REJECTED')} refusé{n(c, 'REJECTED') > 1 ? 's' : ''}</p>
+                  <p className="m-0 mb-2 flex items-center gap-1.5 rounded-xl bg-primary-fixed/40 px-3 py-2 text-body-sm text-on-surface"><Icon name="info" size={16} className="shrink-0 text-primary" /> {c.myItems.length} article{c.myItems.length > 1 ? 's' : ''} inscrit{c.myItems.length > 1 ? 's' : ''} : {entryCounts(c).join(', ')}</p>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <button onClick={() => setOpenId(c.id)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-3 text-label-md text-white"><Icon name="checklist" size={18} /> Gérer mes articles</button>
                     <button onClick={() => onJoin(c)} disabled={!c.canJoin} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface disabled:cursor-default disabled:opacity-50"><Icon name="add" size={18} /> Inscrire d’autres articles</button>
@@ -540,11 +561,12 @@ export function CampaignsTab({ campaigns, onJoin, onChanged, onNavigate }: { cam
       {detail && (
         <section className={card}>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0"><h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={20} className="text-primary" /> Ma participation : {detail.name}</h2><p className="m-0 text-body-sm text-on-surface-variant">{detail.myItems.length} article{detail.myItems.length > 1 ? 's' : ''} soumis à l’équipe Dilchap</p></div>
+            <div className="min-w-0"><h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={20} className="text-primary" /> Ma participation : {detail.name}</h2><p className="m-0 text-body-sm text-on-surface-variant">{participationLine(detail)}</p></div>
             <div className="flex flex-wrap gap-1.5">
               <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{n(detail, 'APPROVED')} actif{n(detail, 'APPROVED') > 1 ? 's' : ''}</span>
               {n(detail, 'AWAITING_PAYMENT') > 0 && <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-label-sm text-amber-800">{n(detail, 'AWAITING_PAYMENT')} à régler</span>}
-              <span className="whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{n(detail, 'PENDING')} en attente</span>
+              {(n(detail, 'PENDING') > 0 || detail.validation !== 'AUTO') && <span className="whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{n(detail, 'PENDING')} en attente de validation</span>}
+              {n(detail, 'WAITLISTED') > 0 && <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-label-sm text-amber-800">{n(detail, 'WAITLISTED')} en liste d’attente</span>}
               <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{n(detail, 'REJECTED')} refusé{n(detail, 'REJECTED') > 1 ? 's' : ''}</span>
             </div>
           </div>

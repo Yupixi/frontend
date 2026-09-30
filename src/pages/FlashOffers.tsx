@@ -10,6 +10,8 @@ import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { placeOptions, useLists } from '../lib/lists'
 import { useMarket, useMarketVars } from '../lib/countries'
 import { richHtml } from '../lib/richText'
+import { feeOptions, feeText } from '../lib/campaignFees'
+import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
 
 type FlashOffersProps = {
   // '' = the newest live campaign.
@@ -40,6 +42,9 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
   const slug = campaignSlug || live[0]?.slug || ''
   const { data, loading } = useQuery<{ campaign: CampaignPage | null }>(CAMPAIGN_PAGE_QUERY, { variables: { slug, ...useMarketVars() }, skip: !slug })
   const campaign = data?.campaign && isLive(data.campaign) ? data.campaign : null
+  // A signed-in member sees their own price (the API's, by seller status).
+  const { data: mineData } = useQuery<{ openShopCampaigns: OpenCampaign[] }>(OPEN_CAMPAIGNS_QUERY, { skip: !isLoggedIn || !campaign?.openToShops, fetchPolicy: 'cache-and-network' })
+  const mine = mineData?.openShopCampaigns.find(c => c.id === campaign?.id)
 
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
@@ -95,7 +100,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
   }
 
   const others = live.filter(c => c.id !== campaign.id)
-  const cost = campaign.listingFee + campaign.entryFee
+  const fees = feeOptions({ entryFee: campaign.entryFee, listingFee: campaign.listingFee }, campaign.feeTiers)
   const share = () => {
     const url = `${window.location.origin}/bonnes-affaires/${campaign.slug}`
     if (navigator.share) void navigator.share({ title: campaign.name, url }).catch(() => undefined)
@@ -194,10 +199,23 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
               <p className="m-0 text-label-sm font-bold uppercase tracking-wider text-primary">Espace vendeurs</p>
               <h2 className="m-0 text-headline-sm font-bold text-on-surface">{market ? `Vous vendez à ${market.mainCity} ?` : 'Vous vendez ?'}</h2>
               <p className="m-0 mt-1 max-w-2xl text-body-sm text-on-surface-variant">
-                Participez à « {campaign.name} » et mettez vos articles devant tous les acheteurs de la campagne
-                {cost > 0 ? ` (${[campaign.entryFee ? `${campaign.entryFee} crédits d’inscription` : '', campaign.listingFee ? `${campaign.listingFee} crédits par article` : ''].filter(Boolean).join(' + ')})` : ' — participation gratuite'}
-                {campaign.minDiscountPercent ? `, remise minimale ${campaign.minDiscountPercent} %` : ''}.
+                Participez à « {campaign.name} » et mettez vos articles devant tous les acheteurs de la campagne{campaign.minDiscountPercent ? `, avec une remise d’au moins ${campaign.minDiscountPercent} %` : ''}.
               </p>
+              <div className="mt-2 max-w-2xl rounded-xl bg-surface-container-low px-3 py-2 text-body-sm">
+                {mine ? (
+                  <p className="m-0 text-on-surface"><b className="font-semibold">Votre tarif :</b> {feeText(mine)}{mine.entryFeePaid && mine.entryFee > 0 ? ' (participation déjà réglée)' : ''}</p>
+                ) : fees.single ? (
+                  <p className="m-0 text-on-surface"><b className="font-semibold">Tarif :</b> {feeText(fees.cheapest)}</p>
+                ) : (
+                  <>
+                    <p className="m-0 text-on-surface"><b className="font-semibold">Tarif selon votre statut de vendeur</b>, {fees.cheapest.entryFee + fees.cheapest.listingFee > 0 ? `à partir de ${feeText(fees.cheapest).replace(/^Participation /, '')}` : 'gratuit pour certains statuts'}{isLoggedIn ? '' : ' — connectez-vous pour voir le vôtre'} :</p>
+                    <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-on-surface-variant">
+                      {fees.lines.map(l => <li key={l.label}>{l.label} : {l.text}</li>)}
+                    </ul>
+                  </>
+                )}
+                {(mine ? mine.entryFee + mine.listingFee > 0 : fees.anyPaid) && <p className="m-0 mt-1 text-on-surface-variant">À régler en crédits, uniquement pour les articles acceptés.</p>}
+              </div>
               {campaign.sellerConditions.length > 0 && (
                 <details className="mt-2 max-w-2xl text-body-sm">
                   <summary className="cursor-pointer text-label-md text-primary">Conditions de participation</summary>
