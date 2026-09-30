@@ -843,7 +843,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
             {/* Dilchap campaign, joined and paid on publishing */}
             {publishes && requiresPrice && (
-              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} categoryId={form.categoryId} countryCode={form.countryCode} value={campaignChoice} onChange={setCampaignChoice} />
+              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} categoryId={form.categoryId} subcategoryId={form.subcategoryId || null} condition={form.condition || null} countryCode={form.countryCode} value={campaignChoice} onChange={setCampaignChoice} />
             )}
 
             {/* Exchange */}

@@ -5,7 +5,7 @@ import { gql } from '@apollo/client'
 // (the items themselves come from `listings(filter: { campaignId })`).
 const CAMPAIGN_FIELDS = `
   id name slug description type themeColor startsAt endsAt visuals
-  listingsCount sellersCount maxDiscountPercent
+  listingsCount sellersCount maxDiscountPercent featuredOnHome
   listings { id discountPercent salePrice listing { id title coverImageUrl } }
 `
 
@@ -19,7 +19,7 @@ export const CAMPAIGN_PAGE_QUERY = gql`
   query CampaignPage($slug: String!, $country: String) {
     campaign(slug: $slug, country: $country) {
       ${CAMPAIGN_FIELDS}
-      status shopId openToShops entryFee listingFee minDiscountPercent
+      status shopId openToShops entryFee listingFee minDiscountPercent sellerConditions sellerTerms
       categoryCounts { slug name icon count }
     }
   }
@@ -40,11 +40,16 @@ export type LiveCampaign = {
   id: string; name: string; slug: string; description: string | null; type: CampaignType; themeColor: string | null
   startsAt: string; endsAt: string; visuals: CampaignVisuals | null
   listingsCount: number; sellersCount: number; maxDiscountPercent: number | null
+  // Shown in the home « Promotions en cours » (BO « Visibilité »; the API
+  // already sorts by the BO's home order).
+  featuredOnHome: boolean
   listings: { id: string; discountPercent: number | null; salePrice: number | null; listing: { id: string; title: string; coverImageUrl: string | null } }[]
 }
 
 export type CampaignPage = LiveCampaign & {
   status: string; shopId: string | null; openToShops: boolean; entryFee: number; listingFee: number; minDiscountPercent: number | null
+  // Every condition of participation in plain words, and the team's terms (rich text).
+  sellerConditions: string[]; sellerTerms: string | null
   categoryCounts: { slug: string; name: string; icon: string | null; count: number }[]
 }
 

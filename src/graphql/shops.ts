@@ -224,7 +224,9 @@ export type ShopListing = {
 
 const PROMO_ITEM = 'entryId listingId title coverUrl price discountPercent salePrice promoPrice status rejectReason'
 const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt salesCount salesVolume items { ${PROMO_ITEM} }`
-const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt countryCodes minDiscountPercent state entryFee listingFee entryFeePaid amountDue earlyAccessUntil canJoin myItems { ${PROMO_ITEM} }`
+const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt countryCodes minDiscountPercent state entryFee listingFee entryFeePaid amountDue earlyAccessUntil
+  eligible missing actions blockedReason canJoin sellerConditions sellerTerms ineligibleMessage placesLeft waitlist sellerLimitLeft validation
+  categoryIds subcategoryIds conditions minPrice maxPrice minPhotos myItems { ${PROMO_ITEM} }`
 const BUNDLE_FIELDS = 'id name tiers { minQty percent } scope aisleId aisleName listingIds startsAt endsAt active state listingsCount'
 const POST_FIELDS = 'id title body imageUrl listings { id title price coverUrl } recipients views createdAt'
 
@@ -257,17 +259,32 @@ export type PromoState = 'SCHEDULED' | 'LIVE' | 'ENDED'
 export type PromoItem = {
   entryId: string; listingId: string; title: string; coverUrl: string | null; price: number | null
   discountPercent: number | null; salePrice: number | null; promoPrice: number | null
-  // AWAITING_PAYMENT: accepted in a paid campaign, not paid yet.
-  status: 'PENDING' | 'AWAITING_PAYMENT' | 'APPROVED' | 'REJECTED'; rejectReason: string | null
+  // AWAITING_PAYMENT: accepted in a paid campaign, not paid yet. WAITLISTED:
+  // the campaign was full, it takes the next free place.
+  status: 'PENDING' | 'AWAITING_PAYMENT' | 'APPROVED' | 'REJECTED' | 'WAITLISTED'; rejectReason: string | null
 }
 export type ShopSale = { id: string; name: string; slug: string; startsAt: string; endsAt: string; state: PromoState; notifyFollowers: boolean; followersNotifiedAt: string | null; salesCount: number; salesVolume: number; items: PromoItem[] }
 export type OpenCampaign = { id: string; name: string; slug: string; description: string | null; themeColor: string | null; startsAt: string; endsAt: string; minDiscountPercent: number | null; state: PromoState; myItems: PromoItem[]
-  // Paid participation (F CFA), charged once items are accepted.
+  // Paid participation (credits, this seller's price), charged once items are accepted.
   entryFee: number; listingFee: number; entryFeePaid: boolean; amountDue: number
   // Early access of certified sellers: others can join from this date.
-  earlyAccessUntil: string | null; canJoin: boolean
+  earlyAccessUntil: string | null
+  // The campaign's rules (set by the Dilchap team), checked by the server:
+  // whether this seller qualifies, else what they lack and what gets it.
+  eligible: boolean; missing: string[]; actions: CampaignAction[]
+  // Qualifies but not now (registration dates, early access, own limit, full).
+  blockedReason: string | null; canJoin: boolean
+  // Every condition in plain words, and the team's own terms (rich text).
+  sellerConditions: string[]; sellerTerms: string | null; ineligibleMessage: string | null
+  // Places left (null = no limit), waiting list once full, items this seller may still add.
+  placesLeft: number | null; waitlist: boolean; sellerLimitLeft: number | null
+  validation: 'TEAM' | 'AUTO'
+  // Listing criteria (empty / null = any).
+  categoryIds: string[]; subcategoryIds: string[]; conditions: string[]; minPrice: number | null; maxPrice: number | null; minPhotos: number | null
   // Countries it runs in (empty = every country).
   countryCodes: string[] }
+// What gets a missing status: a paid badge, the identity check, an official shop.
+export type CampaignAction = 'BADGE' | 'KYC' | 'SHOP'
 export type BundleTier = { minQty: number; percent: number }
 export type ShopBundle = { id: string; name: string; tiers: BundleTier[]; scope: 'ALL' | 'AISLE' | 'LISTINGS'; aisleId: string | null; aisleName: string | null; listingIds: string[]; startsAt: string | null; endsAt: string | null; active: boolean; state: PromoState; listingsCount: number }
 export type ShopPost = { id: string; title: string; body: string; imageUrl: string | null; listings: { id: string; title: string; price: number | null; coverUrl: string | null }[]; recipients: number; views: number; createdAt: string }

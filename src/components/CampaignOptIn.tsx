@@ -24,10 +24,14 @@ const dateFr = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day:
 // "Participer à une campagne" in the listing wizard: the Dilchap campaigns
 // this seller may join, what it costs in credits (taken on publishing), the
 // balance, and a way to buy the missing credits without leaving the form.
-export default function CampaignOptIn({ price, currency, categoryId, countryCode, value, onChange, render = body => body }: {
+export default function CampaignOptIn({ price, currency, categoryId, subcategoryId, condition, countryCode, value, onChange, render = body => body }: {
   price: number
-  // Category of the listing: category offers (« Offres & gratuités »).
+  // Category of the listing: category offers (« Offres & gratuités »), and
+  // the campaigns accepting it.
   categoryId?: string | null
+  subcategoryId?: string | null
+  // Condition of the item: campaigns limited to some conditions.
+  condition?: string | null
   // Country of the listing: only the campaigns running there.
   countryCode?: string | null
   currency: string
@@ -51,8 +55,16 @@ export default function CampaignOptIn({ price, currency, categoryId, countryCode
     document.addEventListener('visibilitychange', again)
     return () => { window.removeEventListener('focus', again); document.removeEventListener('visibilitychange', again) }
   }, [refetch])
-  const campaigns = (data?.openShopCampaigns ?? []).filter(c => c.canJoin && c.state !== 'ENDED'
-    && (!countryCode || !c.countryCodes?.length || c.countryCodes.includes(countryCode)))
+  // Only the campaigns this listing can enter (the server checks every rule
+  // again on publishing): open to this seller, a place left, the listing's
+  // country, category, condition and price.
+  const fits = (c: OpenCampaign) =>
+    (!c.categoryIds.length && !c.subcategoryIds.length) || (!!categoryId && c.categoryIds.includes(categoryId)) || (!!subcategoryId && c.subcategoryIds.includes(subcategoryId))
+  const campaigns = (data?.openShopCampaigns ?? []).filter(c => c.canJoin && c.state !== 'ENDED' && c.placesLeft !== 0
+    && (!countryCode || !c.countryCodes?.length || c.countryCodes.includes(countryCode))
+    && fits(c)
+    && (!c.conditions.length || (!!condition && c.conditions.includes(condition)))
+    && (!price || ((c.minPrice == null || price >= c.minPrice) && (c.maxPrice == null || price <= c.maxPrice))))
   // The listing moved to a country the chosen campaign doesn't run in.
   useEffect(() => {
     if (data && value && !campaigns.some(c => c.id === value.campaign.id)) onChange(null)
@@ -91,6 +103,7 @@ export default function CampaignOptIn({ price, currency, categoryId, countryCode
                 <span className="block text-body-sm text-on-surface-variant">
                   {c.state === 'LIVE' ? `En cours jusqu’au ${dateFr(c.endsAt)}` : `Du ${dateFr(c.startsAt)} au ${dateFr(c.endsAt)}`}
                   {c.minDiscountPercent ? ` · remise minimale ${c.minDiscountPercent} %` : ''}
+                  {c.minPhotos ? ` · ${c.minPhotos} photos minimum` : ''}
                 </span>
                 <span className="mt-1 block text-label-md text-on-surface">
                   {quote.percent > 0 ? <>Coût : <s className="font-normal text-on-surface-variant"><Credits n={quote.base} unit={false} /></s> {fee > 0 ? <Credits n={fee} /> : 'gratuit'} <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary">{offerLabel(quote.percent)}</span></> : fee > 0 ? <>Coût : <Credits n={fee} />{!c.entryFeePaid && c.entryFee > 0 && c.listingFee > 0 ? <span className="text-body-sm text-on-surface-variant"> (frais d’entrée + article)</span> : null}</> : 'Participation gratuite'}

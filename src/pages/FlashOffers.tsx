@@ -9,6 +9,7 @@ import { CAMPAIGN_PAGE_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignPage, t
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { placeOptions, useLists } from '../lib/lists'
 import { useMarket, useMarketVars } from '../lib/countries'
+import { richHtml } from '../lib/richText'
 
 type FlashOffersProps = {
   // '' = the newest live campaign.
@@ -197,6 +198,15 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
                 {cost > 0 ? ` (${[campaign.entryFee ? `${campaign.entryFee} crédits d’inscription` : '', campaign.listingFee ? `${campaign.listingFee} crédits par article` : ''].filter(Boolean).join(' + ')})` : ' — participation gratuite'}
                 {campaign.minDiscountPercent ? `, remise minimale ${campaign.minDiscountPercent} %` : ''}.
               </p>
+              {campaign.sellerConditions.length > 0 && (
+                <details className="mt-2 max-w-2xl text-body-sm">
+                  <summary className="cursor-pointer text-label-md text-primary">Conditions de participation</summary>
+                  <ul className="m-0 mt-1.5 list-none space-y-1 p-0 text-on-surface-variant">
+                    {campaign.sellerConditions.map(l => <li key={l} className="flex items-start gap-1.5"><Icon name="check" size={15} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0">{l}</span></li>)}
+                  </ul>
+                  {campaign.sellerTerms && <div className="rich-text mt-2 text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(campaign.sellerTerms) }} />}
+                </details>
+              )}
             </div>
           </div>
           <button
