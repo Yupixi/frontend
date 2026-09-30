@@ -190,7 +190,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                     <div className="flex items-center justify-between gap-2 text-label-sm uppercase text-on-surface-variant">
                       <span><span className="md:hidden">Transaction</span><span className="max-md:hidden">Article concerné</span></span>
                       {disputeIsOpen(d.status)
-                        ? <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-tertiary-soft px-2 py-0.5 normal-case text-tertiary md:hidden"><Icon name="lock" size={13} /> Fonds bloqués</span>
+                        ? <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-tertiary-soft px-2 py-0.5 normal-case text-tertiary md:hidden"><Icon name="gavel" size={13} /> Litige en cours</span>
                         : null}
                       <span className={`rounded bg-surface-container px-1.5 normal-case ${disputeIsOpen(d.status) ? 'max-md:hidden' : ''}`}>{d.listing.category.name}</span>
                     </div>
