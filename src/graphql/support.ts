@@ -10,6 +10,26 @@ export type SupportPriority = 'NORMAL' | 'HIGH' | 'URGENT'
 // CRITICAL).
 export type SupportImportance = 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL'
 
+// « Joindre »: one of the member's objects, as a compact card (title,
+// price, status, date). The server only ever lists and accepts the
+// member's own objects.
+export type SupportObjectKind = 'LISTING' | 'DEAL' | 'PAYMENT' | 'DISPUTE' | 'CONVERSATION'
+export type SupportObjectRef = { kind: SupportObjectKind; id: string }
+export type SupportObjectCard = {
+  kind: SupportObjectKind; id: string; title: string; subtitle: string | null; price: number | null; currency: string
+  status: string; statusLabel: string; date: string; image: string | null
+}
+export type SupportTicketObject = { id: string; kind: SupportObjectKind; targetId: string; snapshot: SupportObjectCard; auto: boolean; createdAt: string }
+export const OBJECT_KINDS: [SupportObjectKind, string, string][] = [
+  ['LISTING', 'Annonces', 'sell'],
+  ['DEAL', 'Achats et ventes', 'handshake'],
+  ['PAYMENT', 'Paiements', 'payments'],
+  ['DISPUTE', 'Litiges', 'gavel'],
+  ['CONVERSATION', 'Conversations', 'forum'],
+]
+export const OBJECT_KIND_LABEL: Record<SupportObjectKind, string> = { LISTING: 'Annonce', DEAL: 'Achat ou vente', PAYMENT: 'Paiement', DISPUTE: 'Litige', CONVERSATION: 'Conversation' }
+export const OBJECT_KIND_ICON = Object.fromEntries(OBJECT_KINDS.map(([k, , icon]) => [k, icon])) as Record<SupportObjectKind, string>
+
 export type SupportTicket = {
   id: string
   reference: string
@@ -25,6 +45,8 @@ export type SupportTicket = {
   createdAt: string
   updatedAt: string
   messages: { id: string; body: string; attachments: string[] | null; readAt: string | null; createdAt: string; adminId: string | null; admin: { fullName: string } | null }[]
+  // Objects the member attached (cards as they were when attached).
+  objects?: SupportTicketObject[]
   // Staff replies not read yet.
   unread: number
 }
@@ -57,4 +79,7 @@ export const MARK_SUPPORT_READ_MUTATION = gql`mutation MarkSupportTicketRead($id
 // Staff replied / changed a ticket: which one (the tab refetches).
 export const SUPPORT_TICKET_UPDATED_SUBSCRIPTION = gql`subscription SupportTicketUpdated { supportTicketUpdated }`
 export const CLOSE_SUPPORT_TICKET_MUTATION = gql`mutation CloseSupportTicket($id: ID!) { closeSupportTicket(id: $id) }`
+export const MY_SUPPORT_ATTACHABLES_QUERY = gql`query MySupportAttachables($kind: SupportObjectKind, $search: String) { mySupportAttachables(kind: $kind, search: $search) }`
+export const MY_SUPPORT_ATTACHABLE_QUERY = gql`query MySupportAttachable($kind: SupportObjectKind!, $id: ID!) { mySupportAttachable(kind: $kind, id: $id) }`
+export const ATTACH_SUPPORT_OBJECTS_MUTATION = gql`mutation AttachSupportObjects($id: ID!, $objects: [SupportObjectRefInput!]!) { attachSupportObjects(id: $id, objects: $objects) }`
 export const REQUEST_RECOVERY_MUTATION = gql`mutation RequestAccountRecovery($input: RecoveryRequestInput!) { requestAccountRecovery(input: $input) }`

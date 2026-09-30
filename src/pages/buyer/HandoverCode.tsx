@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import SupportAboutButton from '../../components/SupportAboutButton'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
@@ -217,6 +218,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 </div>
               </section>
 
+              <SupportAboutButton about={{ kind: o.dealStatus === 'CONCLUDED' ? 'DEAL' : 'CONVERSATION', id: o.id }} what="cet achat" />
               {!done && (
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                   <div className="flex gap-2"><Icon name="report_problem" size={20} className="text-primary" /><div><div className="text-label-lg text-on-surface">Un imprévu sur place ?</div><p className="m-0 text-body-sm text-on-surface-variant">Le vendeur ne se présente pas, l'article est défectueux ou non conforme aux photos ?</p></div></div>

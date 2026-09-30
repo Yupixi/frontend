@@ -1,4 +1,5 @@
 import AnimatedIcon from '../../components/AnimatedIcon'
+import SupportAboutButton from '../../components/SupportAboutButton'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -175,6 +176,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                     <button onClick={printReceipt} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-3 text-label-md text-on-surface"><Icon name="download" size={18} /> Reçu PDF</button>
                     <button onClick={share} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-inverse-surface py-3 text-label-md text-white"><Icon name="share" size={18} /> Partager</button>
                   </div>
+                  <SupportAboutButton about={{ kind: o.dealStatus === 'CONCLUDED' ? 'DEAL' : 'CONVERSATION', id: o.id }} what="cet achat" className="mt-2" />
                 </div>
               </section>
 

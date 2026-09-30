@@ -6,7 +6,8 @@ import { BADGE_LABEL } from '../../graphql/badges'
 import type { AuthUser } from '../../graphql/auth'
 import { delayText, useRules } from '../../lib/rules'
 import { useMemberCountryCode } from '../../lib/countries'
-import { requestOpenHelp } from '../../lib/navigation'
+import { useEffect, useState } from 'react'
+import { OPEN_SUPPORT_EVENT, requestOpenHelp, type SupportAbout } from '../../lib/navigation'
 
 type Props = { onNavigate: (p: any) => void; focusTicketId?: string | null; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -19,6 +20,14 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
   // account country.
   const rules = useRules(useMemberCountryCode())
   const hours = badge === 'CERTIFIED' ? rules.SUPPORT_SLA_URGENT_HOURS : badge ? rules.SUPPORT_SLA_HIGH_HOURS : rules.SUPPORT_SLA_NORMAL_HOURS
+  // The floating tab is hidden here: this page takes the « Contacter le
+  // support à propos de… » requests itself.
+  const [about, setAbout] = useState<(SupportAbout & { nonce: number }) | null>(null)
+  useEffect(() => {
+    const onRequest = (e: Event) => { const d = (e as CustomEvent<SupportAbout>).detail; if (d) setAbout({ ...d, nonce: Date.now() }) }
+    window.addEventListener(OPEN_SUPPORT_EVENT, onRequest)
+    return () => window.removeEventListener(OPEN_SUPPORT_EVENT, onRequest)
+  }, [])
   return (
     <AccountLayout active="support" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title="Aide & support">
       <h1 className="m-0 text-headline-lg text-on-surface">Aide & support</h1>
@@ -49,7 +58,7 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
 
       {/* The same conversations as the « Support » tab of every page. */}
       <section className="mt-4 h-[min(720px,calc(100dvh-12rem))] min-h-[480px] overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
-        <SupportCenter currentUser={currentUser} focusTicketId={focusTicketId} />
+        <SupportCenter currentUser={currentUser} focusTicketId={focusTicketId} about={about} />
       </section>
     </AccountLayout>
   )

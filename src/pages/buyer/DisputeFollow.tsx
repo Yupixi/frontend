@@ -1,4 +1,5 @@
 import EmptyState from '../../components/EmptyState'
+import SupportAboutButton from '../../components/SupportAboutButton'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -223,6 +224,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                     {d.listing && <button onClick={() => onOpenConversation(d.seller.id, d.listing!.id)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface" aria-label="Chat"><Icon name="chat" size={18} /></button>}
                   </div>
                 </section>
+                <SupportAboutButton about={{ kind: 'DISPUTE', id: d.id }} what="ce litige" className="max-lg:order-5" />
                 <div className="max-md:hidden max-lg:order-5"><MediationCard whatsapp={statsData?.myDisputeStats.mediationWhatsapp ?? null} compact /></div>
                 {statsData?.myDisputeStats.mediationWhatsapp && (
                   <a href={`https://wa.me/${statsData.myDisputeStats.mediationWhatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer" className="order-5 flex items-center gap-3 rounded-2xl bg-surface-container-low p-3 no-underline md:hidden">
