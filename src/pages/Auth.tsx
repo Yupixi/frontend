@@ -4,7 +4,7 @@ import Icon from '../components/Icon'
 import Logo from '../components/DilchapLogo'
 import { LOGIN_MUTATION, REGISTER_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, type AuthPayload } from '../graphql/auth'
 import { REQUEST_RECOVERY_MUTATION } from '../graphql/support'
-import { storeAccessToken } from '../lib/auth'
+import { getGuestSecret, storeAccessToken } from '../lib/auth'
 import Select from '../components/Select'
 import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
@@ -112,7 +112,7 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     void register({
-      variables: { input: { fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(), phone: toIntl(form.phone, country), city: form.city || undefined, password: form.password, countryCode: country.code } },
+      variables: { input: { fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(), phone: toIntl(form.phone, country), city: form.city || undefined, password: form.password, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
     }).then(r => r.data && onSuccess(r.data.register)).catch(() => undefined)
   }
   return (
