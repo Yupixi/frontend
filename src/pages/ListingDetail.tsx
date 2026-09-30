@@ -54,7 +54,7 @@ import SellerBadge from '../components/SellerBadge'
 import { BADGE_LABEL } from '../graphql/badges'
 import { Claim } from '../lib/site'
 import { useLists } from '../lib/lists'
-import { countryVars, METHOD_LABELS } from '../lib/countries'
+import { countryVars, METHOD_LABELS, useMarketCode } from '../lib/countries'
 import { listingPath, samePlace } from '../lib/routes'
 import { usePageTitle } from '../lib/site'
 
@@ -130,7 +130,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // Similar listings and the seller card load alongside the listing, not
   // after it: the seller id is usually already in the cache from the card
   // that was clicked.
-  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4 } })
+  // The visitor's market (the listing's own country when « Tous les pays »).
+  const market = useMarketCode()
+  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4, countryCode: market ?? undefined } })
   const similar = similarData?.similarListings ?? []
   const apollo = useApolloClient()
   const sellerId = listing?.seller.id
