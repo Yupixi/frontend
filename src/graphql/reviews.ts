@@ -5,6 +5,7 @@ export const SELLER_PROFILE_QUERY = gql`
   query SellerProfile($sellerId: String!) {
     sellerProfile(sellerId: $sellerId) {
       id
+      handle
       fullName
       avatarUrl
       city
@@ -61,6 +62,7 @@ export const CREATE_REVIEW_MUTATION = gql`
 `
 
 export type RemoteSellerProfile = {
+  handle?: string | null
   // "Page vendeur personnalisée" (Vendeur certifié).
   website?: string | null; facebook?: string | null; instagram?: string | null; tiktok?: string | null
   id: string
@@ -109,3 +111,6 @@ export function formatResponseTime(minutes: number | null | undefined): string |
   if (minutes < 24 * 60) return `< ${Math.ceil(minutes / 60)} h`
   return `${Math.ceil(minutes / 1440)} j`
 }
+
+// dilchap.com/@handle → the member's id (null: unknown or not active).
+export const SELLER_ID_BY_HANDLE_QUERY = gql`query SellerIdByHandle($handle: String!) { sellerIdByHandle(handle: $handle) }`

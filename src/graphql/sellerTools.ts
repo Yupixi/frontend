@@ -167,6 +167,7 @@ export const SELLER_SETTINGS_QUERY = gql`
     me {
       id email phone fullName avatarUrl city countryCode bio isVerified badge verifiedAt meetupSpots paymentMethods vacationMode notificationPreferences createdAt
       coverUrl website facebook instagram tiktok
+      handle handleChangedAt
     }
     myReputation {
       averageRating reviewsCount satisfactionRate salesCount responseTimeMinutes trustScore reactivity reactivityPrev activeListings isVerified hasPhone verifiedAt
@@ -176,7 +177,7 @@ export const SELLER_SETTINGS_QUERY = gql`
 export const UPDATE_SELLER_PROFILE_MUTATION = gql`
   mutation UpdateSellerProfile($input: UpdateProfileInput!) {
     updateProfile(input: $input) {
-      id email phone fullName avatarUrl city countryCode bio isVerified badge boostCredits coverUrl meetupSpots paymentMethods vacationMode notificationPreferences
+      id email phone fullName avatarUrl city countryCode bio isVerified badge boostCredits coverUrl handle handleChangedAt meetupSpots paymentMethods vacationMode notificationPreferences
     }
   }
 `

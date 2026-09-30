@@ -64,6 +64,7 @@ export const ME_QUERY = gql`
       isVerified badge
       bio
       coverUrl
+      handle
       boostCredits
     }
   }
@@ -93,6 +94,9 @@ export type AuthUser = {
   boostCredits?: number
   bio?: string | null
   coverUrl?: string | null
+  // Short public address dilchap.com/@handle.
+  handle?: string | null
+  handleChangedAt?: string | null
 }
 
 export type AuthPayload = {

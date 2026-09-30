@@ -1,6 +1,6 @@
 import EmptyState from '../components/EmptyState'
 import Icon from '../components/Icon'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Star, MapPin, MessageSquare, BadgeCheck, Share2, Home, ChevronRight, Search, Handshake, Percent, ShieldCheck,
@@ -9,7 +9,7 @@ import {
 import { ListingCard } from '../components/ListingCard'
 import { LISTINGS_QUERY, type RemoteListing, type ListingSort } from '../graphql/listings'
 import {
-  SELLER_PROFILE_QUERY, SELLER_REVIEWS_QUERY, CREATE_REVIEW_MUTATION, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION,
+  SELLER_ID_BY_HANDLE_QUERY, SELLER_PROFILE_QUERY, SELLER_REVIEWS_QUERY, CREATE_REVIEW_MUTATION, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION,
   formatResponseTime, type RemoteSellerProfile, type RemoteReview,
 } from '../graphql/reviews'
 import { PAYMENT_LABELS } from './ListingDetail'
@@ -25,6 +25,7 @@ import { BADGE_LABEL } from '../graphql/badges'
 import { Claim, useNoCommissionClaims } from '../lib/site'
 import { useLists } from '../lib/lists'
 import { usePageTitle } from '../lib/site'
+import { rememberHandle } from '../lib/routes'
 
 
 type SellerProfileProps = {
@@ -50,7 +51,25 @@ function Stars({ rating, size = 14 }: { rating: number, size?: number }) {
 
 const memberSince = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
 
-export default function SellerProfile({ sellerId, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId }: SellerProfileProps) {
+// dilchap.com/@handle: the member's id first, then their profile.
+export default function SellerProfile(props: SellerProfileProps) {
+  const byHandle = props.sellerId.startsWith('@')
+  const { data, loading, error } = useQuery<{ sellerIdByHandle: string | null }>(SELLER_ID_BY_HANDLE_QUERY, { variables: { handle: props.sellerId }, skip: !byHandle })
+  if (!byHandle) return <SellerProfileView {...props} />
+  if (loading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
+  // Too many lookups from this connection (rate limit): not « unknown ».
+  if (error) return <div className="p-12 text-center text-on-surface-variant">Trop de pages ouvertes d’un coup : réessayez dans une minute.</div>
+  const id = data?.sellerIdByHandle
+  if (!id) return (
+    <div className="p-12 text-center">
+      <p className="mb-4 text-on-surface-variant">Aucun vendeur à l’adresse {props.sellerId}.</p>
+      <button onClick={() => props.onNavigate('home')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour à l'accueil</button>
+    </div>
+  )
+  return <SellerProfileView {...props} sellerId={id} />
+}
+
+function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId }: SellerProfileProps) {
   const [tab, setTab] = useState<'listings' | 'reviews' | 'terms'>('listings')
   const noCommission = useNoCommissionClaims()
   const [q, setQ] = useState('')
@@ -74,6 +93,16 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
   const { data: profileData, loading, refetch: refetchProfile } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, { variables: { sellerId } })
   const seller = profileData?.sellerProfile
   usePageTitle(seller?.fullName)
+  // The short address is the one shown and shared (an official shop keeps
+  // its /boutique/… address).
+  const handle = seller?.handle
+  const shopSlug = shopData?.shop?.isOfficial ? shopData.shop.slug : null
+  useEffect(() => {
+    const path = shopSlug ? `/boutique/${encodeURIComponent(shopSlug)}` : handle ? `/@${handle}` : null
+    if (!path) return
+    if (handle && !shopSlug) rememberHandle(sellerId, handle)
+    if (window.location.pathname !== path) window.history.replaceState(window.history.state, '', path)
+  }, [handle, shopSlug, sellerId])
   const { data: listingsData } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId }, sort, pageSize: 100 },
   })
@@ -127,7 +156,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
       .catch(() => undefined)
   }
   const share = async () => {
-    const url = `${window.location.origin}/vendeur/${seller.id}`
+    const url = `${window.location.origin}${seller.handle ? `/@${seller.handle}` : `/vendeur/${seller.id}`}`
     if (navigator.share) { try { await navigator.share({ title: seller.fullName, url }) } catch { /* cancelled */ } return }
     await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
@@ -184,6 +213,7 @@ export default function SellerProfile({ sellerId, onNavigate, onSelectListing, o
                   <h1 className="m-0 text-headline-md text-on-surface md:text-headline-lg">{seller.fullName}</h1>
                   <SellerBadge tier={seller.badge} variant="pill" size={15} />
                 </div>
+                {seller.handle && <button type="button" onClick={() => void share()} title="Copier le lien de la page" className="mt-0.5 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="link" size={15} /> {window.location.host}/@{seller.handle}</button>}
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-on-surface-variant">
                   {seller.city && <span className="flex items-center gap-1"><MapPin size={14} /> {seller.city}</span>}
                   <span className="flex items-center gap-1"><Calendar size={14} /> Membre depuis {memberSince(seller.createdAt)}</span>
