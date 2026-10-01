@@ -5,6 +5,9 @@ import ChatComposer from './ChatComposer'
 import ImageLightbox from './ImageLightbox'
 import SellerBadge from './SellerBadge'
 import { thumbnailUrl } from '../lib/media'
+
+// Documents the support team joins to its replies (stored as `<uuid>.pdf`).
+const isPdf = (url: string) => /\.pdf(?:$|[?#])/i.test(url)
 import { delayText, useRules } from '../lib/rules'
 import { useMemberCountryCode } from '../lib/countries'
 import type { AuthUser } from '../graphql/auth'
@@ -303,11 +306,25 @@ function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: Su
               <div key={m.id} className={`flex max-w-[85%] flex-col ${mine ? 'items-end self-end' : 'items-start self-start'}`}>
                 {!mine && <span className="mb-0.5 ml-1 flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="support_agent" size={14} className="text-primary" /> {m.admin?.fullName ? `${m.admin.fullName.split(' ')[0]} • ` : ''}Équipe Dilchap</span>}
                 <div className={`rounded-2xl px-3 py-2 text-body-md ${mine ? 'rounded-br-md bg-primary text-white' : 'rounded-bl-md bg-surface-lowest text-on-surface shadow-sm'}`}>
-                  {!!m.attachments?.length && (
-                    <span className={`mb-1 grid gap-1 ${m.attachments.length > 1 ? 'grid-cols-2' : ''}`}>
-                      {m.attachments.map((src, i) => <button key={src} type="button" onClick={() => setPhotos({ images: m.attachments!, start: i })} aria-label={`Voir la photo ${i + 1}`} className="block h-28 w-28 cursor-zoom-in overflow-hidden rounded-lg border-none bg-surface-container p-0"><img src={thumbnailUrl(src)} alt="" loading="lazy" className="h-full w-full object-cover" /></button>)}
-                    </span>
-                  )}
+                  {(() => {
+                    // Photos open in the lightbox; the team may also join PDF documents.
+                    const images = (m.attachments ?? []).filter((u) => !isPdf(u))
+                    const docs = (m.attachments ?? []).filter(isPdf)
+                    return <>
+                      {images.length > 0 && (
+                        <span className={`mb-1 grid gap-1 ${images.length > 1 ? 'grid-cols-2' : ''}`}>
+                          {images.map((src, i) => <button key={src} type="button" onClick={() => setPhotos({ images, start: i })} aria-label={`Voir la photo ${i + 1}`} className="block h-28 w-28 cursor-zoom-in overflow-hidden rounded-lg border-none bg-surface-container p-0"><img src={thumbnailUrl(src)} alt="" loading="lazy" className="h-full w-full object-cover" /></button>)}
+                        </span>
+                      )}
+                      {docs.map((src, i) => (
+                        <a key={src} href={src} target="_blank" rel="noopener noreferrer" className={`mb-1 flex min-h-11 items-center gap-2 rounded-lg px-2.5 py-1.5 text-label-md no-underline ${mine ? 'bg-white/15 text-white' : 'bg-surface-container text-on-surface'}`}>
+                          <Icon name="picture_as_pdf" size={20} className={mine ? '' : 'text-primary'} />
+                          <span className="min-w-0 flex-1 truncate">Document PDF{docs.length > 1 ? ` ${i + 1}` : ''}</span>
+                          <Icon name="open_in_new" size={16} className="opacity-70" />
+                        </a>
+                      ))}
+                    </>
+                  })()}
                   {m.body && <p className="selectable m-0 whitespace-pre-line break-words">{m.body}</p>}
                 </div>
                 <span className="mx-1 mt-0.5 text-[11px] text-on-surface-variant">{time(m.createdAt)}{mine && m.id === lastMine?.id && m.readAt ? ' • Lu par l’équipe' : ''}</span>
