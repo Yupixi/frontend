@@ -4,12 +4,18 @@ import Icon from './Icon'
 import Price from './Price'
 import SafeImg from './SafeImg'
 import { thumbnailUrl } from '../lib/media'
+import { useMemberCountryCode } from '../lib/countries'
+import { useRules } from '../lib/rules'
 import {
   MY_SUPPORT_ATTACHABLES_QUERY, OBJECT_KINDS, OBJECT_KIND_ICON, OBJECT_KIND_LABEL,
   type SupportObjectCard, type SupportObjectKind,
 } from '../graphql/support'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+
+// A listing card says whose it is: « Votre annonce » or « Consultée le … ».
+const originLabel = (o: SupportObjectCard) =>
+  o.kind !== 'LISTING' || !o.origin ? null : o.origin === 'OWN' ? 'Votre annonce' : `Consultée${o.viewedAt ? ` le ${day(o.viewedAt)}` : ''}`
 
 // Compact card of an object attached to a support conversation: picture,
 // kind, title, price, status, date.
@@ -20,7 +26,7 @@ export function SupportObjectCard({ o, onRemove, tone = 'card' }: { o: SupportOb
         {o.image ? <SafeImg src={thumbnailUrl(o.image)} icon={OBJECT_KIND_ICON[o.kind]} /> : <Icon name={OBJECT_KIND_ICON[o.kind]} size={22} />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1 text-label-sm normal-case tracking-normal text-on-surface-variant"><Icon name={OBJECT_KIND_ICON[o.kind]} size={13} /> {OBJECT_KIND_LABEL[o.kind]}</span>
+        <span className="flex min-w-0 items-center gap-1 text-label-sm normal-case tracking-normal text-on-surface-variant"><Icon name={OBJECT_KIND_ICON[o.kind]} size={13} /> <span className="truncate">{OBJECT_KIND_LABEL[o.kind]}{originLabel(o) && <> · <span className={o.origin === 'OWN' ? 'font-semibold text-primary' : ''}>{originLabel(o)}</span></>}</span></span>
         <span className="block truncate text-label-md text-on-surface">{o.title}</span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-label-sm normal-case tracking-normal text-on-surface-variant">
           {o.price != null && <span className="font-semibold text-on-surface"><Price amount={o.price} currency={o.currency} /></span>}
@@ -34,12 +40,14 @@ export function SupportObjectCard({ o, onRemove, tone = 'card' }: { o: SupportOb
 }
 
 // « Joindre »: the member's own objects, by kind, searchable, with their
-// picture; several can be picked. Shown over the support panel.
+// picture; several can be picked. Shown over the support panel. Listings:
+// their own and those they consulted (never the whole catalogue).
 export function SupportAttachPicker({ already, onPick, onClose }: { already: { kind: SupportObjectKind; id: string }[]; onPick: (cards: SupportObjectCard[]) => void; onClose: () => void }) {
   const [kind, setKind] = useState<SupportObjectKind | ''>('')
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<SupportObjectCard[]>([])
+  const rules = useRules(useMemberCountryCode())
   useEffect(() => {
     const t = window.setTimeout(() => setSearch(input.trim()), 300)
     return () => window.clearTimeout(t)
@@ -59,7 +67,7 @@ export function SupportAttachPicker({ already, onPick, onClose }: { already: { k
     <div className="absolute inset-0 z-20 flex flex-col bg-surface-lowest animate-[slideUp_0.2s_cubic-bezier(0.16,1,0.3,1)]" role="dialog" aria-modal="true" aria-label="Joindre un élément">
       <div className="flex shrink-0 items-center gap-2 border-0 border-b border-solid border-outline-variant/60 px-4 py-3">
         <button type="button" onClick={onClose} aria-label="Fermer" className="-ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface hover:bg-surface-container"><Icon name="arrow_back" size={21} /></button>
-        <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Joindre un élément</div><div className="text-body-sm text-on-surface-variant">Une de vos annonces, un achat, une vente, un paiement, un litige ou une conversation.</div></div>
+        <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Joindre un élément</div><div className="text-body-sm text-on-surface-variant">Une annonce (la vôtre ou une annonce consultée), un achat, une vente, un paiement, un litige ou une conversation.</div></div>
       </div>
       <div className="shrink-0 space-y-2 px-3 pt-3">
         <label className="flex h-11 items-center gap-2 rounded-xl bg-surface-container px-3 focus-within:bg-surface-container-high">
@@ -70,10 +78,18 @@ export function SupportAttachPicker({ already, onPick, onClose }: { already: { k
           <button type="button" aria-pressed={kind === ''} onClick={() => setKind('')} className={chip(kind === '')}>Tout</button>
           {OBJECT_KINDS.map(([k, label, icon]) => <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={chip(kind === k)}><Icon name={icon} size={15} /> {label}</button>)}
         </div>
+        {kind === 'LISTING' && <p className="m-0 px-1 text-label-sm normal-case tracking-normal text-on-surface-variant">Vos annonces et celles que vous avez ouvertes en étant connecté ces {rules.SUPPORT_ATTACH_VIEWED_DAYS} derniers jours ({rules.SUPPORT_ATTACH_LISTINGS_MAX} au plus).</p>}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2">
         {error && <p className="m-0 p-4 text-center text-body-sm text-primary">{error.message}</p>}
-        {!error && !list.length && <p className="m-0 p-6 text-center text-body-sm text-on-surface-variant">{loading ? 'Chargement…' : search ? 'Aucun résultat.' : 'Rien à joindre pour l’instant.'}</p>}
+        {!error && !list.length && (loading ? <p className="m-0 p-6 text-center text-body-sm text-on-surface-variant">Chargement…</p>
+          : kind === 'LISTING' && !search ? (
+            <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-on-surface-variant"><Icon name="history" size={24} /></span>
+              <p className="m-0 text-label-lg text-on-surface">Les annonces que vous consultez apparaîtront ici.</p>
+              <p className="m-0 text-body-sm text-on-surface-variant">Ouvrez l’annonce concernée en étant connecté, puis revenez la joindre. Vos propres annonces y figurent aussi.</p>
+            </div>
+          ) : <p className="m-0 p-6 text-center text-body-sm text-on-surface-variant">{search ? kind === 'LISTING' ? 'Aucun résultat parmi vos annonces et celles que vous avez consultées.' : 'Aucun résultat.' : 'Rien à joindre pour l’instant.'}</p>)}
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {list.map(o => {
             const done = isAlready(o)
