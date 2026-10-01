@@ -417,7 +417,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {p.listings.map(l => (
                         <button key={l.id} onClick={() => onSelectListing(l.id)} className="min-w-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-low p-0 text-left">
-                          <span className="block aspect-square overflow-hidden bg-surface-container">{l.coverUrl && <img src={l.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}</span>
+                          <span className="block aspect-square overflow-hidden bg-surface-container">{l.coverUrl && <img src={l.coverUrl} alt={`${l.title} — photo 1`} loading="lazy" className="h-full w-full object-cover" />}</span>
                           <span className="block truncate px-2 pt-1 text-label-sm text-on-surface">{l.title}</span>
                           <span className="block px-2 pb-1.5 text-label-md text-primary"><Price amount={l.price} /></span>
                         </button>

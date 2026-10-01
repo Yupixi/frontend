@@ -15,6 +15,9 @@ export type Route = {
   legalSlug?: string
   campaignSlug?: string
   category?: string
+  // A category page in one city (/categorie/velos/abidjan): the city's
+  // address word.
+  categoryCity?: string
   // Centre d’aide: an article's key ('' = the help centre's home).
   helpSlug?: string
 }
@@ -61,7 +64,9 @@ export function pathFor(page: string, s: Omit<Route, 'page'> & { searchTerm?: st
     case 'shops': return '/boutiques'
     case 'categories': return '/categories'
     case 'search':
-      return s.category && !s.searchTerm ? `/categorie/${enc(s.category)}` : s.searchTerm ? `/recherche?q=${enc(s.searchTerm)}` : '/recherche'
+      return s.category && !s.searchTerm
+        ? `/categorie/${enc(s.category)}${s.categoryCity ? `/${enc(s.categoryCity)}` : ''}`
+        : s.searchTerm ? `/recherche?q=${enc(s.searchTerm)}` : '/recherche'
     case 'flash-offers': return s.campaignSlug ? `/bonnes-affaires/${enc(s.campaignSlug)}` : '/bonnes-affaires'
     case 'legal': return s.legalSlug ? `/legal/${enc(s.legalSlug)}` : '/'
     case 'auth': return '/connexion'
@@ -85,7 +90,7 @@ export function parsePath(pathname: string): Route | null {
   if (head === 'boutique' && key) return { page: 'shop', shopKey: key }
   if (head === 'boutiques') return { page: 'shops' }
   if (head === 'categories') return { page: 'categories' }
-  if (head === 'categorie' && key) return { page: 'search', category: key }
+  if (head === 'categorie' && key) return seg[2] ? { page: 'search', category: key, categoryCity: seg[2] } : { page: 'search', category: key }
   if (head === 'recherche') return { page: 'search' }
   if (head === 'bonnes-affaires') return { page: 'flash-offers', campaignSlug: key ?? '' }
   if (head === 'legal' && key) return { page: 'legal', legalSlug: key }

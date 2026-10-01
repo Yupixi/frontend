@@ -199,7 +199,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
           {image.src ? (
             <img
               src={image.src}
-              alt={listing.title}
+              alt={`${listing.title} — photo 1`}
               loading="lazy"
               decoding="async"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -328,7 +328,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
     <div onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm transition-shadow hover:shadow-card-hover sm:flex-row sm:gap-4 sm:p-3">
       <div className="aspect-video w-full shrink-0 overflow-hidden bg-surface-container sm:aspect-auto sm:h-28 sm:w-28 sm:rounded-xl md:h-32 md:w-40">
         {image.src
-          ? <img loading="lazy" decoding="async" src={image.src} alt={listing.title} onError={image.onError} className="h-full w-full object-cover" />
+          ? <img loading="lazy" decoding="async" src={image.src} alt={`${listing.title} — photo 1`} onError={image.onError} className="h-full w-full object-cover" />
           : <span className="flex h-full items-center justify-center text-on-surface-variant"><Tag size={28} /></span>}
       </div>
 
