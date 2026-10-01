@@ -18,7 +18,10 @@ const originLabel = (o: SupportObjectCard) =>
   o.kind !== 'LISTING' || !o.origin ? null : o.origin === 'OWN' ? 'Votre annonce' : `Consultée${o.viewedAt ? ` le ${day(o.viewedAt)}` : ''}`
 
 // Compact card of an object attached to a support conversation: picture,
-// kind, title, price, status, date.
+// kind, title, price, status, date. A consulted listing no longer public
+// shows the copy of the member's last visit, its status (« Retirée », « Plus
+// disponible », « Vendeur suspendu ») stands out, and a cover gone from
+// storage gives way to the kind's icon (SafeImg).
 export function SupportObjectCard({ o, onRemove, tone = 'card' }: { o: SupportObjectCard; onRemove?: () => void; tone?: 'card' | 'mine' }) {
   return (
     <div className={`flex min-w-0 items-center gap-2.5 rounded-2xl border border-solid p-2 text-left ${tone === 'mine' ? 'border-primary/30 bg-primary-fixed/40' : 'border-outline-variant/60 bg-surface-lowest'}`}>
@@ -28,9 +31,10 @@ export function SupportObjectCard({ o, onRemove, tone = 'card' }: { o: SupportOb
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1 text-label-sm normal-case tracking-normal text-on-surface-variant"><Icon name={OBJECT_KIND_ICON[o.kind]} size={13} /> <span className="truncate">{OBJECT_KIND_LABEL[o.kind]}{originLabel(o) && <> · <span className={o.origin === 'OWN' ? 'font-semibold text-primary' : ''}>{originLabel(o)}</span></>}</span></span>
         <span className="block truncate text-label-md text-on-surface">{o.title}</span>
+        {o.snapshotAt && o.sellerName && <span className="block truncate text-label-sm normal-case tracking-normal text-on-surface-variant">{o.sellerName}{o.city ? ` · ${o.city}` : ''}</span>}
         <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-label-sm normal-case tracking-normal text-on-surface-variant">
           {o.price != null && <span className="font-semibold text-on-surface"><Price amount={o.price} currency={o.currency} /></span>}
-          <span className="rounded-full bg-surface-container px-1.5">{o.statusLabel}</span>
+          <span className={`rounded-full px-1.5 ${o.snapshotAt ? 'bg-primary-fixed font-semibold text-primary' : 'bg-surface-container'}`} title={o.snapshotAt ? `Telle que vous l’avez vue le ${day(o.snapshotAt)}` : undefined}>{o.statusLabel}</span>
           <span>{day(o.date)}</span>
         </span>
       </span>
