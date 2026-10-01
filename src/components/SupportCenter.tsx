@@ -162,6 +162,8 @@ const refOf = (o: ObjectCard) => ({ kind: o.kind, id: o.id })
 const same = (a: { kind: string; id: string }, b: { kind: string; id: string }) => a.kind === b.kind && a.id === b.id
 
 function NewConversation({ header, firstName, onCreated, about }: { header: React.ReactNode; firstName?: string; onCreated: (id: string) => void; about: SupportAbout | null }) {
+  // Photos per message: a « Règles » value of the member's country.
+  const maxPhotos = useRules(useMemberCountryCode()).SUPPORT_MEMBER_PHOTOS_MAX
   const [category, setCategory] = useState<SupportCategory | null>(about ? CATEGORY_OF[about.kind] ?? null : null)
   const [importance, setImportance] = useState<SupportImportance>('NORMAL')
   const [text, setText] = useState('')
@@ -218,7 +220,7 @@ function NewConversation({ header, firstName, onCreated, about }: { header: Reac
       </div>
       <div className="shrink-0 border-0 border-t border-solid border-outline-variant/60 bg-surface-lowest px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <AttachRow cards={attached} onAdd={() => setPicking(true)} onRemove={o => (auto && same(o, auto) ? setAutoRemoved(true) : setPicked(p => p.filter(x => !same(x, o))))} note={about && aboutError ? 'L’élément de la page n’a pas pu être joint.' : null} />
-        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={attached.length ? 'Expliquez-nous le problème…' : 'Décrivez votre problème…'} noVoice maxPhotos={4} />
+        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={attached.length ? 'Expliquez-nous le problème…' : 'Décrivez votre problème…'} noVoice maxPhotos={maxPhotos} />
       </div>
       {picking && <SupportAttachPicker already={attached.map(refOf)} onClose={() => setPicking(false)} onPick={cards => { setPicked(p => [...p, ...cards]); setPicking(false) }} />}
     </div>
@@ -239,6 +241,8 @@ function AttachRow({ cards, onAdd, onRemove, note, busy }: { cards: ObjectCard[]
 }
 
 function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: SupportTicket; loading: boolean; header: Header; onBack: () => void; onChanged: () => void }) {
+  // Photos per message: a « Règles » value of the member's country.
+  const maxPhotos = useRules(useMemberCountryCode()).SUPPORT_MEMBER_PHOTOS_MAX
   const [text, setText] = useState('')
   const [photos, setPhotos] = useState<{ images: string[]; start: number } | null>(null)
   const [reply] = useMutation(REPLY_SUPPORT_TICKET_MUTATION, { refetchQueries: REFETCH })
@@ -337,7 +341,7 @@ function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: Su
       </div>
       <div className="shrink-0 border-0 border-t border-solid border-outline-variant/60 bg-surface-lowest px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <AttachRow cards={[]} onAdd={() => setPicking(true)} busy={attaching || (t.objects?.length ?? 0) >= 10} note={attachError || null} />
-        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={t.status === 'RESOLVED' ? 'Écrire rouvre la conversation…' : 'Votre message…'} noVoice maxPhotos={4} />
+        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={t.status === 'RESOLVED' ? 'Écrire rouvre la conversation…' : 'Votre message…'} noVoice maxPhotos={maxPhotos} />
       </div>
       {picking && <SupportAttachPicker already={(t.objects ?? []).map(o => ({ kind: o.kind, id: o.targetId }))} onClose={() => setPicking(false)} onPick={pick} />}
       {photos && <ImageLightbox images={photos.images} start={photos.start} alt="Photo jointe" onClose={() => setPhotos(null)} />}
