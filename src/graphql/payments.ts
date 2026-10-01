@@ -13,7 +13,14 @@ export const PAYMENT_QUERY = gql`
 `
 
 export type PaymentProvider = 'wave' | 'orange' | 'mtn' | 'moov'
-export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'FULFILMENT_FAILED'
+// UNCONFIRMED / TO_REVIEW: Paytic has not confirmed the outcome yet — never
+// shown as failed or paid: « Vérification en cours » (credits added and the
+// member notified if Paytic confirms it).
+export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'FULFILMENT_FAILED' | 'UNCONFIRMED' | 'TO_REVIEW'
+// Waiting for the payer / the operator (polled).
+export const OPEN_PAYMENT: PaymentStatus[] = ['PENDING', 'PROCESSING']
+// Outcome not confirmed by Paytic: Dilchap keeps checking on its own.
+export const VERIFYING_PAYMENT: PaymentStatus[] = ['UNCONFIRMED', 'TO_REVIEW']
 export type PaymentIntent = {
   id: string
   reference: string
