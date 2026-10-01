@@ -12,16 +12,19 @@ export type SupportImportance = 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL'
 
 // « Joindre »: one of the member's objects, as a compact card (title,
 // price, status, date). The server only ever lists and accepts the
-// member's own objects.
+// member's own objects — and, for listings, those they consulted (signed
+// in), within the « Règles » window: `origin` says which.
 export type SupportObjectKind = 'LISTING' | 'DEAL' | 'PAYMENT' | 'DISPUTE' | 'CONVERSATION'
 export type SupportObjectRef = { kind: SupportObjectKind; id: string }
 export type SupportObjectCard = {
   kind: SupportObjectKind; id: string; title: string; subtitle: string | null; price: number | null; currency: string
   status: string; statusLabel: string; date: string; image: string | null
+  // LISTING: the member's own, or one they consulted (absent on old cards).
+  origin?: 'OWN' | 'VIEWED'; viewedAt?: string | null
 }
 export type SupportTicketObject = { id: string; kind: SupportObjectKind; targetId: string; snapshot: SupportObjectCard; auto: boolean; createdAt: string }
 export const OBJECT_KINDS: [SupportObjectKind, string, string][] = [
-  ['LISTING', 'Annonces', 'sell'],
+  ['LISTING', 'Annonces consultées', 'sell'],
   ['DEAL', 'Achats et ventes', 'handshake'],
   ['PAYMENT', 'Paiements', 'payments'],
   ['DISPUTE', 'Litiges', 'gavel'],
