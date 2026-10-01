@@ -11,13 +11,15 @@ import type { AuthUser } from '../graphql/auth'
 import {
   ATTACH_SUPPORT_OBJECTS_MUTATION, CATEGORY_LABEL, CLOSE_SUPPORT_TICKET_MUTATION, CREATE_SUPPORT_TICKET_MUTATION, IMPORTANCE_CHOICES, IMPORTANCE_LABEL,
   MARK_SUPPORT_READ_MUTATION, MY_SUPPORT_ATTACHABLE_QUERY, MY_SUPPORT_TICKETS_QUERY, MY_SUPPORT_UNREAD_QUERY, REPLY_SUPPORT_TICKET_MUTATION, SUPPORT_CATEGORIES,
-  SUPPORT_TICKET_UPDATED_SUBSCRIPTION,
-  type SupportCategory, type SupportImportance, type SupportObjectCard as ObjectCard, type SupportObjectKind, type SupportTicket,
+  SUPPORT_ASSISTANT_QUERY, SUPPORT_TICKET_UPDATED_SUBSCRIPTION,
+  type AssistantState, type SupportCategory, type SupportImportance, type SupportObjectCard as ObjectCard, type SupportObjectKind, type SupportTicket,
 } from '../graphql/support'
 import type { SupportAbout } from '../lib/navigation'
 import { SupportAttachPicker, SupportObjectCard } from './SupportObjects'
+import SupportAssistant from './SupportAssistant'
 
-type View = { kind: 'list' } | { kind: 'new' } | { kind: 'thread'; id: string }
+// 'new': the assistant when it is on, else the form; 'agent': the form.
+type View = { kind: 'list' } | { kind: 'new' } | { kind: 'agent' } | { kind: 'thread'; id: string }
 
 const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const time = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -51,10 +53,16 @@ export default function SupportCenter({ currentUser, focusTicketId, onClose, abo
   // Staff replies arrive live.
   useSubscription(SUPPORT_TICKET_UPDATED_SUBSCRIPTION, { onData: () => void refetch() })
   const tickets = data?.mySupportTickets
+  // « L'assistant Dilchap » answers first when it is on for the member's
+  // country (an API without it, or an error: tickets only, as before).
+  const { data: assistantData } = useQuery<{ supportAssistant: AssistantState }>(SUPPORT_ASSISTANT_QUERY, { fetchPolicy: 'cache-and-network', errorPolicy: 'ignore' })
+  const assistant = assistantData?.supportAssistant?.enabled ? assistantData.supportAssistant : null
   const [view, setView] = useState<View | null>(focusTicketId ? { kind: 'thread', id: focusTicketId } : null)
   useEffect(() => { if (focusTicketId) setView({ kind: 'thread', id: focusTicketId }) }, [focusTicketId])
   useEffect(() => { if (about) setView({ kind: 'new' }) }, [about])
-  // First visit: straight to a new conversation.
+  // First visit: straight to a new conversation (kept when the assistant
+  // hands it over and the first ticket appears).
+  useEffect(() => { if (!view && tickets && !tickets.length) setView({ kind: 'new' }) }, [view, tickets])
   const shown: View = view ?? (tickets && !tickets.length ? { kind: 'new' } : { kind: 'list' })
 
   const badge = currentUser?.badge ?? null
@@ -83,8 +91,25 @@ export default function SupportCenter({ currentUser, focusTicketId, onClose, abo
     const t = tickets?.find(x => x.id === shown.id)
     return <Thread key={shown.id} ticket={t} loading={!tickets} header={header} onBack={() => setView({ kind: 'list' })} onChanged={() => void refetch()} />
   }
-  if (shown.kind === 'new')
-    return <NewConversation key={about?.nonce ?? 0} about={about ?? null} header={header(<span className="flex items-center gap-1.5"><Icon name="support_agent" size={20} className="text-primary" /> Nouvelle conversation</span>, sla, tickets?.length ? () => setView({ kind: 'list' }) : undefined)} firstName={currentUser?.fullName?.split(' ')[0]} onCreated={id => { void refetch(); setView({ kind: 'thread', id }) }} />
+  const toList = tickets?.length ? () => setView({ kind: 'list' }) : undefined
+  if (shown.kind === 'new' && assistant)
+    return (
+      <SupportAssistant
+        key={about?.nonce ?? 0}
+        header={header}
+        welcomeMessage={assistant.welcomeMessage}
+        suggestions={assistant.suggestions}
+        remainingToday={assistant.remainingToday}
+        conversation={assistant.conversation}
+        firstName={currentUser?.fullName?.split(' ')[0]}
+        about={about ?? null}
+        onBack={toList}
+        onAgentForm={() => setView({ kind: 'agent' })}
+        onOpenTicket={id => { void refetch(); setView({ kind: 'thread', id }) }}
+      />
+    )
+  if (shown.kind === 'new' || shown.kind === 'agent')
+    return <NewConversation key={about?.nonce ?? 0} about={about ?? null} header={header(<span className="flex items-center gap-1.5"><Icon name="support_agent" size={20} className="text-primary" /> {assistant ? 'Écrire à un agent' : 'Nouvelle conversation'}</span>, sla, assistant ? () => setView({ kind: 'new' }) : toList)} firstName={currentUser?.fullName?.split(' ')[0]} onCreated={id => { void refetch(); setView({ kind: 'thread', id }) }} />
 
   const list = tickets ?? []
   return (
@@ -92,7 +117,7 @@ export default function SupportCenter({ currentUser, focusTicketId, onClose, abo
       {header(<span className="flex items-center gap-1.5"><Icon name="support_agent" size={20} className="text-primary" /> Support Dilchap</span>, sla)}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
         <button type="button" onClick={() => setView({ kind: 'new' })} className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white shadow-sm hover:bg-primary-dark">
-          <Icon name="edit_square" size={19} /> Nouvelle conversation
+          <Icon name={assistant ? 'auto_awesome' : 'edit_square'} size={19} /> {assistant?.conversation ? 'Reprendre avec l’assistant' : 'Nouvelle conversation'}
         </button>
         {!tickets && <p className="m-0 mt-6 text-center text-body-sm text-on-surface-variant">Chargement…</p>}
         <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
