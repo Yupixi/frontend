@@ -5,9 +5,10 @@ import Icon from './Icon'
 import Price from './Price'
 import PaymentLogo from './PaymentLogo'
 import {
-  PAYMENT_QUERY, PENDING_PAYMENT_KEY, PROVIDERS, START_PAYMENT_MUTATION,
+  OPEN_PAYMENT, PAYMENT_QUERY, PENDING_PAYMENT_KEY, PROVIDERS, START_PAYMENT_MUTATION, VERIFYING_PAYMENT,
   type PaymentIntent, type PaymentProvider, type PaymentRequest,
 } from '../graphql/payments'
+import PaymentVerifying from './PaymentVerifying'
 import { momoNumberError, NETWORK_PREFIX } from '../lib/phone'
 import { trackCreditPurchase } from '../lib/analytics'
 
@@ -48,10 +49,13 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   const [intent, setIntent] = useState<PaymentIntent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // The polling stopped before the operator answered: never a failure nor
+  // a success — « Vérification en cours », the server keeps checking.
+  const [timedOut, setTimedOut] = useState(false)
   const [start, { loading }] = useMutation<{ startPayment: PaymentIntent }>(START_PAYMENT_MUTATION)
   const timer = useRef<number | null>(null)
 
-  const reset = () => { setIntent(null); setError(null); setOtp(''); setTouched(false); setCopied(false) }
+  const reset = () => { setIntent(null); setError(null); setOtp(''); setTouched(false); setCopied(false); setTimedOut(false) }
   useEffect(() => { if (!open) { reset(); setProvider(null); setPhone(''); if (timer.current) window.clearInterval(timer.current) } }, [open])
   useEffect(() => () => { if (timer.current) window.clearInterval(timer.current) }, [])
 
@@ -68,9 +72,9 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
       void client.query<{ payment: PaymentIntent }>({ query: PAYMENT_QUERY, variables: { id }, fetchPolicy: 'network-only' }).then(({ data }) => {
         const p = data?.payment
         if (!p) return
-        if (p.status !== 'PENDING' && p.status !== 'PROCESSING') { window.clearInterval(timer.current!); finish(p) }
+        if (!OPEN_PAYMENT.includes(p.status)) { window.clearInterval(timer.current!); finish(p) }
         else setIntent(p)
-        if (Date.now() - started > POLL_LIMIT_MS) window.clearInterval(timer.current!)
+        if (OPEN_PAYMENT.includes(p.status) && Date.now() - started > POLL_LIMIT_MS) { window.clearInterval(timer.current!); setTimedOut(true) }
       }).catch(() => undefined)
     }, POLL_MS)
   }
@@ -82,7 +86,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
     try {
       const { data } = await start({ variables: { input: { ...request, provider, msisdn: phone, otp: provider === 'orange' ? otp.trim() : undefined } } })
       const p = data!.startPayment
-      if (p.status === 'SUCCESS' || p.status === 'FAILED' || p.status === 'FULFILMENT_FAILED') { finish(p); return }
+      if (!OPEN_PAYMENT.includes(p.status)) { finish(p); return }
       setIntent(p)
       if (p.redirectUrl) {
         try { sessionStorage.setItem(PENDING_PAYMENT_KEY, p.id) } catch { /* ignore */ }
@@ -99,7 +103,9 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
     void navigator.clipboard?.writeText(ref).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500) }).catch(() => undefined)
   }
 
-  const waiting = intent && (intent.status === 'PENDING' || intent.status === 'PROCESSING')
+  const waiting = intent && OPEN_PAYMENT.includes(intent.status) && !timedOut
+  // Outcome not confirmed by Paytic (yet): the server keeps checking.
+  const verifying = intent && (VERIFYING_PAYMENT.includes(intent.status) || (OPEN_PAYMENT.includes(intent.status) && timedOut))
   const selected = PROVIDERS.find((p) => p.key === provider)
   const phoneError = provider && selected ? momoNumberError(phone, provider, selected.label) : 'Choisissez un moyen de paiement.'
   const showPhoneError = !!phoneError && !!phone && (touched || phone.replace(/\D/g, '').length >= 10)
@@ -126,7 +132,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
     </div>
   ) : (
     <div className="border-0 border-t border-solid border-outline-variant px-4 py-3">
-      <button onClick={onClose} className={`${btn} w-full bg-surface-container-high text-on-surface`}>{waiting ? 'Fermer (le paiement continue)' : 'Terminer'}</button>
+      <button onClick={onClose} className={`${btn} w-full bg-surface-container-high text-on-surface`}>{waiting || verifying ? 'Fermer (la vérification continue)' : 'Terminer'}</button>
     </div>
   )
 
@@ -253,6 +259,8 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
         </div>
       )}
 
+      {verifying && <PaymentVerifying intent={intent} method={paidWith.method} />}
+
       {intent?.status === 'SUCCESS' && (
         <div className="flex flex-col items-center gap-2 py-5 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={48} fill /></span>
@@ -261,6 +269,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
         </div>
       )}
 
+      {/* « Non abouti » only for a failure Paytic confirmed (the server never sets FAILED otherwise). */}
       {intent && (intent.status === 'FAILED' || intent.status === 'FULFILMENT_FAILED') && (
         <div className="flex flex-col items-center gap-2 py-5 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={48} /></span>
