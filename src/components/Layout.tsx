@@ -44,6 +44,7 @@ import { replayTours } from '../lib/tourControl'
 import { useSite } from '../lib/site'
 import { reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
+import ManageCookies from './ManageCookies'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
@@ -494,6 +495,11 @@ export default function Layout({
                         </button>
                       ))}
 
+                      <ManageCookies
+                        onDone={() => setUserMenuOpen(false)}
+                        icon={<Icon name="tune" size={17} className="text-on-surface-variant" />}
+                        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
+                      />
                       {!currentUser?.isGuest && (
                         <>
                           <a

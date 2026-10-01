@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../components/Icon'
+import ManageCookies from '../components/ManageCookies'
 import ImageLightbox from '../components/ImageLightbox'
 import { useHelpArticles } from '../components/HelpLink'
 import { HELP_ARTICLE_QUERY, helpImageUrl, helpKeyOf, helpSlugOf, type HelpArticle, type HelpStep } from '../graphql/help'
@@ -224,6 +225,7 @@ function Home({ articles, loading, onOpen, onNavigate }: { articles: HelpArticle
         <button onClick={() => void startTour('fe-welcome')} className="mt-3 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary hover:underline">
           <Icon name="replay" size={17} /> Revoir la visite guidée
         </button>
+        <ManageCookies icon={<Icon name="tune" size={17} />} className="mt-2 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary hover:underline" />
       </section>
 
       {loading && !articles ? (
