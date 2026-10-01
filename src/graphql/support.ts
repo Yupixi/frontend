@@ -21,6 +21,9 @@ export type SupportObjectCard = {
   status: string; statusLabel: string; date: string; image: string | null
   // LISTING: the member's own, or one they consulted (absent on old cards).
   origin?: 'OWN' | 'VIEWED'; viewedAt?: string | null
+  // LISTING consulted and no longer public (paused, deleted, seller
+  // suspended): the copy of the last visit; `statusLabel` says why.
+  snapshotAt?: string; sellerName?: string; city?: string
 }
 export type SupportTicketObject = { id: string; kind: SupportObjectKind; targetId: string; snapshot: SupportObjectCard; auto: boolean; createdAt: string }
 export const OBJECT_KINDS: [SupportObjectKind, string, string][] = [
