@@ -13,6 +13,7 @@ import { placeOptions, useLists } from '../lib/lists'
 import { localNumberError, toIntl } from '../lib/dialing'
 import { useCountries, useHomeCountry, useMarket, useMethods, type Country } from '../lib/countries'
 import Flag from '../components/Flag'
+import ManageCookies from '../components/ManageCookies'
 import { track } from '../lib/analytics'
 
 type AuthProps = {
@@ -312,7 +313,9 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
               <a href={`https://wa.me/${supportPhone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer" className="text-label-md text-primary no-underline">Contacter le support</a>
             </p>
           )}
-          <p className="m-0 mt-4 text-center text-label-sm text-on-surface-variant lg:text-left">Plateforme sécurisée • En continuant, vous acceptez les <a href="/legal/cgu" target="_blank" rel="noreferrer" className="text-primary">conditions d'utilisation</a>, la <a href="/legal/remise-en-main-propre" target="_blank" rel="noreferrer" className="text-primary">charte de confiance</a> Dilchap et sa <a href="/legal/confidentialite" target="_blank" rel="noreferrer" className="text-primary">politique de confidentialité</a>.</p>
+          <p className="m-0 mt-4 text-center text-label-sm text-on-surface-variant lg:text-left">Plateforme sécurisée • En continuant, vous acceptez les <a href="/legal/cgu" target="_blank" rel="noreferrer" className="text-primary">conditions d'utilisation</a>, la <a href="/legal/remise-en-main-propre" target="_blank" rel="noreferrer" className="text-primary">charte de confiance</a> Dilchap et sa <a href="/legal/confidentialite" target="_blank" rel="noreferrer" className="text-primary">politique de confidentialité</a>.
+            <ManageCookies className="ml-1 cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary underline underline-offset-2" />
+          </p>
         </section>
 
         <aside className="relative hidden overflow-hidden bg-surface-container-low p-10 lg:block">
