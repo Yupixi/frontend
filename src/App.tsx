@@ -3,6 +3,8 @@ import { useApolloClient, useLazyQuery, useMutation, useQuery } from '@apollo/cl
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
+import ConsentBanner, { useConsentOpen } from './components/ConsentBanner'
+import { pageTitle, track, trackPageView } from './lib/analytics'
 import SupportTab from './components/SupportTab'
 import ErrorBoundary from './components/ErrorBoundary'
 import PaymentReturn from './components/PaymentReturn'
@@ -191,6 +193,8 @@ export default function App() {
   const [dark, setDark] = useState(savedDark)
   // Tab title, description and share tags when moving between pages.
   useSeo(page)
+  // The consent banner of the « Mesure d'audience » is up: other bottom banners wait.
+  const consentOpen = useConsentOpen()
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
@@ -501,6 +505,13 @@ export default function App() {
     if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(window.history.state, '', path)
   }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, searchTerm, helpSlug])
 
+  // « Mesure d'audience »: one page_view per page or item (after the
+  // address bar above; not when only the search words change). Sent only
+  // with the visitor's consent, address cleaned (lib/analytics).
+  useEffect(() => {
+    trackPageView(window.location.href, pageTitle(page, categoryFilter))
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, helpSlug])
+
   // Tours tied to a page know where the member is.
   useEffect(() => { noteTourPage(page) }, [page])
 
@@ -710,6 +721,13 @@ export default function App() {
     setContactSeller({ listingId, sellerId })
     navigate('buyer-messages')
   }
+  // « Discuter », « Contacter », an offer sent… from a listing, a profile or
+  // a shop (not reopening a conversation from the account pages): counted
+  // in the « Mesure d'audience » with the listing id only.
+  const contactSellerFrom = (sellerId: string, listingId?: string) => {
+    track('contact_seller', { item_id: listingId, method: 'message' })
+    contactSellerAbout(sellerId, listingId)
+  }
 
   // Shared by the full-page Auth screen and the inline guest-messaging flow
   // on ListingDetail (see InlineConversation) — both just need React state
@@ -777,15 +795,15 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'home':
-        return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerAbout} onSearch={searchFromHome} />
+        return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerFrom} onSearch={searchFromHome} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerAbout} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
       case 'listing-detail':
-        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} onContactSeller={contactSellerAbout} />
+        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} onContactSeller={contactSellerFrom} />
       case 'seller-profile':
-        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
+        return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerFrom} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
       case 'shop':
-        return <ShopPage key={shopKey} shopKey={shopKey} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
+        return <ShopPage key={shopKey} shopKey={shopKey} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerFrom} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
       case 'shops':
         return <ShopsDirectory onNavigate={navigate} onOpenShop={openShop} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       case 'categories':
@@ -795,7 +813,7 @@ export default function App() {
       case 'help':
         return <Help slug={helpSlug} onOpenArticle={openHelp} onNavigate={navigate} />
       case 'flash-offers':
-        return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
+        return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerFrom} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:
         return <Home onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} location={marketLocation} />
     }
@@ -832,6 +850,7 @@ export default function App() {
             }}
           />
         </ErrorBoundary>
+        <ConsentBanner onOpenLegal={openLegal} />
       </div>
     )
   }
@@ -887,13 +906,13 @@ export default function App() {
         case 'buyer-disputes':
           return <DisputeFollow focusDisputeId={selectedDisputeId} onNavigate={navigate} onSelectDispute={id => setSelectedDisputeId(id)} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
         case 'buyer-favorites':
-          return <Favorites onNavigate={navigate} onSelectListing={selectListing} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerAbout} onSearchCategory={navigateToCategory} currentUser={currentUser} onLogout={logout} />
+          return <Favorites onNavigate={navigate} onSelectListing={selectListing} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerFrom} onSearchCategory={navigateToCategory} currentUser={currentUser} onLogout={logout} />
         case 'buyer-messages':
           return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} openConversationId={openConversationId} onOpenConversationConsumed={() => setOpenConversationId(null)} onOpenHandover={(id, as) => as === 'SELLER' ? openHandover(id) : openPurchase(id, 'buyer-handover')} />
         case 'buyer-notifications':
           return <Notifications onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} currentUser={currentUser} onLogout={logout} />
         case 'buyer-history':
-          return <History onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerAbout} onSearch={term => searchFromHome(term)} onSearchCategory={navigateToCategory} currentUser={currentUser} onProfileUpdated={setCurrentUser} onLogout={logout} />
+          return <History onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerFrom} onSearch={term => searchFromHome(term)} onSearchCategory={navigateToCategory} currentUser={currentUser} onProfileUpdated={setCurrentUser} onLogout={logout} />
         case 'seller-kyc':
           return <Kyc onNavigate={navigate} currentUser={currentUser} onLogout={logout} onViewShop={selectSeller} />
         case 'seller-shop':
@@ -922,8 +941,9 @@ export default function App() {
         </ErrorBoundary>
         <SupportTab page={accountPage} isLoggedIn={isLoggedIn} currentUser={currentUser} onNavigate={navigate} />
         <PaymentReturn isLoggedIn={isLoggedIn} />
+        <ConsentBanner onOpenLegal={openLegal} />
         {verifyPrompt}
-        <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+        <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
         {onboarding}
       </div>
     )
@@ -952,15 +972,16 @@ export default function App() {
           <Suspense fallback={<PageFallback />}>{renderPage()}</Suspense>
         </ErrorBoundary>
       </Layout>
-      <InstallBanner show={showInstallBanner && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}
       {verifyPrompt}
-      {isLoggedIn && pushStatus && !verifyPrompt && !showUpdateBanner && !showInstallBanner && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
+      {isLoggedIn && pushStatus && !verifyPrompt && !showUpdateBanner && !showInstallBanner && !consentOpen && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}
       <UpdateBanner show={showUpdateBanner} onUpdate={applyServiceWorkerUpdate} onDismiss={() => setShowUpdateBanner(false)} />
       <SupportTab page={page} isLoggedIn={isLoggedIn} currentUser={currentUser} onNavigate={navigate} />
       <PaymentReturn isLoggedIn={isLoggedIn} />
+      <ConsentBanner onOpenLegal={openLegal} />
       {onboarding}
     </div>
   )

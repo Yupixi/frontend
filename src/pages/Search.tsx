@@ -16,6 +16,7 @@ import { setAuthReason } from '../lib/authReason'
 import { PaymentLogos, useMobileMethods } from '../components/PaymentLogo'
 import { useMarketCode, useMarketVars } from '../lib/countries'
 import { useNoCommissionClaims } from '../lib/site'
+import { track } from '../lib/analytics'
 
 const PAGE_SIZE = 18
 
@@ -208,6 +209,17 @@ export default function SearchPage({
   const items = result?.items ?? []
   const total = result?.totalCount ?? 0
   const totalPages = result?.totalPages ?? 1
+  // « Mesure d'audience »: one `search` per words / category, once its
+  // results are in. Never the words themselves (they can hold a name or a
+  // number): the category, whether words were typed, and the count.
+  const trackedSearch = useRef('')
+  useEffect(() => {
+    if (loading || !data || page !== 1 || (!search && !categoryFilter)) return
+    const key = `${search}|${categoryFilter}`
+    if (trackedSearch.current === key) return
+    trackedSearch.current = key
+    track('search', { search_category: categoryFilter || 'toutes', with_words: !!search.trim(), results_count: data.listings.totalCount, country: countryCode ?? undefined })
+  }, [data, loading, page, search, categoryFilter, countryCode])
 
   const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter } })
   const facets = facetsData?.listingFacets

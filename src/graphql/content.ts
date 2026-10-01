@@ -138,3 +138,9 @@ export const LEGAL_PAGES = [
   { slug: 'faq', label: 'FAQ & support', icon: 'help' },
   { slug: 'confidentialite', label: 'Confidentialité', icon: 'lock' },
 ]
+
+// « Mesure d'audience » of the visitor's country (lib/analytics.ts): on or
+// off, the GA4 measurement ID and the consent banner texts.
+export const ANALYTICS_CONFIG_QUERY = gql`
+  query AnalyticsConfig($country: String) { analyticsConfig(country: $country) }
+`

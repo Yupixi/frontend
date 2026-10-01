@@ -31,6 +31,7 @@ import { Claim, useNoCommissionClaims } from '../../lib/site'
 import { useLists } from '../../lib/lists'
 import { useRules } from '../../lib/rules'
 import HelpLink from '../../components/HelpLink'
+import { track } from '../../lib/analytics'
 
 const TITLE_MAX = 80
 
@@ -491,6 +492,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           campaign = { name: c.name, error: err instanceof Error ? err.message : 'La participation a échoué.' }
         }
       }
+      // « Mesure d'audience »: a listing sent for publication (new or a
+      // draft), not a draft saved nor an edit.
+      if (submit && publishes) track('publish_listing', { item_id: id, item_category: category.slug, country: form.countryCode, status: live ? 'en_ligne' : 'en_validation' })
       setResult({ id, submitted: submit, live, fromDraft: editingDraft, campaign })
     } catch (err) {
       setUploading(false)

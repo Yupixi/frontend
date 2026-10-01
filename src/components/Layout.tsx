@@ -42,6 +42,7 @@ import { syncAppBadge } from '../lib/pushNotifications'
 import { requestOpenCampaign, requestOpenHelp } from '../lib/navigation'
 import { replayTours } from '../lib/tourControl'
 import { useSite } from '../lib/site'
+import { reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
 
 type Page =
@@ -113,6 +114,7 @@ export default function Layout({
   const footer = (footerLive ?? footerPrevious)?.footerSettings
   // Brand, contacts, social / app links and claims (« Réglages du site »).
   const site = useSite()
+  const { config: analytics } = useAnalyticsState()
   // Visitor's country (none for « Tous les pays »): towns, methods, support.
   const market = useMarket()
   const countries = useCountries()
@@ -688,6 +690,12 @@ export default function Layout({
                     <button onClick={() => onOpenLegal?.(p.slug)} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">{p.label}</button>
                   </li>
                 ))}
+                {/* « Mesure d'audience » on for this country: change one's mind. */}
+                {analytics?.enabled && analytics.measurementId && (
+                  <li>
+                    <button onClick={reopenConsent} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">{analytics.banner.manage}</button>
+                  </li>
+                )}
               </ul>
               <PaymentLogos className="mt-4" size={26} methods={methods} />
             </div>

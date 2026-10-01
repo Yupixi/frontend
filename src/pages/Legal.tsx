@@ -3,6 +3,7 @@ import Icon from '../components/Icon'
 import { CONTENT_PAGE_QUERY, LEGAL_PAGES, type ContentPage } from '../graphql/content'
 import { richHtml } from '../lib/richText'
 import { countryVars, useMarketCode } from '../lib/countries'
+import { reopenConsent, useAnalyticsState } from '../lib/analytics'
 
 // Legal & help pages (CGU, remise en main propre, FAQ, confidentialité),
 // written by the team in the Backoffice "CMS & Pages légales".
@@ -14,6 +15,8 @@ export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string;
   const previous = previousData?.contentPage?.slug === slug ? previousData.contentPage : undefined
   const page = data ? data.contentPage : previous
   const meta = LEGAL_PAGES.find((p) => p.slug === slug) ?? LEGAL_PAGES[0]
+  const { config } = useAnalyticsState()
+  const manage = config?.enabled && config.measurementId ? config.banner.manage : null
 
   return (
     <div className="mx-auto max-w-[960px] px-4 py-6 lg:px-6 lg:py-10">
@@ -24,6 +27,12 @@ export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string;
             <Icon name={p.icon} size={17} /> {p.label}
           </button>
         ))}
+        {/* « Gérer les cookies » (the footer is desktop-only): the consent banner again. */}
+        {manage && (
+          <button onClick={reopenConsent} className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-none bg-surface-container-low px-3.5 py-2 text-label-md text-on-surface hover:bg-surface-container">
+            <Icon name="tune" size={17} /> {manage}
+          </button>
+        )}
       </div>
       <article className="rounded-2xl bg-surface-lowest p-5 shadow-sm lg:p-8">
         <h1 className="m-0 text-headline-lg-mobile text-on-surface lg:text-headline-lg">{page?.title ?? meta.label}</h1>

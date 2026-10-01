@@ -9,6 +9,7 @@ import {
   type PaymentIntent, type PaymentProvider, type PaymentRequest,
 } from '../graphql/payments'
 import { momoNumberError, NETWORK_PREFIX } from '../lib/phone'
+import { trackCreditPurchase } from '../lib/analytics'
 
 const PHONE_KEY = 'dilchap_momo_phone'
 const POLL_MS = 3000
@@ -56,7 +57,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
 
   const finish = (p: PaymentIntent) => {
     setIntent(p)
-    if (p.status === 'SUCCESS') onPaid(p)
+    if (p.status === 'SUCCESS') { trackCreditPurchase(p); onPaid(p) }
   }
 
   // Poll until the operator confirms (the server also listens to Paytic webhooks).
