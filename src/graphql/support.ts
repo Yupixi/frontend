@@ -83,3 +83,30 @@ export const MY_SUPPORT_ATTACHABLES_QUERY = gql`query MySupportAttachables($kind
 export const MY_SUPPORT_ATTACHABLE_QUERY = gql`query MySupportAttachable($kind: SupportObjectKind!, $id: ID!) { mySupportAttachable(kind: $kind, id: $id) }`
 export const ATTACH_SUPPORT_OBJECTS_MUTATION = gql`mutation AttachSupportObjects($id: ID!, $objects: [SupportObjectRefInput!]!) { attachSupportObjects(id: $id, objects: $objects) }`
 export const REQUEST_RECOVERY_MUTATION = gql`mutation RequestAccountRecovery($input: RecoveryRequestInput!) { requestAccountRecovery(input: $input) }`
+
+// « L'assistant Dilchap » (AI) of the « Support » tab: answers first, from
+// the help center and the member's own data, and hands over to an agent
+// (button « Parler à un agent », or by itself when unsure). `enabled: false`
+// (off for the member's country, or not set up): tickets only, as before.
+export type AssistantSource = { key: string; title: string }
+export type AssistantMessage = { id: string; role: 'MEMBER' | 'ASSISTANT' | 'SYSTEM'; body: string; sources: AssistantSource[] | null; createdAt: string }
+export type AssistantConversation = {
+  id: string
+  status: 'ACTIVE' | 'HANDED_OFF' | 'CLOSED'
+  handedOffAt: string | null
+  ticket: { id: string; reference: string } | null
+  createdAt: string
+  messages: AssistantMessage[]
+}
+export type AssistantState =
+  | { enabled: false }
+  | { enabled: true; welcomeMessage: string; suggestions: string[]; remainingToday: number; conversation: AssistantConversation | null }
+export type AssistantSendResult = {
+  conversation: AssistantConversation | null
+  ticketId?: string | null
+  limited?: boolean
+  handedOff?: { reason: string; reference: string }
+}
+export const SUPPORT_ASSISTANT_QUERY = gql`query SupportAssistant { supportAssistant }`
+export const SEND_SUPPORT_ASSISTANT_MUTATION = gql`mutation SendSupportAssistantMessage($input: SupportAssistantMessageInput!) { sendSupportAssistantMessage(input: $input) }`
+export const SUPPORT_ASSISTANT_HANDOFF_MUTATION = gql`mutation SupportAssistantHandoff($conversationId: ID!) { supportAssistantHandoff(conversationId: $conversationId) }`

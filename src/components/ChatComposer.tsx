@@ -60,7 +60,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
 
   const addFiles = (list: FileList | File[]) => {
     const files = Array.from(list).filter(f => f.type.startsWith('image/'))
-    if (!files.length) return
+    if (!files.length || maxPhotos <= 0) return
     const room = maxPhotos - photos.length
     if (room <= 0) { setError(`${maxPhotos} photos maximum par message.`); return }
     if (files.length > room) setError(`${maxPhotos} photos maximum par message.`)
@@ -173,10 +173,15 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
       ) : (
 
       <form onSubmit={e => { e.preventDefault(); void send() }} className="flex items-end gap-2">
-        <input ref={picker} type="file" accept="image/*" multiple hidden onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = '' }} />
-        <button type="button" disabled={disabled || photos.length >= maxPhotos} onClick={() => picker.current?.click()} aria-label="Joindre des photos" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40">
-          <Icon name="add_photo_alternate" size={22} />
-        </button>
+        {/* maxPhotos 0 (support assistant): text only. */}
+        {maxPhotos > 0 && (
+          <>
+            <input ref={picker} type="file" accept="image/*" multiple hidden onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = '' }} />
+            <button type="button" disabled={disabled || photos.length >= maxPhotos} onClick={() => picker.current?.click()} aria-label="Joindre des photos" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40">
+              <Icon name="add_photo_alternate" size={22} />
+            </button>
+          </>
+        )}
         <div className="flex min-h-11 min-w-0 flex-1 items-center rounded-3xl bg-surface-container px-4 py-2 transition-colors focus-within:bg-surface-container-high">
           <textarea
             ref={field}
