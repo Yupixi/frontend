@@ -101,7 +101,7 @@ export default function ImageLightbox({ images, start, alt, onClose, onIndexChan
         <div className="flex justify-center gap-2 overflow-x-auto px-4 pt-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           {images.map((src, i) => (
             <button key={i} onClick={() => goTo(i)} aria-label={`Photo ${i + 1}`} className={`h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 transition-opacity ${i === idx ? 'border-white opacity-100' : 'border-transparent opacity-50'}`}>
-              <img src={thumbnailUrl(src)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+              <img src={thumbnailUrl(src)} alt={`${alt} — photo ${i + 1}`} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>

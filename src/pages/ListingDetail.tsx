@@ -120,7 +120,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // Report reasons of the listing's country (the market until it loads).
   const reportReasons = useLists(listing?.countryCode || undefined).reportReasons.listing
   const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
-  usePageTitle(listing?.title)
+  // Same tab title as search engines get for a sold or expired listing.
+  const archiveLabel = listing?.status === 'SOLD' ? 'Vendu' : listing?.status === 'EXPIRED' ? 'Annonce expirée' : null
+  usePageTitle(listing ? (archiveLabel ? `${archiveLabel} — ${listing.title}` : listing.title) : null)
   // /annonce/<id> (or old words) → /annonce/<words of the title>-<id>.
   useEffect(() => {
     if (!listing) return
@@ -426,7 +428,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <div className="mt-3 hidden gap-2 overflow-x-auto lg:flex">
                 {images.map((img, i) => (
                   <button key={i} onClick={() => showImage(i)} className={`h-20 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 ${i === imgIdx ? 'border-primary' : 'border-transparent'}`}>
-                    <img loading="lazy" decoding="async" src={thumbnailUrl(img)} alt="" className="h-full w-full object-cover" />
+                    <img loading="lazy" decoding="async" src={thumbnailUrl(img)} alt={`${listing.title} — photo ${i + 1}`} className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -439,6 +441,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <span className="truncate">{[listing.brand, listing.subcategory?.name ?? listing.category.name].filter(Boolean).join(' • ')}</span>
               <span className="flex shrink-0 items-center gap-1 normal-case"><Eye size={14} /> {listing.viewsCount} vues</span>
             </div>
+            {archiveLabel && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-inverse-surface px-2.5 py-0.5 text-label-md uppercase text-white"><Archive size={13} /> {archiveLabel}</span>}
             <h1 className="m-0 mt-1 text-headline-md text-on-surface">{listing.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="text-headline-lg font-extrabold text-primary"><Price amount={shownPrice} currency={listing.currency} /></span>
@@ -539,6 +542,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 <span className="flex shrink-0 items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><CheckCircle2 size={12} /> {listing.condition}</span>
               )}
             </div>
+            {archiveLabel && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-inverse-surface px-2.5 py-0.5 text-label-md uppercase text-white"><Archive size={13} /> {archiveLabel}</span>}
             <h1 className="m-0 text-headline-md text-on-surface">{listing.title}</h1>
 
             <div className="mt-4 rounded-xl bg-surface-container-low p-4">

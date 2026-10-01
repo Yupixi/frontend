@@ -5,7 +5,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown, SlidersHorizontal, X, BadgeCheck, Search as SearchIcon, MapPin, BellRing, Check, LayoutGrid, List, Handshake } from '../components/icons'
 import FilterSheet from '../components/FilterSheet'
 import { ListingCard, ListingListCard } from '../components/ListingCard'
-import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
+import { CATEGORIES_QUERY, CATEGORY_LANDING_QUERY, type CategoryLanding, type RemoteCategory } from '../graphql/categories'
 import {
   LISTINGS_QUERY, LISTING_FACETS_QUERY, CREATE_SAVED_SEARCH_MUTATION,
   type RemoteListing, type ListingSort, type ListingFacets, type ListingFilterInput, type FacetCount,
@@ -14,8 +14,11 @@ import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
 import { setAuthReason } from '../lib/authReason'
 import { PaymentLogos, useMobileMethods } from '../components/PaymentLogo'
-import { useMarketCode, useMarketVars } from '../lib/countries'
-import { useNoCommissionClaims } from '../lib/site'
+import { useCountries, useMarketCode, useMarketVars } from '../lib/countries'
+import { useNoCommissionClaims, usePageTitle } from '../lib/site'
+import { slugify } from '../lib/routes'
+import { richHtml } from '../lib/richText'
+import CategoryLandingExtras from '../components/CategoryLandingExtras'
 import { track } from '../lib/analytics'
 
 const PAGE_SIZE = 18
@@ -40,8 +43,11 @@ type SearchProps = {
   favorites: string[]
   onToggleFavorite: (id: string) => void
   categoryFilter?: string
+  // City of a category page (/categorie/velos/abidjan): its address word.
+  categoryCity?: string
+  onCategoryCityChange?: (city: string) => void
   onClearCategoryFilter?: () => void
-  onCategorySelect?: (slug: string) => void
+  onCategorySelect?: (slug: string, city?: string) => void
   searchTerm?: string
   onSearchTermChange?: (term: string) => void
   selectedCity?: string
@@ -132,7 +138,7 @@ function DebouncedSearchInput({ value, onCommit }: { value: string, onCommit: (t
 }
 
 export default function SearchPage({
-  onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, onClearCategoryFilter, onCategorySelect,
+  onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, categoryCity, onCategoryCityChange, onClearCategoryFilter, onCategorySelect,
   searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, initialPromoOnly, currentUserId, isLoggedIn, onContactSeller,
 }: SearchProps) {
   const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
@@ -153,10 +159,12 @@ export default function SearchPage({
   const [conditions, setConditions] = useState<string[]>([])
   const [brands, setBrands] = useState<string[]>([])
   const [sizes, setSizes] = useState<string[]>([])
-  const [cities, setCities] = useState<string[]>(selectedCity ? [selectedCity] : [])
+  // A category page in one city has that city, not the visitor's.
+  const [cities, setCities] = useState<string[]>(selectedCity && !categoryCity ? [selectedCity] : [])
+  useEffect(() => { if (categoryCity) setCities([]) }, [categoryCity])
   // The initial city is the visitor's detected location, not a choice they made:
   // it is labelled "Près de vous" and left out of the active-filter badge.
-  const [nearCity] = useState(selectedCity ?? '')
+  const [nearCity] = useState(categoryCity ? '' : (selectedCity ?? ''))
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice ? String(initialMaxPrice) : '')
   // Typed prices reach the query after a pause — every digit used to refetch
@@ -176,16 +184,49 @@ export default function SearchPage({
   useEffect(() => { setSearch(searchTerm || '') }, [searchTerm])
   useEffect(() => { setSubcategories([]) }, [categoryFilter])
 
+  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
+  const categories = categoriesData?.categories ?? []
+  // The page's rubric: a category, or a subcategory with its own page
+  // (/categorie/velos) — then its category.
+  const subOwner = categoryFilter && !categories.some(c => c.slug === categoryFilter)
+    ? categories.find(c => c.subcategories.some(s => s.slug === categoryFilter))
+    : undefined
+  const category = subOwner ?? categories.find(c => c.slug === categoryFilter)
+  const subcategory = subOwner?.subcategories.find(s => s.slug === categoryFilter)
+  // Category page: the team's texts and the links to neighbouring pages.
+  const { data: landingData } = useQuery<{ categoryLanding: CategoryLanding | null }>(CATEGORY_LANDING_QUERY, {
+    variables: { slug: categoryFilter ?? '', city: categoryCity || null },
+    skip: !categoryFilter,
+  })
+  const landing = categoryFilter ? landingData?.categoryLanding ?? null : null
+  // The city of a city page, from the country lists (at once), else the server's.
+  const countries = useCountries()
+  const pageCity = useMemo(() => {
+    if (!categoryCity) return null
+    for (const c of countries) {
+      const name = c.cities.find(n => slugify(n) === slugify(categoryCity))
+      if (name) return { name, countryCode: c.code }
+    }
+    return landing?.city ? { name: landing.city.name, countryCode: landing.city.countryCode } : null
+  }, [categoryCity, countries, landing])
+  const rubricName = subcategory?.name ?? category?.name ?? landing?.name
+  // A category address opened directly: wait for the categories (a
+  // subcategory's page needs its category) rather than flash « 0 article ».
+  const rubricPending = !!categoryFilter && !categoriesData
+  // Category links are real addresses (crawlable); a click stays in the app.
+  const goCategory = (slug: string, city?: string) => (e: React.MouseEvent) => { e.preventDefault(); onCategorySelect?.(slug, city) }
+
   const filter: ListingFilterInput = useMemo(() => ({
     // Listings of the visitor's country (all for « Tous les pays »).
-    ...(countryCode ? { countryCode } : {}),
+    // A city page shows its city's country, whatever the visitor's.
+    ...(pageCity ? { countryCode: pageCity.countryCode } : countryCode ? { countryCode } : {}),
     ...(search ? { search } : {}),
-    ...(categoryFilter ? { categorySlug: categoryFilter } : {}),
-    ...(subcategories.length ? { subcategorySlugs: subcategories } : {}),
+    ...(category ? { categorySlug: category.slug } : categoryFilter ? { categorySlug: categoryFilter } : {}),
+    ...(subcategory ? { subcategorySlugs: [subcategory.slug] } : subcategories.length ? { subcategorySlugs: subcategories } : {}),
     ...(conditions.length ? { conditions } : {}),
     ...(brands.length ? { brands } : {}),
     ...(sizes.length ? { sizes } : {}),
-    ...(cities.length ? { cities } : {}),
+    ...(pageCity ? { cities: [pageCity.name] } : cities.length ? { cities } : {}),
     ...(verifiedOnly ? { verifiedSellersOnly: true } : {}),
     ...(shopsOnly ? { officialShopsOnly: true } : {}),
     ...(handoverOnly ? { handoverOnly: true } : {}),
@@ -194,16 +235,13 @@ export default function SearchPage({
     ...(categorySlugs.length ? { categorySlugs } : {}),
     ...(appliedPrice.min ? { minPrice: Number(appliedPrice.min) } : {}),
     ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
-  }), [countryCode, search, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
+  }), [countryCode, pageCity, search, category, subcategory, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
-  const categories = categoriesData?.categories ?? []
-  const category = categories.find(c => c.slug === categoryFilter)
-
   const { data, previousData, loading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; totalPages: number } }>(LISTINGS_QUERY, {
     variables: { filter, sort, page, pageSize: PAGE_SIZE },
+    skip: rubricPending,
   })
   const result = (data ?? previousData)?.listings
   const items = result?.items ?? []
@@ -221,14 +259,14 @@ export default function SearchPage({
     track('search', { search_category: categoryFilter || 'toutes', with_words: !!search.trim(), results_count: data.listings.totalCount, country: countryCode ?? undefined })
   }, [data, loading, page, search, categoryFilter, countryCode])
 
-  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter } })
+  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter }, skip: rubricPending })
   const facets = facetsData?.listingFacets
   const noCommission = useNoCommissionClaims()
 
   const [createSavedSearch, { loading: savingAlert }] = useMutation(CREATE_SAVED_SEARCH_MUTATION)
   const createAlert = async () => {
     if (!isLoggedIn) { setAuthReason('alert'); onNavigate('auth'); return }
-    const label = search || category?.name || 'Ma recherche'
+    const label = search || (pageCity && rubricName ? `${rubricName} à ${pageCity.name}` : rubricName) || 'Ma recherche'
     try {
       await createSavedSearch({ variables: { label, filter } })
       setAlertState('done')
@@ -248,7 +286,8 @@ export default function SearchPage({
   const chips: { key: string, label: string, near?: boolean, clear: () => void }[] = [
     ...(search ? [{ key: 'q', label: `« ${search} »`, clear: () => onSearchTermChange?.('') }] : []),
     ...(promoOnly ? [{ key: 'promo', label: 'En promotion', clear: () => setPromoOnly(false) }] : []),
-    ...(category ? [{ key: 'cat', label: category.name, clear: () => onClearCategoryFilter?.() }] : []),
+    ...(category ? [{ key: 'cat', label: rubricName ?? category.name, clear: () => onClearCategoryFilter?.() }] : []),
+    ...(pageCity ? [{ key: 'page-city', label: `À ${pageCity.name}`, clear: () => onCategoryCityChange?.('') }] : []),
     ...subcategories.map(v => ({ key: `sub-${v}`, label: facets?.subcategories.find(f => f.value === v)?.label ?? v, clear: () => setSubcategories(s => s.filter(x => x !== v)) })),
     ...cities.map(v => ({ key: `city-${v}`, label: v === nearCity ? `Près de vous : ${v}` : v, near: v === nearCity, clear: () => setCities(s => s.filter(x => x !== v)) })),
     ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
@@ -305,7 +344,15 @@ export default function SearchPage({
               <ChevronLeft size={14} /> Toutes les catégories
             </button>
             <div className="mb-1 flex items-center gap-2 text-label-md text-on-surface"><CategoryIcon icon={category.icon} size={20} className="text-primary" /> {category.name}</div>
-            {(facets?.subcategories ?? []).map(f => (
+            {subcategory ? (
+              // A subcategory's own page: its neighbours are pages too.
+              <div className="flex flex-col">
+                {category.subcategories.map(sub => (
+                  <a key={sub.id} href={`/categorie/${sub.slug}${categoryCity ? `/${categoryCity}` : ''}`} onClick={goCategory(sub.slug, categoryCity || undefined)} aria-current={sub.slug === subcategory.slug ? 'page' : undefined}
+                    className={`py-1 text-body-sm no-underline hover:text-primary ${sub.slug === subcategory.slug ? 'font-bold text-primary' : 'text-on-surface'}`}>{sub.name}</a>
+                ))}
+              </div>
+            ) : (facets?.subcategories ?? []).map(f => (
               <CheckRow key={f.value} checked={subcategories.includes(f.value)} label={f.label} count={f.count} onChange={() => setSubcategories(s => toggle(s, f.value))} />
             ))}
           </>
@@ -399,7 +446,10 @@ export default function SearchPage({
     </div>
   )
 
-  const title = search ? `Résultats pour « ${search} »` : category ? category.name : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
+  const title = search ? `Résultats pour « ${search} »` : rubricPending ? ' ' : rubricName ? (pageCity ? `${rubricName} à ${pageCity.name}` : rubricName) : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
+  // Category pages: same tab title as the one search engines get.
+  const countText = `${total.toLocaleString('fr-FR')} annonce${total > 1 ? 's' : ''}`
+  usePageTitle(categoryFilter && !search && rubricName && (data || previousData) ? (pageCity ? `${title} : ${countText}` : rubricName) : null)
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const to = Math.min(page * PAGE_SIZE, total)
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
@@ -426,14 +476,25 @@ export default function SearchPage({
         </button>
       </div>
 
-      <nav aria-label="Fil d'ariane" className="mb-2 hidden flex-wrap items-center gap-1 text-label-md text-on-surface-variant lg:flex">
-        <button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary">Accueil</button>
+      {/* Category pages: the same trail as their structured data (Backend seo). */}
+      <nav aria-label="Fil d'ariane" className={`mb-2 flex-wrap items-center gap-1 text-label-md text-on-surface-variant ${category ? 'flex' : 'hidden lg:flex'}`}>
+        <a href="/" onClick={e => { e.preventDefault(); onNavigate('home') }} className="text-label-md text-on-surface-variant no-underline hover:text-primary">Accueil</a>
         <ChevronRight size={14} className="text-outline-variant" />
         {category ? (
           <>
-            <button onClick={() => onClearCategoryFilter?.()} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary">Catalogue</button>
-            <ChevronRight size={14} className="text-outline-variant" />
-            <span className="font-semibold text-on-surface">{category.name}</span>
+            {(subcategory || pageCity) && (
+              <>
+                <a href={`/categorie/${category.slug}`} onClick={goCategory(category.slug)} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{category.name}</a>
+                <ChevronRight size={14} className="text-outline-variant" />
+              </>
+            )}
+            {subcategory && pageCity && (
+              <>
+                <a href={`/categorie/${subcategory.slug}`} onClick={goCategory(subcategory.slug)} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{subcategory.name}</a>
+                <ChevronRight size={14} className="text-outline-variant" />
+              </>
+            )}
+            <span className="font-semibold text-on-surface">{pageCity ? pageCity.name : rubricName}</span>
           </>
         ) : <span className="font-semibold text-on-surface">Catalogue</span>}
       </nav>
@@ -446,7 +507,7 @@ export default function SearchPage({
           )}
           <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{title}</h1>
           <p className="m-0 mt-1 text-body-md text-on-surface-variant">
-            <span className="font-bold text-on-surface">{total.toLocaleString('fr-FR')} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.
+            {result ? <><span className="font-bold text-on-surface">{total.toLocaleString('fr-FR')} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.</> : ' '}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -538,6 +599,16 @@ export default function SearchPage({
                 </div>
               )}
             </div>
+          )}
+
+          {landing && !search && (
+            <CategoryLandingExtras
+              landing={landing}
+              rubricName={rubricName ?? landing.name}
+              cityName={pageCity?.name}
+              introHtml={landing.introText ? richHtml(landing.introText) : ''}
+              onOpen={(slug, city) => onCategorySelect?.(slug, city)}
+            />
           )}
         </section>
       </div>

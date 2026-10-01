@@ -71,7 +71,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-3">
-        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container">{listing.coverImageUrl && <img src={listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
+        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container">{listing.coverImageUrl && <img src={listing.coverImageUrl} alt={`${listing.title} — photo 1`} className="h-full w-full object-cover" />}</span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-label-md text-on-surface">{listing.title}</div>
           <div className="text-body-sm text-on-surface-variant"><Price amount={listing.price} currency={listing.currency} /> • {place}</div>

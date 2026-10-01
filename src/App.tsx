@@ -89,6 +89,8 @@ type NavState = {
   searchTerm: string
   searchCity: string
   categoryFilter: string
+  // City of a category page (/categorie/velos/abidjan), '' = every city.
+  categoryCity?: string
   selectedOrderId?: string
   selectedDisputeId?: string
   legalSlug?: string
@@ -191,8 +193,6 @@ export default function App() {
   // Centre d'aide article shown ('' = the help centre's home).
   const [helpSlug, setHelpSlug] = useState(initialRoute?.page === 'help' ? (initialRoute.helpSlug ?? '') : (savedNav.helpSlug ?? ''))
   const [dark, setDark] = useState(savedDark)
-  // Tab title, description and share tags when moving between pages.
-  useSeo(page)
   // The consent banner of the « Mesure d'audience » is up: other bottom banners wait.
   const consentOpen = useConsentOpen()
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
@@ -206,7 +206,12 @@ export default function App() {
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
   // Conversation to open directly (message notification / push link), consumed by BuyerMessages.
   const [openConversationId, setOpenConversationId] = useState<string | null>(() => conversationFromUrl())
-  const [categoryFilter, setCategoryFilter] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedNav.categoryFilter ?? ''))
+  const [categoryFilter, setCategoryFilterState] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedNav.categoryFilter ?? ''))
+  const [categoryCity, setCategoryCity] = useState(initialSearch ? (initialRoute?.categoryCity ?? '') : (savedNav.categoryCity ?? ''))
+  // A category page's city belongs to that category page.
+  const setCategoryFilter = (cat: string) => { setCategoryFilterState(cat); setCategoryCity('') }
+  // Tab title, description and share tags when moving between pages.
+  useSeo(page, page === 'search' && !!categoryFilter)
   const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
   const [selectedDisputeId, setSelectedDisputeId] = useState(linkParam('dispute') ?? savedNav.selectedDisputeId ?? '')
   // Support ticket to open (notification of a reply).
@@ -428,8 +433,10 @@ export default function App() {
     navigate('search')
   }
 
-  const navigateToCategory = (cat: string) => {
-    setCategoryFilter(cat)
+  // A category page, optionally in one city (/categorie/velos/abidjan).
+  const navigateToCategory = (cat: string, city = '') => {
+    setCategoryFilterState(cat)
+    setCategoryCity(typeof city === 'string' ? city : '')
     setSearchTerm('')
     navigate('search')
   }
@@ -500,10 +507,10 @@ export default function App() {
   // The address bar follows the page: public pages have their own URL
   // (shareable, indexed), account pages sit under /compte.
   useEffect(() => {
-    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, searchTerm, helpSlug })
+    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, categoryCity, searchTerm, helpSlug })
     const here = window.location.pathname + window.location.search
     if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(window.history.state, '', path)
-  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, searchTerm, helpSlug])
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug])
 
   // « Mesure d'audience »: one page_view per page or item (after the
   // address bar above; not when only the search words change). Sent only
@@ -518,10 +525,10 @@ export default function App() {
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
     }
     try { sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state)) } catch { /* storage blocked: no restore after a reload */ }
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug])
 
   type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string; helpSlug?: string }
   const historyEntry = (p: Page, sel: Selection = {}) => ({
@@ -632,7 +639,7 @@ export default function App() {
     if (route?.page === 'legal' && route.legalSlug) return openLegal(route.legalSlug)
     if (route?.page === 'flash-offers') return openCampaignRef.current(route.campaignSlug ?? '')
     if (route?.page === 'help') return openHelpRef.current(route.helpSlug ?? '')
-    if (route?.page === 'search' && route.category) return navigateToCategory(route.category)
+    if (route?.page === 'search' && route.category) return navigateToCategory(route.category, route.categoryCity)
     if (route && route.page !== 'account') return navigate(route.page)
     const conversation = q.get('conversation')
     if (conversation) return openConversationRef.current(conversation)
@@ -797,7 +804,7 @@ export default function App() {
       case 'home':
         return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerFrom} onSearch={searchFromHome} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
+        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} categoryCity={categoryCity} onCategoryCityChange={setCategoryCity} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
       case 'listing-detail':
         return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} onContactSeller={contactSellerFrom} />
       case 'seller-profile':
@@ -830,7 +837,7 @@ export default function App() {
   // without the storefront header, bottom nav and footer around it.
   // What the page shows: a page that failed to render gets another chance
   // as soon as the visitor goes elsewhere (page or item), see ErrorBoundary.
-  const pageKey = [page, selectedListingId, selectedSellerId, shopKey, campaignSlug, legalSlug, helpSlug, categoryFilter, searchTerm, selectedOrderId, selectedDisputeId].join('|')
+  const pageKey = [page, selectedListingId, selectedSellerId, shopKey, campaignSlug, legalSlug, helpSlug, categoryFilter, categoryCity, searchTerm, selectedOrderId, selectedDisputeId].join('|')
 
   if (page === 'auth') {
     const close = () => (window.history.length > 1 ? window.history.back() : navigate('home'))

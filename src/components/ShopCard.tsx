@@ -45,7 +45,7 @@ export function ShopCard({ shop, onOpen, onFollow, compact }: { shop: Shop, onOp
             <div className="mt-1.5 grid grid-cols-3 gap-1.5">
               {shop.highlights.map(h => (
                 <div key={h.id} className="min-w-0">
-                  <div className="aspect-square overflow-hidden rounded-lg bg-surface-container">{h.coverUrl && <img src={h.coverUrl} alt={h.title} loading="lazy" className="h-full w-full object-cover" />}</div>
+                  <div className="aspect-square overflow-hidden rounded-lg bg-surface-container">{h.coverUrl && <img src={h.coverUrl} alt={`${h.title} — photo 1`} loading="lazy" className="h-full w-full object-cover" />}</div>
                   <p className="m-0 mt-0.5 truncate text-[11px] font-bold text-on-surface"><Price amount={h.price} /></p>
                 </div>
               ))}

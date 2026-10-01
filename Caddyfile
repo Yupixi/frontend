@@ -106,9 +106,10 @@
 		}
 	}
 
-	# Search engines: robots.txt and sitemap.xml come from the backend
+	# Search engines: robots.txt, sitemap.xml (an index) and its files
+	# under /sitemaps/ come from the backend
 	# (Backend src/modules/seo), which knows the live listings and shops.
-	@seo_files path /robots.txt /sitemap.xml
+	@seo_files path /robots.txt /sitemap.xml /sitemaps/*
 	handle @seo_files {
 		rewrite * /seo{path}
 		import seo_backend

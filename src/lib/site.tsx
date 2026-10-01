@@ -85,7 +85,8 @@ const OWN_TITLE = ['listing-detail', 'shop', 'seller-profile', 'help']
 // storefront's server (Backend src/modules/seo): its title, description,
 // share image and structured data are already right for that URL and are
 // left as they are.
-export function useSeo(page: string) {
+// `ownTitle`: the page sets its own (a category page).
+export function useSeo(page: string, ownTitle = false) {
   const { seo: siteSeo, brand } = useSite()
   // A country's own texts (« Pays » in the BO) win over the site's (the
   // market's version of « Réglages du site » when it has one).
@@ -95,7 +96,7 @@ export function useSeo(page: string) {
   const moved = useRef(false)
   if (page !== firstPage.current) moved.current = true
   useEffect(() => {
-    if (!moved.current || OWN_TITLE.includes(page)) return
+    if (!moved.current || ownTitle || OWN_TITLE.includes(page)) return
     document.title = seo.title || brand.name
     setMeta('name', 'description', seo.description)
     setMeta('property', 'og:title', seo.title || brand.name)
@@ -103,7 +104,7 @@ export function useSeo(page: string) {
     setMeta('property', 'og:site_name', brand.name)
     setMeta('property', 'og:image', seo.image)
     setMeta('name', 'apple-mobile-web-app-title', brand.name)
-  }, [page, seo.title, seo.description, seo.image, brand.name])
+  }, [page, ownTitle, seo.title, seo.description, seo.image, brand.name])
 }
 
 // Tab title of a page about one thing (a listing, a shop, a member).
