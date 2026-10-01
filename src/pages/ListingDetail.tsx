@@ -37,6 +37,7 @@ import BoostSheet from '../components/BoostSheet'
 import ImageLightbox from '../components/ImageLightbox'
 import InlineConversation from '../components/InlineConversation'
 import QuickNegotiation from '../components/QuickNegotiation'
+import { track } from '../lib/analytics'
 import { ListingCard, discountedPrice } from '../components/ListingCard'
 import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
@@ -128,6 +129,11 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     if (here.startsWith('/annonce/') && here !== want && samePlace(here, want))
       window.history.replaceState(window.history.state, '', want)
   }, [listing?.id, listing?.title])
+  // « Mesure d'audience »: the listing id, its category and country only.
+  useEffect(() => {
+    if (!listing) return
+    track('view_item', { country: listing.countryCode ?? undefined, items: [{ item_id: listing.id, item_category: listing.category.slug }] })
+  }, [listing?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // Similar listings and the seller card load alongside the listing, not
   // after it: the seller id is usually already in the cache from the card
   // that was clicked.
@@ -269,7 +275,12 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const loggedIn = !!getAccessToken() && !currentUser?.isGuest
   // "Discuter" always means chat: members go to their inbox, visitors get the
   // inline guest conversation. Price proposals live behind "Faire une offre".
-  const openChat = () => (loggedIn && onContactSeller ? onContactSeller(listing.seller.id, listing.id) : setChatOpen(true))
+  const openChat = () => {
+    if (loggedIn && onContactSeller) return onContactSeller(listing.seller.id, listing.id)
+    // Visitors write from the page (App counts the members' contacts).
+    track('contact_seller', { item_id: listing.id, item_category: listing.category.slug, method: 'guest_chat' })
+    setChatOpen(true)
+  }
   const negotiation = (
     <QuickNegotiation
       listing={listing}

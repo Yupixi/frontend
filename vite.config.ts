@@ -108,7 +108,6 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   const favicon = config.icons?.icon ?? ''
   const socialImage = config.openGraph?.image ?? ''
   const language = sanitizeHtmlValue(config.language) || 'fr'
-  const googleAnalyticsId = sanitizeHtmlValue(config.analytics?.googleAnalyticsId)
   const headStart = config.customScripts?.headStart ?? ''
   const headEnd = config.customScripts?.headEnd ?? ''
   const bodyStart = config.customScripts?.bodyStart ?? ''
@@ -169,28 +168,9 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
           )
         }
 
-        if (googleAnalyticsId) {
-          tags.push(
-            {
-              tag: 'script',
-              attrs: {
-                async: true,
-                src: `https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`,
-              },
-              injectTo: 'head',
-            },
-            {
-              tag: 'script',
-              children: `
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', ${JSON.stringify(googleAnalyticsId)});
-`,
-              injectTo: 'head',
-            },
-          )
-        }
+        // Google Analytics is never injected here (it would load without
+        // consent): the storefront loads it after the visitor accepts, from
+        // the Backoffice « Mesure d'audience » (src/lib/analytics.ts).
 
         if (config.accessibility?.addBypassLinks) {
           tags.push(

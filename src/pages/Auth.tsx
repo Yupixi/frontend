@@ -13,6 +13,7 @@ import { placeOptions, useLists } from '../lib/lists'
 import { localNumberError, toIntl } from '../lib/dialing'
 import { useCountries, useHomeCountry, useMarket, useMethods, type Country } from '../lib/countries'
 import Flag from '../components/Flag'
+import { track } from '../lib/analytics'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -76,7 +77,12 @@ function LoginForm({ onSuccess, onForgot }: { onSuccess: (p: AuthPayload) => voi
     e.preventDefault()
     const id = identifier.trim()
     const phone = /[a-z@]/i.test(id) ? undefined : toIntl(id, country)
-    void login({ variables: { input: { email: phone ?? id, password, countryCode: country.code } } }).then(r => r.data && onSuccess(r.data.login)).catch(() => undefined)
+    void login({ variables: { input: { email: phone ?? id, password, countryCode: country.code } } }).then(r => {
+      if (!r.data) return
+      // « Mesure d'audience »: how, never who.
+      track('login', { method: phone ? 'phone' : 'email', country: country.code })
+      onSuccess(r.data.login)
+    }).catch(() => undefined)
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
@@ -113,7 +119,11 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
     e.preventDefault()
     void register({
       variables: { input: { fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(), phone: toIntl(form.phone, country), city: form.city || undefined, password: form.password, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
-    }).then(r => r.data && onSuccess(r.data.register)).catch(() => undefined)
+    }).then(r => {
+      if (!r.data) return
+      track('sign_up', { method: 'email', country: country.code })
+      onSuccess(r.data.register)
+    }).catch(() => undefined)
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-3.5">

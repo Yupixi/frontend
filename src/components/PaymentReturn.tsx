@@ -4,6 +4,7 @@ import { useApolloClient } from '@apollo/client/react'
 import BottomSheet from './BottomSheet'
 import Icon from './Icon'
 import PaymentLogo from './PaymentLogo'
+import { trackCreditPurchase } from '../lib/analytics'
 import { PAYMENT_QUERY, PENDING_PAYMENT_KEY, PROVIDERS, type PaymentIntent } from '../graphql/payments'
 
 const OPEN = ['PENDING', 'PROCESSING']
@@ -39,6 +40,8 @@ export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
         if (OPEN.includes(data.payment.status) && ++tries < 60) timer = window.setTimeout(tick, 3000)
         else {
           try { sessionStorage.removeItem(PENDING_PAYMENT_KEY) } catch { /* ignore */ }
+          // Bought credits: counted once (lib/analytics, with consent only).
+          trackCreditPurchase(data.payment)
           // Credits added (or not): the balance and history shown anywhere
           // come from the server again, not from the cache (queries on
           // screen refetch at once, the others on their next display).
