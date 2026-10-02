@@ -169,6 +169,12 @@ export default function QrStudio({ target, intro }: { target: QrTarget; intro?: 
                   </span>
                 </div>
                 <p className="m-0 break-all text-body-sm text-on-surface-variant">{q.url.replace(/^https?:\/\//, '')} • {q.scanCount} scan{q.scanCount > 1 ? 's' : ''}</p>
+                {q.assignedByTeam && (
+                  <p className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft/70 p-3 text-body-sm text-on-surface">
+                    <Icon name="verified" size={18} className="mt-0.5 shrink-0 text-tertiary" />
+                    <span><b>Attribué par l’équipe Dilchap</b>. C’est {target.kind === 'MEMBER' ? 'votre' : 'le'} QR code unique {target.kind === 'MEMBER' ? 'de votre page' : 'de cette annonce'}, par exemple un autocollant posé par l’équipe : téléchargez-le ou imprimez-le avec un visuel, ses scans s’affichent ci-dessous.</span>
+                  </p>
+                )}
                 {pending && <p className="m-0 text-body-sm text-on-surface-variant">Avant le lancement, un scan affiche la page de lancement de Dilchap ; il mènera tout seul à {target.kind === 'MEMBER' ? 'votre page' : 'l’annonce'} dès l’ouverture. Vous pouvez imprimer dès maintenant.</p>}
               </div>
             )}
