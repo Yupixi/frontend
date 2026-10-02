@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare, Truck, Wallet, Star,
-  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, Store, Gavel, Handshake, Tag, Megaphone, Headset,
+  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, QrCode, Store, Gavel, Handshake, Tag, Megaphone, Headset,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import { MY_DISPUTE_STATS_QUERY } from '../../graphql/sellerTools'
@@ -57,6 +57,7 @@ const SECTIONS: { title: string; items: NavEntry[] }[] = [
         label: 'Réputation', icon: Star, items: [
           { key: 'seller-reviews', icon: Star, label: 'Avis & Réputation' },
           { key: 'seller-badge', icon: BadgeCheck, label: 'Mon badge' },
+          { key: 'seller-qr', icon: QrCode, label: 'Mon QR code' },
         ],
       },
       { key: 'buyer-messages', icon: MessageSquare, label: 'Messagerie' },
@@ -83,6 +84,7 @@ export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-dashboard': 'Tableau de bord',
   'seller-kyc': 'Vérification d’identité',
   'seller-badge': 'Mon badge',
+  'seller-qr': 'Mon QR code',
   'seller-campaigns': 'Campagnes Dilchap',
   support: 'Aide & support',
   'seller-shop': 'Ma Boutique officielle',
@@ -122,7 +124,7 @@ const MEMBER_TABS: MobileTab[] = [
   { key: 'buyer-favorites', icon: 'favorite', label: 'Favoris', match: ['buyer-favorites'] },
   { key: 'seller-post', icon: 'add', label: 'Déposer', match: [], primary: true },
   { key: 'buyer-messages', icon: 'chat', label: 'Messages', match: ['buyer-messages'] },
-  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews', 'seller-badge', 'support'] },
+  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews', 'seller-badge', 'seller-qr', 'support'] },
 ]
 
 const SELLER_TABS: MobileTab[] = [
