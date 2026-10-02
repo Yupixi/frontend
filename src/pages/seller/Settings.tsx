@@ -1,3 +1,5 @@
+import PersonalizeHomeSetting from '../../components/PersonalizeHomeSetting'
+import { requestOpenHelp } from '../../lib/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -602,6 +604,9 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">Apparence</div><div className="text-body-sm text-on-surface-variant">{dark ? 'Mode sombre activé' : 'Mode clair activé'}</div></div>
                   <Toggle label="Mode sombre" on={dark} onChange={onToggleDark} />
                 </div>
+                <PersonalizeHomeSetting className="mt-3" prefs={me.notificationPreferences}
+                  onHelp={() => requestOpenHelp('accueil-personnalise')}
+                  onSaved={(p) => { void refetch(); if (currentUser) onProfileUpdated({ ...currentUser, notificationPreferences: p as AuthUser['notificationPreferences'] }) }} />
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="menu_book" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">Visite guidée</div><div className="text-body-sm text-on-surface-variant">Revoyez les essentiels de Dilchap, et les nouveautés déjà présentées.</div></div>

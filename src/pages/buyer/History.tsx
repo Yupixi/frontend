@@ -1,3 +1,6 @@
+import PersonalizeHomeSetting from '../../components/PersonalizeHomeSetting'
+import { clearInterests } from '../../lib/interests'
+import { requestOpenHelp } from '../../lib/navigation'
 import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
@@ -56,7 +59,8 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
   const cities = new Set(items.map(i => i.listing.locationLabel ?? i.listing.city)).size
 
   const remove = (id: string) => void removeItem({ variables: { listingId: id } }).then(() => refetch())
-  const clear = () => { if (window.confirm("Effacer tout l'historique ?")) void clearAll().then(() => refetch()) }
+  // The interest profile goes with the history (« Pour vous » starts again).
+  const clear = () => { if (window.confirm("Effacer tout l'historique ? Votre accueil personnalisé repartira de zéro.")) void clearAll().then(() => { clearInterests(); return refetch() }) }
   const toggle = () => void updatePrefs({ variables: { preferences: { historyEnabled: !enabled } } }).then(({ data: d }) => {
     if (d && currentUser) onProfileUpdated({ ...currentUser, notificationPreferences: d.updateNotificationPreferences.notificationPreferences as AuthUser['notificationPreferences'] })
   })
@@ -89,6 +93,8 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
             </div>
           ))}
         </section>
+        <PersonalizeHomeSetting className="mt-4" prefs={prefs} onHelp={() => requestOpenHelp('accueil-personnalise')}
+          onSaved={(p) => { if (currentUser) onProfileUpdated({ ...currentUser, notificationPreferences: p as AuthUser['notificationPreferences'] }) }} />
         {!enabled && <p className="m-0 mt-3 flex items-center gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="history_toggle_off" size={18} /> L'enregistrement de l'historique est désactivé : les nouvelles consultations ne sont plus conservées.</p>}
 
         {loading && !data && <p className="mt-4 text-body-md text-on-surface-variant">Chargement…</p>}

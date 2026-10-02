@@ -1,3 +1,4 @@
+import { noteInterest } from '../lib/interests'
 import AnimatedIcon from '../components/AnimatedIcon'
 import SupportAboutButton from '../components/SupportAboutButton'
 import { useEffect, useRef, useState } from 'react'
@@ -135,6 +136,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   useEffect(() => {
     if (!listing) return
     track('view_item', { country: listing.countryCode ?? undefined, items: [{ item_id: listing.id, item_category: listing.category.slug }] })
+    // Anonymous interests (this device only, see lib/interests).
+    noteInterest(listing.category.slug)
   }, [listing?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // Similar listings and the seller card load alongside the listing, not
   // after it: the seller id is usually already in the cache from the card
