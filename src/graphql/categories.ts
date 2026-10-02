@@ -81,10 +81,12 @@ export type ActiveCampaignTile = {
 // A category page (/categorie/<slug>[/<ville>]): category or subcategory,
 // its city, the team's introduction and FAQ (BO « Catégories ») and links
 // to the same page in other cities and to neighbouring categories — the
-// same data search engines get (Backend seo).
+// same data search engines get (Backend seo). `country`: the visitor's
+// market, for its version of the text (a city page takes its city's); a
+// subcategory without a text of its own gets its category's.
 export const CATEGORY_LANDING_QUERY = gql`
-  query CategoryLanding($slug: String!, $city: String) {
-    categoryLanding(slug: $slug, city: $city) {
+  query CategoryLanding($slug: String!, $city: String, $country: String) {
+    categoryLanding(slug: $slug, city: $city, country: $country) {
       slug
       name
       kind

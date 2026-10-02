@@ -200,7 +200,7 @@ export default function SearchPage({
   const subcategory = subOwner?.subcategories.find(s => s.slug === categoryFilter)
   // Category page: the team's texts and the links to neighbouring pages.
   const { data: landingData } = useQuery<{ categoryLanding: CategoryLanding | null }>(CATEGORY_LANDING_QUERY, {
-    variables: { slug: categoryFilter ?? '', city: categoryCity || null },
+    variables: { slug: categoryFilter ?? '', city: categoryCity || null, country: countryCode ?? null },
     skip: !categoryFilter,
   })
   const landing = categoryFilter ? landingData?.categoryLanding ?? null : null
