@@ -1,3 +1,4 @@
+import { rotationSeed } from '../../lib/rotationSeed'
 import { useRef, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../Icon'
@@ -8,7 +9,7 @@ import { requestOpenCampaign, requestOpenLink } from '../../lib/navigation'
 import { CAMPAIGN_TYPE_LABEL, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignVisual, type LiveCampaign } from '../../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../../graphql/listings'
 import { plainText } from '../../lib/format'
-import { useMarketVars } from '../../lib/countries'
+import { useMarketCode, useMarketVars } from '../../lib/countries'
 
 const DEFAULT_TINT = '#EB1100'
 const tintOf = (c: LiveCampaign) => c.themeColor || DEFAULT_TINT
@@ -141,8 +142,10 @@ function useLiveCampaigns() {
 
 // Best deals of the main campaign ("Les pépites de la …").
 function DealsRail({ c, renderCard }: { c: LiveCampaign; renderCard: (l: RemoteListing) => React.ReactNode }) {
+  // Only the visitor's country (a campaign may run in several).
+  const marketCode = useMarketCode()
   const { data } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: { filter: { campaignId: c.id }, sort: 'DISCOUNT_DESC', page: 1, pageSize: 10 },
+    variables: { filter: { campaignId: c.id, ...(marketCode ? { countryCode: marketCode } : {}) }, sort: 'DISCOUNT_DESC', page: 1, pageSize: 10, rotationSeed: rotationSeed() },
   })
   const items = data?.listings.items ?? []
   if (!items.length) return null

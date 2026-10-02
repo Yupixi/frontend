@@ -5,7 +5,7 @@ import Icon from './Icon'
 import Price from './Price'
 import BoostSheet from './BoostSheet'
 import BottomSheet from './BottomSheet'
-import type { RemoteListing } from '../graphql/listings'
+import type { BoostBadge, RemoteListing } from '../graphql/listings'
 import { formatRelativeDate, plainText } from '../lib/format'
 import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
@@ -122,8 +122,28 @@ function PromoBadge({ listing }: { listing: RemoteListing }) {
   )
 }
 
-function isUrgent(listing: RemoteListing) {
-  return !!listing.urgentUntil && new Date(listing.urgentUntil) > new Date()
+// The badge of the formula the seller bought, worded as the formula
+// promises it (server-side `boostBadges`; older queries without it fall
+// back on the boost dates).
+function boughtBadge(listing: RemoteListing): BoostBadge | null {
+  if (listing.boostBadges) return listing.boostBadges[0] ?? null
+  const now = new Date()
+  const pinned = !!listing.boostExpiresAt && new Date(listing.boostExpiresAt) > now
+  const urgent = !!listing.urgentUntil && new Date(listing.urgentUntil) > now
+  if (pinned && urgent) return { kind: 'TURBO', label: 'Prix Choc' }
+  if (pinned) return { kind: 'FEATURED', label: 'En vedette' }
+  if (urgent) return { kind: 'URGENT', label: 'Vente Urgente' }
+  return null
+}
+
+const BADGE_ICON: Record<BoostBadge['kind'], string> = { FEATURED: 'star', TURBO: 'bolt', URGENT: 'timer' }
+
+function BoughtBadge({ badge }: { badge: BoostBadge }) {
+  return (
+    <span className={`flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold uppercase md:rounded-md md:px-2 md:text-label-sm ${badge.kind === 'FEATURED' ? 'bg-tertiary text-white' : 'bg-primary text-white'}`}>
+      <Icon name={BADGE_ICON[badge.kind]} size={12} fill={badge.kind === 'FEATURED'} /> {badge.label}
+    </span>
+  )
 }
 
 // Product card from the Stitch mockups. Phones get the compact "Dilchap
@@ -148,6 +168,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   const struck = salePrice != null ? listing.price : (listing.originalPrice && listing.price != null && listing.originalPrice > listing.price ? listing.originalPrice : null)
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
   const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
+  const bought = boughtBadge(listing)
   const contact = (e: React.MouseEvent) => { e.stopPropagation(); (onContact ?? onSelect)() }
   // Phone button of the mockup card. Sellers' numbers aren't public: the
   // number is shared in the conversation, so the button says so and leads
@@ -209,18 +230,14 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <div className="flex h-full w-full items-center justify-center text-outline"><Tag size={40} /></div>
           )}
 
-          {/* The photo carries two tags at most: one hook at the top (the
-              strongest of promo > urgent > boosted) and one neutral fact at
-              the bottom. Everything else (seller badge, stock) is in the
-              card body or on the listing page. */}
-          <div className="absolute left-2 right-10 top-2 flex items-start md:left-3 md:right-12 md:top-3">
-            {listing.activeCampaignDiscount ? <PromoBadge listing={listing} />
-              : isUrgent(listing) ? <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2 md:text-label-sm">Urgent</span>
-              : isActivelyBoosted(listing) && (
-                <span className="flex items-center gap-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:rounded-md md:px-2.5 md:py-1 md:text-label-sm">
-                  <Icon name="rocket_launch" size={14}/> Boosté
-                </span>
-              )}
+          {/* Top of the photo: the badge the seller paid for (« En vedette »,
+              « Prix Choc », « Vente Urgente ») and the campaign discount,
+              side by side — a promo never hides a bought badge. Bottom:
+              one neutral fact. Everything else (seller badge, stock) is in
+              the card body or on the listing page. */}
+          <div className="absolute left-2 right-10 top-2 flex flex-wrap items-start gap-1 md:left-3 md:right-12 md:top-3">
+            {bought && <BoughtBadge badge={bought} />}
+            {listing.activeCampaignDiscount && <PromoBadge listing={listing} />}
           </div>
 
           {/* Phone: size, condition or category. Desktop: the condition. */}

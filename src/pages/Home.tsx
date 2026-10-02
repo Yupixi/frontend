@@ -8,6 +8,7 @@ import {
 import Icon, { CategoryIcon } from '../components/Icon'
 import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
+import { rotationSeed } from '../lib/rotationSeed'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type ListingSort, type RemoteListing } from '../graphql/listings'
 import { DEFAULT_HOME, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
 import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
@@ -118,21 +119,23 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const topCategories = [...categories].sort((a, b) => (b.listingsCount ?? 0) - (a.listingsCount ?? 0)).slice(0, 7)
 
 
-  // Pépites à la Une — the recommendation algorithm, boosted listings first.
+  // Pépites à la Une — the server's order: places reserved to listings « en
+  // vedette » of the visitor's country (how many per layout is set in the
+  // back-office), the recommendation around them.
   const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
-    variables: { limit: 12, countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined },
+    variables: { limit: isDesktop ? 4 : 12, placement: isDesktop ? 'HOME_DESKTOP' : 'HOME_MOBILE', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined },
     skip: locationPending,
   })
-  const isBoosted = (l: RemoteListing) => !!l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()
+  const isFeatured = (l: RemoteListing) => !!l.boostBadges?.some(b => b.kind !== 'URGENT')
   // A showcase rail: listings with a photo only (a grey placeholder card as
-  // the first "pépite" reads as broken), boosted ones first.
+  // the first "pépite" reads as broken).
   const recommended = recommendedData?.recommendedListings ?? []
   const withPhoto = recommended.filter(l => !!listingImage(l))
   // "Boutiques officielles" rail (most followed first).
   const { data: shopsData } = useQuery<{ shops: { items: Shop[] } }>(SHOPS_QUERY, { variables: { sort: 'POPULAR', pageSize: 8, countryCode: location?.countryCode ?? undefined }, skip: locationPending })
   const shops = shopsData?.shops.items ?? []
-  const pepites = [...(withPhoto.length ? withPhoto : recommended)].sort((a, b) => Number(isBoosted(b)) - Number(isBoosted(a)))
-  const hasBoosted = pepites.some(isBoosted)
+  const pepites = withPhoto.length ? withPhoto : recommended
+  const hasBoosted = pepites.some(isFeatured)
 
   // Cities (desktop quick filters + hero select) — real cities facet.
   const marketFilter = location?.countryCode ? { countryCode: location.countryCode } : undefined
@@ -140,7 +143,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const cities = (facetsData?.listingFacets.cities ?? []).map(c => c.value)
   // "Vendeurs certifiés" rail (perk of the paid badge).
   const { data: certifiedData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: { page: 1, pageSize: 8, filter: { ...marketFilter, certifiedSellersOnly: true } },
+    variables: { page: 1, pageSize: 8, filter: { ...marketFilter, certifiedSellersOnly: true }, rotationSeed: rotationSeed() },
     skip: locationPending,
   })
   const certified = certifiedData?.listings.items ?? []
@@ -156,7 +159,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const page = pageState.key === feedKey ? pageState.page : 1
   const setPage = (next: (p: number) => number) => setPageState({ key: feedKey, page: next(page) })
   const { data: feedData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
-    variables: { sort, page, pageSize, filter: feedFilter },
+    variables: { sort, page, pageSize, filter: feedFilter, rotationSeed: rotationSeed() },
     skip: locationPending,
   })
   // Pages received so far for the current filter; the previous filter's
@@ -292,7 +295,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                     <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
                   </span>
-                  <h3 className="m-0 text-headline-lg text-on-surface">Pépites à la Une{hasBoosted && ' & Annonces Boostées'}</h3>
+                  <h3 className="m-0 text-headline-lg text-on-surface">Pépites à la Une{hasBoosted && ' & Annonces en vedette'}</h3>
                 </div>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">Priorité visibilité</span>
               </div>
@@ -440,7 +443,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           <section className="mb-8">
             <SectionHeading
               title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
-              action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">Boostées</span> : undefined}
+              action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">En vedette</span> : undefined}
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {pepites.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}

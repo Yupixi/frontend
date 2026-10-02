@@ -1,3 +1,4 @@
+import { rotationSeed } from '../lib/rotationSeed'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Icon, { CategoryIcon } from '../components/Icon'
@@ -8,7 +9,7 @@ import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
 import { CAMPAIGN_PAGE_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignPage, type LiveCampaign } from '../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
 import { placeOptions, useLists } from '../lib/lists'
-import { useMarket, useMarketVars } from '../lib/countries'
+import { useMarket, useMarketCode, useMarketVars } from '../lib/countries'
 import { richHtml } from '../lib/richText'
 import { feeOptions, feeText } from '../lib/campaignFees'
 import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
@@ -57,20 +58,24 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
   useEffect(() => setPages(1), [query, category, city, minDiscount, sort])
   const places = placeOptions(useLists())
   const market = useMarket()
+  // Only the visitor's country (a campaign may run in several).
+  const marketCode = useMarketCode()
+  const inMarket = marketCode ? { countryCode: marketCode } : {}
 
   const filter = useMemo(() => campaign && ({
     campaignId: campaign.id,
+    ...(marketCode ? { countryCode: marketCode } : {}),
     ...(query ? { search: query } : {}),
     ...(category ? { categorySlug: category } : {}),
     ...(city ? { city } : {}),
     ...(minDiscount ? { minDiscountPercent: minDiscount } : {}),
-  }), [campaign, query, category, city, minDiscount])
+  }), [campaign, marketCode, query, category, city, minDiscount])
   const { data: offersData, loading: offersLoading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number } }>(LISTINGS_QUERY, {
-    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE * pages },
+    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE * pages, rotationSeed: rotationSeed() },
     skip: !filter,
   })
   const { data: topData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
-    variables: { filter: { campaignId: campaign?.id }, sort: 'DISCOUNT_DESC', page: 1, pageSize: 8 },
+    variables: { filter: { campaignId: campaign?.id, ...inMarket }, sort: 'DISCOUNT_DESC', page: 1, pageSize: 8, rotationSeed: rotationSeed() },
     skip: !campaign,
   })
   const offers = offersData?.listings.items ?? []

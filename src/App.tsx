@@ -216,6 +216,8 @@ export default function App() {
   const [selectedDisputeId, setSelectedDisputeId] = useState(linkParam('dispute') ?? savedNav.selectedDisputeId ?? '')
   // Support ticket to open (notification of a reply).
   const [focusTicketId, setFocusTicketId] = useState<string | null>(() => linkParam('ticket'))
+  // « Prolonger » in the end-of-boost notification: Booster opens on that listing.
+  const [boostListingId, setBoostListingId] = useState<string | null>(() => linkParam('boost'))
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
@@ -601,7 +603,7 @@ export default function App() {
     window.addEventListener(OPEN_CONVERSATION_EVENT, onOpen)
     navigator.serviceWorker?.addEventListener('message', onSwMessage)
     // The push link is consumed once: a reload shouldn't reopen it.
-    if (['conversation', 'shortcut', 'dispute', 'ticket'].some(linkParam)) window.history.replaceState(window.history.state, '', window.location.pathname)
+    if (['conversation', 'shortcut', 'dispute', 'ticket', 'boost'].some(linkParam)) window.history.replaceState(window.history.state, '', window.location.pathname)
     return () => {
       window.removeEventListener(OPEN_CONVERSATION_EVENT, onOpen)
       window.removeEventListener(OPEN_SHOP_EVENT, onOpenShop)
@@ -653,6 +655,7 @@ export default function App() {
     const dispute = q.get('dispute')
     if (dispute) setSelectedDisputeId(dispute)
     setFocusTicketId(q.get('ticket'))
+    setBoostListingId(q.get('boost'))
     navigate(target, dispute ? { disputeId: dispute } : undefined)
   }
   const openLinkRef = useRef(openLink)
@@ -900,7 +903,7 @@ export default function App() {
         case 'seller-reviews':
           return <SellerReviews onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'seller-premium':
-          return <SellerPremium onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+          return <SellerPremium key={boostListingId ?? ''} initialListingId={boostListingId} onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
         case 'buyer-purchases':
         case 'buyer-receipts':
           return <Purchases mode={accountPage === 'buyer-receipts' ? 'receipts' : 'purchases'} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />

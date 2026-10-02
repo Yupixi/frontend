@@ -2,7 +2,7 @@ import AnimatedIcon from '../../components/AnimatedIcon'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
-  Rocket, Eye, Heart, MessageSquare, ArrowUp, ArrowRight, Star, CheckCircle2, ShieldCheck, Percent, Handshake,
+  Rocket, Eye, Heart, MessageSquare, ArrowUp, ArrowRight, Star, ShieldCheck, Percent, Handshake,
   Flame, Clock, TrendingUp, Tag, MapPin,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
@@ -16,6 +16,7 @@ import type { AuthUser } from '../../graphql/auth'
 import { MY_WALLET_QUERY, type WalletSummary } from '../../graphql/sellerHub'
 import Select from '../../components/Select'
 import BoosterMobile from './BoosterMobile'
+import PackPromises from '../../components/PackPromises'
 import Credits, { creditsLabel } from '../../components/Credits'
 import { useBumpCost } from '../../lib/useBumpCost'
 import OfferCredits from '../../components/OfferCredits'
@@ -24,7 +25,21 @@ import { Claim, useNoCommissionClaims } from '../../lib/site'
 import PaymentLogo, { useMobileMethods } from '../../components/PaymentLogo'
 import { usePriceVars } from '../../lib/countries'
 
-type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
+type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, initialListingId?: string | null }
+
+// Status of a boost in the history.
+function boostStatus(b: RemoteBoost): { label: string, active: boolean } {
+  if (b.upcoming) return { label: 'À venir', active: false }
+  const active = isFuture(b.expiresAt) && new Date(b.expiresAt).getTime() - new Date(b.startsAt).getTime() > 0
+  return { label: active ? 'En cours' : 'Terminé', active }
+}
+
+// « +65 vues • +3 contacts • 240 affichages en vedette ».
+function boostGains(b: RemoteBoost) {
+  const parts = [`+${b.viewsGained ?? 0} vues`, `+${b.contactsGained ?? 0} contacts`]
+  if (b.impressions != null) parts.push(`${b.impressions} affichage${b.impressions > 1 ? 's' : ''} en vedette`)
+  return parts.join(' • ')
+}
 
 const isFuture = (iso?: string | null) => !!iso && new Date(iso) > new Date()
 
@@ -35,7 +50,7 @@ function formatDate(iso: string) {
 // "Booster mes annonces & Remontées en tête" mockup. Packs and prices come
 // from the backend (boostPacks); packs are paid with the wallet balance
 // (WalletPaySheet) and activated by the server at once.
-export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
+export default function Booster({ onNavigate, currentUser, onLogout, initialListingId }: Props) {
   const noCommission = useNoCommissionClaims()
   const mobile = useMobileMethods()
   const { data: listingsData, refetch: refetchListings } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 100 } })
@@ -47,8 +62,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const credits = walletData?.myWallet.credits ?? 0
 
-  const [listingId, setListingId] = useState('')
-  useEffect(() => { if (!listingId && live[0]) setListingId(live[0].id) }, [live, listingId])
+  // « Prolonger » from the end-of-boost notification opens on that listing.
+  const [listingId, setListingId] = useState(initialListingId ?? '')
+  useEffect(() => {
+    if (live.length && !live.some(l => l.id === listingId)) setListingId(live[0].id)
+  }, [live, listingId])
   const listing = live.find(l => l.id === listingId)
   // A bump costs the "Remontée instantanée" price less the live offer.
   const bumpCost = useBumpCost(false, listing?.id)
@@ -77,7 +95,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
     setError(null); setDone(null)
     try {
       await bumpListing({ variables: { id: listing.id } })
-      setDone('Annonce remontée en tête du catalogue')
+      setDone('Annonce remontée en tête des plus récentes')
       void refetchListings(); void refetchWallet()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de remonter l’annonce.')
@@ -87,6 +105,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
   const visible = listing && (isFuture(listing.boostExpiresAt) || isFuture(listing.autoBumpUntil) || isFuture(listing.urgentUntil))
   const turbo = pack('TURBO_7D')
   const urgent = pack('URGENT_72H')
+  const bumpHour = pack('BUMP_DAILY_7')?.autoBumpHour ?? turbo?.autoBumpHour
   const radio = (p: BoostPack, current: BoostPack, set: (p: BoostPack) => void, sub?: string) => {
     const info = pack(p)
     if (!info) return null
@@ -145,7 +164,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               <div className="mt-3 flex items-start gap-2 text-body-sm text-on-surface-variant">
                 <Clock size={16} className="mt-0.5 text-primary" />
                 {isFuture(listing?.autoBumpUntil)
-                  ? <span>Prochaine remontée planifiée : <b className="text-on-surface">chaque jour à 18h00</b> jusqu'au {formatDate(listing!.autoBumpUntil!)}</span>
+                  ? <span>Remontée automatique : <b className="text-on-surface">chaque jour{bumpHour != null ? ` à ${bumpHour} h (heure locale)` : ''}</b> jusqu'au {formatDate(listing!.autoBumpUntil!)}</span>
                   : <span>Aucune remontée automatique planifiée</span>}
               </div>
               <button onClick={() => onNavigate('seller-wallet')} className="mt-3 h-11 w-full cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container-low text-label-md text-on-surface hover:bg-surface-container">Acheter des crédits</button>
@@ -231,12 +250,13 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
             <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <span className="self-start rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">Recommandé pour relancer</span>
               <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><ArrowUp size={22} className="text-primary" /> Remontée Flash en Tête</div>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Votre annonce est immédiatement repositionnée tout en haut du catalogue, comme si elle venait d'être publiée.</p>
+              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{pack('BUMP_FLASH')?.description}</p>
               <div className="mt-3 flex flex-col gap-2">
                 {radio('BUMP_FLASH', bumpChoice, setBumpChoice)}
                 {radio('BUMP_PACK_3', bumpChoice, setBumpChoice, 'À la demande')}
-                {radio('BUMP_DAILY_7', bumpChoice, setBumpChoice, 'À 18h00 pile')}
+                {radio('BUMP_DAILY_7', bumpChoice, setBumpChoice, bumpHour != null ? `Chaque jour à ${bumpHour} h` : undefined)}
               </div>
+              <PackPromises info={pack(bumpChoice)} className="mt-3" />
               <button disabled={!listing} onClick={() => activate(bumpChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                 Activer maintenant <ArrowRight size={16} />
               </button>
@@ -246,11 +266,11 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
             <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <span className="flex items-center gap-1 self-start rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><TrendingUp size={13} /> Meilleur impact</span>
               <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><Star size={22} className="text-tertiary" /> Badge En Vedette &amp; Carrousel</div>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Votre annonce passe avant les résultats standards et dans la sélection « Pépites à la Une » de l'accueil.</p>
               <div className="mt-3 flex flex-col gap-2">
                 {radio('FEATURED_48H', featuredChoice, setFeaturedChoice)}
                 {radio('FEATURED_7D', featuredChoice, setFeaturedChoice, '1 semaine complète')}
               </div>
+              <PackPromises info={pack(featuredChoice)} className="mt-3" />
               <button disabled={!listing} onClick={() => activate(featuredChoice)} className="mt-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest disabled:opacity-50" style={{ marginTop: 16 }}>
                 Choisir En Vedette <ArrowRight size={16} />
               </button>
@@ -261,12 +281,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               <div className="relative flex flex-col rounded-2xl border-2 border-solid border-primary bg-surface-lowest p-4">
                 <span className="absolute -top-3 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-primary px-3 py-1 text-label-sm uppercase text-white"><Flame size={13} /> Formule pro rentabilité</span>
                 <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><Rocket size={22} className="text-primary" /> {turbo.label}</div>
-                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">La formule tout-en-un pour déclencher la vente sous 72h chrono.</p>
-                <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface">
-                  {['7 remontées quotidiennes à l’heure d’affluence (18h)', 'Épinglage 7 jours en tête des résultats', 'Badge visuel « Prix Choc »', 'Mise en avant sur l’accueil'].map(t => (
-                    <li key={t} className="flex items-start gap-2"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-tertiary" /> {t}</li>
-                  ))}
-                </ul>
+                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{turbo.description}</p>
+                <PackPromises info={turbo} className="mt-3" />
                 <div className="mt-4 rounded-xl bg-surface-container-low p-3">
                   <div className="text-label-sm uppercase text-on-surface-variant">Tarif spécial tout-inclus</div>
                   <div className="flex items-baseline gap-2">
@@ -286,6 +302,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 <span className="self-start rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">Signal visuel flash</span>
                 <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="alarm" size={22} className="text-primary" /> {urgent.label}</div>
                 <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{urgent.description}</p>
+                <PackPromises info={urgent} className="mt-3" />
                 <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm">
                   <span className="text-on-surface-variant">Validité continue</span><span className="text-right font-semibold text-on-surface">{urgent.durationHours} heures</span>
                   <span className="text-on-surface-variant">Tarif unique</span><span className="whitespace-nowrap text-right font-extrabold text-primary"><OfferCredits op="BOOST" n={urgent.price} listingId={listing?.id} /></span>
@@ -314,16 +331,15 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                 <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Descend dans le fil au fil des nouvelles publications.</p>
               </div>
               <div className="min-w-0">
-                <div className="mb-2 flex items-center gap-1.5 text-label-md text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> Avec boost (en tête de liste)</div>
+                <div className="mb-2 flex items-center gap-1.5 text-label-md text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> En vedette (en tête de liste)</div>
                 <div className="relative flex items-center gap-3 rounded-xl border-2 border-solid border-primary bg-surface-lowest p-3">
-                  <span className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Star size={11} /> En vedette Dilchap</span>
+                  <span className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Star size={11} /> En vedette</span>
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container">
                     {listing.coverImageUrl && <img src={listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}
-                    <span className="absolute inset-x-0 bottom-0 bg-primary text-center text-[8px] font-bold uppercase text-white">Prix choc</span>
                   </div>
                   <div className="min-w-0"><div className="text-[11px] text-primary">Remontée à l'instant</div><div className="truncate text-label-md text-on-surface">{listing.title}</div><div className="text-label-md font-bold text-primary"><Price amount={listing.price} currency={listing.currency} /></div></div>
                 </div>
-                <p className="m-0 mt-2 flex items-center gap-1.5 rounded-lg bg-tertiary-soft p-2 text-body-sm text-tertiary"><TrendingUp size={15} /> 1re position de sa catégorie pendant la durée du boost</p>
+                <p className="m-0 mt-2 flex items-center gap-1.5 rounded-lg bg-tertiary-soft p-2 text-body-sm text-tertiary"><TrendingUp size={15} /> En tête des pages de sa catégorie et des recherches, à tour de rôle avec les autres annonces en vedette</p>
               </div>
             </div>
           </section>
@@ -334,7 +350,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
               <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Historique des boosts &amp; performances</h2>
-              <p className="m-0 text-body-sm text-on-surface-variant">Gains de vues et de contacts depuis chaque activation.</p>
+              <p className="m-0 text-body-sm text-on-surface-variant">Gains de vues et de contacts depuis chaque activation, et affichages obtenus en vedette.</p>
             </div>
             <span className="flex items-center gap-1.5 text-label-sm text-tertiary"><span className="h-2 w-2 rounded-full bg-tertiary" /> Mise à jour en temps réel</span>
           </div>
@@ -342,7 +358,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
           <div className="flex flex-col gap-2 md:hidden">
             {history.length === 0 && <p className="m-0 rounded-2xl bg-surface-container-low p-5 text-center text-body-sm text-on-surface-variant">Aucun boost pour le moment.</p>}
             {history.map(b => {
-              const active = isFuture(b.expiresAt) && new Date(b.expiresAt).getTime() - new Date(b.startsAt).getTime() > 0
+              const { label: status, active } = boostStatus(b)
               const img = b.listing?.coverImageUrl ?? b.listing?.media[0]?.url
               return (
                 <div key={b.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-3">
@@ -352,13 +368,13 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                       <div className="truncate text-label-md text-on-surface">{b.listing?.title ?? '—'}</div>
                       <div className="text-body-sm text-on-surface-variant">{formatDate(b.createdAt)}</div>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{active ? 'Actif' : 'Terminé'}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{status}</span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span>
                     <span className="whitespace-nowrap text-label-md font-bold text-on-surface"><Credits n={b.price} /></span>
                   </div>
-                  <div className="mt-1.5 flex items-center gap-1 text-body-sm text-tertiary"><TrendingUp size={14} /> +{b.viewsGained ?? 0} vues • +{b.contactsGained ?? 0} contacts</div>
+                  <div className="mt-1.5 flex items-center gap-1 text-body-sm text-tertiary"><TrendingUp size={14} /> {boostGains(b)}</div>
                 </div>
               )
             })}
@@ -373,7 +389,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
               <tbody>
                 {history.length === 0 && <tr><td colSpan={6} className="px-4 py-6 text-center text-on-surface-variant">Aucun boost pour le moment.</td></tr>}
                 {history.map(b => {
-                  const active = isFuture(b.expiresAt) && new Date(b.expiresAt).getTime() - new Date(b.startsAt).getTime() > 0
+                  const { label: status, active } = boostStatus(b)
                   return (
                     <tr key={b.id} className="border-0 border-t border-solid border-outline-variant">
                       <td className="px-4 py-3 text-on-surface">{formatDate(b.createdAt)}</td>
@@ -385,8 +401,8 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
                       </td>
                       <td className="px-4 py-3"><span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span></td>
                       <td className="whitespace-nowrap px-4 py-3 font-semibold text-on-surface"><Credits n={b.price} /></td>
-                      <td className="px-4 py-3 text-tertiary"><span className="flex items-center gap-1"><TrendingUp size={14} /> +{b.viewsGained ?? 0} vues • +{b.contactsGained ?? 0} contacts</span></td>
-                      <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{active ? 'Actif' : 'Terminé'}</span></td>
+                      <td className="px-4 py-3 text-tertiary"><span className="flex items-center gap-1"><TrendingUp size={14} /> {boostGains(b)}</span></td>
+                      <td className="px-4 py-3"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{status}</span></td>
                     </tr>
                   )
                 })}
@@ -418,7 +434,7 @@ export default function Booster({ onNavigate, currentUser, onLogout }: Props) {
         onClose={() => setConfirmBump(false)}
         onConfirm={() => void spendCredit()}
       >
-        {listing && <p className="m-0">« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">{creditsLabel(bumpCost ?? 0)}</b> {(bumpCost ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.</p>}
+        {listing && <p className="m-0">« {listing.title} » repasse en tête du tri « Plus récents ». <b className="text-on-surface">{creditsLabel(bumpCost ?? 0)}</b> {(bumpCost ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.</p>}
       </ConfirmSheet>
       <WalletPaySheet
         open={!!confirmPack}
