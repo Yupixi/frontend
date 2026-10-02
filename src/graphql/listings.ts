@@ -2,8 +2,8 @@ import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 export const LISTINGS_QUERY = gql`
-  query Listings($filter: ListingFilterInput, $sort: ListingSort, $page: Float, $pageSize: Float) {
-    listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize) {
+  query Listings($filter: ListingFilterInput, $sort: ListingSort, $page: Float, $pageSize: Float, $rotationSeed: String) {
+    listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize, rotationSeed: $rotationSeed) {
       totalCount
       page
       pageSize
@@ -40,6 +40,7 @@ export const LISTINGS_QUERY = gql`
         createdAt
         coverImageUrl
         boostExpiresAt
+        boostBadges { kind label }
         activeCampaignDiscount {
           campaignId
           campaignName
@@ -74,8 +75,8 @@ export const LISTINGS_QUERY = gql`
 `
 
 export const RECOMMENDED_LISTINGS_QUERY = gql`
-  query RecommendedListings($limit: Float, $countryCode: String, $city: String) {
-    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city) {
+  query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement) {
+    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement) {
       id
       title
       description
@@ -107,6 +108,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       createdAt
       coverImageUrl
       boostExpiresAt
+      boostBadges { kind label }
       activeCampaignDiscount {
         campaignId
         campaignName
@@ -239,6 +241,7 @@ export const LISTING_QUERY = gql`
       createdAt
       coverImageUrl
       boostExpiresAt
+      boostBadges { kind label }
       activeCampaignDiscount {
         campaignId
         campaignName
@@ -524,6 +527,9 @@ export type RemoteListing = {
   createdAt: string
   coverImageUrl: string | null
   boostExpiresAt?: string | null
+  // Badges of the boosts running now, the first one is shown on the card
+  // (FEATURED « En vedette », TURBO « Prix Choc », URGENT « Vente Urgente »).
+  boostBadges?: BoostBadge[]
   status?: string
   activeCampaignDiscount?: CampaignDiscount | null
   media: { url: string }[]
@@ -536,6 +542,8 @@ export type RemoteListing = {
   // Official shop bundle ("2 achetés = -10 %").
   bundleOffer?: BundleOffer | null
 }
+
+export type BoostBadge = { kind: 'FEATURED' | 'TURBO' | 'URGENT'; label: string }
 
 export type BundleOffer = { name: string; tiers: { minQty: number; percent: number }[] }
 

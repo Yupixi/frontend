@@ -12,6 +12,7 @@ import PaymentLogo from '../../components/PaymentLogo'
 import { useAccountCountryCode, useCountry } from '../../lib/countries'
 import { Claim } from '../../lib/site'
 import OfferCredits from '../../components/OfferCredits'
+import PackPromises from '../../components/PackPromises'
 import { packOperation, useOfferPrice } from '../../lib/priceOffers'
 
 type Props = {
@@ -68,7 +69,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         </div>
         <h1 className="m-0 mt-2 text-headline-sm text-on-surface">Propulsez vos annonces en tête de liste</h1>
         <div className="mt-2 flex items-end justify-between gap-3">
-          <p className="m-0 text-body-sm text-on-surface-variant">{flash ? <>Une remontée immédiate en tête du catalogue : {creditsLabel(flashCost)}.</> : 'Remontée immédiate en tête du catalogue.'}</p>
+          <p className="m-0 text-body-sm text-on-surface-variant">{flash ? <>Une remontée immédiate en tête des plus récentes : {creditsLabel(flashCost)}.</> : 'Remontée immédiate en tête des plus récentes.'}</p>
           <button onClick={() => onNavigate('seller-wallet')} className="flex h-10 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container-high px-3 text-label-md text-on-surface">
             <Icon name="add_circle" size={17} /> Acheter
           </button>
@@ -130,12 +131,8 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         <section className="relative overflow-hidden rounded-2xl border-2 border-solid border-primary bg-surface-lowest p-4 pt-8">
           <span className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-xl bg-primary px-2.5 py-1 text-label-sm uppercase text-white"><Icon name="local_fire_department" size={13} /> Le plus populaire</span>
           <h3 className="m-0 text-headline-sm text-on-surface">{turbo.label}</h3>
-          {/* What the pack really includes, from the API (no marketing claims) */}
-          <ul className="m-0 mt-3 flex list-none flex-col gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface">
-            {(turbo.description ?? '').replace(/\.$/, '').split(/, | et /).filter(Boolean).map((t, i) => (
-              <li key={i} className="flex items-start gap-2"><Icon name="check_circle" size={16} className="mt-0.5 shrink-0 text-primary" /> <span>{t.charAt(0).toUpperCase() + t.slice(1)}</span></li>
-            ))}
-          </ul>
+          {/* What the pack really guarantees, worded by the server. */}
+          <PackPromises info={turbo} className="mt-3 rounded-xl bg-surface-container-low p-3" />
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="min-w-0">
               <div className="text-label-sm text-on-surface-variant">Tarif forfaitaire</div>
@@ -153,10 +150,11 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="m-0 text-headline-sm text-on-surface">Remontée Flash en Tête</h3>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Replace immédiatement votre annonce tout en haut, comme si elle venait d'être publiée.</p>
+              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{flash?.description}</p>
             </div>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="arrow_upward" size={20} /></span>
           </div>
+          {daily && <PackPromises info={daily} className="mt-3" />}
           <div className={`mt-3 grid gap-2 ${bumpTiles.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {bumpTiles.map(t => (
               <button key={t.p.pack} disabled={disabled} onClick={() => onChoose(t.p.pack)} aria-label={`${t.p.label} · ${creditsLabel(t.p.price)}`} className={`relative flex cursor-pointer flex-col items-center gap-0.5 overflow-hidden rounded-xl border-none px-1 pb-2 text-on-surface disabled:opacity-50 ${t.eco ? 'bg-primary-fixed/40 pt-6' : 'bg-surface-container-low pt-2.5'}`}>
@@ -178,7 +176,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
                 <h3 className="m-0 text-headline-sm text-on-surface">En Vedette</h3>
                 <span className="rounded bg-tertiary-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-tertiary">Recommandé</span>
               </div>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Bandeau exclusif sur la page d'accueil et premier résultat sur les recherches de votre catégorie.</p>
+              <PackPromises info={featuredTiles[0]} className="mt-2" />
             </div>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface"><Icon name="hotel_class" size={20} /></span>
           </div>
@@ -201,7 +199,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="alarm_on" size={24} /></span>
           <div className="min-w-0 flex-1">
             <h3 className="m-0 text-label-lg text-on-surface">{urgent.label}</h3>
-            <p className="m-0 text-body-sm text-on-surface-variant">Macaron clignotant rouge {urgent.durationHours}h</p>
+            <p className="m-0 text-body-sm text-on-surface-variant">{urgent.description}</p>
             <span className="text-label-md font-bold text-primary"><OfferCredits op="BOOST" n={urgent.price} listingId={listing?.id} /></span>
           </div>
           <button disabled={disabled} onClick={() => onChoose('URGENT_72H')} className="h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high px-4 text-label-md text-on-surface disabled:opacity-50">Activer</button>

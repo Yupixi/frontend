@@ -25,7 +25,7 @@ type Props = {
 const LABELS: Record<NotificationKind, string> = {
   MESSAGE: 'Message', OFFER_RECEIVED: 'Négociation directe', OFFER_ACCEPTED: 'Offre acceptée', OFFER_REJECTED: 'Offre refusée',
   LISTING_APPROVED: 'Annonce en ligne', LISTING_REJECTED: 'Annonce refusée', LISTING_STATUS_CHANGED: 'Annonce',
-  ANNOUNCEMENT: 'Info Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité', SHOP: 'Boutique officielle', SHOP_POST: 'Actualité boutique', CAMPAIGN_ENTRY: 'Campagne Dilchap', BADGE: 'Badge Dilchap', SUPPORT: 'Support Dilchap', CREDITS: 'Crédits',
+  ANNOUNCEMENT: 'Info Dilchap', SAVED_SEARCH_MATCH: 'Alerte recherche', DISPUTE: 'Litige', MEETUP: 'Remise en main propre', PRICE_DROP: 'Baisse de prix', KYC: 'Vérification d’identité', SHOP: 'Boutique officielle', SHOP_POST: 'Actualité boutique', CAMPAIGN_ENTRY: 'Campagne Dilchap', BADGE: 'Badge Dilchap', SUPPORT: 'Support Dilchap', CREDITS: 'Crédits', BOOST: 'Mise en avant',
 }
 // `short` labels keep the chips on one line on a phone.
 const FILTERS: { key: string; label: string; short?: string; icon?: string; types?: NotificationKind[] }[] = [
@@ -95,6 +95,7 @@ export default function Notifications({ onNavigate, onOpenPurchase, currentUser,
             <button onClick={() => open(n)} className={`${btn} bg-surface-container-high text-on-surface`}><Icon name="reply" size={17} /> <span className="md:hidden">Répondre</span><span className="max-md:hidden">Répondre &amp; contre-proposer</span></button>
           </>
         case 'MEETUP': return <button onClick={() => open(n)} className={`${btn} bg-primary text-white`}><Icon name="handshake" size={17} /> Voir le rendez-vous</button>
+        case 'BOOST': return <button onClick={() => open(n)} className={`${btn} bg-primary text-white`}><Icon name="rocket_launch" size={17} /> Prolonger</button>
         case 'PRICE_DROP': case 'SAVED_SEARCH_MATCH': case 'LISTING_APPROVED': case 'LISTING_REJECTED': case 'LISTING_STATUS_CHANGED': case 'OFFER_ACCEPTED': case 'OFFER_REJECTED':
           return n.listingId ? <button onClick={() => open(n)} className={`${btn} bg-inverse-surface text-white`}><Icon name="visibility" size={17} /> Voir l'annonce</button> : null
         case 'DISPUTE': return <button onClick={() => open(n)} className={`${btn} bg-surface-container-high text-on-surface`}><Icon name="folder_open" size={17} /> Consulter le dossier</button>

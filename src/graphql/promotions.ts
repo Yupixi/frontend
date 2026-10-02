@@ -13,13 +13,20 @@ export type BoostPackInfo = {
   pinned: boolean
   autoBump: boolean
   urgentBadge: boolean
+  // What the formula guarantees, one line each, worded by the server from
+  // the back-office settings of the payer's country.
+  promises: string[]
+  // Card badge while it runs (« En vedette », « Prix Choc », « Vente Urgente »).
+  badgeLabel: string | null
+  // Local hour of the daily automatic bump (Quotidienne, Turbo).
+  autoBumpHour: number | null
 }
 
 // Pricing lives in the backend (BoostsService / boost-packs.ts), per
 // country: `country` is the payer's (lib/countries usePriceVars).
 export const BOOST_PACKS_QUERY = gql`
   query BoostPacks($country: String) {
-    boostPacks(country: $country) { pack family label description price durationHours bumpCredits pinned autoBump urgentBadge }
+    boostPacks(country: $country) { pack family label description price durationHours bumpCredits pinned autoBump urgentBadge promises badgeLabel autoBumpHour }
   }
 `
 
@@ -41,6 +48,8 @@ export const MY_BOOSTS_QUERY = gql`
       createdAt
       viewsGained
       contactsGained
+      impressions
+      upcoming
       listing { id title coverImageUrl media { url } }
     }
   }
@@ -56,5 +65,10 @@ export type RemoteBoost = {
   createdAt: string
   viewsGained: number | null
   contactsGained: number | null
+  // Reserved-place displays (home « Pépites à la Une », top of results) —
+  // formulas « en vedette » only.
+  impressions?: number | null
+  // Not started yet (awaiting moderation, or chained after the current one).
+  upcoming?: boolean | null
   listing: { id: string; title: string; coverImageUrl: string | null; media: { url: string }[] } | null
 }

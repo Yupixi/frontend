@@ -1,3 +1,4 @@
+import { rotationSeed } from '../lib/rotationSeed'
 import EmptyState from '../components/EmptyState'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Icon, { CategoryIcon } from '../components/Icon'
@@ -240,7 +241,9 @@ export default function SearchPage({
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
   const { data, previousData, loading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; totalPages: number } }>(LISTINGS_QUERY, {
-    variables: { filter, sort, page, pageSize: PAGE_SIZE },
+    // rotationSeed: listings « en vedette » keep one order across the pages
+    // of this visit.
+    variables: { filter, sort, page, pageSize: PAGE_SIZE, rotationSeed: rotationSeed() },
     skip: rubricPending,
   })
   const result = (data ?? previousData)?.listings
