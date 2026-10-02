@@ -14,6 +14,9 @@ export type MyQrCode = {
   codeSpaced: string
   url: string
   kind: 'MEMBER' | 'LISTING'
+  // SELF: made by the member; TEAM / BATCH: given by the Dilchap team.
+  origin: 'SELF' | 'TEAM' | 'BATCH'
+  assignedByTeam: boolean
   activation: 'AT_LAUNCH' | 'IMMEDIATE' | 'SCHEDULED'
   activationLabel: string
   activateAt: string | null
@@ -32,7 +35,9 @@ export type MyQrOverview = {
   eligible: boolean
   reason: string | null
   eligibility: string | null
+  // One QR per member and per listing: theirs, or the one the team gave them.
   qr: MyQrCode | null
+  assignedByTeam: boolean
   targetPath: string | null
   targetName: string | null
   dailyMax: number

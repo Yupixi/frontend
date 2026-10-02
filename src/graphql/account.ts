@@ -39,7 +39,7 @@ export const MARK_ALL_NOTIFICATIONS_READ_MUTATION = gql`
 export type NotificationKind =
   | 'MESSAGE' | 'LISTING_APPROVED' | 'LISTING_REJECTED' | 'LISTING_STATUS_CHANGED'
   | 'OFFER_RECEIVED' | 'OFFER_ACCEPTED' | 'OFFER_REJECTED' | 'ANNOUNCEMENT' | 'SAVED_SEARCH_MATCH' | 'DISPUTE'
-  | 'MEETUP' | 'PRICE_DROP' | 'KYC' | 'SHOP' | 'SHOP_POST' | 'CAMPAIGN_ENTRY' | 'BADGE' | 'SUPPORT' | 'CREDITS' | 'BOOST'
+  | 'MEETUP' | 'PRICE_DROP' | 'KYC' | 'SHOP' | 'SHOP_POST' | 'CAMPAIGN_ENTRY' | 'BADGE' | 'SUPPORT' | 'CREDITS' | 'BOOST' | 'QR_CODE'
 
 // Material Symbols icon + tone per notification kind (bell menu and
 // notifications page).
@@ -64,6 +64,7 @@ export const NOTIFICATION_META: Record<NotificationKind, { icon: string; cls: st
   SUPPORT: { icon: 'support_agent', cls: 'bg-surface-container text-on-surface' },
   CREDITS: { icon: 'toll', cls: 'bg-tertiary-soft text-tertiary' },
   BOOST: { icon: 'rocket_launch', cls: 'bg-primary-fixed text-primary' },
+  QR_CODE: { icon: 'qr_code_2', cls: 'bg-tertiary-soft text-tertiary' },
 }
 
 // Dispute notifications go to the seller's "Litiges" page or the buyer's
@@ -81,6 +82,7 @@ export const notificationTarget = (n: { type: NotificationKind; title: string })
     : n.type === 'SUPPORT' ? 'support'
     : n.type === 'CREDITS' ? 'seller-wallet'
     : n.type === 'BOOST' ? 'seller-premium'
+    : n.type === 'QR_CODE' ? 'seller-qr'
     : n.type === 'DISPUTE' ? (/vente|L'acheteur/.test(n.title) ? 'seller-disputes' : 'buyer-disputes')
       : null
 
