@@ -2,8 +2,8 @@ import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 export const LISTINGS_QUERY = gql`
-  query Listings($filter: ListingFilterInput, $sort: ListingSort, $page: Float, $pageSize: Float, $rotationSeed: String) {
-    listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize, rotationSeed: $rotationSeed) {
+  query Listings($filter: ListingFilterInput, $sort: ListingSort, $page: Float, $pageSize: Float, $rotationSeed: String, $interestCategories: [String!]) {
+    listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize, rotationSeed: $rotationSeed, interestCategories: $interestCategories) {
       totalCount
       page
       pageSize
@@ -75,8 +75,8 @@ export const LISTINGS_QUERY = gql`
 `
 
 export const RECOMMENDED_LISTINGS_QUERY = gql`
-  query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement) {
-    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement) {
+  query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!]) {
+    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds) {
       id
       title
       description
@@ -576,7 +576,7 @@ export type ListingFilterInput = {
   promoOnly?: boolean
 }
 
-export type ListingSort = 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'
+export type ListingSort = 'RELEVANCE' | 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'
 
 export const LISTING_FACETS_QUERY = gql`
   query ListingFacets($filter: ListingFilterInput) {

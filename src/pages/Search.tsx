@@ -1,3 +1,4 @@
+import { interestCategories, noteInterest } from '../lib/interests'
 import { rotationSeed } from '../lib/rotationSeed'
 import EmptyState from '../components/EmptyState'
 import { useState, useEffect, useMemo, useRef } from 'react'
@@ -25,6 +26,7 @@ import { track } from '../lib/analytics'
 const PAGE_SIZE = 18
 
 const SORTS: { value: ListingSort, label: string }[] = [
+  { value: 'RELEVANCE', label: 'Pertinence' },
   { value: 'RECENT', label: 'Plus récents' },
   { value: 'PRICE_ASC', label: 'Prix croissant' },
   { value: 'PRICE_DESC', label: 'Prix décroissant' },
@@ -146,7 +148,9 @@ export default function SearchPage({
   const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const [sort, setSort] = useState<ListingSort>('RECENT')
+  // « Pertinence » by default: the visitor's interests, proximity,
+  // freshness and quality (listings « en vedette » always lead).
+  const [sort, setSort] = useState<ListingSort>('RELEVANCE')
   const [verifiedOnly, setVerifiedOnly] = useState(false)
   const [shopsOnly, setShopsOnly] = useState(false)
   const [handoverOnly, setHandoverOnly] = useState(false)
@@ -243,7 +247,7 @@ export default function SearchPage({
   const { data, previousData, loading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; totalPages: number } }>(LISTINGS_QUERY, {
     // rotationSeed: listings « en vedette » keep one order across the pages
     // of this visit.
-    variables: { filter, sort, page, pageSize: PAGE_SIZE, rotationSeed: rotationSeed() },
+    variables: { filter, sort, page, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories() },
     skip: rubricPending,
   })
   const result = (data ?? previousData)?.listings
@@ -259,6 +263,8 @@ export default function SearchPage({
     const key = `${search}|${categoryFilter}`
     if (trackedSearch.current === key) return
     trackedSearch.current = key
+    // Anonymous interests (this device only): the category searched in.
+    if (categoryFilter) noteInterest(category?.slug ?? categoryFilter, 0.5)
     track('search', { search_category: categoryFilter || 'toutes', with_words: !!search.trim(), results_count: data.listings.totalCount, country: countryCode ?? undefined })
   }, [data, loading, page, search, categoryFilter, countryCode])
 

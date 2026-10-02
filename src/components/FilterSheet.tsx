@@ -9,6 +9,7 @@ import { useLists } from '../lib/lists'
 // "Filtres de recherche" mobile bottom sheet (Stitch mockup). Filters
 // apply live, the result count comes from the search query.
 const SORTS: { value: ListingSort; label: string }[] = [
+  { value: 'RELEVANCE', label: 'Pertinence' },
   { value: 'RECENT', label: 'Plus récents' },
   { value: 'PRICE_ASC', label: 'Prix croissant' },
   { value: 'PRICE_DESC', label: 'Prix décroissant' },

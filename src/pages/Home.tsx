@@ -1,3 +1,5 @@
+import { interestCategories } from '../lib/interests'
+import { requestOpenHelp } from '../lib/navigation'
 import EmptyState from '../components/EmptyState'
 import { Fragment, useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
@@ -122,8 +124,14 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // Pépites à la Une — the server's order: places reserved to listings « en
   // vedette » of the visitor's country (how many per layout is set in the
   // back-office), the recommendation around them.
+  // Visitors not signed in send their anonymous interests (categories kept
+  // on this device, lib/interests); members use their profile on the server.
+  const [anonInterests] = useState(() => (currentUser ? undefined : interestCategories()))
+  const personalized = currentUser
+    ? (currentUser.notificationPreferences as Record<string, unknown> | undefined)?.personalizeHome !== false
+    : !!anonInterests
   const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
-    variables: { limit: isDesktop ? 4 : 12, placement: isDesktop ? 'HOME_DESKTOP' : 'HOME_MOBILE', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined },
+    variables: { limit: isDesktop ? 4 : 12, placement: isDesktop ? 'HOME_DESKTOP' : 'HOME_MOBILE', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests },
     skip: locationPending,
   })
   const isFeatured = (l: RemoteListing) => !!l.boostBadges?.some(b => b.kind !== 'URGENT')
@@ -136,6 +144,14 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const shops = shopsData?.shops.items ?? []
   const pepites = withPhoto.length ? withPhoto : recommended
   const hasBoosted = pepites.some(isFeatured)
+  // « Pour vous »: personalised only (no reserved places), without the
+  // cards already shown in « Pépites à la Une ».
+  const { data: forYouData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
+    variables: { limit: isDesktop ? 8 : 12, placement: 'FOR_YOU', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests, excludeIds: pepites.map(l => l.id) },
+    skip: locationPending || !personalized || !recommendedData,
+  })
+  const forYou = (forYouData?.recommendedListings ?? []).filter(l => !!listingImage(l))
+  const forYouHint = currentUser ? 'D’après les annonces que vous consultez, aimez et recherchez.' : 'D’après les catégories consultées sur cet appareil.'
 
   // Cities (desktop quick filters + hero select) — real cities facet.
   const marketFilter = location?.countryCode ? { countryCode: location.countryCode } : undefined
@@ -302,6 +318,18 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               <div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div>
             </section>
           )}
+          {forYou.length > 0 && (
+            <section data-tour="home-for-you" className="mt-10">
+              <div className="mb-4 flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="auto_awesome" size={24} className="text-primary" /> Pour vous</h3>
+                  <p className="m-0 mt-1 text-body-md text-on-surface-variant">{forYouHint}</p>
+                </div>
+                <button onClick={() => requestOpenHelp('accueil-personnalise')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Pourquoi ces annonces ?</button>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-6">{forYou.slice(0, 8).map(l => card(l))}</div>
+            </section>
+          )}
     </>,
     shops: <>
           {shops.length > 0 && (
@@ -447,6 +475,18 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {pepites.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
+            </div>
+          </section>
+        )}
+        {forYou.length > 0 && (
+          <section className="mb-8">
+            <SectionHeading
+              title={<><Icon name="auto_awesome" size={22} className="text-primary" /> Pour vous</>}
+              action={<button onClick={() => requestOpenHelp('accueil-personnalise')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">Pourquoi ?</button>}
+            />
+            <p className="m-0 -mt-1 mb-2 text-body-sm text-on-surface-variant">{forYouHint}</p>
+            <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
+              {forYou.map(l => <div key={l.id} className="w-[200px] shrink-0 snap-start">{card(l)}</div>)}
             </div>
           </section>
         )}
