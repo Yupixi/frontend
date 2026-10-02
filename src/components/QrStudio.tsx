@@ -136,7 +136,9 @@ export default function QrStudio({ target, intro }: { target: QrTarget; intro?: 
     try {
       const r = await client.mutate<{ myQrDownload: QrFile }>({ mutation: MY_QR_DOWNLOAD, variables: { input: { ...target, format, size: format === 'PNG' ? size : undefined, color, transparent, logo } } })
       if (r.data) saveQrFile(r.data.myQrDownload)
+      // Made on this first download: the real code replaces the example.
       void refetch()
+      void client.refetchQueries({ include: ['MyQrPreview', 'MyQrVisualPreview', 'MyQrStats'] })
     } catch (e) {
       setError(errText(e))
     } finally {
@@ -218,7 +220,7 @@ export default function QrStudio({ target, intro }: { target: QrTarget; intro?: 
           <h2 className="m-0 text-title-md text-on-surface">Visuels prêts à imprimer</h2>
           <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Créés par l’équipe Dilchap, remplis avec {target.kind === 'MEMBER' ? 'votre nom' : 'votre annonce'} et votre QR code. Imprimez à 100 % (sans « ajuster à la page »). Jamais votre téléphone ni votre e-mail.</p>
           <ul className="m-0 mt-3 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 xl:grid-cols-3">
-            {visuals.map(v => <VisualCard key={v.id} v={v} target={target} disabled={!can || left === 0} onDone={() => void refetch()} />)}
+            {visuals.map(v => <VisualCard key={v.id} v={v} target={target} disabled={!can || left === 0} onDone={() => { void refetch(); void client.refetchQueries({ include: ['MyQrPreview', 'MyQrVisualPreview'] }) }} />)}
           </ul>
         </section>
       )}

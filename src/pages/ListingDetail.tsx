@@ -302,7 +302,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   // The listing's QR code (its owner only, « Règles » QR_LISTING_ENABLED).
   const qrButton = isOwner && qrEnabled && listing.status !== 'DRAFT' && listing.status !== 'REJECTED' ? (
-    <button onClick={() => setQrOpen(true)} className="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-low py-3 text-label-lg text-on-surface hover:bg-surface-container">
+    <button onClick={() => setQrOpen(true)} className="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-low py-3 text-label-lg text-on-surface hover:bg-surface-container max-lg:mt-0">
       <Icon name="qr_code_2" size={18} /> QR code de l’annonce
     </button>
   ) : null
