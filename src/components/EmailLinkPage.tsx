@@ -30,7 +30,7 @@ function useLinkToken(param = 'token') {
 const home = () => window.location.assign('/')
 const btn = 'flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60'
 
-function Shell({ icon, tone, title, children }: { icon: string; tone: 'ok' | 'err' | 'info'; title: string; children: React.ReactNode }) {
+export function Shell({ icon, tone, title, children }: { icon: string; tone: 'ok' | 'err' | 'info'; title: string; children: React.ReactNode }) {
   const toneCls = tone === 'ok' ? 'bg-tertiary-soft text-tertiary' : tone === 'err' ? 'bg-primary-fixed text-primary' : 'bg-surface-container-low text-on-surface-variant'
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-surface px-4 py-10">

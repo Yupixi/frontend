@@ -51,7 +51,8 @@ function useCountdown(target: string | null) {
   }
 }
 
-function LaunchPage({ status, onOpen }: { status: LaunchStatus, onOpen: () => void }) {
+// `notice`: a line above the title — a printed QR code's shop (QrLandingPage).
+export function LaunchPage({ status, onOpen, notice }: { status: LaunchStatus, onOpen: () => void, notice?: ReactNode }) {
   const site = useSite()
   const market = useMarketCode()
   const countries = useCountries()
@@ -84,7 +85,8 @@ function LaunchPage({ status, onOpen }: { status: LaunchStatus, onOpen: () => vo
       <div className="relative z-10 flex w-full max-w-2xl flex-col items-center" style={{ animation: 'fadeIn .8s ease both' }}>
         {/* The official logo (public/logo-dilchap.png), straight on the background. */}
         <DilchapLogo size="xl" style={{ height: 64, filter: 'drop-shadow(0 6px 24px rgba(254,0,0,.35))' }} />
-        <h1 className="m-0 mt-8 text-[clamp(1.9rem,6vw,3.2rem)] font-extrabold leading-tight">{status.title}</h1>
+        {notice && <div className="mt-8 w-full max-w-xl">{notice}</div>}
+        <h1 className={`m-0 ${notice ? 'mt-6' : 'mt-8'} text-[clamp(1.9rem,6vw,3.2rem)] font-extrabold leading-tight`}>{status.title}</h1>
         {status.text && <p className="m-0 mt-4 max-w-xl text-body-lg text-white/80">{status.text}</p>}
 
         {c && (
@@ -111,7 +113,8 @@ function LaunchPage({ status, onOpen }: { status: LaunchStatus, onOpen: () => vo
           </div>
         )}
       </div>
-      {countries.length > 1 && (
+      {/* Not on a QR code's page: it is about one shop. */}
+      {countries.length > 1 && !notice && (
         <div className="relative z-10 mt-10 flex items-center gap-2 text-label-sm text-white/60">
           {market ? <Flag code={market} size={16} /> : <Icon name="public" size={16} />}
           <Select value={market ?? ''} onChange={e => pickCountry(e.target.value)} aria-label="Pays"

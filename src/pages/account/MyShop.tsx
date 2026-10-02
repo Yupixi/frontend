@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery } from '@apollo/client/react'
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import Select from '../../components/Select'
@@ -23,6 +23,7 @@ import type { ShopLegalIdType } from '../../graphql/shops'
 import { useRules } from '../../lib/rules'
 import RichTextEditor from '../../components/RichTextEditor'
 import { plainText } from '../../lib/format'
+import { MY_SHOP_QR_CODES_QUERY, MY_SHOP_QR_DOWNLOAD_QUERY, saveQrFile, type MyShopQr, type QrFile } from '../../graphql/shopQr'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -570,7 +571,7 @@ function PlanCard({ plan, withMethods }: { plan: ShopPlan, withMethods?: boolean
   )
 }
 
-type Tab = 'profile' | 'aisles' | 'featured' | 'stock'
+type Tab = 'profile' | 'aisles' | 'featured' | 'stock' | 'qr'
 
 function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onOpenShop, refetch, pay }: {
   shop: MyShopT, plan: ShopPlan, categories: { id: string, name: string }[], onRenew: () => void, paidMsg: string
@@ -583,7 +584,10 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
   const { data: ld, refetch: refetchListings } = useQuery<{ myListings: { items: ShopListing[], totalCount: number } }>(MY_SHOP_LISTINGS_QUERY, { fetchPolicy: 'cache-and-network' })
   const listings = ld?.myListings.items ?? []
   const [copied, setCopied] = useState(false)
-  const tabs: [Tab, string, string][] = [['stock', 'inventory_2', 'Stock'], ['aisles', 'category', 'Rayons'], ['featured', 'push_pin', 'Articles phares'], ['profile', 'storefront', 'Profil & infos']]
+  // The QR tab only once the team has made QR codes for the shop.
+  const { data: qd } = useQuery<{ myShopQrCodes: MyShopQr[] }>(MY_SHOP_QR_CODES_QUERY, { fetchPolicy: 'cache-and-network' })
+  const qrCodes = qd?.myShopQrCodes ?? []
+  const tabs: [Tab, string, string][] = [['stock', 'inventory_2', 'Stock'], ['aisles', 'category', 'Rayons'], ['featured', 'push_pin', 'Articles phares'], ['profile', 'storefront', 'Profil & infos'], ...(qrCodes.length ? [['qr', 'qr_code_2', 'QR codes'] as [Tab, string, string]] : [])]
 
   return (
     <>
@@ -645,6 +649,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
         {tab === 'aisles' && <AislesTab shop={shop} onChanged={() => { refetch(); void refetchListings() }} />}
         {tab === 'featured' && <FeaturedTab listings={listings} countryCode={shop.countryCode} onChanged={() => { void refetchListings(); refetch() }} />}
         {tab === 'profile' && <ProfileTab shop={shop} categories={categories} onSaved={refetch} />}
+        {tab === 'qr' && <QrTab codes={qrCodes} />}
       </div>
       {pay}
     </>
@@ -876,6 +881,55 @@ function ProfileTab({ shop, categories, onSaved }: { shop: MyShopT, categories: 
       <button disabled={!ok || loading} onClick={() => void save({ variables: { input: profileInput(form) } }).then(() => { setMsg({ ok: true, text: 'Profil de la boutique enregistré.' }); onSaved() }).catch((e: Error) => setMsg({ ok: false, text: e.message }))} className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-45 lg:ml-auto lg:w-72">
         <Icon name="save" size={19} /> {loading ? 'Enregistrement…' : 'Enregistrer les modifications'}
       </button>
+    </section>
+  )
+}
+
+// QR codes made by the Dilchap team for the shop (to print and stick on the
+// shop window, bags, cards): download and scans.
+function QrTab({ codes }: { codes: MyShopQr[] }) {
+  const client = useApolloClient()
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const download = async (key: string, format: 'PNG' | 'SVG' | 'PDF', id?: string) => {
+    setBusy(key)
+    setError('')
+    try {
+      const r = await client.query<{ myShopQrDownload: QrFile }>({ query: MY_SHOP_QR_DOWNLOAD_QUERY, variables: { format, id }, fetchPolicy: 'no-cache' })
+      if (r.data) saveQrFile(r.data.myShopQrDownload)
+    } catch {
+      setError('Téléchargement impossible pour le moment. Réessayez.')
+    } finally {
+      setBusy(null)
+    }
+  }
+  const btn = 'flex h-10 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface shadow-sm disabled:opacity-60'
+  return (
+    <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="m-0 text-title-md text-on-surface">Vos QR codes</h2>
+          <p className="m-0 mt-1 text-body-sm text-on-surface-variant">À imprimer et coller en vitrine, sur vos sacs ou vos cartes : un scan ouvre directement votre boutique. Imprimez à 100 % (sans « ajuster à la page »).</p>
+        </div>
+        <button disabled={!!busy} onClick={() => void download('all', 'PDF')} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-60"><Icon name="picture_as_pdf" size={18} /> {busy === 'all' ? 'Préparation…' : 'Planche A4 (PDF)'}</button>
+      </div>
+      {error && <p className="m-0 mt-3 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
+      <ul className="m-0 mt-4 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2">
+        {codes.map(q => (
+          <li key={q.id} className="rounded-xl bg-surface-container-low p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-label-lg tracking-wider text-on-surface">{q.codeSpaced}</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${q.state === 'ACTIVE' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}><Icon name={q.state === 'ACTIVE' ? 'check_circle' : 'schedule'} size={14} /> {q.state === 'PENDING' ? (q.activation === 'SCHEDULED' && q.activateAt ? `Actif le ${fdate(q.activateAt)}` : 'Actif au lancement') : q.stateLabel}</span>
+            </div>
+            {q.label && <p className="m-0 mt-1 truncate text-body-sm text-on-surface-variant">{q.label}</p>}
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{q.scanCount} scan{q.scanCount > 1 ? 's' : ''}{q.lastScanAt ? ` • dernier le ${fdate(q.lastScanAt)}` : ''}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button disabled={!!busy} onClick={() => void download(`png-${q.id}`, 'PNG', q.id)} className={btn}><Icon name="image" size={17} /> {busy === `png-${q.id}` ? '…' : 'PNG'}</button>
+              <button disabled={!!busy} onClick={() => void download(`svg-${q.id}`, 'SVG', q.id)} className={btn}><Icon name="download" size={17} /> {busy === `svg-${q.id}` ? '…' : 'SVG'}</button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

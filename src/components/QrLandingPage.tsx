@@ -1,0 +1,91 @@
+import { useEffect } from 'react'
+import { useQuery } from '@apollo/client/react'
+import Icon from './Icon'
+import { LaunchPage } from './LaunchGate'
+import { Shell } from './EmailLinkPage'
+import { QR_LANDING_QUERY, type QrLanding } from '../graphql/shopQr'
+import { useSite } from '../lib/site'
+
+// /q/<code>: a printed QR code of an official shop. The storefront's server
+// (Caddyfile → Backend /seo/q/<code>) counts the scan and sends an active
+// QR straight to the shop; the app only opens here for the other cases —
+// before the launch (launch page + « La boutique … ouvre sur Dilchap au
+// lancement »), a blank QR, a QR no longer active — or when the server
+// couldn't answer (then an active QR is forwarded from here).
+const codeOf = (pathname: string) => decodeURIComponent(pathname.replace(/^\/q\//, '').replace(/\/+$/, '')).slice(0, 32)
+
+// Never indexed (the server's page says it too).
+function useNoIndex(title: string) {
+  useEffect(() => {
+    document.title = title
+    let m = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
+    if (!m) { m = document.createElement('meta'); m.name = 'robots'; document.head.appendChild(m) }
+    m.content = 'noindex, follow'
+  }, [title])
+}
+
+const homeBtn = 'mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 text-label-lg text-white no-underline hover:bg-primary-dark'
+
+export default function QrLandingPage() {
+  const code = codeOf(window.location.pathname)
+  const { brand } = useSite()
+  const { data, loading, error } = useQuery<{ qrLanding: QrLanding }>(QR_LANDING_QUERY, { variables: { code }, fetchPolicy: 'network-only' })
+  const q = data?.qrLanding
+  const shopName = q?.shop?.name
+  useNoIndex(
+    q?.state === 'PENDING' ? `${shopName ? `${shopName} ouvre bientôt` : `${brand.name} arrive bientôt`} | ${brand.name}`
+      : q?.state === 'UNASSIGNED' ? `QR code pas encore attribué | ${brand.name}`
+      : q?.state === 'SHOP_UNAVAILABLE' ? `Boutique indisponible | ${brand.name}`
+      : `Ce QR code n’est plus actif | ${brand.name}`,
+  )
+  // Active (the server was bypassed): on to the shop.
+  useEffect(() => {
+    if (q?.state === 'ACTIVE' && q.shop?.slug) window.location.replace(`/boutique/${encodeURIComponent(q.shop.slug)}?utm_source=qr&utm_medium=print`)
+  }, [q])
+
+  if (loading || q?.state === 'ACTIVE') return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
+
+  if (q?.state === 'PENDING' && q.launch) {
+    const date = q.activateAt ? new Date(q.activateAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Abidjan' }) : null
+    return (
+      <LaunchPage
+        status={{ ...q.launch, active: true, preview: false, launchAt: q.activateAt ?? q.launch.launchAt }}
+        onOpen={() => window.location.reload()}
+        notice={
+          <p className="m-0 inline-flex max-w-full items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-left text-body-md text-white ring-1 ring-white/15 backdrop-blur">
+            {q.shop?.logoUrl
+              ? <img src={q.shop.logoUrl} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white object-cover" />
+              : <Icon name="storefront" size={22} className="shrink-0" />}
+            <span className="min-w-0">
+              {shopName ? <>La boutique <b className="break-words">{shopName}</b></> : 'Cette boutique'} ouvre sur {brand.name} {date ? `le ${date}` : 'au lancement'}.
+              <span className="block text-body-sm text-white/70">Gardez ce QR code : il vous y mènera directement.</span>
+            </span>
+          </p>
+        }
+      />
+    )
+  }
+
+  if (q?.state === 'UNASSIGNED')
+    return (
+      <Shell icon="qr_code_2" tone="info" title="QR code pas encore attribué">
+        <p className="m-0">Ce QR code {brand.name} n’est pas encore relié à une boutique. Il le sera bientôt : revenez le scanner plus tard.</p>
+        <a href="/" className={homeBtn}><Icon name="home" size={20} /> Aller sur {brand.name}</a>
+      </Shell>
+    )
+
+  if (q?.state === 'SHOP_UNAVAILABLE')
+    return (
+      <Shell icon="storefront" tone="info" title="Boutique indisponible">
+        <p className="m-0">Cette boutique n’est pas disponible sur {brand.name} pour le moment.</p>
+        <a href="/" className={homeBtn}><Icon name="home" size={20} /> Aller sur {brand.name}</a>
+      </Shell>
+    )
+
+  return (
+    <Shell icon="block" tone="err" title="Ce QR code n’est plus actif">
+      <p className="m-0">{error ? 'Impossible de vérifier ce QR code pour le moment. Réessayez dans un instant.' : `Ce QR code ne mène plus à une boutique ${brand.name}.`}</p>
+      <a href="/" className={homeBtn}><Icon name="home" size={20} /> Aller à l’accueil</a>
+    </Shell>
+  )
+}
