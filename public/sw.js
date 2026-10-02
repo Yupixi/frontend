@@ -251,7 +251,8 @@ self.addEventListener('fetch', (event) => {
           const response = await fetch(request)
           // One copy of the app shell for offline use: every page (each
           // listing has its own address) is the same app.
-          if (response.ok) {
+          // (Not a printed QR code's page /q/…: its own title and noindex.)
+          if (response.ok && !url.pathname.startsWith('/q/')) {
             const cache = await caches.open(PAGE_CACHE)
             cache.put('/', response.clone()).catch(() => {})
           }

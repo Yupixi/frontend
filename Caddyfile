@@ -115,6 +115,16 @@
 		import seo_backend
 	}
 
+	# Printed QR codes of the shops: https://<site>/q/<code> never changes.
+	# The backend counts the scan (no IP kept) and answers a 302 to the
+	# shop once the QR is active, else the app's page (launch page, blank
+	# or inactive QR), noindex and never cached. Backend down: the app
+	# shell (handle_errors), whose /q/ page asks the API itself.
+	handle /q/* {
+		rewrite * /seo{path}
+		import seo_backend
+	}
+
 	# Storefront pages (/, /annonce/…, /categorie/…, /boutique/…: every
 	# path without a file extension) come back from the backend as the
 	# app's own index.html with the page's title, description, share image,
