@@ -60,6 +60,8 @@ import { useLists } from '../lib/lists'
 import { countryVars, METHOD_LABELS, useMarketCode } from '../lib/countries'
 import { listingPath, samePlace } from '../lib/routes'
 import { usePageTitle } from '../lib/site'
+import ListingQrSheet from '../components/ListingQrSheet'
+import { useRules } from '../lib/rules'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -120,6 +122,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const listing = data?.listing
   // Report reasons of the listing's country (the market until it loads).
   const reportReasons = useLists(listing?.countryCode || undefined).reportReasons.listing
+  const qrEnabled = useRules(listing?.countryCode || undefined).QR_LISTING_ENABLED !== 0
   const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   // Same tab title as search engines get for a sold or expired listing.
   const archiveLabel = listing?.status === 'SOLD' ? 'Vendu' : listing?.status === 'EXPIRED' ? 'Annonce expirée' : null
@@ -159,6 +162,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
   const [bumpListing, { loading: renewing }] = useMutation(BUMP_LISTING_MUTATION)
   const [boostOpen, setBoostOpen] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
 
@@ -296,8 +300,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   )
 
 
+  // The listing's QR code (its owner only, « Règles » QR_LISTING_ENABLED).
+  const qrButton = isOwner && qrEnabled && listing.status !== 'DRAFT' && listing.status !== 'REJECTED' ? (
+    <button onClick={() => setQrOpen(true)} className="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-low py-3 text-label-lg text-on-surface hover:bg-surface-container">
+      <Icon name="qr_code_2" size={18} /> QR code de l’annonce
+    </button>
+  ) : null
+
   // Seller-side / archived states replace the buying CTAs.
-  const ownerPanel = isOwner ? (
+  const ownerPanel = isOwner ? (<>{
     isExpired ? (
       renewed ? (
         <p className="m-0 flex items-center gap-2 rounded-lg bg-tertiary-soft p-3 text-label-md text-tertiary"><CheckCircle2 size={16} /> Annonce remise en ligne</p>
@@ -311,7 +322,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         <Rocket size={18} /> Booster cette annonce
       </button>
     )
-  ) : !canContact ? (
+  }{qrButton}</>) : !canContact ? (
     <p className="m-0 flex items-start gap-2 rounded-lg bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
       <Archive size={17} className="mt-0.5 shrink-0" /> {isSold ? 'Cet article a déjà été vendu.' : isExpired ? "Cette annonce a expiré : le vendeur ne peut plus être contacté à son sujet." : "Cette annonce n’est pas en ligne : le vendeur ne peut pas être contacté à son sujet."}
     </p>
@@ -321,6 +332,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     <div className="pb-24 lg:pb-8">
       {viewer !== null && images.length > 0 && <ImageLightbox images={images} start={viewer} alt={listing.title} onClose={() => setViewer(null)} onIndexChange={i => showImage(i, false)} />}
       {isOwner && <BoostSheet open={boostOpen} onClose={() => setBoostOpen(false)} listing={listing} />}
+      {isOwner && <ListingQrSheet listing={qrOpen ? { id: listing.id, title: listing.title } : null} onClose={() => setQrOpen(false)} />}
       {/* Mobile app bar (Stitch "Détails Article") — replaces the site header here */}
       <div className="safe-top sticky z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface px-2 lg:hidden">
         <button onClick={() => (window.history.length > 1 ? window.history.back() : onNavigate('home'))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Retour">

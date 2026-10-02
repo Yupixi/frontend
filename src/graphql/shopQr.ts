@@ -1,14 +1,22 @@
 import { gql } from '@apollo/client'
 
-// Printed QR codes of the official shops (Backend src/modules/shop-qr).
+// Printed QR codes of the official shops, members and listings (Backend
+// src/modules/shop-qr).
 
 // /q/<code>: what to show (the server already counted the scan).
 export const QR_LANDING_QUERY = gql`query QrLanding($code: String!) { qrLanding(code: $code) }`
 
 export type QrLanding = {
-  state: 'ACTIVE' | 'PENDING' | 'UNASSIGNED' | 'SHOP_UNAVAILABLE' | 'DISABLED' | 'REVOKED' | 'UNKNOWN'
+  state: 'ACTIVE' | 'PENDING' | 'UNASSIGNED' | 'SHOP_UNAVAILABLE' | 'MEMBER_UNAVAILABLE' | 'LISTING_UNAVAILABLE' | 'DISABLED' | 'REVOKED' | 'UNKNOWN'
+  kind: 'SHOP' | 'MEMBER' | 'LISTING' | null
   code: string | null
+  // Where an active QR leads (/boutique/…, /@pseudo, /annonce/…).
+  path: string | null
   shop: { name: string; slug: string | null; logoUrl: string | null } | null
+  member: { name: string; avatarUrl: string | null } | null
+  listing: { title: string; photo: string | null; sellerName: string | null } | null
+  // A listing no longer there: its seller's page (other listings).
+  seller: { name: string; path: string } | null
   activateAt: string | null
   launch: { active: boolean; launchAt: string | null; title: string; text: string; image: string } | null
 }

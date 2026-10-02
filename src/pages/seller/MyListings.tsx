@@ -17,12 +17,15 @@ import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import BottomSheet from '../../components/BottomSheet'
 import ConfirmSheet from '../../components/ConfirmSheet'
+import ListingQrSheet from '../../components/ListingQrSheet'
+import { MY_LISTING_QR_CODES_QUERY, type MyListingQr } from '../../graphql/memberQr'
+import { useRules } from '../../lib/rules'
 import WalletPaySheet from '../../components/WalletPaySheet'
 import { BOOST_PACKS_QUERY } from '../../graphql/promotions'
 import { creditsLabel } from '../../components/Credits'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { useNoCommissionClaims } from '../../lib/site'
-import { usePriceVars } from '../../lib/countries'
+import { useMemberCountryCode, usePriceVars } from '../../lib/countries'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -85,6 +88,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const [page, setPage] = useState(1)
   const [offersFor, setOffersFor] = useState<string | null>(null)
   const [menuFor, setMenuFor] = useState<string | null>(null)
+  const [qrFor, setQrFor] = useState<{ id: string; title: string } | null>(null)
+  const qrScans = useQuery<{ myListingQrCodes: MyListingQr[] }>(MY_LISTING_QR_CODES_QUERY, { fetchPolicy: 'cache-and-network' }).data?.myListingQrCodes ?? []
+  const qrEnabled = useRules(useMemberCountryCode()).QR_LISTING_ENABLED !== 0
   const [flash, setFlash] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<{ kind: 'delete' | 'boost' | 'bump', l: MyListingRow } | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -308,6 +314,10 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                         <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className={`${item} text-on-surface`}><Eye size={16} /> Voir l'annonce</button>
                         <button onClick={() => { setMenuFor(null); onEditListing(l.id) }} className={`${item} text-on-surface`}><Edit3 size={16} /> Modifier</button>
                         <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className={`${item} text-on-surface`}><Tag size={16} /> Offres reçues</button>
+                        {qrEnabled && l.status !== 'DRAFT' && l.status !== 'REJECTED' && (() => {
+                          const scans = qrScans.find(q => q.listingId === l.id)?.scanCount
+                          return <button onClick={() => { setMenuFor(null); setQrFor({ id: l.id, title: l.title }) }} className={`${item} text-on-surface`}><Icon name="qr_code_2" size={16} /> QR code de l’annonce{scans ? ` · ${scans} scan${scans > 1 ? 's' : ''}` : ''}</button>
+                        })()}
                         <button onClick={() => { setMenuFor(null); setConfirm({ kind: 'delete', l }) }} className={`${item} text-primary hover:bg-primary-fixed/40`}><Trash2 size={16} /> Supprimer</button>
                       </div>
                     )}
@@ -324,6 +334,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             )
           })}
         </div>
+
+        <ListingQrSheet listing={qrFor} onClose={() => setQrFor(null)} />
 
         <ConfirmSheet
           open={confirm?.kind === 'delete'}

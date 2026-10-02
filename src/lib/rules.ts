@@ -23,6 +23,11 @@ export const DEFAULT_RULES = {
   SHOP_POSTS_PER_WEEK: 2,
   SHOP_MAX_FEATURED: 8,
   KYC_RETENTION_DAYS: 30,
+  // QR codes: personal QR for 0 everyone / 1 badges / 2 certified; listing
+  // QR on (1) or off (0); downloads per day.
+  QR_MEMBER_ELIGIBILITY: 0,
+  QR_LISTING_ENABLED: 1,
+  QR_MEMBER_DAILY_MAX: 30,
 }
 export type MarketplaceRules = typeof DEFAULT_RULES
 
