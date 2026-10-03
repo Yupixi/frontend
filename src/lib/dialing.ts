@@ -27,3 +27,9 @@ export function localNumberError(raw: string, country: Dialing & { phoneExample:
   const d = t.replace(/\D/g, '')
   return d.length === country.localDigits || intlDigits(d) ? null : `Numéro invalide (${country.localDigits} chiffres, ex : ${country.phoneExample}).`
 }
+
+// UEMOA country of an international number (+225…), by its dial code.
+export function countryOfIntl(intl: string | undefined): string | undefined {
+  const d = (intl ?? '').replace(/\D/g, '')
+  return COUNTRIES.find(c => d.startsWith(c.dialCode))?.code
+}
