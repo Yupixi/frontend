@@ -33,7 +33,7 @@ type Channel = 'push' | 'whatsapp' | 'email'
 type Alerts = Record<string, Record<Channel, boolean>>
 type Quiet = { enabled: boolean; start: string; end: string }
 type SettingsData = {
-  me: AuthUser & { email: string; verifiedAt: string | null; meetupSpots: string[]; paymentMethods: string[]; vacationMode: boolean; notificationPreferences: Record<string, any>; createdAt: string
+  me: AuthUser & { verifiedAt: string | null; meetupSpots: string[]; paymentMethods: string[]; vacationMode: boolean; notificationPreferences: Record<string, any>; createdAt: string
     coverUrl?: string | null; website?: string | null; facebook?: string | null; instagram?: string | null; tiktok?: string | null }
   myReputation: {
     averageRating: number; reviewsCount: number; satisfactionRate: number | null; salesCount: number; responseTimeMinutes: number | null
@@ -215,7 +215,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
   const rep = data?.myReputation
 
   const initial = useMemo(() => me && ({
-    fullName: me.fullName, countryCode: me.countryCode ?? 'CI', city: me.city ?? '', bio: me.bio ?? '', phone: me.phone ?? '', email: me.email, avatarUrl: me.avatarUrl ?? '',
+    fullName: me.fullName, countryCode: me.countryCode ?? 'CI', city: me.city ?? '', bio: me.bio ?? '', phone: me.phone ?? '', email: me.email ?? '', avatarUrl: me.avatarUrl ?? '',
     meetupSpots: me.meetupSpots, paymentMethods: me.paymentMethods,
     alerts: { ...DEFAULT_ALERTS, ...(me.notificationPreferences?.alerts ?? {}) } as Alerts,
     quiet: { enabled: false, ...SMS_NIGHT, ...(me.notificationPreferences?.quietHours ?? {}) } as Quiet,
@@ -250,9 +250,15 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
   const [revokeSession] = useMutation(REVOKE_SESSION_MUTATION)
   const [revokeOthers, { loading: revokingOthers }] = useMutation(REVOKE_OTHER_SESSIONS_MUTATION)
 
-  // Changing the login e-mail asks for the current password.
+  // Changing the login e-mail asks for the current password; so does
+  // changing the number of an account without e-mail (it is the login).
   const [emailPw, setEmailPw] = useState('')
-  const emailChanged = !!form && !!me && form.email.trim() !== me.email
+  const emailChanged = !!form && !!me && form.email.trim() !== (me.email ?? '')
+  const noEmail = !!me && !me.email
+  const loginPhoneChanged = noEmail && !!form && form.phone.trim() !== (me?.phone ?? '')
+  const needsPw = emailChanged || loginPhoneChanged
+  // « Ajouter un e-mail » (account opened with a phone only).
+  const [addingEmail, setAddingEmail] = useState(false)
   const [pwOpen, setPwOpen] = useState(false)
   const [pw, setPw] = useState({ current: '', next: '' })
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -277,7 +283,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
         variables: {
           input: {
             fullName: form.fullName.trim(), countryCode: form.countryCode !== me.countryCode ? form.countryCode : undefined, city: form.city || null, bio: form.bio.trim() || null, phone: form.phone.trim() || null,
-            email: emailChanged ? form.email.trim() : undefined, currentPassword: emailChanged ? emailPw : undefined, avatarUrl: form.avatarUrl || null,
+            email: emailChanged ? form.email.trim() : undefined, currentPassword: needsPw ? emailPw : undefined, avatarUrl: form.avatarUrl || null,
             meetupSpots: form.meetupSpots, paymentMethods: form.paymentMethods,
           },
         },
@@ -286,6 +292,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
       if (res?.updateProfile && currentUser) onProfileUpdated({ ...currentUser, ...res.updateProfile })
       await refetch()
       setEmailPw('')
+      setAddingEmail(false)
       setSaveMsg({ ok: true, text: 'Paramètres enregistrés.' })
     } catch (e) {
       setSaveMsg({ ok: false, text: e instanceof Error ? e.message : "L'enregistrement a échoué." })
@@ -408,13 +415,25 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </label>
                   <label className="text-label-md text-on-surface">Numéro WhatsApp &amp; Appels
                     <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="chat" size={18} className="text-tertiary" /><input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder={country ? `+${country.dialCode} ${country.phoneExample}` : ''} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
+                    {noEmail && <span className="mt-1 block text-body-sm text-on-surface-variant">Il sert à vous connecter : le changer demande votre mot de passe.</span>}
                   </label>
-                  <label className="text-label-md text-on-surface">Adresse e-mail transactionnelle
-                    <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="mail" size={18} className="text-on-surface-variant" /><input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
-                  </label>
-                  {emailChanged && (
+                  {noEmail && !addingEmail && !emailChanged ? (
+                    <div className="text-label-md text-on-surface">Adresse e-mail
+                      <div className="mt-1 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-3 py-2">
+                        <Icon name="mail" size={18} className="text-on-surface-variant" />
+                        <span className="min-w-0 flex-1 text-body-md text-on-surface-variant">Pas d’e-mail</span>
+                        <button type="button" onClick={() => setAddingEmail(true)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary-fixed px-2.5 py-1.5 text-label-md text-primary"><Icon name="add" size={16} /> Ajouter un e-mail</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="text-label-md text-on-surface">{noEmail ? 'Nouvelle adresse e-mail' : 'Adresse e-mail transactionnelle'}
+                      <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="mail" size={18} className="text-on-surface-variant" /><input type="email" value={form.email} autoFocus={addingEmail} autoComplete="email" placeholder="nom@exemple.com" onChange={e => set('email', e.target.value)} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
+                      {noEmail && <span className="mt-1 block text-body-sm text-on-surface-variant">Un lien de confirmation lui sera envoyé à l’enregistrement.</span>}
+                    </label>
+                  )}
+                  {needsPw && (
                     <label className="text-label-md text-on-surface">Mot de passe actuel
-                      <input type="password" autoComplete="current-password" value={emailPw} onChange={e => setEmailPw(e.target.value)} placeholder="Requis pour changer d’adresse e-mail" className={`${field} mt-1`} />
+                      <input type="password" autoComplete="current-password" value={emailPw} onChange={e => setEmailPw(e.target.value)} placeholder={emailChanged ? 'Requis pour changer d’adresse e-mail' : 'Requis pour changer de numéro'} className={`${field} mt-1`} />
                     </label>
                   )}
                 </div>

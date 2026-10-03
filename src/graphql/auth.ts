@@ -61,6 +61,7 @@ export const ME_QUERY = gql`
       notificationPreferences
       isGuest
       emailVerifiedAt
+      phoneVerifiedAt
       isVerified badge
       bio
       coverUrl
@@ -79,7 +80,8 @@ export const LOGOUT_MUTATION = gql`
 
 export type AuthUser = {
   id: string
-  email: string
+  // Null for an account without e-mail (signed up with its phone only).
+  email: string | null
   fullName: string
   phone?: string | null
   city?: string | null
@@ -90,6 +92,8 @@ export type AuthUser = {
   isGuest?: boolean
   // Null until the member opens the link e-mailed at sign-up.
   emailVerifiedAt?: string | null
+  // Set once the number was proven by an SMS code (sign-up or Paramètres).
+  phoneVerifiedAt?: string | null
   isVerified?: boolean; badge?: BadgeTier | null
   boostCredits?: number
   bio?: string | null
@@ -136,5 +140,36 @@ export const RESET_PASSWORD_MUTATION = gql`
 export const UNSUBSCRIBE_EMAILS_MUTATION = gql`
   mutation UnsubscribeEmails($t: String!) {
     unsubscribeEmails(token: $t)
+  }
+`
+
+// « Inscription par téléphone » and « Mot de passe oublié » by SMS (Backend
+// PhoneAuthService): what the country offers, then a 6-digit code by SMS.
+// requestPasswordResetCode answers the same whether or not the number has
+// an account.
+export type PhoneAuthOptions = { signup: boolean; passwordReset: boolean }
+export type PhoneCodeSent = { expiresAt: string; resendAfterSeconds: number; phoneHint: string }
+
+export const PHONE_AUTH_OPTIONS_QUERY = gql`
+  query PhoneAuthOptions($countryCode: String) {
+    phoneAuthOptions(countryCode: $countryCode) { signup passwordReset }
+  }
+`
+
+export const REQUEST_SIGNUP_CODE_MUTATION = gql`
+  mutation RequestSignupCode($phone: String!, $countryCode: String!) {
+    requestSignupCode(phone: $phone, countryCode: $countryCode) { expiresAt resendAfterSeconds phoneHint }
+  }
+`
+
+export const REQUEST_PASSWORD_RESET_CODE_MUTATION = gql`
+  mutation RequestPasswordResetCode($phone: String!, $countryCode: String!) {
+    requestPasswordResetCode(phone: $phone, countryCode: $countryCode) { expiresAt resendAfterSeconds phoneHint }
+  }
+`
+
+export const RESET_PASSWORD_WITH_CODE_MUTATION = gql`
+  mutation ResetPasswordWithCode($input: ResetPasswordWithCodeInput!) {
+    resetPasswordWithCode(input: $input)
   }
 `

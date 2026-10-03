@@ -871,7 +871,9 @@ export default function App() {
   // Welcome tour / « Nouveau » announcements of signed-in members.
   const onboarding = <Onboarding page={page} enabled={isLoggedIn && !!currentUser && !currentUser.isGuest} />
 
-  const verifyPrompt = isLoggedIn && currentUser && !currentUser.isGuest && !currentUser.emailVerifiedAt && !verifyLater && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'
+  // An account confirmed by its phone (SMS code) or without e-mail has
+  // nothing to confirm by e-mail.
+  const verifyPrompt = isLoggedIn && currentUser && !currentUser.isGuest && currentUser.email && !currentUser.emailVerifiedAt && !currentUser.phoneVerifiedAt && !verifyLater && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'
     ? <EmailVerifyPrompt email={currentUser.email} onDismiss={() => setVerifyLater(true)} />
     : null
 

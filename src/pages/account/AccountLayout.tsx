@@ -355,7 +355,7 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
           <div className="absolute right-0 top-full z-[200] mt-2 w-56 rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float">
             <div className="mb-1 border-0 border-b border-solid border-outline-variant px-3 py-2">
               <div className="truncate text-label-md text-on-surface">{displayName}</div>
-              <div className="truncate text-body-sm text-on-surface-variant">{currentUser?.email ?? ''}</div>
+              <div className="truncate text-body-sm text-on-surface-variant">{currentUser?.email ?? currentUser?.phone ?? ''}</div>
             </div>
             {!isGuest && <NavItem icon={Settings} label="Paramètres du compte" onClick={() => { setMenuOpen(false); onNavigate('buyer-settings') }} />}
             <button onClick={() => { setMenuOpen(false); onLogout() }} className="flex w-full cursor-pointer items-center gap-3 rounded-lg border-none bg-transparent px-3 py-2.5 text-label-md text-primary hover:bg-primary-fixed/50">

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useMutation } from '@apollo/client/react'
+import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../components/Icon'
 import Logo from '../components/DilchapLogo'
-import { LOGIN_MUTATION, REGISTER_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, type AuthPayload } from '../graphql/auth'
+import { LOGIN_MUTATION, PHONE_AUTH_OPTIONS_QUERY, REGISTER_MUTATION, REQUEST_PASSWORD_RESET_CODE_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, REQUEST_SIGNUP_CODE_MUTATION, RESET_PASSWORD_WITH_CODE_MUTATION, type AuthPayload, type PhoneAuthOptions, type PhoneCodeSent } from '../graphql/auth'
 import { REQUEST_RECOVERY_MUTATION } from '../graphql/support'
 import { getGuestSecret, storeAccessToken } from '../lib/auth'
 import Select from '../components/Select'
@@ -10,7 +10,8 @@ import { AUTH_REASONS, takeAuthReason } from '../lib/authReason'
 import PaymentLogo, { paymentLabel } from '../components/PaymentLogo'
 import { useNoCommissionClaims, useSupportPhone } from '../lib/site'
 import { placeOptions, useLists } from '../lib/lists'
-import { localNumberError, toIntl } from '../lib/dialing'
+import { countryOfIntl, localNumberError, toIntl } from '../lib/dialing'
+import { useCooldown } from '../lib/useCooldown'
 import { useCountries, useHomeCountry, useMarket, useMethods, type Country } from '../lib/countries'
 import Flag from '../components/Flag'
 import ManageCookies from '../components/ManageCookies'
@@ -105,7 +106,27 @@ function LoginForm({ onSuccess, onForgot }: { onSuccess: (p: AuthPayload) => voi
   )
 }
 
-function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
+// Code field of an SMS code (6 digits, filled by the phone's keyboard
+// suggestion), with the resend countdown.
+function SmsCodeField({ value, onChange, sentTo, wait, resending, onResend, maybe = false }: { value: string; onChange: (v: string) => void; sentTo: string; wait: number; resending: boolean; onResend: () => void; maybe?: boolean }) {
+  const to = <b className="font-semibold">…{sentTo.replace(/^…/, '')}</b>
+  return (
+    <div className="rounded-xl bg-tertiary-soft/60 p-3">
+      <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface"><Icon name="sms" size={18} className="mt-0.5 shrink-0 text-tertiary" /><span className="min-w-0">{maybe ? <>Si ce numéro est vérifié sur un compte Dilchap, un code arrive par SMS au {to}. Il expire dans 5 minutes.</> : <>Code envoyé par SMS au {to}. Il expire dans 5 minutes.</>}</span></p>
+      <label className="mt-2 block text-label-md text-on-surface">Code reçu par SMS
+        <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <input value={value} onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} placeholder="000000" aria-label="Code à 6 chiffres reçu par SMS"
+            className="h-12 w-36 rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-center font-mono text-body-lg tracking-[0.3em] text-on-surface outline-none focus:border-primary" />
+          <button type="button" disabled={resending || wait > 0} onClick={onResend} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary disabled:cursor-default disabled:text-on-surface-variant">
+            {resending ? 'Envoi…' : wait > 0 ? `Renvoyer le code (${wait} s)` : 'Renvoyer le code'}
+          </button>
+        </span>
+      </label>
+    </div>
+  )
+}
+
+function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => void; onLogin: () => void }) {
   const countries = useCountries()
   const home = useHomeCountry()
   const market = useMarket() ?? home
@@ -115,17 +136,51 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
   const phoneError = form.phone ? localNumberError(form.phone, country) : null
   const [accepted, setAccepted] = useState(false)
   const [register, { loading, error }] = useMutation<{ register: AuthPayload }>(REGISTER_MUTATION)
+  // « Inscription par téléphone » (BO › Règles): the e-mail becomes
+  // optional; without one, the number is proven by an SMS code first.
+  const { data: options } = useQuery<{ phoneAuthOptions: PhoneAuthOptions }>(PHONE_AUTH_OPTIONS_QUERY, { variables: { countryCode: country.code } })
+  const byPhone = !!options?.phoneAuthOptions.signup
+  const phoneOnly = byPhone && !form.email.trim()
+  const [requestCode, { loading: sending }] = useMutation<{ requestSignupCode: PhoneCodeSent }>(REQUEST_SIGNUP_CODE_MUTATION)
+  const [sent, setSent] = useState<{ phone: string; hint: string } | null>(null)
+  const [code, setCode] = useState('')
+  const [codeError, setCodeError] = useState('')
+  const [resendAt, setResendAt] = useState(0)
+  const wait = useCooldown(resendAt)
+  const intl = toIntl(form.phone, country)
+  // A code is for one number: another number (or country) asks for a new one.
+  const codeFor = sent && sent.phone === intl ? sent : null
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [k]: e.target.value }))
+  const sendCode = () => {
+    if (!intl) return
+    setCodeError('')
+    void requestCode({ variables: { phone: intl, countryCode: country.code } }).then(r => {
+      const d = r.data?.requestSignupCode
+      if (!d) return
+      setSent({ phone: intl, hint: d.phoneHint })
+      setCode('')
+      setResendAt(Date.now() + d.resendAfterSeconds * 1000)
+    }).catch((e: Error) => setCodeError(e.message))
+  }
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (phoneOnly && !codeFor) { sendCode(); return }
+    setCodeError('')
+    const email = form.email.trim().toLowerCase()
     void register({
-      variables: { input: { fullName: form.fullName.trim(), email: form.email.trim().toLowerCase(), phone: toIntl(form.phone, country), city: form.city || undefined, password: form.password, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
+      variables: { input: { fullName: form.fullName.trim(), email: email || undefined, phone: intl, phoneCode: phoneOnly && codeFor && code.length === 6 ? code : undefined, city: form.city || undefined, password: form.password, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
     }).then(r => {
       if (!r.data) return
-      track('sign_up', { method: 'email', country: country.code })
+      track('sign_up', { method: email ? 'email' : 'phone', country: country.code })
       onSuccess(r.data.register)
     }).catch(() => undefined)
   }
+  const basics = accepted && !phoneError && form.fullName.trim().length >= 2 && form.password.length >= 8
+  const ready = phoneOnly
+    ? basics && !!intl && (!codeFor || code.length === 6)
+    : basics && !!form.email
+  const message = codeError || readable(error?.message)
+  const taken = /déjà un compte|déjà associé/i.test(message ?? '')
   return (
     <form onSubmit={submit} className="flex flex-col gap-3.5">
       <label className="text-label-md text-on-surface">Nom complet ou nom de boutique<input value={form.fullName} onChange={set('fullName')} autoComplete="name" placeholder="Ex : Aya Koné" className={`${field} mt-1.5`} /></label>
@@ -136,12 +191,13 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
         </Select>
       </label>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 sm:grid-cols-2">
-        <label className="text-label-md text-on-surface">E-mail<input type="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="nom@exemple.com" className={`${field} mt-1.5`} /></label>
+        <label className="text-label-md text-on-surface">{byPhone ? 'E-mail (facultatif)' : 'E-mail'}<input type="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="nom@exemple.com" className={`${field} mt-1.5`} /></label>
         <label className="text-label-md text-on-surface">Téléphone WhatsApp
-          <span className="mt-1.5 flex items-center gap-2 rounded-xl bg-surface-container-low pl-3 focus-within:ring-1 focus-within:ring-primary"><DialPrefix country={country} className="text-on-surface-variant" /><input value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel-national" placeholder={country.phoneExample} aria-invalid={!!phoneError} className="w-full border-none bg-transparent px-2 py-3 text-body-md text-on-surface outline-none" /></span>
+          <span className="mt-1.5 flex items-center gap-2 rounded-xl bg-surface-container-low pl-3 focus-within:ring-1 focus-within:ring-primary"><DialPrefix country={country} className="text-on-surface-variant" /><input value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel-national" placeholder={country.phoneExample} aria-invalid={!!phoneError} required={phoneOnly} className="w-full min-w-0 border-none bg-transparent px-2 py-3 text-body-md text-on-surface outline-none" /></span>
           {phoneError && <span className="mt-1 block text-body-sm text-primary">{phoneError}</span>}
         </label>
       </div>
+      {phoneOnly && !codeFor && <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="mt-0.5 shrink-0" /><span className="min-w-0">Pas d’e-mail ? Votre numéro suffit : nous vous envoyons un code par SMS pour le vérifier.</span></p>}
       <label className="text-label-md text-on-surface">Ville / commune
         <Select value={form.city} onChange={set('city')} className={`${field} mt-1.5 cursor-pointer`}>
           <option value="">Choisir…</option>
@@ -155,23 +211,36 @@ function RegisterForm({ onSuccess }: { onSuccess: (p: AuthPayload) => void }) {
         <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
         <span>J'accepte les <a href="/legal/cgu" target="_blank" rel="noreferrer" className="text-primary">conditions d'utilisation</a>, la <a href="/legal/remise-en-main-propre" target="_blank" rel="noreferrer" className="text-primary">charte de confiance</a> Dilchap et sa <a href="/legal/confidentialite" target="_blank" rel="noreferrer" className="text-primary">politique de confidentialité</a>.</span>
       </label>
-      {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{readable(error.message)}</p>}
-      <button type="submit" disabled={loading || !accepted || !!phoneError || form.fullName.trim().length < 2 || !form.email || form.password.length < 8} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
-        {loading ? 'Création…' : <>Créer mon compte <Icon name="arrow_forward" size={19} /></>}
+      {phoneOnly && codeFor && <SmsCodeField value={code} onChange={setCode} sentTo={codeFor.hint} wait={wait} resending={sending} onResend={sendCode} />}
+      {message && (
+        <p role="alert" className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{message}
+          {taken && <button type="button" onClick={onLogin} className="ml-1 cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline underline-offset-2">Se connecter</button>}
+        </p>
+      )}
+      <button type="submit" disabled={loading || sending || !ready} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
+        {phoneOnly && !codeFor
+          ? (sending ? 'Envoi du code…' : <><Icon name="sms" size={19} /> Recevoir le code</>)
+          : loading ? 'Création…' : <>Créer mon compte <Icon name="arrow_forward" size={19} /></>}
       </button>
     </form>
   )
 }
 
-// "Mot de passe oublié": a reset link e-mailed to the account's address
-// (same answer whether or not it belongs to a member). No access to that
-// mailbox (or an account opened with a phone number): the request reaches
-// the support queue instead (SupportRecovery).
+const softField = 'h-12 rounded-xl border-none bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary'
+
+// "Mot de passe oublié": a reset link e-mailed to the account's address,
+// or (when SMS is set up) a code sent by SMS to the account's verified
+// number — the same answer whether or not either belongs to a member. No
+// access to either: the request reaches the support queue instead
+// (SupportRecovery).
 function ForgotPassword({ onBack }: { onBack: () => void }) {
-  const [email, setEmail] = useState('')
   const [support, setSupport] = useState(false)
-  const [send, { data, loading, error }] = useMutation<{ requestPasswordReset: boolean }>(REQUEST_PASSWORD_RESET_MUTATION)
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const home = useHomeCountry()
+  const country = useMarket() ?? home
+  const { data: options } = useQuery<{ phoneAuthOptions: PhoneAuthOptions }>(PHONE_AUTH_OPTIONS_QUERY, { variables: { countryCode: country.code } })
+  const smsReset = !!options?.phoneAuthOptions.passwordReset
+  const [by, setBy] = useState<'email' | 'sms'>('email')
+  const method = smsReset ? by : 'email'
   if (support) return <SupportRecovery onBack={() => setSupport(false)} />
   return (
     <div className="flex flex-col gap-4">
@@ -180,20 +249,92 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
         <div className="text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="lock_reset" size={24} /></span>
           <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Mot de passe oublié</h2>
-          <p className="m-0 mt-1 text-body-md text-on-surface-variant">Indiquez l’adresse e-mail de votre compte : nous vous envoyons un lien pour choisir un nouveau mot de passe.</p>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant">{method === 'email' ? 'Indiquez l’adresse e-mail de votre compte : nous vous envoyons un lien pour choisir un nouveau mot de passe.' : 'Indiquez le numéro de votre compte : nous vous envoyons un code par SMS pour choisir un nouveau mot de passe.'}</p>
         </div>
-        {data?.requestPasswordReset ? (
-          <p role="status" className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><Icon name="forward_to_inbox" size={18} className="mt-0.5 shrink-0" /> <span className="min-w-0 break-words">Si un compte Dilchap utilise <b className="font-semibold">{email.trim()}</b>, un e-mail vient de partir. Le lien est valable 1 heure ; pensez à regarder dans les spams.</span></p>
-        ) : (
-          <form onSubmit={e => { e.preventDefault(); void send({ variables: { email: email.trim().toLowerCase() } }).catch(() => undefined) }} className="mt-4 flex flex-col gap-3">
-            <input type="email" value={email} onChange={e => setEmail(e.target.value.slice(0, 120))} placeholder="nom@exemple.com" autoComplete="email" className="h-12 rounded-xl border-none bg-surface-lowest px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary" />
-            {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{error.message}</p>}
-            <button type="submit" disabled={!valid || loading} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60"><Icon name="mail" size={19} /> {loading ? 'Envoi…' : 'Recevoir le lien'}</button>
-          </form>
+        {smsReset && (
+          <div role="tablist" aria-label="Recevoir" className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-surface-lowest p-1">
+            {([['email', 'mail', 'Par e-mail'], ['sms', 'sms', 'Par SMS']] as const).map(([k, icon, label]) => (
+              <button key={k} type="button" role="tab" aria-selected={method === k} onClick={() => setBy(k)} className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none py-2 text-label-md ${method === k ? 'bg-primary text-white' : 'bg-transparent text-on-surface-variant'}`}><Icon name={icon} size={17} /> {label}</button>
+            ))}
+          </div>
         )}
-        <button onClick={() => setSupport(true)} className="mx-auto mt-4 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-center text-label-md text-primary"><Icon name="support_agent" size={18} className="shrink-0" /> Plus accès à cet e-mail ? Contacter l’équipe</button>
+        {method === 'email' ? <ResetByEmail /> : <ResetBySms onDone={onBack} />}
+        <button onClick={() => setSupport(true)} className="mx-auto mt-4 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-center text-label-md text-primary"><Icon name="support_agent" size={18} className="shrink-0" /> {method === 'email' ? 'Plus accès à cet e-mail ? Contacter l’équipe' : 'Plus accès à ce numéro ? Contacter l’équipe'}</button>
       </div>
     </div>
+  )
+}
+
+function ResetByEmail() {
+  const [email, setEmail] = useState('')
+  const [send, { data, loading, error }] = useMutation<{ requestPasswordReset: boolean }>(REQUEST_PASSWORD_RESET_MUTATION)
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  return data?.requestPasswordReset ? (
+    <p role="status" className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><Icon name="forward_to_inbox" size={18} className="mt-0.5 shrink-0" /> <span className="min-w-0 break-words">Si un compte Dilchap utilise <b className="font-semibold">{email.trim()}</b>, un e-mail vient de partir. Le lien est valable 1 heure ; pensez à regarder dans les spams.</span></p>
+  ) : (
+    <form onSubmit={e => { e.preventDefault(); void send({ variables: { email: email.trim().toLowerCase() } }).catch(() => undefined) }} className="mt-4 flex flex-col gap-3">
+      <input type="email" value={email} onChange={e => setEmail(e.target.value.slice(0, 120))} placeholder="nom@exemple.com" autoComplete="email" aria-label="Adresse e-mail du compte" className={softField} />
+      {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{error.message}</p>}
+      <button type="submit" disabled={!valid || loading} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60"><Icon name="mail" size={19} /> {loading ? 'Envoi…' : 'Recevoir le lien'}</button>
+    </form>
+  )
+}
+
+// Number, then the code and the new password. The server answers the same
+// whether or not the number has an account (and only texts a verified one).
+function ResetBySms({ onDone }: { onDone: () => void }) {
+  const home = useHomeCountry()
+  const market = useMarket() ?? home
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [password, setPassword] = useState('')
+  const [sent, setSent] = useState<{ phone: string; country: string; hint: string } | null>(null)
+  const [resendAt, setResendAt] = useState(0)
+  const wait = useCooldown(resendAt)
+  const [request, { loading: sending, error: sendError }] = useMutation<{ requestPasswordResetCode: PhoneCodeSent }>(REQUEST_PASSWORD_RESET_CODE_MUTATION)
+  const [reset, { data: done, loading: saving, error: resetError }] = useMutation<{ resetPasswordWithCode: boolean }>(RESET_PASSWORD_WITH_CODE_MUTATION)
+  const intl = toIntl(phone, market)
+  // A number typed with its dial code may be of another open country.
+  const countryCode = countryOfIntl(intl) ?? market.code
+  const phoneError = phone ? localNumberError(phone, market) : null
+  const ask = () => {
+    if (!intl) return
+    void request({ variables: { phone: intl, countryCode } }).then(r => {
+      const d = r.data?.requestPasswordResetCode
+      if (!d) return
+      setSent({ phone: intl, country: countryCode, hint: d.phoneHint })
+      setResendAt(Date.now() + d.resendAfterSeconds * 1000)
+    }).catch(() => undefined)
+  }
+  if (done?.resetPasswordWithCode)
+    return (
+      <div className="mt-4 flex flex-col gap-3">
+        <p role="status" className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><Icon name="check_circle" size={18} className="mt-0.5 shrink-0" /> <span className="min-w-0">Mot de passe modifié. Tous vos appareils ont été déconnectés : connectez-vous avec votre nouveau mot de passe.</span></p>
+        <button type="button" onClick={onDone} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="login" size={19} /> Se connecter</button>
+      </div>
+    )
+  if (!sent)
+    return (
+      <form onSubmit={e => { e.preventDefault(); ask() }} className="mt-4 flex flex-col gap-3">
+        <span className="flex h-12 items-center gap-2 rounded-xl bg-surface-lowest pl-2 focus-within:outline focus-within:outline-2 focus-within:outline-primary">
+          <DialPrefix country={market} className="rounded-lg bg-surface-container-low px-2 py-1.5 text-on-surface" />
+          <input value={phone} onChange={e => setPhone(e.target.value.slice(0, 30))} inputMode="tel" autoComplete="tel-national" placeholder={market.phoneExample} aria-label="Numéro de téléphone du compte" className="h-full w-full min-w-0 border-none bg-transparent px-1 text-body-md text-on-surface outline-none" />
+        </span>
+        {phoneError && <span className="text-body-sm text-primary">{phoneError}</span>}
+        {sendError && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{sendError.message}</p>}
+        <button type="submit" disabled={!intl || !!phoneError || sending} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60"><Icon name="sms" size={19} /> {sending ? 'Envoi…' : 'Recevoir le code'}</button>
+      </form>
+    )
+  return (
+    <form onSubmit={e => { e.preventDefault(); void reset({ variables: { input: { phone: sent.phone, countryCode: sent.country, code, newPassword: password } } }).catch(() => undefined) }} className="mt-4 flex flex-col gap-3">
+      <SmsCodeField maybe value={code} onChange={setCode} sentTo={sent.hint} wait={wait} resending={sending} onResend={ask} />
+      <label className="text-label-md text-on-surface">Nouveau mot de passe
+        <span className="mt-1.5 block"><PasswordInput value={password} onChange={setPassword} placeholder="8 caractères minimum" autoComplete="new-password" /></span>
+      </label>
+      {(resetError || sendError) && <p role="alert" className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{(resetError ?? sendError)!.message}</p>}
+      <button type="submit" disabled={code.length !== 6 || password.length < 8 || saving} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60"><Icon name="lock_reset" size={19} /> {saving ? 'Enregistrement…' : 'Changer le mot de passe'}</button>
+      <button type="button" onClick={() => { setSent(null); setCode('') }} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant">Changer de numéro</button>
+    </form>
   )
 }
 
@@ -218,7 +359,7 @@ function SupportRecovery({ onBack }: { onBack: () => void }) {
   }
   return (
     <div className="flex flex-col gap-4">
-      <button onClick={onBack} className="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant"><Icon name="arrow_back" size={18} /> Recevoir un lien par e-mail</button>
+      <button onClick={onBack} className="flex w-fit cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant"><Icon name="arrow_back" size={18} /> Mot de passe oublié</button>
       <div className="rounded-2xl bg-surface-container-low p-5">
         <div className="text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="support_agent" size={24} /></span>
@@ -285,7 +426,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
 
           <div className="mt-6">
             {mode === 'login' && <LoginForm onSuccess={success} onForgot={() => setMode('forgot')} />}
-            {mode === 'register' && <RegisterForm onSuccess={success} />}
+            {mode === 'register' && <RegisterForm onSuccess={success} onLogin={() => setMode('login')} />}
             {mode === 'forgot' && <ForgotPassword onBack={() => setMode('login')} />}
           </div>
 

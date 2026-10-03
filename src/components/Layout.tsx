@@ -65,7 +65,7 @@ type LayoutProps = {
   onToggleDark: () => void
   children: React.ReactNode
   isLoggedIn: boolean
-  currentUser?: { fullName: string; email: string; avatarUrl?: string | null; isGuest?: boolean } | null
+  currentUser?: { fullName: string; email: string | null; phone?: string | null; avatarUrl?: string | null; isGuest?: boolean } | null
   onToggleLogin: () => void
   onSelectListing?: (id: string) => void
   onSetSearchTerm?: (term: string) => void
@@ -477,7 +477,7 @@ export default function Layout({
                     <div className={`${dropdown} w-64 p-2`}>
                       <div className="mb-1.5 border-b border-outline-variant px-3 py-3">
                         <div className="text-label-lg">{displayName}</div>
-                        <div className="mt-0.5 truncate text-body-sm text-on-surface-variant">{currentUser?.email ?? ''}</div>
+                        <div className="mt-0.5 truncate text-body-sm text-on-surface-variant">{currentUser?.email ?? currentUser?.phone ?? ''}</div>
                       </div>
 
                       {/* Everyone on Dilchap can both buy and sell — one

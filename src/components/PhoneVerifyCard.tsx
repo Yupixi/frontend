@@ -1,22 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useCooldown } from '../lib/useCooldown'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from './Icon'
 import HelpLink from './HelpLink'
 import {
   PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, type PhoneChannelData,
 } from '../graphql/phoneVerification'
-
-// Seconds left before another code can be asked (the server allows one a
-// minute). Ticks only inside this small card.
-function useCooldown(until: number) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (until <= Date.now()) return
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [until])
-  return Math.max(0, Math.ceil((until - now) / 1000))
-}
 
 // « WhatsApp / SMS » alerts: the member proves they hold the number of their
 // profile with a 6-digit code sent by SMS. Hidden until the team opens the
