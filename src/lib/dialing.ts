@@ -33,3 +33,17 @@ export function countryOfIntl(intl: string | undefined): string | undefined {
   const d = (intl ?? '').replace(/\D/g, '')
   return COUNTRIES.find(c => d.startsWith(c.dialCode))?.code
 }
+
+// An international number as people read it: « +225 07 00 00 00 00 »,
+// « +221 77 123 45 67 » (UEMOA dial code, then the national number in
+// groups). Anything else is returned as is.
+export function formatIntl(intl: string | null | undefined): string {
+  const d = (intl ?? '').replace(/\D/g, '')
+  const c = COUNTRIES.find(x => d.startsWith(x.dialCode) && d.length === x.dialCode.length + x.localDigits)
+  if (!c) return intl ?? ''
+  const local = d.slice(c.dialCode.length)
+  const groups = local.length % 2 === 0
+    ? local.match(/\d{2}/g) ?? [local]
+    : [local.slice(0, 2), local.slice(2, 5), ...(local.slice(5).match(/\d{2}/g) ?? [])]
+  return `+${c.dialCode} ${groups.join(' ')}`
+}

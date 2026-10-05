@@ -125,6 +125,32 @@
 		import seo_backend
 	}
 
+	# One-click account confirmation links sent by SMS:
+	# https://<site>/v/<code>. Like /q/, it works while the launch page is
+	# up: the backend answers the app's page, noindex and never cached; the
+	# app (outside the launch page) uses the link through GraphQL, so a link
+	# preview fetching this address uses nothing up. Backend down: the app
+	# shell (handle_errors), which asks the API itself.
+	handle /v/* {
+		rewrite * /seo{path}
+		import seo_backend
+	}
+
+	# The web app manifest asked with the team's preview key (?acces=…, set
+	# by the app once the key is confirmed): the backend checks the key and
+	# answers the manifest with a start_url that carries it, so the app
+	# installed on a phone's home screen opens the preview too (iPhones give
+	# it its own storage, without the key). Without the parameter: the
+	# static file below.
+	@manifest_key {
+		path /manifest.json
+		query acces=*
+	}
+	handle @manifest_key {
+		rewrite * /seo/manifest.json
+		import seo_backend
+	}
+
 	# Storefront pages (/, /annonce/…, /categorie/…, /boutique/…: every
 	# path without a file extension) come back from the backend as the
 	# app's own index.html with the page's title, description, share image,
@@ -161,6 +187,15 @@
 	# Backend unreachable or too slow: the plain app shell, the site keeps
 	# working (with the build's default title and share tags).
 	handle_errors {
+		# The manifest with a key, backend unreachable: the static one.
+		@manifest_down {
+			path /manifest.json
+			expression `{err.status_code} >= 502 && {err.status_code} <= 504`
+		}
+		handle @manifest_down {
+			rewrite * /manifest.json
+			file_server
+		}
 		@backend_down expression `{err.status_code} >= 502 && {err.status_code} <= 504`
 		handle @backend_down {
 			rewrite * /index.html

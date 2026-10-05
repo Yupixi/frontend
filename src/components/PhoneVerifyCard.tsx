@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react'
 import { useCooldown } from '../lib/useCooldown'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from './Icon'
+import { announceAccountVerified } from '../lib/accountVerify'
 import HelpLink from './HelpLink'
 import {
   PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, type PhoneChannelData,
 } from '../graphql/phoneVerification'
 
 // « WhatsApp / SMS » alerts: the member proves they hold the number of their
-// profile with a 6-digit code sent by SMS. Hidden until the team opens the
-// channel. `unsavedPhone`: the profile form holds another number not saved yet.
+// profile with a 6-digit code sent by SMS. Shown once the team opens the
+// alerts — and, SMS first, whenever the account is confirmed by neither its
+// e-mail nor its phone and SMS can be sent (the code confirms the account).
+// `unsavedPhone`: the profile form holds another number not saved yet.
 export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: { wantsSms: boolean; unsavedPhone: boolean; onVerified?: () => void }) {
   const { data, refetch } = useQuery<PhoneChannelData>(PHONE_CHANNEL_QUERY, { fetchPolicy: 'cache-and-network' })
   const [request, { loading: sending }] = useMutation<{ requestPhoneVerification: { alreadyVerified: boolean; phoneHint: string } }>(REQUEST_PHONE_CODE_MUTATION)
@@ -22,7 +25,10 @@ export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: 
   const me = data?.me
   // A number changed in the profile: any code in progress is for the old one.
   useEffect(() => { setSentTo(null); setCode(''); setError('') }, [me?.phone])
-  if (!data?.smsAlertsAvailable || !me) return null
+  if (!data || !me) return null
+  const unconfirmed = !me.phoneVerifiedAt && !me.emailVerifiedAt
+  const forAccount = unconfirmed && data.phoneVerificationAvailable
+  if (!data.smsAlertsAvailable && !forAccount) return null
 
   const send = () => {
     setError('')
@@ -38,7 +44,7 @@ export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: 
   const submit = () => {
     setError('')
     verify({ variables: { code } })
-      .then(() => { setSentTo(null); setCode(''); void refetch(); onVerified?.() })
+      .then(() => { setSentTo(null); setCode(''); void refetch(); announceAccountVerified(); onVerified?.() })
       .catch((e: Error) => setError(e.message))
   }
 
@@ -47,27 +53,31 @@ export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: 
     return (
       <div className={`${box} flex items-center gap-3 bg-tertiary-soft`}>
         <Icon name="verified_user" size={20} className="text-tertiary" />
-        <span className="flex-1 text-body-sm text-on-surface">Numéro …{(me.phone ?? '').slice(-4)} vérifié : les alertes « WhatsApp / SMS » activées ci-dessous lui sont envoyées.</span>
+        <span className="flex-1 text-body-sm text-on-surface">{data.smsAlertsAvailable ? `Numéro …${(me.phone ?? '').slice(-4)} vérifié : les alertes « WhatsApp / SMS » activées ci-dessous lui sont envoyées.` : `Numéro …${(me.phone ?? '').slice(-4)} vérifié : votre compte est confirmé.`}</span>
       </div>
     )
   if (!me.phone || unsavedPhone)
     return (
       <div className={`${box} flex items-start gap-3 bg-surface-container-low`}>
         <Icon name="phone_android" size={20} className="mt-0.5 shrink-0 text-on-surface-variant" />
-        <span className="flex-1 text-body-sm text-on-surface">{unsavedPhone ? 'Enregistrez d’abord votre nouveau numéro (onglet Profil), puis vérifiez-le ici pour recevoir les alertes par WhatsApp / SMS.' : 'Ajoutez votre numéro dans l’onglet Profil pour recevoir les alertes par WhatsApp / SMS.'}</span>
+        <span className="flex-1 text-body-sm text-on-surface">{forAccount
+          ? (unsavedPhone ? 'Enregistrez d’abord votre nouveau numéro (onglet Profil), puis vérifiez-le ici pour confirmer votre compte.' : 'Ajoutez votre numéro dans l’onglet Profil pour confirmer votre compte par SMS.')
+          : unsavedPhone ? 'Enregistrez d’abord votre nouveau numéro (onglet Profil), puis vérifiez-le ici pour recevoir les alertes par WhatsApp / SMS.' : 'Ajoutez votre numéro dans l’onglet Profil pour recevoir les alertes par WhatsApp / SMS.'}</span>
       </div>
     )
   return (
-    <div className={`${box} ${wantsSms ? 'bg-primary-fixed/60' : 'bg-surface-container-low'}`}>
+    <div className={`${box} ${wantsSms || forAccount ? 'bg-primary-fixed/60' : 'bg-surface-container-low'}`}>
       <div className="flex flex-wrap items-center gap-3">
-        <Icon name="password" size={20} className={`shrink-0 ${wantsSms ? 'text-primary' : 'text-on-surface-variant'}`} />
+        <Icon name="password" size={20} className={`shrink-0 ${wantsSms || forAccount ? 'text-primary' : 'text-on-surface-variant'}`} />
         <span className="min-w-0 flex-1 basis-56 text-body-sm text-on-surface">
           {sentTo != null
             ? `Code envoyé par SMS au …${sentTo.replace(/^…/, '')}. Il expire dans 5 minutes.`
-            : wantsSms
-              ? 'Vérifiez votre numéro pour recevoir les alertes « WhatsApp / SMS » que vous avez activées.'
-              : 'Vérifiez votre numéro pour pouvoir recevoir des alertes par WhatsApp / SMS.'}
-          {sentTo == null && <HelpLink article="alertes-sms-whatsapp" className="ml-1 align-middle" />}
+            : forAccount
+              ? 'Confirmez votre compte : recevez un code par SMS sur votre numéro. Il faut un compte confirmé pour publier, contacter les vendeurs et payer.'
+              : wantsSms
+                ? 'Vérifiez votre numéro pour recevoir les alertes « WhatsApp / SMS » que vous avez activées.'
+                : 'Vérifiez votre numéro pour pouvoir recevoir des alertes par WhatsApp / SMS.'}
+          {sentTo == null && <HelpLink article={forAccount ? 'confirmer-mon-compte' : 'alertes-sms-whatsapp'} className="ml-1 align-middle" />}
         </span>
         {sentTo == null && (
           <button type="button" disabled={sending} onClick={send} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white disabled:opacity-60">

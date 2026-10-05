@@ -9,6 +9,8 @@ import SupportTab from './components/SupportTab'
 import ErrorBoundary from './components/ErrorBoundary'
 import PaymentReturn from './components/PaymentReturn'
 import EmailVerifyPrompt, { verifyPromptDismissed } from './components/EmailVerifyPrompt'
+import AccountVerifySheet from './components/AccountVerifySheet'
+import { ACCOUNT_VERIFIED_EVENT } from './lib/accountVerify'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { parsePath, pathFor, samePlace } from './lib/routes'
@@ -311,6 +313,16 @@ export default function App() {
     cacheOwner.current = me.id
     setCurrentUser(me)
   }
+
+  // The account was just confirmed (SMS code, link): reload the member so
+  // the banner, the cards and the gates follow.
+  useEffect(() => {
+    const onVerified = () => {
+      void fetchMe().then(r => { if (r.data?.me) acceptUser(r.data.me) }).catch(() => undefined)
+    }
+    window.addEventListener(ACCOUNT_VERIFIED_EVENT, onVerified)
+    return () => window.removeEventListener(ACCOUNT_VERIFIED_EVENT, onVerified)
+  }, [])
 
   // A silent token refresh can fail well after mount (token expired/revoked
   // mid-session) — apollo.ts clears storage but has no way to touch React
@@ -871,10 +883,15 @@ export default function App() {
   // Welcome tour / « Nouveau » announcements of signed-in members.
   const onboarding = <Onboarding page={page} enabled={isLoggedIn && !!currentUser && !currentUser.isGuest} />
 
-  // An account confirmed by its phone (SMS code) or without e-mail has
-  // nothing to confirm by e-mail.
-  const verifyPrompt = isLoggedIn && currentUser && !currentUser.isGuest && currentUser.email && !currentUser.emailVerifiedAt && !currentUser.phoneVerifiedAt && !verifyLater && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'
-    ? <EmailVerifyPrompt email={currentUser.email} onDismiss={() => setVerifyLater(true)} />
+  // An account confirmed by neither its phone (SMS code) nor its e-mail:
+  // a code by SMS first (EmailVerifyPrompt), else the e-mail again.
+  const verifyPrompt = isLoggedIn && currentUser && !currentUser.isGuest && (currentUser.email || currentUser.phone) && !currentUser.emailVerifiedAt && !currentUser.phoneVerifiedAt && !verifyLater && !showUpdateBanner && page !== 'seller-post' && page !== 'seller-edit'
+    ? <EmailVerifyPrompt email={currentUser.email} phone={currentUser.phone ?? null} onDismiss={() => setVerifyLater(true)} />
+    : null
+  // « Recevoir un code par SMS » wherever an action needs a confirmed
+  // account (contacting, paying, the banner above).
+  const verifySheet = isLoggedIn && currentUser && !currentUser.isGuest
+    ? <AccountVerifySheet onAddPhone={() => navigate('buyer-settings')} />
     : null
 
   if (isAccountPage(page)) {
@@ -958,6 +975,7 @@ export default function App() {
         <PaymentReturn isLoggedIn={isLoggedIn} />
         <ConsentBanner onOpenLegal={openLegal} />
         {verifyPrompt}
+        {verifySheet}
         <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
         {onboarding}
       </div>
@@ -990,6 +1008,7 @@ export default function App() {
       <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}
       {verifyPrompt}
+      {verifySheet}
       {isLoggedIn && pushStatus && !verifyPrompt && !showUpdateBanner && !showInstallBanner && !consentOpen && ['permission-required', 'error', 'ios-install-required', 'permission-denied'].includes(pushStatus) && !pushDismissed && !isSnoozed('push') && (
         <PushBanner status={pushStatus} enabling={enablingPush} onEnable={enablePush} onDismiss={() => { snooze('push'); setPushDismissed(true) }} />
       )}

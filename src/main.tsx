@@ -13,6 +13,10 @@ import './index.css'
 // app and the launch gate (it shows the launch page itself).
 const isQrPath = (pathname: string) => /^\/q\/[^/]+\/?$/.test(pathname)
 const QrLandingPage = lazy(() => import('./components/QrLandingPage'))
+// /v/<code> (one-click confirmation link sent by SMS): same, it works
+// before the launch.
+const isVerifyLinkPath = (pathname: string) => /^\/v\/[^/]+\/?$/.test(pathname)
+const VerifyLinkPage = lazy(() => import('./components/VerifyLinkPage'))
 
 // The entry script ran: index.html's stale-build guard stands down (a lazy
 // chunk that fails from now on is lib/lazyPage's and the ErrorBoundaries').
@@ -32,6 +36,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         ) : isQrPath(window.location.pathname) ? (
           <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
             <QrLandingPage />
+          </Suspense>
+        ) : isVerifyLinkPath(window.location.pathname) ? (
+          <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
+            <VerifyLinkPage />
           </Suspense>
         ) : (
           <LaunchGate>

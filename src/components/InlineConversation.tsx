@@ -21,6 +21,8 @@ import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
 import { dateFormat } from '../lib/intl'
 import { useMemberLists } from '../lib/lists'
+import AccountVerifyPanel from './AccountVerifyPanel'
+import { isNotVerifiedError } from '../lib/accountVerify'
 
 // Short chip labels so the row wraps instead of being cut off on phones;
 // the full sentence goes into the message box.
@@ -45,13 +47,19 @@ const chip = 'shrink-0 whitespace-nowrap cursor-pointer rounded-full border-none
 export default function InlineConversation({ sellerId, listingId, sellerName, onAuthenticated, onClose }: InlineConversationProps) {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [startError, setStartError] = useState<string | null>(null)
+  // A member whose account isn't confirmed: the SMS code right here, then
+  // the discussion opens.
+  const [needsVerify, setNeedsVerify] = useState(false)
   const [startConversation, { loading: starting }] = useMutation<{ startConversation: RemoteConversation }>(START_CONVERSATION_MUTATION)
 
   const beginThread = () => {
     setStartError(null)
     void startConversation({ variables: { recipientId: sellerId, listingId } })
       .then(({ data }) => data?.startConversation && setConversationId(data.startConversation.id))
-      .catch(() => setStartError('Impossible de démarrer la discussion. Réessayez.'))
+      .catch((e: unknown) => {
+        if (isNotVerifiedError(e)) setNeedsVerify(true)
+        else setStartError('Impossible de démarrer la discussion. Réessayez.')
+      })
   }
 
   // Already authenticated (real account or a guest session from earlier in
@@ -63,6 +71,14 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
 
   if (conversationId) {
     return <div className={panel}><ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} /></div>
+  }
+
+  if (needsVerify) {
+    return (
+      <div className={panel}>
+        <AccountVerifyPanel tone="plain" intro={`Pour écrire à ${sellerName}, confirmez votre compte : par SMS, c’est immédiat, et la discussion s’ouvre aussitôt.`} onVerified={() => { setNeedsVerify(false); beginThread() }} />
+      </div>
+    )
   }
 
   if (getAccessToken()) {

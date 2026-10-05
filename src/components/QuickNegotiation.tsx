@@ -8,6 +8,8 @@ import { MAKE_OFFER_MUTATION } from '../graphql/offers'
 import SellerBadge from '../components/SellerBadge'
 import type { BadgeTier } from '../graphql/badges'
 import { Claim } from '../lib/site'
+import AccountVerifyPanel from './AccountVerifyPanel'
+import { isNotVerifiedError } from '../lib/accountVerify'
 
 type Props = {
   listing: {
@@ -47,6 +49,8 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
   const [custom, setCustom] = useState(chips[1] ? String(chips[1].amount) : '')
   const [message, setMessage] = useState(presets[0])
   const [error, setError] = useState<string | null>(null)
+  // Account not confirmed: the SMS code here, then the same message goes.
+  const [needsVerify, setNeedsVerify] = useState(false)
   const [startConversation, { loading: starting }] = useMutation<{ startConversation: RemoteConversation }>(START_CONVERSATION_MUTATION)
   const [sendMessage, { loading: sendingMsg }] = useMutation(SEND_MESSAGE_MUTATION)
   const [makeOffer, { loading: offering }] = useMutation(MAKE_OFFER_MUTATION)
@@ -64,6 +68,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
       if (offer) await makeOffer({ variables: { input: { listingId: listing.id, amount: offer, conversationId } } })
       onSent(listing.seller.id, listing.id)
     } catch (e) {
+      if (isNotVerifiedError(e)) { setNeedsVerify(true); return }
       setError(e instanceof Error ? e.message : "Impossible d'envoyer votre message.")
     }
   }
@@ -130,6 +135,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
       </div>
 
       {error && <p className="m-0 text-body-sm text-primary">{error}</p>}
+      {needsVerify && <AccountVerifyPanel tone="plain" intro="Pour contacter le vendeur, confirmez votre compte : par SMS, c’est immédiat, et votre message part aussitôt." onVerified={() => { setNeedsVerify(false); void submit() }} />}
       <button onClick={() => void submit()} disabled={busy || (!message.trim() && !offer)} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
         <Icon name="send" size={19} /> {busy ? 'Envoi…' : offer ? `Envoyer l'offre de ${formatNumber(offer)} F & Ouvrir le chat` : 'Envoyer & Ouvrir le chat'}
       </button>

@@ -136,11 +136,12 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
   const phoneError = form.phone ? localNumberError(form.phone, country) : null
   const [accepted, setAccepted] = useState(false)
   const [register, { loading, error }] = useMutation<{ register: AuthPayload }>(REGISTER_MUTATION)
-  // « Inscription par téléphone » (BO › Règles): the e-mail becomes
-  // optional; without one, the number is proven by an SMS code first.
-  const { data: options } = useQuery<{ phoneAuthOptions: PhoneAuthOptions }>(PHONE_AUTH_OPTIONS_QUERY, { variables: { countryCode: country.code } })
+  // « Inscription par téléphone » (BO › Règles), SMS first: the number and
+  // its SMS code come first and are required, the e-mail last and optional;
+  // the account is confirmed by its number at once. Not offered in the
+  // country (setting off, SMS down): the e-mail sign-up as before.
+  const { data: options, refetch: refetchOptions } = useQuery<{ phoneAuthOptions: PhoneAuthOptions }>(PHONE_AUTH_OPTIONS_QUERY, { variables: { countryCode: country.code } })
   const byPhone = !!options?.phoneAuthOptions.signup
-  const phoneOnly = byPhone && !form.email.trim()
   const [requestCode, { loading: sending }] = useMutation<{ requestSignupCode: PhoneCodeSent }>(REQUEST_SIGNUP_CODE_MUTATION)
   const [sent, setSent] = useState<{ phone: string; hint: string } | null>(null)
   const [code, setCode] = useState('')
@@ -152,7 +153,7 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
   const codeFor = sent && sent.phone === intl ? sent : null
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [k]: e.target.value }))
   const sendCode = () => {
-    if (!intl) return
+    if (!intl || phoneError) return
     setCodeError('')
     void requestCode({ variables: { phone: intl, countryCode: country.code } }).then(r => {
       const d = r.data?.requestSignupCode
@@ -164,64 +165,117 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
   }
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (phoneOnly && !codeFor) { sendCode(); return }
+    if (byPhone && !codeFor) { sendCode(); return }
     setCodeError('')
     const email = form.email.trim().toLowerCase()
     void register({
-      variables: { input: { fullName: form.fullName.trim(), email: email || undefined, phone: intl, phoneCode: phoneOnly && codeFor && code.length === 6 ? code : undefined, city: form.city || undefined, password: form.password, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
+      variables: { input: { fullName: form.fullName.trim(), email: email || undefined, phone: intl, phoneCode: byPhone && codeFor && code.length === 6 ? code : undefined, city: form.city || undefined, password: form.password, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
     }).then(r => {
       if (!r.data) return
-      track('sign_up', { method: email ? 'email' : 'phone', country: country.code })
+      track('sign_up', { method: byPhone ? 'phone' : 'email', country: country.code })
       onSuccess(r.data.register)
-    }).catch(() => undefined)
+    }).catch(() => {
+      // The setting may have changed since the page opened.
+      void refetchOptions()
+    })
   }
   const basics = accepted && !phoneError && form.fullName.trim().length >= 2 && form.password.length >= 8
-  const ready = phoneOnly
-    ? basics && !!intl && (!codeFor || code.length === 6)
+  const emailOk = !form.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+  const ready = byPhone
+    ? basics && emailOk && !!codeFor && code.length === 6
     : basics && !!form.email
   const message = codeError || readable(error?.message)
   const taken = /déjà un compte|déjà associé/i.test(message ?? '')
+
+  const nameField = <label className="text-label-md text-on-surface">Nom complet ou nom de boutique<input value={form.fullName} onChange={set('fullName')} autoComplete="name" placeholder="Ex : Aya Koné" className={`${field} mt-1.5`} /></label>
+  const countryField = (
+    <label className="text-label-md text-on-surface">Pays
+      {/* Another country, other towns: the chosen city no longer applies. */}
+      <Select value={country.code} onChange={e => setForm(f => ({ ...f, countryCode: e.target.value, city: '' }))} className={`${field} mt-1.5 cursor-pointer`}>
+        {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+      </Select>
+    </label>
+  )
+  const cityField = (
+    <label className="text-label-md text-on-surface">Ville / commune
+      <Select value={form.city} onChange={set('city')} className={`${field} mt-1.5 cursor-pointer`}>
+        <option value="">Choisir…</option>
+        {placeOptions(lists).map(c => <option key={c} value={c}>{c}</option>)}
+      </Select>
+    </label>
+  )
+  const phoneInput = <span className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-container-low pl-3 focus-within:ring-1 focus-within:ring-primary"><DialPrefix country={country} className="text-on-surface-variant" /><input value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel-national" placeholder={country.phoneExample} aria-invalid={!!phoneError} aria-label="Téléphone" required={byPhone} className="w-full min-w-0 border-none bg-transparent px-2 py-3 text-body-md text-on-surface outline-none" /></span>
+  const passwordField = (
+    <label className="text-label-md text-on-surface">Mot de passe
+      <span className="mt-1.5 block"><PasswordInput value={form.password} onChange={v => setForm(f => ({ ...f, password: v }))} placeholder="8 caractères minimum" autoComplete="new-password" /></span>
+    </label>
+  )
+  const consent = (
+    <label className="flex cursor-pointer items-start gap-2 text-body-sm text-on-surface-variant">
+      <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
+      <span>J'accepte les <a href="/legal/cgu" target="_blank" rel="noreferrer" className="text-primary">conditions d'utilisation</a>, la <a href="/legal/remise-en-main-propre" target="_blank" rel="noreferrer" className="text-primary">charte de confiance</a> Dilchap et sa <a href="/legal/confidentialite" target="_blank" rel="noreferrer" className="text-primary">politique de confidentialité</a>.</span>
+    </label>
+  )
+  const alert = message && (
+    <p role="alert" className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{message}
+      {taken && <button type="button" onClick={onLogin} className="ml-1 cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline underline-offset-2">Se connecter</button>}
+    </p>
+  )
+  const createBtn = (
+    <button type="submit" disabled={loading || sending || !ready} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
+      {loading ? 'Création…' : <>Créer mon compte <Icon name="arrow_forward" size={19} /></>}
+    </button>
+  )
+
+  if (byPhone)
+    return (
+      <form onSubmit={submit} className="flex flex-col gap-3.5">
+        {/* 1. Who and where. */}
+        {nameField}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 sm:grid-cols-2">{countryField}{cityField}</div>
+        {/* 2. The number and its code. */}
+        <div className="text-label-md text-on-surface">
+          <span className="flex items-center gap-1.5">Téléphone <span className="text-body-sm font-normal text-on-surface-variant">(il confirme votre compte)</span></span>
+          <div className="mt-1.5 flex flex-wrap items-stretch gap-2">
+            {phoneInput}
+            {!codeFor && (
+              <button type="button" onClick={sendCode} disabled={sending || !intl || !!phoneError} className="flex min-h-12 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white hover:bg-primary-dark disabled:opacity-60 max-sm:w-full">
+                <Icon name="sms" size={18} /> {sending ? 'Envoi…' : 'Recevoir le code'}
+              </button>
+            )}
+          </div>
+          {phoneError && <span className="mt-1 block text-body-sm font-normal text-primary">{phoneError}</span>}
+          {!codeFor && !phoneError && <span className="mt-1 block text-body-sm font-normal text-on-surface-variant">Un code à 6 chiffres vous est envoyé par SMS pour vérifier ce numéro.</span>}
+        </div>
+        {/* 3. The 6-digit code. */}
+        {codeFor && <SmsCodeField value={code} onChange={setCode} sentTo={codeFor.hint} wait={wait} resending={sending} onResend={sendCode} />}
+        {/* 4. Password. */}
+        {passwordField}
+        {/* 5. E-mail last, optional. */}
+        <label className="text-label-md text-on-surface">E-mail <span className="text-body-sm font-normal text-on-surface-variant">(facultatif)</span><input type="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="nom@exemple.com" className={`${field} mt-1.5`} /></label>
+        {consent}
+        {alert}
+        {createBtn}
+        {!codeFor && <p className="m-0 text-center text-body-sm text-on-surface-variant">Commencez par recevoir le code par SMS : il est demandé pour créer le compte.</p>}
+      </form>
+    )
+
   return (
     <form onSubmit={submit} className="flex flex-col gap-3.5">
-      <label className="text-label-md text-on-surface">Nom complet ou nom de boutique<input value={form.fullName} onChange={set('fullName')} autoComplete="name" placeholder="Ex : Aya Koné" className={`${field} mt-1.5`} /></label>
-      <label className="text-label-md text-on-surface">Pays
-        {/* Another country, other towns: the chosen city no longer applies. */}
-        <Select value={country.code} onChange={e => setForm(f => ({ ...f, countryCode: e.target.value, city: '' }))} className={`${field} mt-1.5 cursor-pointer`}>
-          {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-        </Select>
-      </label>
+      {nameField}
+      {countryField}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 sm:grid-cols-2">
-        <label className="text-label-md text-on-surface">{byPhone ? 'E-mail (facultatif)' : 'E-mail'}<input type="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="nom@exemple.com" className={`${field} mt-1.5`} /></label>
+        <label className="text-label-md text-on-surface">E-mail<input type="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="nom@exemple.com" className={`${field} mt-1.5`} /></label>
         <label className="text-label-md text-on-surface">Téléphone WhatsApp
-          <span className="mt-1.5 flex items-center gap-2 rounded-xl bg-surface-container-low pl-3 focus-within:ring-1 focus-within:ring-primary"><DialPrefix country={country} className="text-on-surface-variant" /><input value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel-national" placeholder={country.phoneExample} aria-invalid={!!phoneError} required={phoneOnly} className="w-full min-w-0 border-none bg-transparent px-2 py-3 text-body-md text-on-surface outline-none" /></span>
+          <span className="mt-1.5 flex">{phoneInput}</span>
           {phoneError && <span className="mt-1 block text-body-sm text-primary">{phoneError}</span>}
         </label>
       </div>
-      {phoneOnly && !codeFor && <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="mt-0.5 shrink-0" /><span className="min-w-0">Pas d’e-mail ? Votre numéro suffit : nous vous envoyons un code par SMS pour le vérifier.</span></p>}
-      <label className="text-label-md text-on-surface">Ville / commune
-        <Select value={form.city} onChange={set('city')} className={`${field} mt-1.5 cursor-pointer`}>
-          <option value="">Choisir…</option>
-          {placeOptions(lists).map(c => <option key={c} value={c}>{c}</option>)}
-        </Select>
-      </label>
-      <label className="text-label-md text-on-surface">Mot de passe
-        <span className="mt-1.5 block"><PasswordInput value={form.password} onChange={v => setForm(f => ({ ...f, password: v }))} placeholder="8 caractères minimum" autoComplete="new-password" /></span>
-      </label>
-      <label className="flex cursor-pointer items-start gap-2 text-body-sm text-on-surface-variant">
-        <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
-        <span>J'accepte les <a href="/legal/cgu" target="_blank" rel="noreferrer" className="text-primary">conditions d'utilisation</a>, la <a href="/legal/remise-en-main-propre" target="_blank" rel="noreferrer" className="text-primary">charte de confiance</a> Dilchap et sa <a href="/legal/confidentialite" target="_blank" rel="noreferrer" className="text-primary">politique de confidentialité</a>.</span>
-      </label>
-      {phoneOnly && codeFor && <SmsCodeField value={code} onChange={setCode} sentTo={codeFor.hint} wait={wait} resending={sending} onResend={sendCode} />}
-      {message && (
-        <p role="alert" className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{message}
-          {taken && <button type="button" onClick={onLogin} className="ml-1 cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline underline-offset-2">Se connecter</button>}
-        </p>
-      )}
-      <button type="submit" disabled={loading || sending || !ready} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
-        {phoneOnly && !codeFor
-          ? (sending ? 'Envoi du code…' : <><Icon name="sms" size={19} /> Recevoir le code</>)
-          : loading ? 'Création…' : <>Créer mon compte <Icon name="arrow_forward" size={19} /></>}
-      </button>
+      {cityField}
+      {passwordField}
+      {consent}
+      {alert}
+      {createBtn}
     </form>
   )
 }
