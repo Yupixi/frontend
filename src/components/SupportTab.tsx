@@ -80,7 +80,7 @@ export default function SupportTab({ page, isLoggedIn, currentUser, onNavigate }
         </button>
       )}
       {open && (
-        <div className="fixed inset-0 z-[10001] lg:inset-auto lg:bottom-4 lg:right-4" role="dialog" aria-modal="true" aria-label="Support Dilchap">
+        <div data-clarity-mask="True" className="fixed inset-0 z-[10001] lg:inset-auto lg:bottom-4 lg:right-4" role="dialog" aria-modal="true" aria-label="Support Dilchap">
           <div className="absolute inset-0 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />
           <div className="safe-pt relative flex h-full w-full flex-col overflow-hidden bg-surface-lowest lg:h-[min(680px,calc(100dvh-2rem))] lg:w-[400px] lg:rounded-2xl lg:border lg:border-solid lg:border-outline-variant/60 lg:shadow-2xl animate-[slideUp_0.25s_cubic-bezier(0.16,1,0.3,1)]">
             {member

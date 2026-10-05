@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
 import ConsentBanner, { useConsentOpen } from './components/ConsentBanner'
 import { pageTitle, track, trackPageView } from './lib/analytics'
+import { setClarityPage } from './lib/clarity'
 import SupportTab from './components/SupportTab'
 import ErrorBoundary from './components/ErrorBoundary'
 import PaymentReturn from './components/PaymentReturn'
@@ -534,6 +535,12 @@ export default function App() {
     trackPageView(window.location.href, pageTitle(page, categoryFilter))
   }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, helpSlug])
 
+  // Microsoft Clarity (same consent): stopped on excluded pages (KYC) and
+  // on addresses carrying anything but harmless parameters (lib/clarity).
+  useEffect(() => {
+    setClarityPage(page, window.location.href)
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug])
+
   // Tours tied to a page know where the member is.
   useEffect(() => { noteTourPage(page) }, [page])
 
@@ -862,6 +869,8 @@ export default function App() {
         {/* No Suspense here on purpose: while its chunk loads, the page the
             visitor comes from stays up (navigation is a transition). */}
         <ErrorBoundary resetKey={pageKey} fullScreen>
+          {/* Microsoft Clarity: the sign-in / sign-up screens are masked. */}
+          <div data-clarity-mask="True" className="contents">
           <Auth
             onNavigate={navigate}
             onClose={close}
@@ -872,6 +881,7 @@ export default function App() {
               setAuthReturn(null)
             }}
           />
+          </div>
         </ErrorBoundary>
         <ConsentBanner onOpenLegal={openLegal} />
       </div>
@@ -969,7 +979,11 @@ export default function App() {
       <div className={dark ? 'dark' : ''} style={{ background: 'var(--bg)' }}>
         {/* Only the page: the Support tab, banners… stay mounted. */}
         <ErrorBoundary resetKey={pageKey} fullScreen>
-          <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
+          {/* Microsoft Clarity: every account page is masked (messages,
+              credits, payments, settings, shop, orders…). */}
+          <div data-clarity-mask="True" className="contents">
+            <Suspense fallback={<PageFallback fullScreen />}>{accountContent}</Suspense>
+          </div>
         </ErrorBoundary>
         <SupportTab page={accountPage} isLoggedIn={isLoggedIn} currentUser={currentUser} onNavigate={navigate} />
         <PaymentReturn isLoggedIn={isLoggedIn} />

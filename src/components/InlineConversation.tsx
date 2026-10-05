@@ -70,12 +70,12 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   }, [])
 
   if (conversationId) {
-    return <div className={panel}><ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} /></div>
+    return <div data-clarity-mask="True" className={panel}><ThreadView conversationId={conversationId} sellerName={sellerName} onClose={onClose} /></div>
   }
 
   if (needsVerify) {
     return (
-      <div className={panel}>
+      <div data-clarity-mask="True" className={panel}>
         <AccountVerifyPanel tone="plain" intro={`Pour écrire à ${sellerName}, confirmez votre compte : par SMS, c’est immédiat, et la discussion s’ouvre aussitôt.`} onVerified={() => { setNeedsVerify(false); beginThread() }} />
       </div>
     )
@@ -83,7 +83,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
 
   if (getAccessToken()) {
     return (
-      <div className={`${panel} text-center text-body-sm text-on-surface-variant`}>
+      <div data-clarity-mask="True" className={`${panel} text-center text-body-sm text-on-surface-variant`}>
         {starting ? 'Connexion à la discussion…' : (startError ?? '')}
         {startError && <button onClick={beginThread} className="mx-auto mt-3 block cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white">Réessayer</button>}
       </div>
@@ -91,7 +91,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   }
 
   return (
-    <div className={panel}>
+    <div data-clarity-mask="True" className={panel}>
       <GuestForm sellerId={sellerId} listingId={listingId} onAuthenticated={onAuthenticated} onStarted={setConversationId} />
     </div>
   )

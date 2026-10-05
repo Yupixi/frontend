@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import DilchapLogo from './DilchapLogo'
 import Icon from './Icon'
 import { useLaunch, type LaunchStatus } from '../lib/launch'
+import { useClarityHold } from '../lib/clarity'
 import Flag from './Flag'
 import Select from './Select'
 import { useSite } from '../lib/site'
@@ -16,6 +17,9 @@ import { setMarketState, useCountries, useMarketCode } from '../lib/countries'
 // market (useLaunch), so switching country shows or lifts the page.
 export default function LaunchGate({ children }: { children: ReactNode }) {
   const { status, loading, refetch } = useLaunch()
+  // Microsoft Clarity never records the launch page nor the team preview
+  // (the page's manifest link carries the preview key there).
+  useClarityHold(!!status?.active)
   if (loading) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
   if (status?.active && !status.preview) return <LaunchPage status={status} onOpen={() => void refetch()} />
   return (

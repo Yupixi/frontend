@@ -125,7 +125,7 @@ function ShopInfos({ shop, onReport, canReport }: { shop: Shop, onReport: () => 
 
 function ContactRow({ href, icon, label, value }: { href: string, icon: string, label: string, value: string }) {
   return (
-    <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="flex min-w-0 items-center gap-3 rounded-xl bg-surface-container-low px-3 py-2 no-underline hover:bg-surface-container">
+    <a href={href} data-clarity-mask="True" target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="flex min-w-0 items-center gap-3 rounded-xl bg-surface-container-low px-3 py-2 no-underline hover:bg-surface-container">
       <Icon name={icon} size={18} className="shrink-0 text-primary" />
       <span className="min-w-0 flex-1"><span className="block text-label-sm text-on-surface-variant">{label}</span><span className="block truncate text-label-md text-on-surface">{value}</span></span>
       <Icon name="arrow_outward" size={16} className="shrink-0 text-on-surface-variant" />

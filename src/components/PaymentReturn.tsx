@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import SupportAboutButton from './SupportAboutButton'
 import { useApolloClient } from '@apollo/client/react'
 import BottomSheet from './BottomSheet'
+import { useClarityHold } from '../lib/clarity'
 import Icon from './Icon'
 import PaymentLogo from './PaymentLogo'
 import { trackCreditPurchase } from '../lib/analytics'
@@ -23,6 +24,8 @@ export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
   })
   const [intent, setIntent] = useState<PaymentIntent | null>(null)
   const [open, setOpen] = useState(!!id)
+  // Payments are never recorded by Microsoft Clarity.
+  useClarityHold(open)
   // The status could not be read (network): the sheet says so instead of
   // closing without a word.
   const [unreachable, setUnreachable] = useState(false)
@@ -83,6 +86,8 @@ export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
         <button onClick={close} className="h-12 w-full cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white">{waiting || verifying ? 'Continuer (vérification en cours)' : 'Terminer'}</button>
       </div>
     }>
+      {/* Microsoft Clarity: masked, and stopped while open (lib/clarity). */}
+      <div data-clarity-mask="True" className="contents">
       <div className="flex flex-col items-center gap-3 py-4 text-center">
         <PaymentLogo method={method} size={56} />
         {waiting && unreachable && <><Icon name="wifi_off" size={32} className="text-on-surface-variant" /><p className="m-0 text-headline-sm text-on-surface">Vérification impossible</p><p className="m-0 text-body-sm text-on-surface-variant">Nous n’arrivons pas à joindre Dilchap. Votre solde sera mis à jour dès la confirmation de l’opérateur.</p></>}
@@ -92,6 +97,7 @@ export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
         {intent?.status === 'FAILED' && <><span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={36} /></span><p className="m-0 text-headline-sm text-on-surface">Paiement non abouti</p><p className="m-0 text-body-sm text-on-surface-variant">{intent.failedReason ?? 'Aucun montant n’a été débité.'}</p></>}
         {intent && !waiting && intent.status !== 'SUCCESS' && <SupportAboutButton about={{ kind: 'PAYMENT', id: intent.id }} what="ce paiement" className="order-last mt-1" onBefore={close} />}
         {intent?.status === 'FULFILMENT_FAILED' && <><Icon name="support_agent" size={36} className="text-primary" /><p className="m-0 text-headline-sm text-on-surface">Paiement reçu</p><p className="m-0 text-body-sm text-on-surface-variant">L’activation a échoué ; notre équipe s’en occupe. Réf. {intent.reference}</p></>}
+      </div>
       </div>
     </BottomSheet>
   )
