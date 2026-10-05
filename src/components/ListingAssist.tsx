@@ -13,20 +13,31 @@ import { usePriceVars } from '../lib/countries'
 
 const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
 
-// Cover photo shrunk in the browser (≤ 512 px JPEG, < 90 KB) so it fits
-// in one small request to the assistant.
+// Cover photo shrunk in the browser (≤ 512 px JPEG) so it fits in one
+// small request to the assistant: at most 80 000 characters of data URL
+// (~58 KB of image), far below the API's JSON limit (200 KB) with the
+// title and description around it.
+const PHOTO_MAX_CHARS = 80_000
 async function thumbnail(file: File): Promise<string | null> {
   try {
     const bitmap = await createImageBitmap(file)
-    const scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height))
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.round(bitmap.width * scale)
-    canvas.height = Math.round(bitmap.height * scale)
-    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-    bitmap.close()
-    for (const q of [0.72, 0.55, 0.4]) {
-      const url = canvas.toDataURL('image/jpeg', q)
-      if (url.length < 118_000) return url
+    try {
+      // Smaller sizes, then lower qualities, until the data URL fits: the
+      // whole request must stay well under the API's JSON limit (an iPhone
+      // photo at 512 px went past 100 KB with the text).
+      for (const side of [512, 448, 384, 320]) {
+        const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+        canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+        for (const q of [0.7, 0.55, 0.42]) {
+          const url = canvas.toDataURL('image/jpeg', q)
+          if (url.startsWith('data:image/jpeg') && url.length <= PHOTO_MAX_CHARS) return url
+        }
+      }
+    } finally {
+      bitmap.close()
     }
   } catch { /* unreadable image: text only */ }
   return null

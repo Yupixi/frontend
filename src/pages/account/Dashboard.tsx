@@ -4,6 +4,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from './AccountLayout'
+import AccountVerifyPanel from '../../components/AccountVerifyPanel'
 import { formatNumber } from '../../lib/format'
 import { MY_LISTINGS_QUERY, type MyListingRow } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
@@ -115,6 +116,12 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           </div>
           <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white md:flex"><Icon name="add_circle" size={19} /> Vendre un article</button>
         </section>
+
+        {/* SMS first: an account confirmed by neither its phone nor its
+            e-mail can't publish, contact or pay — confirm it right here. */}
+        {currentUser && !currentUser.isGuest && !currentUser.phoneVerifiedAt && !currentUser.emailVerifiedAt && (
+          <div className="mt-4"><AccountVerifyPanel onAddPhone={() => onNavigate('buyer-settings')} /></div>
+        )}
 
         {/* Mobile: today's meet-up first */}
         {upcoming && (

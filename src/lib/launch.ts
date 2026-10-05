@@ -6,8 +6,9 @@ import { earlyLocationLookup, getStoredLocation } from './location'
 
 // « Lancement » (BO › Contenu): until the launch date the storefront shows
 // the launch page. The team opens the real site with its secret link
-// (?acces=<key>), remembered on that browser. The launch can differ per
-// country (BO « par pays »): `country` is the visitor's market.
+// (?acces=<key>), remembered on that browser (storage and a cookie) and
+// sent with every launchStatus. The launch can differ per country (BO
+// « par pays »): `country` is the visitor's market.
 export const LAUNCH_STATUS_QUERY = gql`
   query LaunchStatus($key: String, $country: String) { launchStatus(key: $key, country: $country) }
 `
@@ -19,26 +20,80 @@ export type LaunchStatus = {
   text: string
   image: string
   preview: boolean
+  // The key sent is a preview key (of any country's launch page); false:
+  // rotated in the Backoffice, forget it. Null when none was sent.
+  keyValid?: boolean | null
 }
 
 const KEY_STORE = 'yupixi_launch_key'
+const KEY_COOKIE = 'dilchap_acces'
+const KEY_RE = /^[A-Za-z0-9_-]{12,64}$/
+
+const readCookie = () => {
+  try {
+    const m = document.cookie.match(new RegExp(`(?:^|; )${KEY_COOKIE}=([^;]*)`))
+    return m ? decodeURIComponent(m[1]) : null
+  } catch {
+    return null
+  }
+}
+const writeCookie = (value: string | null) => {
+  try {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+    document.cookie = value
+      ? `${KEY_COOKIE}=${encodeURIComponent(value)}; Max-Age=31536000; Path=/; SameSite=Lax${secure}`
+      : `${KEY_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax${secure}`
+  } catch { /* cookies blocked */ }
+}
+
+function remember(key: string) {
+  try { localStorage.setItem(KEY_STORE, key) } catch { /* private mode */ }
+  writeCookie(key)
+}
 
 // The team's key: from the link (then stored and dropped from the address
-// bar), else the one stored earlier on this browser.
+// bar), else the one stored earlier on this browser — local storage, or
+// the cookie when the storage was cleared (iOS clears script storage of
+// sites not visited for a while).
 export function previewKey(): string | null {
   try {
     const url = new URL(window.location.href)
     const fromLink = url.searchParams.get('acces')
-    if (fromLink) {
-      localStorage.setItem(KEY_STORE, fromLink)
+    if (fromLink && KEY_RE.test(fromLink)) {
+      remember(fromLink)
       url.searchParams.delete('acces')
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
       return fromLink
     }
-    return localStorage.getItem(KEY_STORE)
-  } catch {
-    return null
-  }
+  } catch { /* no URL API */ }
+  let stored: string | null = null
+  try { stored = localStorage.getItem(KEY_STORE) } catch { /* private mode */ }
+  const key = stored ?? readCookie()
+  if (key && !stored) remember(key)
+  return key && KEY_RE.test(key) ? key : null
+}
+
+// The key was rotated in the Backoffice: this browser stops sending it.
+export function forgetPreviewKey() {
+  try { localStorage.removeItem(KEY_STORE) } catch { /* private mode */ }
+  writeCookie(null)
+  setManifestKey(null)
+}
+
+// The installed app (home screen) opens the address of the manifest's
+// start_url. iPhones give an installed app its own storage, without the
+// key this browser remembered: with a valid key, the manifest is asked
+// with it and the storefront's server answers a start_url carrying it
+// (Caddyfile → Backend /seo/manifest.json), so the installed app opens the
+// preview too.
+const MANIFEST = '/manifest.json?v=dilchap-3'
+export function setManifestKey(key: string | null) {
+  try {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+    if (!link) return
+    const href = key ? `${MANIFEST}&acces=${encodeURIComponent(key)}` : MANIFEST
+    if (link.getAttribute('href') !== href) link.setAttribute('href', href)
+  } catch { /* no DOM */ }
 }
 
 // First visit (no place stored yet): wait briefly for the IP lookup, as
@@ -74,5 +129,13 @@ export function useLaunch() {
     skip: !ready,
   })
   const status = (data ?? previousData)?.launchStatus ?? null
+  // A key the server no longer knows is forgotten; a valid one goes into
+  // the manifest (installed app).
+  const answer = data?.launchStatus
+  useEffect(() => {
+    if (!answer || !key) return
+    if (answer.keyValid === false) forgetPreviewKey()
+    else if (answer.preview) setManifestKey(key)
+  }, [answer, key])
   return { status, loading: (!ready || loading) && !status, error, refetch }
 }

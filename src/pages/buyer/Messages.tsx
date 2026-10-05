@@ -31,6 +31,7 @@ import type { AuthUser } from '../../graphql/auth'
 import { dateFormat } from '../../lib/intl'
 import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
+import { isNotVerifiedError, requestAccountVerification } from '../../lib/accountVerify'
 import { useMemberLists } from '../../lib/lists'
 
 
@@ -138,11 +139,18 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     const key = `${startWith.listingId}:${startWith.sellerId}`
     if (startedFor.current === key) return
     startedFor.current = key
-    void startConversation({ variables: { recipientId: startWith.sellerId, listingId: startWith.listingId } }).then(({ data }) => {
+    const { sellerId, listingId } = startWith
+    // Account not confirmed: « Recevoir un code par SMS » (sheet), then
+    // the discussion opens.
+    const start = () => void startConversation({ variables: { recipientId: sellerId, listingId } }).then(({ data }) => {
       if (data?.startConversation) { setActiveId(data.startConversation.id); setShowList(false) }
       void refetchList()
       onStartWithConsumed?.()
+    }).catch((e: unknown) => {
+      if (isNotVerifiedError(e)) requestAccountVerification(start)
+      onStartWithConsumed?.()
     })
+    start()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startWith])
 
@@ -286,6 +294,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     setReopening(true)
     void startConversation({ variables: { recipientId: other.id, listingId: conv?.listingId ?? undefined } })
       .then(refresh)
+      .catch((e: unknown) => { if (isNotVerifiedError(e)) requestAccountVerification(reopen) })
       .finally(() => setReopening(false))
   }
   const otherResponse = formatResponseTime(otherProfile?.responseTimeMinutes)

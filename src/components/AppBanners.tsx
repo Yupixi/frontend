@@ -126,3 +126,28 @@ export function VerifyEmailBanner({ email, onResend, sending, sent, error, onDis
     </div>
   )
 }
+
+// SMS first: an account confirmed by neither e-mail nor phone, with a
+// number and SMS available — a code by SMS (AccountVerifySheet) rather
+// than waiting for the confirmation e-mail.
+export function VerifyAccountBanner({ phone, onSms, onDismiss }: {
+  phone: string
+  onSms: () => void
+  onDismiss: () => void
+}) {
+  return (
+    <div role="status" className="tour-hide fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-[9998] mx-auto max-w-xl">
+      <div className={`${card} flex-wrap sm:flex-nowrap`}>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="sms" size={21} /></span>
+        <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-auto">
+          <div className="text-label-lg text-on-surface">Confirmez votre compte</div>
+          <div className="break-words text-body-sm text-on-surface-variant">Recevez un code par SMS au <b className="whitespace-nowrap font-semibold">{phone}</b> pour publier, acheter et contacter les vendeurs.</div>
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
+          <button onClick={onSms} className={primaryBtn}>Recevoir un code</button>
+        </div>
+      </div>
+    </div>
+  )
+}

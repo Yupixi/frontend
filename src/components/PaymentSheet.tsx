@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useApolloClient, useMutation } from '@apollo/client/react'
 import BottomSheet from './BottomSheet'
 import Icon from './Icon'
+import AccountVerifyPanel from './AccountVerifyPanel'
+import { isNotVerifiedError } from '../lib/accountVerify'
 import Price from './Price'
 import PaymentLogo from './PaymentLogo'
 import {
@@ -48,6 +50,9 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   const [otp, setOtp] = useState('')
   const [intent, setIntent] = useState<PaymentIntent | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Account not confirmed: the SMS code inside this sheet, then the
+  // payment starts again.
+  const [needsVerify, setNeedsVerify] = useState(false)
   const [copied, setCopied] = useState(false)
   // The polling stopped before the operator answered: never a failure nor
   // a success — « Vérification en cours », the server keeps checking.
@@ -55,7 +60,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   const [start, { loading }] = useMutation<{ startPayment: PaymentIntent }>(START_PAYMENT_MUTATION)
   const timer = useRef<number | null>(null)
 
-  const reset = () => { setIntent(null); setError(null); setOtp(''); setTouched(false); setCopied(false); setTimedOut(false) }
+  const reset = () => { setIntent(null); setError(null); setNeedsVerify(false); setOtp(''); setTouched(false); setCopied(false); setTimedOut(false) }
   useEffect(() => { if (!open) { reset(); setProvider(null); setPhone(''); if (timer.current) window.clearInterval(timer.current) } }, [open])
   useEffect(() => () => { if (timer.current) window.clearInterval(timer.current) }, [])
 
@@ -95,6 +100,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
       }
       poll(p.id)
     } catch (e) {
+      if (isNotVerifiedError(e)) { setNeedsVerify(true); return }
       setError(e instanceof Error ? e.message : 'Le paiement n’a pas pu être lancé.')
     }
   }
@@ -232,6 +238,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           )}
 
           {error && <p className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-primary-fixed px-3 py-2.5 text-body-sm text-primary"><Icon name="error" size={18} className="shrink-0" /> {error}</p>}
+          {needsVerify && <div className="mt-4"><AccountVerifyPanel intro="Pour payer, confirmez votre compte : par SMS, c’est immédiat, et le paiement reprend aussitôt." onVerified={() => { setNeedsVerify(false); void pay() }} /></div>}
         </>
       )}
 

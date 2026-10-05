@@ -4,6 +4,8 @@ import BottomSheet from './BottomSheet'
 import BuyCreditsSheet from './BuyCreditsSheet'
 import Credits from './Credits'
 import Icon from './Icon'
+import AccountVerifyPanel from './AccountVerifyPanel'
+import { isNotVerifiedError } from '../lib/accountVerify'
 import {
   PURCHASE_WITH_WALLET_MUTATION, WALLET_BALANCE_QUERY,
   type PaymentRequest, type PurchaseResult, type WalletBalance,
@@ -36,6 +38,9 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
   const { data, refetch } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), skip: !open, fetchPolicy: 'network-only' })
   const [buy, { loading }] = useMutation<{ purchaseWithWallet: PurchaseResult }>(PURCHASE_WITH_WALLET_MUTATION)
   const [error, setError] = useState('')
+  // Account not confirmed: the SMS code inside this sheet, then the
+  // purchase goes through.
+  const [needsVerify, setNeedsVerify] = useState(false)
   const [topUp, setTopUp] = useState(false)
   // Set synchronously: a double tap lands before `loading` re-renders the
   // button disabled, and each purchase call is charged.
@@ -43,14 +48,17 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
   const balance = data?.myWallet.credits ?? 0
   const missing = Math.max(0, amount - balance)
 
-  const close = () => { setError(''); onClose() }
+  const close = () => { setError(''); setNeedsVerify(false); onClose() }
   const pay = () => {
     if (!request || paying.current) return
     paying.current = true
     setError('')
     void buy({ variables: { input: { kind: request.kind, product: request.product, listingId: request.listingId } } })
       .then(r => { if (r.data) { onPaid(r.data.purchaseWithWallet); onClose() } })
-      .catch((e: Error) => { setError(e.message); void refetch() })
+      .catch((e: Error) => {
+        if (isNotVerifiedError(e)) { setNeedsVerify(true); return }
+        setError(e.message); void refetch()
+      })
       .finally(() => { paying.current = false })
   }
 
@@ -82,6 +90,7 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
         <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-primary-fixed/50 px-3 py-2.5 text-body-sm text-on-surface"><Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" /> <span>Il vous manque <b><Credits n={missing} /></b>. Achetez des crédits par Mobile Money, puis confirmez l’achat.</span></p>
       )}
       {error && <p className="m-0 mt-3 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
+      {needsVerify && <div className="mt-3"><AccountVerifyPanel intro="Pour acheter, confirmez votre compte : par SMS, c’est immédiat, et l’achat reprend aussitôt." onVerified={() => { setNeedsVerify(false); pay() }} /></div>}
     </BottomSheet>
   )
 }

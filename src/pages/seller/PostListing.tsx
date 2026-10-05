@@ -32,6 +32,8 @@ import { useLists } from '../../lib/lists'
 import { useRules } from '../../lib/rules'
 import HelpLink from '../../components/HelpLink'
 import { track } from '../../lib/analytics'
+import AccountVerifyPanel from '../../components/AccountVerifyPanel'
+import { isNotVerifiedError } from '../../lib/accountVerify'
 
 const TITLE_MAX = 80
 
@@ -191,6 +193,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [prefilled, setPrefilled] = useState(false)
   const initialForm = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Publishing refused: the account is confirmed by neither its phone nor
+  // its e-mail. « Recevoir un code par SMS » right here, then the same
+  // save runs again.
+  const [needsVerify, setNeedsVerify] = useState(false)
+  const lastSubmit = useRef(false)
   // campaign: joined on publishing, or why it failed (the listing is
   // published either way).
   const [result, setResult] = useState<{ id: string, submitted: boolean, live?: boolean, fromDraft?: boolean, campaign?: { name: string, credits: number } | { name: string, error: string } } | null>(null)
@@ -422,6 +429,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
   const save = async (submit: boolean) => {
     setError(null)
+    lastSubmit.current = submit
     if (submit && missing.length) {
       setError(`Complétez ${missing.map(k => FIELD_LABELS[k]).join(', ')}.`)
       flagMissing(missing)
@@ -498,6 +506,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       setResult({ id, submitted: submit, live, fromDraft: editingDraft, campaign })
     } catch (err) {
       setUploading(false)
+      if (isNotVerifiedError(err)) { setNeedsVerify(true); return }
       const message = err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.'
       // The category isn't open in the listing's country (changed since, or
       // limited by the team meanwhile): pick another one.
@@ -917,6 +926,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}</p>}
+            {needsVerify && <div className="hidden lg:block"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat, et la publication reprend toute seule." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
             <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
               {publishes ? (
                 <button disabled={busy} onClick={() => void save(false)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-surface-container-high px-5 py-3 text-label-lg text-on-surface hover:bg-surface-container-highest disabled:opacity-60">
@@ -991,6 +1001,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))] lg:hidden" />
         <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5 lg:hidden">
           {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
+          {needsVerify && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
           <div className="flex items-center gap-2">
             {step > 0 ? (
               <button type="button" onClick={() => backTo(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label="Étape précédente">
