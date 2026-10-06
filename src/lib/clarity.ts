@@ -10,9 +10,9 @@ import { useEffect } from 'react'
 //   visitor's country is on. Then on the first interaction or when the
 //   browser is idle, never in the way of the first paint (like gtag.js).
 // - Never on surfaces that must not be recorded: the identity check (KYC),
-//   payments (PaymentSheet / PaymentReturn hold it), the launch page and
-//   the team preview (LaunchGate holds it: the manifest link carries the
-//   preview key), and any address with parameters other than a few
+//   payments (PaymentSheet / PaymentReturn hold it), the launch page
+//   (LaunchGate holds it; the team preview is recorded: its key is never
+//   in the page), and any address with parameters other than a few
 //   harmless ones (?acces=, reset tokens, invitations…). /q/ and /v/ pages
 //   and e-mail links render outside the app: Clarity never starts there.
 //   Already running: it is stopped (clarity("stop") drops the recording;

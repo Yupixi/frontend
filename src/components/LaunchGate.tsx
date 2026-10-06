@@ -17,9 +17,10 @@ import { setMarketState, useCountries, useMarketCode } from '../lib/countries'
 // market (useLaunch), so switching country shows or lifts the page.
 export default function LaunchGate({ children }: { children: ReactNode }) {
   const { status, loading, refetch } = useLaunch()
-  // Microsoft Clarity never records the launch page nor the team preview
-  // (the page's manifest link carries the preview key there).
-  useClarityHold(!!status?.active)
+  // Microsoft Clarity never records the launch page. The team preview is
+  // recorded: the key leaves the address bar at once and the manifest
+  // link never carries it (lib/launch).
+  useClarityHold(!!status?.active && !status.preview)
   if (loading) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
   if (status?.active && !status.preview) return <LaunchPage status={status} onOpen={() => void refetch()} />
   return (

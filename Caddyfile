@@ -139,9 +139,10 @@
 		import seo_backend
 	}
 
-	# The web app manifest asked with the team's preview key (?acces=…, set
-	# by the app once the key is confirmed): the backend checks the key and
-	# answers the manifest with a start_url that carries it, so the app
+	# The web app manifest of a tester (?equipe=1, set by the app once the
+	# key is confirmed; the key itself is in the dilchap_acces cookie, never
+	# in the page — older apps sent ?acces=…): the backend checks the key
+	# and answers the manifest with a start_url that carries it, so the app
 	# installed on a phone's home screen opens the preview too (iPhones give
 	# it its own storage, without the key). Without the parameter: the
 	# static file below.
@@ -150,6 +151,14 @@
 		query acces=*
 	}
 	handle @manifest_key {
+		rewrite * /seo/manifest.json
+		import seo_backend
+	}
+	@manifest_team {
+		path /manifest.json
+		query equipe=1
+	}
+	handle @manifest_team {
 		rewrite * /seo/manifest.json
 		import seo_backend
 	}
