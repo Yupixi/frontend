@@ -83,15 +83,18 @@ export function forgetPreviewKey() {
 // The installed app (home screen) opens the address of the manifest's
 // start_url. iPhones give an installed app its own storage, without the
 // key this browser remembered: with a valid key, the manifest is asked
-// with it and the storefront's server answers a start_url carrying it
-// (Caddyfile → Backend /seo/manifest.json), so the installed app opens the
-// preview too.
+// (?equipe=1, with the cookie) and the storefront's server answers a
+// start_url carrying the key from that cookie (Caddyfile → Backend
+// /seo/manifest.json), so the installed app opens the preview too. The
+// link itself never shows the key: Microsoft Clarity records the page.
 const MANIFEST = '/manifest.json?v=dilchap-3'
 export function setManifestKey(key: string | null) {
   try {
     const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
     if (!link) return
-    const href = key ? `${MANIFEST}&acces=${encodeURIComponent(key)}` : MANIFEST
+    const href = key ? `${MANIFEST}&equipe=1` : MANIFEST
+    // Manifests are fetched without cookies unless asked.
+    if (key && link.crossOrigin !== 'use-credentials') link.crossOrigin = 'use-credentials'
     if (link.getAttribute('href') !== href) link.setAttribute('href', href)
   } catch { /* no DOM */ }
 }
