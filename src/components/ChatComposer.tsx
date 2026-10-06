@@ -10,7 +10,7 @@ const MAX_LENGTH = 2000
 const MAX_HEIGHT = 136 // ~5 lines, then the field scrolls
 
 export type ComposerReply = { id: string; author: string; preview: string; photo?: string }
-export type ComposerHandle = { focus: () => void }
+export type ComposerHandle = { focus: () => void; pickPhotos: () => void }
 
 type Photo = { key: string; preview: string; url?: string; error?: boolean }
 
@@ -44,7 +44,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
   const [error, setError] = useState<string | null>(null)
   const [sentCount, setSentCount] = useState(0)
 
-  useImperativeHandle(ref, () => ({ focus: () => field.current?.focus() }), [])
+  useImperativeHandle(ref, () => ({ focus: () => field.current?.focus(), pickPhotos: () => picker.current?.click() }), [])
 
   // Grow with the text up to ~5 lines.
   useLayoutEffect(() => {

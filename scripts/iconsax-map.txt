@@ -146,7 +146,7 @@ local_fire_department Flash*
 local_offer Tag
 local_shipping TruckFast
 location_city Buildings
-location_on Location
+location_on Location*
 lock Lock
 lock_clock SecurityTime
 lock_reset Unlock

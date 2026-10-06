@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
-  CheckCheck, Tag, X, MapPin, ShieldCheck, Star, Handshake, CircleX, Flag,
+  X, MapPin, ShieldCheck, Star, Handshake, CircleX, Flag,
   Calendar, CheckCircle2, Wallet, Info, Lock, Zap,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
-import OfferBubble from '../../components/OfferBubble'
 import ConfirmSheet from '../../components/ConfirmSheet'
+import BottomSheet from '../../components/BottomSheet'
 import PriceSuggestionHint from '../../components/PriceSuggestionHint'
 import { AccountLayout } from '../account/AccountLayout'
 import { PAYMENT_LABELS } from '../ListingDetail'
@@ -19,76 +19,29 @@ import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator 
 import {
   CONVERSATION_QUERY, CONVERSATION_UPDATED_SUBSCRIPTION, MARK_CONVERSATION_READ_MUTATION, MESSAGE_ADDED_SUBSCRIPTION,
   MY_CONVERSATIONS_QUERY, SEND_MESSAGE_MUTATION, SET_CONVERSATION_DEAL_STATUS_MUTATION, START_CONVERSATION_MUTATION,
-  PROPOSE_MEETUP_MUTATION, RESPOND_TO_MEETUP_MUTATION,
-  byLatestMessage, messagePreview, type RemoteConversation, type RemoteMessage, type RemoteMeetup,
+  RESPOND_TO_MEETUP_MUTATION,
+  byLatestMessage, messagePreview, type RemoteConversation, type RemoteMessage, type SystemCard,
 } from '../../graphql/messaging'
+import { CHAT_ASSISTANT_QUERY, type ChatAssistantStatus } from '../../graphql/chatAssistant'
 import ChatComposer, { type ComposerHandle, type ComposerReply } from '../../components/ChatComposer'
-import ChatBubble from '../../components/ChatBubble'
 import InboxList from '../../components/InboxList'
 import ImageLightbox from '../../components/ImageLightbox'
+import ChatThread, { Avatar, ThreadSkeleton, type PendingMessage } from '../../components/chat/ChatThread'
+import SafetyBanners from '../../components/chat/SafetyBanners'
+import type { AssistantUse } from '../../components/chat/AssistantPanel'
+import type { MeetupPrefill } from '../../components/chat/MeetupSheet'
 import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
-import { dateFormat } from '../../lib/intl'
 import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
 import { isNotVerifiedError, requestAccountVerification } from '../../lib/accountVerify'
 import { useMemberLists } from '../../lib/lists'
+import { useMediaQuery } from '../../lib/useMediaQuery'
+import { useChatViewport } from '../../lib/useChatViewport'
 
-
-const time = (iso: string) => dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
-// Day separator, stamped with the first message of that day ("Aujourd'hui, 10:42").
-function dayLabel(iso: string): string {
-  const d = new Date(iso)
-  const today = new Date()
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
-  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString()
-  const day = same(d, today) ? 'Aujourd’hui' : same(d, yesterday) ? 'Hier' : dateFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d)
-  return `${day.charAt(0).toUpperCase()}${day.slice(1)}, ${time(iso)}`
-}
-
-// No presence data in the API, so no "online" dot — the verified badge sits
-// next to the name instead.
-function Avatar({ url, name, size = 40 }: { url?: string | null, name: string, size?: number }) {
-  return (
-    <span className="relative shrink-0">
-      <span className="flex items-center justify-center overflow-hidden rounded-full bg-surface-container-high font-bold text-on-surface-variant" style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}>
-        {url ? <SafeImg src={url} alt={name} icon="person" iconSize={Math.round(size / 2)} fallbackClassName="flex h-full w-full items-center justify-center" /> : name.charAt(0).toUpperCase()}
-      </span>
-    </span>
-  )
-}
-
-function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action }: { meetup: RemoteMeetup, mine: boolean, busy: boolean, onConfirm: () => void, onChange: () => void, action?: { label: string, icon: string, onClick: () => void } }) {
-  const when = new Date(meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
-  return (
-    <div className="w-72 max-w-full rounded-xl bg-surface-lowest p-3 shadow-sm">
-      <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container text-primary"><Icon name="storefront" size={20} /></span>
-        <div className="min-w-0">
-          <div className="text-label-lg text-on-surface">{meetup.place}</div>
-          <div className="text-body-sm capitalize text-on-surface-variant">{when}</div>
-        </div>
-      </div>
-      {meetup.status === 'PROPOSED' ? (
-        mine ? (
-          <p className="m-0 mt-3 rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">En attente de confirmation…</p>
-        ) : (
-          <div className="mt-3 flex gap-2">
-            <button disabled={busy} onClick={onConfirm} className="flex-1 cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary py-2 text-label-md text-white disabled:opacity-60">Confirmer le RDV</button>
-            <button disabled={busy} onClick={onChange} className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container px-3 py-2 text-label-md text-on-surface">Changer</button>
-          </div>
-        )
-      ) : (
-        <p className={`m-0 mt-3 flex items-center gap-1.5 rounded-lg px-3 py-2 text-label-md ${meetup.status === 'CONFIRMED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
-          {meetup.status === 'CONFIRMED' ? <><CheckCircle2 size={16} /> {meetup.handedOverAt ? 'Remise effectuée' : 'Rendez-vous confirmé'}</> : <><CircleX size={16} /> Proposition remplacée ou déclinée</>}
-        </p>
-      )}
-      {meetup.status === 'CONFIRMED' && action && (
-        <button onClick={action.onClick} className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-primary py-2 text-label-md text-white"><Icon name={action.icon} size={17} /> {action.label}</button>
-      )}
-    </div>
-  )
-}
+// Heavy and occasional: loaded on first use only.
+const AssistantPanel = lazy(() => import('../../components/chat/AssistantPanel'))
+const MeetupSheet = lazy(() => import('../../components/chat/MeetupSheet'))
 
 type Props = {
   onNavigate: (p: any) => void
@@ -105,9 +58,17 @@ type Props = {
   onOpenHandover?: (conversationId: string, as: 'SELLER' | 'BUYER') => void
 }
 
-// "Boîte de réception & Chat" mockups (desktop 3 columns, mobile thread).
+let tmpSeq = 0
+
+// « Boîte de réception & Chat »: conversation list + thread (+ recap panel
+// on wide screens). On a phone an open thread is full-screen with its own
+// compact header, a sticky listing card, the composer above the keyboard,
+// quick actions and « Aide Dilchap » (the member's private AI assistant).
 export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
   const lists = useMemberLists()
+  const isPhone = !useMediaQuery('(min-width: 768px)')
+  // ≥ 1280 px: Aide Dilchap is a third column (in place of the recap).
+  const isWide = useMediaQuery('(min-width: 1280px)')
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = [...(listData?.myConversations ?? [])].sort(byLatestMessage)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -116,10 +77,9 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const [offerOpen, setOfferOpen] = useState(false)
   const [offerAmount, setOfferAmount] = useState('')
   const [offerError, setOfferError] = useState<string | null>(null)
-  const [meetupOpen, setMeetupOpen] = useState(false)
-  const [meetupPlace, setMeetupPlace] = useState('')
-  const [meetupAt, setMeetupAt] = useState('')
-  const [meetupError, setMeetupError] = useState<string | null>(null)
+  const [meetup, setMeetup] = useState<{ open: boolean; prefill: MeetupPrefill | null; loaded: boolean }>({ open: false, prefill: null, loaded: false })
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantLoaded, setAssistantLoaded] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [reported, setReported] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -130,7 +90,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const [replyTo, setReplyTo] = useState<ComposerReply | null>(null)
   const [viewer, setViewer] = useState<{ photos: string[]; index: number } | null>(null)
   const [flashId, setFlashId] = useState<string | null>(null)
-  const endRef = useRef<HTMLDivElement>(null)
+  const [pending, setPending] = useState<(PendingMessage & { conv: string; vars: Record<string, unknown> })[]>([])
   const startedFor = useRef<string | null>(null)
 
   const [startConversation] = useMutation<{ startConversation: RemoteConversation }>(START_CONVERSATION_MUTATION)
@@ -161,8 +121,11 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openConversationId])
 
-  useEffect(() => { if (!activeId && !openConversationId && conversations.length > 0) setActiveId(conversations[0].id) }, [conversations, activeId, openConversationId])
+  // Desktop opens the latest conversation; a phone stays on the list.
+  useEffect(() => { if (!activeId && !openConversationId && conversations.length > 0 && !isPhone) setActiveId(conversations[0].id) }, [conversations, activeId, openConversationId, isPhone])
   useEffect(() => { setActiveConversation(activeId); return () => setActiveConversation(null) }, [activeId])
+  const threadOpen = !!activeId && !showList
+  useChatViewport(isPhone && threadOpen)
 
   const { data: convData, loading: convLoading, refetch: refetchConv } = useQuery<{ conversation: RemoteConversation }>(CONVERSATION_QUERY, { variables: { id: activeId }, skip: !activeId })
   // Apollo serves the previous thread while the new one loads — only trust
@@ -172,13 +135,14 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const other = conv?.otherParticipant
   const { data: otherData } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, { variables: { sellerId: other?.id ?? '' }, skip: !other })
   const otherProfile = otherData?.sellerProfile
+  const { data: assistantData } = useQuery<{ chatAssistant: ChatAssistantStatus }>(CHAT_ASSISTANT_QUERY, { variables: { conversationId: activeId }, skip: !activeId || !!currentUser?.isGuest, fetchPolicy: 'cache-and-network' })
+  const assistantOn = !!assistantData?.chatAssistant?.enabled && assistantData.chatAssistant.reason !== 'CLOSED'
 
   const [sendMessage] = useMutation(SEND_MESSAGE_MUTATION)
   const [markRead] = useMutation(MARK_CONVERSATION_READ_MUTATION)
   const [setDealStatus, { loading: closingDeal }] = useMutation(SET_CONVERSATION_DEAL_STATUS_MUTATION)
   const [makeOffer, { loading: sendingOffer }] = useMutation(MAKE_OFFER_MUTATION)
   const [respondToOffer] = useMutation(RESPOND_TO_OFFER_MUTATION)
-  const [proposeMeetup, { loading: proposing }] = useMutation(PROPOSE_MEETUP_MUTATION)
   const [respondToMeetup] = useMutation(RESPOND_TO_MEETUP_MUTATION)
   const [createReport] = useMutation(CREATE_REPORT_MUTATION)
   const { otherIsTyping, notifyTyping, notifyStoppedTyping } = useTypingIndicator(activeId, other?.id)
@@ -188,7 +152,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   useEffect(() => {
     if (!activeId) return
     void markRead({ variables: { conversationId: activeId } }).then(() => refetchList())
-    setOfferOpen(false); setOfferAmount(''); setOfferError(null); setMeetupOpen(false); setReported(false); setMenuOpen(false)
+    setOfferOpen(false); setOfferAmount(''); setOfferError(null); setReported(false); setMenuOpen(false); setAssistantOpen(false)
     setReplyTo(null)
     // Unsent text is kept per conversation.
     try { setMsg(localStorage.getItem(`dilchap_chat_draft_${activeId}`) ?? '') } catch { setMsg('') }
@@ -204,25 +168,34 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     },
   })
   useSubscription(CONVERSATION_UPDATED_SUBSCRIPTION, { onData: () => void refetchList() })
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])
 
-  const refresh = () => { void refetchConv(); void refetchList() }
-  // Empty-state suggestions send right away.
+  const refresh = () => Promise.all([refetchConv(), refetchList()])
+  const saveDraft = (text: string) => { try { if (activeId) { if (text) localStorage.setItem(`dilchap_chat_draft_${activeId}`, text); else localStorage.removeItem(`dilchap_chat_draft_${activeId}`) } } catch { /* private mode */ } }
+
+  // Optimistic sending: the message shows at once; on failure it stays
+  // with « Réessayer ».
+  const deliver = (p: PendingMessage & { conv: string; vars: Record<string, unknown> }) => {
+    setPending(list => [...list.filter(x => x.id !== p.id), { ...p, status: 'sending', error: undefined }])
+    sendMessage({ variables: p.vars })
+      .then(() => refresh())
+      .then(() => setPending(list => list.filter(x => x.id !== p.id)))
+      .catch((e: unknown) => {
+        if (isNotVerifiedError(e)) requestAccountVerification(() => deliver(p))
+        setPending(list => list.map(x => (x.id === p.id ? { ...x, status: 'failed', error: e instanceof Error && e.message.length < 140 ? e.message : 'Non envoyé' } : x)))
+      })
+  }
   const send = (text: string) => {
     const body = text.trim()
     if (!body || !activeId) return
     notifyStoppedTyping()
-    void sendMessage({ variables: { conversationId: activeId, body } }).then(refresh)
+    deliver({ id: `tmp-${++tmpSeq}`, conv: activeId, body, attachments: [], audio: false, status: 'sending', vars: { conversationId: activeId, body } })
   }
-  // Composer: text, photos and quoted reply; the draft is cleared once sent.
+  // Composer: text, photos, voice and quoted reply; the draft is cleared at once.
   const sendFromComposer = async ({ body, attachments, replyToId, audioUrl, audioDuration }: { body: string; attachments: string[]; replyToId?: string; audioUrl?: string; audioDuration?: number }) => {
     if (!activeId) return
     notifyStoppedTyping()
-    await sendMessage({ variables: { conversationId: activeId, body, attachments, replyToId, audioUrl, audioDuration } })
-    if (audioUrl) { refresh(); return }
-    setMsg('')
-    try { localStorage.removeItem(`dilchap_chat_draft_${activeId}`) } catch { /* private mode */ }
-    refresh()
+    if (!audioUrl) { setMsg(''); saveDraft('') }
+    deliver({ id: `tmp-${++tmpSeq}`, conv: activeId, body, attachments, audio: !!audioUrl, status: 'sending', vars: { conversationId: activeId, body, attachments, replyToId, audioUrl, audioDuration } })
   }
   const replyToMessage = (m: RemoteMessage) => setReplyTo({
     id: m.id,
@@ -240,46 +213,47 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     if (!activeId) return
     void setDealStatus({ variables: { conversationId: activeId, status, ...(status === 'CONCLUDED' ? { quantity: soldQty } : {}) } }).then(refresh).finally(() => { setConfirming(null); setSoldQty(1) })
   }
-  // Quick replies fill the input (as in the mockup) rather than sending blind.
-  const suggest = (text: string) => { setMsg(text); inputRef.current?.focus() }
+  // Quick replies fill the input rather than sending blind.
+  const suggest = (text: string) => { setMsg(text); saveDraft(text); inputRef.current?.focus() }
   const submitOffer = () => {
     if (!activeId || !conv?.listingId) return
     const amount = Number(offerAmount.replace(/[^\d]/g, ''))
     if (!amount) { setOfferError('Entrez un montant valide.'); return }
     setOfferError(null)
     void makeOffer({ variables: { input: { listingId: conv.listingId, amount, conversationId: activeId } } })
-      .then(() => { setOfferOpen(false); setOfferAmount(''); refresh() })
+      .then(() => { setOfferOpen(false); setOfferAmount(''); void refresh() })
       .catch((err: Error) => setOfferError(err.message))
   }
   const respondOffer = (offerId: string, accept: boolean) => {
     setBusyId(offerId)
     void respondToOffer({ variables: { offerId, accept } }).then(refresh).finally(() => setBusyId(null))
   }
-  const openMeetup = () => {
-    setMeetupPlace(conv?.listing?.meetupSpot ?? '')
-    const d = new Date(Date.now() + 24 * 3600_000); d.setHours(14, 0, 0, 0)
-    setMeetupAt(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16))
-    setMeetupError(null)
-    setMeetupOpen(true)
-  }
-  const submitMeetup = () => {
-    if (!activeId) return
-    if (!meetupPlace.trim() || !meetupAt) { setMeetupError('Indiquez un lieu et une date.'); return }
-    void proposeMeetup({ variables: { conversationId: activeId, place: meetupPlace.trim(), scheduledAt: new Date(meetupAt).toISOString() } })
-      .then(() => { setMeetupOpen(false); refresh() })
-      .catch((err: Error) => setMeetupError(err.message))
-  }
+  const openMeetup = (prefill: MeetupPrefill | null = null) => setMeetup({ open: true, prefill, loaded: true })
   const answerMeetup = (id: string, confirm: boolean) => {
     setBusyId(id)
-    void respondToMeetup({ variables: { meetupId: id, confirm } }).then(() => { refresh(); if (!confirm) openMeetup() }).finally(() => setBusyId(null))
+    void respondToMeetup({ variables: { meetupId: id, confirm } }).then(() => { void refresh(); if (!confirm) openMeetup() }).finally(() => setBusyId(null))
   }
   const reportScam = () => {
     if (!other) return
     void createReport({ variables: { targetType: 'USER', targetUserId: other.id, reason: 'Tentative d’arnaque', message: `Conversation ${activeId}` } }).then(() => setReported(true)).finally(() => setConfirming(null))
   }
-
+  const openAssistant = () => { setAssistantLoaded(true); setAssistantOpen(true) }
+  const applyAssistant = (u: AssistantUse) => {
+    if (u.kind === 'draft') { setMsg(u.text); saveDraft(u.text); setAssistantOpen(false); window.setTimeout(() => inputRef.current?.focus(), 50) }
+    else if (u.kind === 'price') { setOfferAmount(String(u.amount)); setOfferOpen(true); setAssistantOpen(false) }
+    else { setAssistantOpen(false); openMeetup({ place: u.meetup.place, placeId: u.meetup.placeId, address: u.meetup.address, lat: u.meetup.lat, lng: u.meetup.lng, scheduledAt: u.meetup.scheduledAt }) }
+  }
+  const cardAction = (card: SystemCard) => {
+    if (card.cta === 'MEETUP') openMeetup()
+    else if (card.cta === 'REPORT') setConfirming('REPORT')
+    else if (card.cta === 'REVIEW' && conv) {
+      if (conv.canManageDeal) onNavigate('seller-reviews')
+      else onOpenHandover?.(conv.id, 'BUYER')
+    }
+  }
 
   // Deal summary: the accepted offer price wins over the asking price.
+  const latestOffer = [...messages].reverse().find(m => m.offer)?.offer
   const acceptedOffer = [...messages].reverse().find(m => m.offer?.status === 'ACCEPTED')?.offer
   const agreedPrice = acceptedOffer?.amount ?? conv?.listing?.price ?? null
   const lastMeetup = [...messages].reverse().find(m => m.meetup)?.meetup
@@ -303,87 +277,127 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const otherPlace = other?.city || (conv && !conv.canManageDeal && conv.listing ? [conv.listing.locationLabel, conv.listing.city].filter(Boolean).join(', ') : '')
   const firstName = other?.fullName.split(' ')[0] ?? ''
   const menuItems = !conv ? [] : [
-    discussing && { icon: 'location_on', label: 'Proposer un lieu de RDV', onClick: openMeetup },
+    discussing && { icon: 'location_on', label: 'Fixer un rendez-vous', onClick: () => openMeetup() },
     conv.listing && { icon: 'open_in_new', label: 'Voir la fiche', onClick: () => onSelectListing?.(conv.listing!.id) },
     conv.canManageDeal && conv.listing && discussing && { icon: 'handshake', label: 'Marquer la vente conclue', onClick: () => setConfirming('CONCLUDED') },
     conv.canManageDeal && conv.listing && discussing && { icon: 'cancel', label: 'Discussion non conclue', onClick: () => setConfirming('NOT_CONCLUDED') },
     !reported && { icon: 'flag', label: 'Signaler une arnaque', onClick: () => setConfirming('REPORT'), danger: true },
   ].filter(Boolean) as { icon: string, label: string, onClick: () => void, danger?: boolean }[]
+  const myPending = pending.filter(p => p.conv === activeId)
+  const offerChip = latestOffer && conv?.listing && (
+    <span className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-bold ${latestOffer.status === 'ACCEPTED' ? 'bg-tertiary-soft text-tertiary' : latestOffer.status === 'PENDING' ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-100' : 'bg-surface-container text-on-surface-variant'}`}>
+      {latestOffer.status === 'ACCEPTED' ? 'Offre acceptée' : latestOffer.status === 'PENDING' ? 'Offre en attente' : 'Offre refusée'} <Price amount={latestOffer.amount} currency={conv.listing.currency} />
+    </span>
+  )
 
-  const listingStrip = conv?.listing && (
-    <div className="bg-surface-container-low px-4 py-2 md:bg-transparent md:pb-0 md:pt-3">
-      <div className="flex items-center gap-3 rounded-xl bg-surface-lowest p-2 shadow-sm md:border md:border-solid md:border-outline-variant md:shadow-none">
-        <span className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container-high"><SafeImg src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-1.5">
-            <span className="truncate text-label-lg font-bold text-on-surface">{conv.listing.title}</span>
-            <span className="shrink-0 whitespace-nowrap rounded-md bg-tertiary-soft px-1.5 py-0.5 text-label-sm text-tertiary">Main propre</span>
-          </span>
-          <span className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
-            <span className="whitespace-nowrap text-headline-sm font-extrabold text-primary"><Price amount={conv.listing.price} currency={conv.listing.currency} /></span>
+  // Sticky listing card: photo, title, price, offer status, quick actions.
+  const listingBar = conv?.listing && (
+    <div className="z-10 shrink-0 border-0 border-b border-solid border-outline-variant/70 bg-surface-lowest/95 px-3 py-2 sm:px-4">
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => onSelectListing?.(conv.listing!.id)} aria-label={`Voir l’annonce ${conv.listing.title}`} className="h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-high p-0"><SafeImg src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></button>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-label-md font-bold text-on-surface">{conv.listing.title}</div>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="whitespace-nowrap text-label-lg font-extrabold text-primary"><Price amount={conv.listing.price} currency={conv.listing.currency} /></span>
             {!!conv.listing.originalPrice && conv.listing.price != null && conv.listing.originalPrice > conv.listing.price && <span className="whitespace-nowrap text-body-sm text-on-surface-variant line-through"><Price amount={conv.listing.originalPrice} currency={conv.listing.currency} /></span>}
-          </span>
-        </span>
-        <button onClick={() => onSelectListing?.(conv.listing!.id)} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-2.5 py-1.5 text-label-sm font-semibold text-on-surface hover:bg-surface-container-high">
-          Voir fiche <Icon name="open_in_new" size={14} />
-        </button>
+            {offerChip ?? <span className="whitespace-nowrap rounded-md bg-tertiary-soft px-1.5 py-0.5 text-[11px] font-bold text-tertiary">Main propre</span>}
+          </div>
+        </div>
+        {discussing && (
+          <div className="flex shrink-0 gap-1.5">
+            {canNegotiate && <button type="button" onClick={() => { setOfferOpen(o => !o) }} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white max-[379px]:px-2.5"><Icon name="sell" size={15} /> <span className="max-[379px]:hidden">Offre</span></button>}
+            <button type="button" onClick={() => openMeetup()} aria-label="Fixer un rendez-vous" className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-surface-container px-3 py-2 text-label-sm font-semibold text-on-surface max-[379px]:px-2.5"><Icon name="event" size={15} /> <span className="max-sm:hidden">Rendez-vous</span></button>
+          </div>
+        )}
       </div>
     </div>
   )
 
+  const chips: { key: string; icon: string; label: string; onClick: () => void; accent?: boolean }[] = !discussing ? [] : [
+    ...(assistantOn ? [{ key: 'ai', icon: 'auto_awesome', label: 'Aide Dilchap', onClick: openAssistant, accent: true }] : []),
+    ...(canNegotiate ? [{ key: 'offer', icon: 'sell', label: 'Proposer un prix', onClick: () => setOfferOpen(o => !o) }] : []),
+    { key: 'meetup', icon: 'event', label: 'Fixer un rendez-vous', onClick: () => openMeetup() },
+    { key: 'photo', icon: 'photo_camera', label: 'Envoyer une photo', onClick: () => inputRef.current?.pickPhotos() },
+  ]
+
+  const assistantColumn = (
+    <Suspense fallback={<div className="p-4"><div className="chat-skeleton h-40 rounded-2xl" /></div>}>
+      {activeId && <AssistantPanel conversationId={activeId} isBuyer={!conv?.canManageDeal} canOffer={canNegotiate} onUse={applyAssistant} onClose={() => setAssistantOpen(false)} />}
+    </Suspense>
+  )
+  const desktopAssistant = !isPhone && !isWide && assistantOpen && activeId && (
+    <div className="chat-drawer absolute inset-y-0 right-0 z-30 flex w-[min(400px,100%)] flex-col border-0 border-l border-solid border-outline-variant bg-surface shadow-2xl">
+      <Suspense fallback={<div className="p-4"><div className="chat-skeleton h-40 rounded-2xl" /></div>}>
+        <AssistantPanel conversationId={activeId} isBuyer={!conv?.canManageDeal} canOffer={canNegotiate} onUse={applyAssistant} onClose={() => setAssistantOpen(false)} />
+      </Suspense>
+    </div>
+  )
+
   return (
-    <AccountLayout active="buyer-messages" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} fill onBack={showList ? undefined : () => setShowList(true)} title={showList ? undefined : 'Conversation'}>
+    <AccountLayout active="buyer-messages" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} fill immersive={threadOpen} onBack={showList ? undefined : () => setShowList(true)} title={showList ? undefined : 'Conversation'}>
       <div className="flex min-h-0 flex-1 flex-col">
         {/* Golden rule banner */}
-        <div className="hidden items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-6 py-3 md:flex">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><ShieldCheck size={19} /></span>
+        <div className="hidden items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-6 py-2.5 lg:flex">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><ShieldCheck size={17} /></span>
           <p className="m-0 flex-1 text-body-sm text-on-surface-variant">
             <b className="text-on-surface">Règle d'or Dilchap : remise en main propre<Claim> &amp; 0 F de frais</Claim></b> <Claim><span className="font-semibold text-tertiary">• 100% gratuit.</span> </Claim>Rencontrez-vous dans un lieu public et testez l'article avant tout paiement (espèces ou Mobile Money).
           </p>
           <span className="flex shrink-0 items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1 text-label-sm text-tertiary"><Lock size={13} /> Échanges protégés</span>
         </div>
 
-        <div className="flex min-h-0 flex-1">
+        <div className="relative flex min-h-0 flex-1">
           {/* Conversations */}
-          <aside className={`${showList ? 'flex' : 'hidden'} w-full shrink-0 flex-col border-0 border-r border-solid border-outline-variant bg-surface-lowest md:flex md:w-80 lg:w-[360px]`}>
-            <InboxList
-              conversations={conversations}
-              activeId={activeId}
-              currentUserId={currentUser?.id}
-              onOpen={id => { setActiveId(id); setShowList(false) }}
-              onExplore={() => onNavigate('search')}
-            />
+          <aside className={`${showList ? 'flex' : 'hidden'} w-full shrink-0 flex-col border-0 border-r border-solid border-outline-variant bg-surface-lowest md:flex md:w-80 lg:w-[340px]`}>
+            {!listData ? (
+              <div className="flex flex-col gap-2 p-3" aria-busy="true">{[0, 1, 2, 3, 4].map(i => <div key={i} className="flex items-center gap-3 p-2"><div className="chat-skeleton h-14 w-14 rounded-xl" /><div className="flex-1 space-y-2"><div className="chat-skeleton h-3.5 w-2/3 rounded" /><div className="chat-skeleton h-3 w-1/2 rounded" /></div></div>)}</div>
+            ) : (
+              <InboxList
+                conversations={conversations}
+                activeId={activeId}
+                currentUserId={currentUser?.id}
+                onOpen={id => { setActiveId(id); setShowList(false) }}
+                onExplore={() => onNavigate('search')}
+              />
+            )}
             {/* max-lg:pb-8: the raised « Déposer » button of the bottom bar sits over this line */}
             <p className="m-0 border-0 border-t border-solid border-outline-variant p-3 text-center text-body-sm text-on-surface-variant max-lg:pb-8">Toutes les discussions sont sauvegardées sur votre compte</p>
           </aside>
 
           {/* Thread */}
-          <section className={`${showList ? 'hidden' : 'flex'} min-w-0 flex-1 flex-col bg-surface md:flex`}>
+          <section className={`${showList ? 'hidden' : 'flex'} relative min-w-0 flex-1 flex-col bg-surface md:flex`} aria-label="Discussion">
             {!activeId ? (
-              <div className="flex flex-1 items-center justify-center text-on-surface-variant">Sélectionnez une conversation</div>
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-on-surface-variant"><Icon name="forum" size={36} className="text-outline" /> Sélectionnez une conversation</div>
             ) : !conv ? (
-              <div className="flex flex-1 items-center justify-center text-on-surface-variant">{convLoading ? 'Chargement…' : ''}</div>
+              <>
+                <div className="flex items-center gap-3 bg-surface-lowest px-3 py-2.5 shadow-sm"><div className="chat-skeleton h-10 w-10 rounded-full" /><div className="chat-skeleton h-4 w-40 rounded" /></div>
+                {convLoading ? <ThreadSkeleton /> : <div className="flex-1" />}
+              </>
             ) : (
               <>
-                {/* Contact header */}
-                <div className="relative z-20 flex items-center gap-3 bg-surface-lowest px-4 py-2 shadow-sm">
-                  <Avatar url={other!.avatarUrl} name={other!.fullName} size={44} />
+                {/* Compact contact header */}
+                <header className="relative z-20 flex items-center gap-2.5 bg-surface-lowest px-2 py-2 shadow-sm sm:px-4">
+                  <button type="button" onClick={() => setShowList(true)} aria-label="Retour aux conversations" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface md:hidden"><Icon name="arrow_back" size={22} /></button>
+                  <Avatar url={other!.avatarUrl} name={other!.fullName} size={40} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 text-headline-sm text-on-surface"><span className="truncate">{other!.fullName}</span><SellerBadge tier={other!.badge} size={18} /></div>
-                    <div className="flex items-center gap-1.5 truncate text-label-sm text-on-surface-variant">
-                      {!!other!.reviewsCount && <span className="flex shrink-0 items-center gap-0.5 max-md:hidden"><Star size={13} fill="#F59E0B" color="#F59E0B" /> {other!.averageRating?.toFixed(1)} ({other!.reviewsCount} avis) •</span>}
-                      {otherPlace && <span className="flex min-w-0 items-center gap-0.5"><MapPin size={13} className="shrink-0" /><span className="truncate">{otherPlace}</span></span>}
+                    <div className="flex items-center gap-1 text-label-lg font-bold text-on-surface"><span className="truncate">{other!.fullName}</span><SellerBadge tier={other!.badge} size={17} /></div>
+                    <div className="flex min-w-0 items-center gap-1.5 truncate text-[12px] text-on-surface-variant">
+                      {otherIsTyping ? <span className="font-semibold text-primary">écrit…</span> : (
+                        <>
+                          {!!other!.reviewsCount && <span className="flex shrink-0 items-center gap-0.5"><Star size={12} fill="#F59E0B" color="#F59E0B" /> {other!.averageRating?.toFixed(1)}</span>}
+                          {otherResponse && <span className="flex shrink-0 items-center gap-0.5"><Zap size={12} className="text-tertiary" /> Répond en {otherResponse}</span>}
+                          {otherPlace && <span className="flex min-w-0 items-center gap-0.5 max-sm:hidden"><MapPin size={12} className="shrink-0" /><span className="truncate">{otherPlace}</span></span>}
+                        </>
+                      )}
                     </div>
                   </div>
-                  {/* Members' phone numbers aren't shared, so there is no call button. */}
-                  {discussing && (
-                    <button onClick={openMeetup} title="Proposer un lieu de rendez-vous" className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-surface-container-low px-2.5 py-2 text-label-md text-on-surface hover:bg-surface-container max-md:hidden">
-                      <MapPin size={17} /> <span className="hidden lg:inline">Lieu convenu</span>
+                  {assistantOn && (
+                    <button type="button" onClick={() => (assistantOpen ? setAssistantOpen(false) : openAssistant())} aria-expanded={assistantOpen} className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-none bg-primary-fixed/70 px-3 py-2 text-label-sm font-semibold text-primary hover:bg-primary-fixed max-[379px]:px-2.5">
+                      <Icon name="auto_awesome" size={17} /> <span className="max-[379px]:hidden">Aide Dilchap</span>
                     </button>
                   )}
                   {conv.canManageDeal && conv.listing && discussing && (
-                    <button disabled={closingDeal} onClick={() => setConfirming('CONCLUDED')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-2.5 py-2 text-label-md text-white hover:bg-primary-dark max-md:hidden">
-                      <CheckCircle2 size={17} /> <span className="hidden lg:inline">Marquer conclu</span>
+                    <button disabled={closingDeal} onClick={() => setConfirming('CONCLUDED')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm text-white hover:bg-primary-dark max-lg:hidden">
+                      <CheckCircle2 size={16} /> Marquer conclu
                     </button>
                   )}
                   {menuItems.length > 0 && (
@@ -405,101 +419,70 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       )}
                     </div>
                   )}
-                </div>
+                </header>
 
-                {/* Listing strip — on a phone it scrolls away with the thread */}
-                {conv.listing && <div className="max-md:hidden">{listingStrip}</div>}
+                {listingBar}
 
-                {/* Messages */}
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-                  {conv.listing && <div className="md:hidden">{listingStrip}</div>}
-                  <div className="flex flex-1 flex-col gap-3 px-4 py-4">
-                    {conv.dealStatus !== 'DISCUSSING' && (
-                      <p className={`m-0 flex items-center gap-2 rounded-xl p-3 text-label-md ${conv.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
-                        {conv.dealStatus === 'CONCLUDED' ? <><Handshake size={17} className="shrink-0" /> Remise effectuée — la vente est conclue et l'annonce est marquée comme vendue.</> : <><CircleX size={17} className="shrink-0" /> Cette discussion n'a pas abouti à une vente.</>}
-                      </p>
-                    )}
-                    <div className="flex items-start gap-2 rounded-xl bg-surface-container-high p-2.5 md:hidden">
-                      <Icon name="shield" size={20} fill className="mt-0.5 shrink-0 text-tertiary" />
-                      <p className="m-0 text-body-sm text-on-surface-variant"><b className="block text-on-surface">Sécurité &amp; Confiance Dilchap</b>Rappelez-vous : testez toujours l'objet avant tout règlement en main propre.<Claim> 0 F de commission appliquée.</Claim></p>
-                    </div>
-                    {messages.length === 0 && !closed && (
-                      <div className="m-auto max-w-md text-center">
-                        <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="forum" size={24} /></span>
-                        <h3 className="m-0 text-headline-sm text-on-surface">Commencez la discussion</h3>
-                        <p className="m-0 mb-3 mt-1 text-body-sm text-on-surface-variant">Choisissez une question ou écrivez votre message. Ne partagez jamais de code reçu par SMS.</p>
-                        <div className="flex flex-col gap-2">
-                          {suggestions.slice(0, 3).map(s => <button key={s} onClick={() => send(s)} className="cursor-pointer rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-left text-body-sm text-on-surface hover:border-primary">{s}</button>)}
-                        </div>
+                <ChatThread
+                  conv={conv}
+                  messages={messages}
+                  me={currentUser?.id}
+                  pending={myPending}
+                  otherIsTyping={otherIsTyping}
+                  flashId={flashId}
+                  busyId={busyId}
+                  top={(
+                    <div className="flex flex-col gap-2 px-3 pt-3 sm:px-4">
+                      {conv.dealStatus !== 'DISCUSSING' && (
+                        <p className={`m-0 flex items-center gap-2 rounded-xl p-3 text-label-md ${conv.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
+                          {conv.dealStatus === 'CONCLUDED' ? <><Handshake size={17} className="shrink-0" /> Remise effectuée — la vente est conclue et l'annonce est marquée comme vendue.</> : <><CircleX size={17} className="shrink-0" /> Cette discussion n'a pas abouti à une vente.</>}
+                        </p>
+                      )}
+                      <div className="flex items-start gap-2 rounded-xl bg-surface-container-high/70 p-2.5 lg:hidden">
+                        <Icon name="shield" size={18} fill className="mt-0.5 shrink-0 text-tertiary" />
+                        <p className="m-0 text-body-sm text-on-surface-variant"><b className="text-on-surface">Sécurité Dilchap :</b> lieu public, article vérifié, paiement à la remise uniquement.<Claim> 0 F de commission.</Claim></p>
                       </div>
-                    )}
-                    {messages.map((m: RemoteMessage, i: number) => {
-                      const mine = m.senderId === currentUser?.id
-                      const prev = messages[i - 1]
-                      const divider = !prev || new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString()
-                      // An accepted offer is a deal milestone: full-width card, no avatar.
-                      const milestone = m.offer?.status === 'ACCEPTED'
-                      return (
-                        <div key={m.id} id={`msg-${m.id}`} className={`scroll-mt-24 rounded-2xl transition-colors duration-500 ${flashId === m.id ? 'bg-primary-fixed/50' : ''}`}>
-                          {divider && <div className="mb-3 flex justify-center"><span className="rounded-full bg-surface-container px-3 py-1 text-label-sm text-on-surface-variant">{dayLabel(m.createdAt)}</span></div>}
-                          <div className={`flex items-start gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
-                            {!mine && !milestone && <span className="mt-1"><Avatar url={m.sender.avatarUrl} name={m.sender.fullName} size={28} /></span>}
-                            <div className={`flex flex-col ${milestone ? 'w-full' : 'max-w-[85%]'} ${mine ? 'items-end' : 'items-start'}`}>
-                              {m.offer ? (
-                                <OfferBubble offer={m.offer} currency={conv.listing?.currency ?? 'XOF'} isMine={mine} canRespond={!mine && conv.canManageDeal} responding={busyId === m.offer.id} onAccept={() => respondOffer(m.offer!.id, true)} onReject={() => respondOffer(m.offer!.id, false)} listingId={conv.listingId} acceptedBy={mine ? firstName : undefined} />
-                              ) : m.meetup ? (
-                                <MeetupCard
-                                  meetup={m.meetup} mine={mine} busy={busyId === m.meetup.id} onConfirm={() => answerMeetup(m.meetup!.id, true)} onChange={() => answerMeetup(m.meetup!.id, false)}
-                                  action={!onOpenHandover || !conv?.listing ? undefined
-                                    : conv.canManageDeal ? (m.meetup.handedOverAt ? undefined : { label: 'Valider la remise', icon: 'task_alt', onClick: () => onOpenHandover(conv.id, 'SELLER') })
-                                      : m.meetup.handoverCode || m.meetup.handedOverAt ? { label: m.meetup.handedOverAt ? 'Voir mon reçu' : 'Mon code de remise', icon: m.meetup.handedOverAt ? 'receipt_long' : 'qr_code_2', onClick: () => onOpenHandover(conv.id, 'BUYER') } : undefined}
-                                />
-                              ) : (
-                                <ChatBubble
-                                  message={m}
-                                  mine={mine}
-                                  quoteAuthor={id => (id === currentUser?.id ? 'Vous' : other?.fullName.split(' ')[0] ?? '')}
-                                  onReply={() => replyToMessage(m)}
-                                  onOpenPhotos={(photos, index) => setViewer({ photos, index })}
-                                  onJumpTo={jumpTo}
-                                />
-                              )}
-                              <span className={`mt-1 flex items-center gap-1 text-label-sm text-on-surface-variant ${mine ? '' : 'ml-1'}`}>
-                                {time(m.createdAt)}
-                                {mine && <CheckCheck size={14} color={m.readAt ? 'var(--primary)' : 'var(--fg-subtle)'} />}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                    <div ref={endRef} />
-                  </div>
-                </div>
+                    </div>
+                  )}
+                  empty={!closed && (
+                    <div className="m-auto max-w-md py-6 text-center">
+                      <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="forum" size={24} /></span>
+                      <h3 className="m-0 text-headline-sm text-on-surface">Commencez la discussion</h3>
+                      <p className="m-0 mb-3 mt-1 text-body-sm text-on-surface-variant">Choisissez une question ou écrivez votre message. Ne partagez jamais de code reçu par SMS.</p>
+                      <div className="flex flex-col gap-2">
+                        {suggestions.slice(0, 3).map(s => <button key={s} onClick={() => send(s)} className="cursor-pointer rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-left text-body-sm text-on-surface hover:border-primary">{s}</button>)}
+                      </div>
+                    </div>
+                  )}
+                  onRespondOffer={respondOffer}
+                  onAnswerMeetup={answerMeetup}
+                  meetupAction={m => !onOpenHandover || !conv.listing || !m.meetup ? undefined
+                    : conv.canManageDeal ? (m.meetup.handedOverAt ? undefined : { label: 'Valider la remise', icon: 'task_alt', onClick: () => onOpenHandover(conv.id, 'SELLER') })
+                      : m.meetup.handoverCode || m.meetup.handedOverAt ? { label: m.meetup.handedOverAt ? 'Voir mon reçu' : 'Mon code de remise', icon: m.meetup.handedOverAt ? 'receipt_long' : 'qr_code_2', onClick: () => onOpenHandover(conv.id, 'BUYER') } : undefined}
+                  onReply={replyToMessage}
+                  onOpenPhotos={(photos, index) => setViewer({ photos, index })}
+                  onJumpTo={jumpTo}
+                  onCardAction={cardAction}
+                  onRetry={p => { const full = pending.find(x => x.id === p.id); if (full) deliver(full) }}
+                  onDiscard={id => setPending(list => list.filter(x => x.id !== id))}
+                />
 
-                {/* Quick replies */}
-                {messages.length > 0 && discussing && (
-                  <div className="flex shrink-0 items-center gap-2 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none]">
-                    {suggestions.map(s => <button key={s} onClick={() => suggest(s)} className="shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none bg-surface-container px-3 py-1.5 text-label-sm text-on-surface hover:bg-surface-container-high">{s}</button>)}
-                  </div>
-                )}
-
-                {/* Closed conversation: no composer. Composer — extra bottom room on a phone for the bar's raised "Déposer" button */}
+                {/* Closed conversation: no composer. */}
                 {closed ? (
-                  <div className={`shrink-0 bg-surface-lowest px-4 pt-3 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${currentUser?.isGuest ? 'pb-3' : 'pb-7 lg:pb-3'}`}>
+                  <div className="shrink-0 bg-surface-lowest px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
                     <div className="rounded-2xl bg-surface-container-low px-4 py-3">
                       <div className="flex items-start gap-3">
-                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${conv.closedReason === 'DEAL_CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container-high text-on-surface-variant'}`}>
-                        <Icon name={conv.closedReason === 'DEAL_CONCLUDED' ? 'handshake' : 'lock'} size={20} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-label-lg text-on-surface">Discussion fermée</div>
-                        <div className="text-body-sm text-on-surface-variant">
-                          {conv.closedReason === 'DEAL_CONCLUDED'
-                            ? 'La vente est conclue : plus aucun message ni offre n’est possible, pour votre sécurité.'
-                            : 'Fermée faute d’activité. Vous pouvez la relancer si l’article vous intéresse toujours.'}
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${conv.closedReason === 'DEAL_CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container-high text-on-surface-variant'}`}>
+                          <Icon name={conv.closedReason === 'DEAL_CONCLUDED' ? 'handshake' : 'lock'} size={20} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-label-lg text-on-surface">Discussion fermée</div>
+                          <div className="text-body-sm text-on-surface-variant">
+                            {conv.closedReason === 'DEAL_CONCLUDED'
+                              ? 'La vente est conclue : plus aucun message ni offre n’est possible, pour votre sécurité.'
+                              : 'Fermée faute d’activité. Vous pouvez la relancer si l’article vous intéresse toujours.'}
+                          </div>
                         </div>
-                      </div>
                       </div>
                       {conv.closedReason === 'INACTIVE' && (
                         <button onClick={reopen} disabled={reopening} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white disabled:opacity-60">
@@ -509,73 +492,63 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                     </div>
                   </div>
                 ) : (
-                <div className={`shrink-0 bg-surface-lowest px-4 pt-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${currentUser?.isGuest ? 'pb-3' : 'pb-7 lg:pb-3'}`}>
-                  {conv.closesAt && (
-                    <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-body-sm text-amber-900">
-                      <Icon name="schedule" size={18} className="mt-0.5 shrink-0" />
-                      <span>Sans nouveau message, cette discussion sera fermée le <b>{new Date(conv.closesAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</b>. Écrivez pour la garder ouverte.</span>
-                    </p>
-                  )}
-                  {otherIsTyping && <div className="mb-1 text-center text-body-sm italic text-primary">{other!.fullName} est en train d'écrire…</div>}
+                  <div className="shrink-0 bg-surface-lowest px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] sm:px-4">
+                    {!!conv.safetyAlerts?.length && (
+                      <div className="mb-2"><SafetyBanners alerts={conv.safetyAlerts} conversationId={conv.id} otherId={other?.id} onDone={() => void refetchConv()} /></div>
+                    )}
+                    {conv.closesAt && (
+                      <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-body-sm text-amber-900">
+                        <Icon name="schedule" size={18} className="mt-0.5 shrink-0" />
+                        <span>Sans nouveau message, cette discussion sera fermée le <b>{new Date(conv.closesAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</b>. Écrivez pour la garder ouverte.</span>
+                      </p>
+                    )}
 
-                  {meetupOpen && (
-                    <div className="mb-2 rounded-xl border border-outline-variant p-3">
-                      <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface"><MapPin size={16} className="text-primary" /> Proposer un lieu de rendez-vous</div>
-                      <div className="grid gap-2 sm:grid-cols-[1fr_200px]">
-                        <input className="input" value={meetupPlace} onChange={e => setMeetupPlace(e.target.value)} placeholder={lists.meetupSpots[0] ? `Ex : ${lists.meetupSpots[0].name}` : 'Ex : centre commercial, station-service…'} />
-                        <input className="input" type="datetime-local" value={meetupAt} onChange={e => setMeetupAt(e.target.value)} />
+                    {offerOpen && (
+                      <div className="chat-in mb-2 rounded-2xl border border-solid border-outline-variant p-3">
+                        <div className="mb-1 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="sell" size={16} className="text-primary" /> Votre offre ({conv.listing?.currency === 'XOF' || !conv.listing ? 'F' : conv.listing.currency})</div>
+                        <PriceSuggestionHint listingId={conv.listingId} onUseAmount={a => setOfferAmount(String(a))} />
+                        <input className="input" inputMode="numeric" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder="Ex : 130 000" aria-label="Montant de votre offre" />
+                        {offerError && <p className="m-0 mt-1.5 text-body-sm text-primary">{offerError}</p>}
+                        <div className="mt-2 flex gap-2">
+                          <button disabled={sendingOffer} onClick={submitOffer} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">{sendingOffer ? 'Envoi…' : "Envoyer l'offre"}</button>
+                          <button onClick={() => setOfferOpen(false)} aria-label="Fermer" className="cursor-pointer rounded-lg border-none bg-surface-container px-3"><X size={16} /></button>
+                        </div>
                       </div>
-                      {meetupError && <p className="m-0 mt-1.5 text-body-sm text-primary">{meetupError}</p>}
-                      <div className="mt-2 flex gap-2">
-                        <button disabled={proposing} onClick={submitMeetup} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">Envoyer la proposition</button>
-                        <button onClick={() => setMeetupOpen(false)} aria-label="Fermer" className="cursor-pointer rounded-lg border-none bg-surface-container px-3"><X size={16} /></button>
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {offerOpen && (
-                    <div className="mb-2 rounded-xl border border-outline-variant p-3">
-                      <div className="mb-1 text-label-md text-on-surface">Votre offre ({conv.listing?.currency ?? 'XOF'})</div>
-                      <PriceSuggestionHint listingId={conv.listingId} onUseAmount={a => setOfferAmount(String(a))} />
-                      <input className="input" inputMode="numeric" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder="Ex : 130 000" />
-                      {offerError && <p className="m-0 mt-1.5 text-body-sm text-primary">{offerError}</p>}
-                      <div className="mt-2 flex gap-2">
-                        <button disabled={sendingOffer} onClick={submitOffer} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">{sendingOffer ? 'Envoi…' : "Envoyer l'offre"}</button>
-                        <button onClick={() => setOfferOpen(false)} aria-label="Fermer" className="cursor-pointer rounded-lg border-none bg-surface-container px-3"><X size={16} /></button>
+                    {(chips.length > 0 || (messages.length > 0 && discussing)) && (
+                      <div className="-mx-3 mb-2 flex items-center gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] sm:-mx-4 sm:px-4">
+                        {chips.map(c => (
+                          <button key={c.key} type="button" onClick={c.onClick} className={`flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border border-solid px-3 py-1.5 text-label-sm font-semibold ${c.accent ? 'border-primary/30 bg-primary-fixed/50 text-primary' : 'border-outline-variant bg-surface-lowest text-on-surface hover:bg-surface-container-low'}`}>
+                            <Icon name={c.icon} size={15} /> {c.label}
+                          </button>
+                        ))}
+                        {messages.length > 0 && discussing && suggestions.map(s => <button key={s} onClick={() => suggest(s)} className="shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none bg-surface-container px-3 py-1.5 text-label-sm text-on-surface hover:bg-surface-container-high">{s}</button>)}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    {canNegotiate ? (
-                      <button onClick={() => { setOfferOpen(o => !o); setMeetupOpen(false) }} className="-ml-2 flex min-w-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md border-none bg-transparent px-2 py-1 text-label-sm font-bold text-primary hover:bg-surface-container">
-                        <Tag size={17} /> Proposer un nouveau prix ({!conv.listing || conv.listing.currency === 'XOF' ? 'F' : conv.listing.currency})
-                      </button>
-                    ) : <span />}
-                    <span className="flex shrink-0 items-center gap-1 text-label-sm text-on-surface-variant"><Lock size={15} className="text-tertiary" /> Échanges protégés</span>
+                    <ChatComposer
+                      ref={inputRef}
+                      value={msg}
+                      onChange={text => { setMsg(text); saveDraft(text) }}
+                      onTyping={notifyTyping}
+                      onSend={sendFromComposer}
+                      replyTo={replyTo}
+                      onCancelReply={() => setReplyTo(null)}
+                      placeholder={`Écrivez à ${firstName}…`}
+                    />
                   </div>
-
-                  <ChatComposer
-                    ref={inputRef}
-                    value={msg}
-                    onChange={text => {
-                      setMsg(text)
-                      try { if (activeId) localStorage.setItem(`dilchap_chat_draft_${activeId}`, text) } catch { /* private mode */ }
-                    }}
-                    onTyping={notifyTyping}
-                    onSend={sendFromComposer}
-                    replyTo={replyTo}
-                    onCancelReply={() => setReplyTo(null)}
-                    placeholder={`Écrivez à ${firstName}…`}
-                  />
-                </div>
                 )}
               </>
             )}
+            {desktopAssistant}
           </section>
 
-          {/* Right panel */}
-          {conv && other && (
+          {/* Right panel: Aide Dilchap when open, else the recap */}
+          {conv && isWide && assistantOpen && (
+            <aside className="chat-drawer flex w-[360px] shrink-0 flex-col border-0 border-l border-solid border-outline-variant bg-surface" aria-label="Aide Dilchap">{assistantColumn}</aside>
+          )}
+          {conv && other && !(isWide && assistantOpen) && (
             <aside className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto border-0 border-l border-solid border-outline-variant bg-surface p-3 xl:flex">
               <div className="rounded-2xl bg-surface-lowest p-4">
                 <div className="flex items-center gap-3">
@@ -635,6 +608,18 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
         </div>
       </div>
       {viewer && <ImageLightbox images={viewer.photos} start={viewer.index} alt={`Photos de ${other?.fullName ?? 'la discussion'}`} onClose={() => setViewer(null)} />}
+      {meetup.loaded && activeId && (
+        <Suspense fallback={null}>
+          <MeetupSheet open={meetup.open} onClose={() => setMeetup(m => ({ ...m, open: false }))} onSent={() => void refresh()} conversationId={activeId} otherName={firstName || 'l’autre membre'} listing={conv?.listing} prefill={meetup.prefill} />
+        </Suspense>
+      )}
+      {isPhone && assistantLoaded && activeId && (
+        <BottomSheet open={assistantOpen} onClose={() => setAssistantOpen(false)} title="Aide Dilchap" maxHeight="88dvh">
+          <Suspense fallback={<div className="chat-skeleton h-40 rounded-2xl" />}>
+            <AssistantPanel asSheet conversationId={activeId} isBuyer={!conv?.canManageDeal} canOffer={canNegotiate} onUse={applyAssistant} onClose={() => setAssistantOpen(false)} />
+          </Suspense>
+        </BottomSheet>
+      )}
       <ConfirmSheet
         open={!!confirming}
         title={confirming === 'REPORT' ? 'Signaler une tentative d’arnaque' : confirming === 'CONCLUDED' ? 'Confirmer la remise ?' : 'Discussion non conclue ?'}

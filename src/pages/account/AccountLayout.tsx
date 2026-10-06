@@ -368,7 +368,7 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
   )
 }
 
-export function AccountLayout({ active, onNavigate, children, currentUser, onLogout, title, onBack, hideBottomNav, fill }: {
+export function AccountLayout({ active, onNavigate, children, currentUser, onLogout, title, onBack, hideBottomNav, fill, immersive }: {
   active: string, onNavigate: (p: any) => void, children: React.ReactNode, currentUser?: AuthUser | null, onLogout: () => void,
   /** Mobile header title, when the page isn't the one `active` names (e.g. a sub-step). */
   title?: string
@@ -380,19 +380,23 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
       exactly the height left between the header and the bottom bar, which
       then sits in the flow instead of floating over the content. */
   fill?: boolean
+  /** Phone full-screen moment (an open conversation): no account header nor
+      bottom bar below 768 px, the page brings its own compact header; the
+      height follows the visual viewport (iOS keyboard) via --chat-vh. */
+  immersive?: boolean
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Desktop sidebar reduced to icons (remembered).
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(SIDEBAR_KEY) === '1' } catch { return false } })
   const toggleCollapsed = () => setCollapsed(c => { try { localStorage.setItem(SIDEBAR_KEY, c ? '0' : '1') } catch { /* private mode */ } return !c })
   const { listingsCount, unreadMessages, unreadNotifications, activeDisputes } = useUnreadCounts()
-  const tabs = hideBottomNav ? null : mobileTabsFor(active)
+  const tabs = hideBottomNav || immersive ? null : mobileTabsFor(active)
   const back = onBack ?? (() => (window.history.length > 1 ? window.history.back() : onNavigate('buyer-dashboard')))
   const isGuest = !!currentUser?.isGuest
   const go = (p: string) => { setSidebarOpen(false); onNavigate(p) }
 
   return (
-    <div className={`safe-pt flex bg-surface ${fill ? 'h-[100dvh]' : 'h-screen'}`}>
+    <div className={`safe-pt flex bg-surface ${fill ? 'h-[100dvh]' : 'h-screen'} ${immersive ? 'max-md:h-[var(--chat-vh,100dvh)]' : ''}`}>
       <aside className={`hidden shrink-0 border-0 border-r border-solid border-outline-variant bg-surface-lowest transition-[width] duration-200 lg:block ${collapsed ? 'w-[72px]' : 'w-64'}`}>
         <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} collapsed={collapsed} />
       </aside>
@@ -413,7 +417,9 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <div className={immersive ? 'max-md:hidden' : 'contents'}>
         <AccountHeader activeLabel={title || ACCOUNT_PAGE_LABELS[active] || active} isHome={active === 'buyer-dashboard' || active === 'seller-dashboard'} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onBack={back} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
+        </div>
         {!fill && <OfferBanner />}
         <main className={fill ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : `dashboard-main flex-1 overflow-auto px-4 py-5 lg:px-8 lg:py-6 ${tabs && !isGuest ? 'pb-24 lg:pb-6' : ''}`}>
           {children}

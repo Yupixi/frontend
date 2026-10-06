@@ -29,6 +29,7 @@ function preview(c: RemoteConversation, me?: string): { icon?: string; text: str
   const m = c.lastMessage
   if (!m) return { icon: 'waving_hand', text: 'Démarrez la discussion' }
   const who = m.senderId === me ? 'Vous : ' : ''
+  if (m.system) return { icon: 'verified_user', text: `Dilchap : ${m.system.title}` }
   if (m.audioUrl) return { icon: 'mic', text: `${who}Message vocal${m.audioDuration ? ` (${formatSeconds(m.audioDuration)})` : ''}` }
   if (m.offer) return { icon: 'sell', text: `${who}Offre de ${m.offer.amount.toLocaleString('fr-FR')} F` }
   if (m.meetup) return { icon: 'event', text: `${who}Rendez-vous : ${m.meetup.place}` }

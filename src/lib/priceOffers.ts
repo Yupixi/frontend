@@ -8,7 +8,7 @@ import { countryVars, useMarketCode, usePayerCountryCode } from './countries'
 // the storefront shows the price the member will really pay, with the same
 // rule (best offer, never cumulated, rounded in their favour).
 
-export type OfferOperation = 'BUMP' | 'BOOST' | 'CAMPAIGN' | 'BADGE' | 'SHOP' | 'AI_ASSIST'
+export type OfferOperation = 'BUMP' | 'BOOST' | 'CAMPAIGN' | 'BADGE' | 'SHOP' | 'AI_ASSIST' | 'CHAT_ASSIST'
 export type LiveOffer = {
   id: string
   name: string
