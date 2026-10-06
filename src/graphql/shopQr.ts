@@ -18,6 +18,7 @@ export type QrLanding = {
   // A listing no longer there: its seller's page (other listings).
   seller: { name: string; path: string } | null
   activateAt: string | null
+  // Only while the QR's country is still behind its launch page.
   launch: { active: boolean; launchAt: string | null; title: string; text: string; image: string } | null
 }
 
@@ -34,6 +35,8 @@ export type MyShopQr = {
   activation: 'AT_LAUNCH' | 'IMMEDIATE' | 'SCHEDULED'
   activationLabel: string
   activateAt: string | null
+  // The shop's country is still behind its launch page.
+  launchActive?: boolean
   state: 'ACTIVE' | 'PENDING' | 'SHOP_UNAVAILABLE'
   stateLabel: string
   scanCount: number

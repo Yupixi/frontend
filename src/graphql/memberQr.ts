@@ -20,6 +20,9 @@ export type MyQrCode = {
   activation: 'AT_LAUNCH' | 'IMMEDIATE' | 'SCHEDULED'
   activationLabel: string
   activateAt: string | null
+  // The QR's country is still behind its launch page: only then do we
+  // speak of the launch (« Actif au lancement », scans « avant lancement »).
+  launchActive?: boolean
   status: 'ACTIVE' | 'DISABLED' | 'REVOKED'
   state: string
   stateLabel: string
