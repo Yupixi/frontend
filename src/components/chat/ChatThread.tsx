@@ -115,6 +115,8 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
   useEffect(() => { if (pending.length || otherIsTyping) { if (atBottom.current) requestAnimationFrame(() => toBottom(true)) } }, [pending.length, otherIsTyping]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const lastMine = [...messages].reverse().find(m => m.senderId === me && m.kind !== 'SYSTEM')
+  // « Fixer le rendez-vous » is moot once a meet-up is confirmed.
+  const meetupConfirmed = messages.some(m => m.meetup?.status === 'CONFIRMED')
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
@@ -136,7 +138,7 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
               <div key={m.id} id={`msg-${m.id}`} className={`chat-in scroll-mt-24 rounded-2xl transition-colors duration-500 ${flashId === m.id ? 'bg-primary-fixed/50' : ''} ${joinsPrev ? 'mt-0.5' : 'mt-3'}`}>
                 {newDay && <div className="mb-3 flex justify-center"><span className="rounded-full bg-surface-container/95 px-3 py-1 text-label-sm text-on-surface-variant shadow-sm">{dayLabel(m.createdAt)}</span></div>}
                 {sys ? (
-                  <SystemCard card={sys} currency={currency} onAction={sys.cta && !(sys.cta === 'REPORT' && mine) ? () => onCardAction(sys, m) : undefined} />
+                  <SystemCard card={sys} currency={currency} onAction={sys.cta && !(sys.cta === 'REPORT' && mine) && !(sys.cta === 'MEETUP' && (meetupConfirmed || conv.closedAt)) ? () => onCardAction(sys, m) : undefined} />
                 ) : (
                   <div className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                     {!mine && !milestone && (joinsNext ? <span className="w-7 shrink-0" /> : <Avatar url={m.sender.avatarUrl} name={m.sender.fullName} size={28} />)}

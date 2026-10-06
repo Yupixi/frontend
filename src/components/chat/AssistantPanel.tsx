@@ -83,10 +83,10 @@ export default function AssistantPanel({ conversationId, isBuyer, canOffer, onUs
         {s?.noticeAccepted && (
           <>
             {!s.available && s.reasonText && <p className="m-0 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="schedule" size={18} className="mt-0.5 shrink-0" /> {s.reasonText}</p>}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className={`grid grid-cols-1 gap-2 ${asSheet ? 'sm:grid-cols-2' : ''}`}>
               {s.actions.map(a => (
                 <button key={a.id} type="button" disabled={!s.available || !!pending} onClick={() => run(a.id)}
-                  className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-2xl border border-solid border-outline-variant bg-surface-lowest px-3 py-2.5 text-left text-label-md text-on-surface transition-colors hover:border-primary disabled:cursor-default disabled:opacity-55 ${a.id === 'SCAM_CHECK' ? 'sm:col-span-2' : ''}`}>
+                  className={`flex min-h-12 cursor-pointer items-center gap-2.5 rounded-2xl border border-solid border-outline-variant bg-surface-lowest px-3 py-2.5 text-left text-label-md text-on-surface transition-colors hover:border-primary disabled:cursor-default disabled:opacity-55 ${a.id === 'SCAM_CHECK' && asSheet ? 'sm:col-span-2' : ''}`}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-fixed/70 text-primary">{pending === a.id ? <Icon name="progress_activity" size={17} className="animate-spin" /> : <Icon name={ACTION_ICON[a.id]} size={17} />}</span>
                   <span className="min-w-0">{a.label}</span>
                 </button>

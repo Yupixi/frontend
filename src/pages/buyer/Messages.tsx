@@ -67,6 +67,8 @@ let tmpSeq = 0
 export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
   const lists = useMemberLists()
   const isPhone = !useMediaQuery('(min-width: 768px)')
+  // ≥ 1280 px: Aide Dilchap is a third column (in place of the recap).
+  const isWide = useMediaQuery('(min-width: 1280px)')
   const { data: listData, refetch: refetchList } = useQuery<{ myConversations: RemoteConversation[] }>(MY_CONVERSATIONS_QUERY)
   const conversations = [...(listData?.myConversations ?? [])].sort(byLatestMessage)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -318,7 +320,12 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     { key: 'photo', icon: 'photo_camera', label: 'Envoyer une photo', onClick: () => inputRef.current?.pickPhotos() },
   ]
 
-  const desktopAssistant = !isPhone && assistantOpen && activeId && (
+  const assistantColumn = (
+    <Suspense fallback={<div className="p-4"><div className="chat-skeleton h-40 rounded-2xl" /></div>}>
+      {activeId && <AssistantPanel conversationId={activeId} isBuyer={!conv?.canManageDeal} canOffer={canNegotiate} onUse={applyAssistant} onClose={() => setAssistantOpen(false)} />}
+    </Suspense>
+  )
+  const desktopAssistant = !isPhone && !isWide && assistantOpen && activeId && (
     <div className="chat-drawer absolute inset-y-0 right-0 z-30 flex w-[min(400px,100%)] flex-col border-0 border-l border-solid border-outline-variant bg-surface shadow-2xl">
       <Suspense fallback={<div className="p-4"><div className="chat-skeleton h-40 rounded-2xl" /></div>}>
         <AssistantPanel conversationId={activeId} isBuyer={!conv?.canManageDeal} canOffer={canNegotiate} onUse={applyAssistant} onClose={() => setAssistantOpen(false)} />
@@ -537,8 +544,11 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
             {desktopAssistant}
           </section>
 
-          {/* Right panel */}
-          {conv && other && (
+          {/* Right panel: Aide Dilchap when open, else the recap */}
+          {conv && isWide && assistantOpen && (
+            <aside className="chat-drawer flex w-[360px] shrink-0 flex-col border-0 border-l border-solid border-outline-variant bg-surface" aria-label="Aide Dilchap">{assistantColumn}</aside>
+          )}
+          {conv && other && !(isWide && assistantOpen) && (
             <aside className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto border-0 border-l border-solid border-outline-variant bg-surface p-3 xl:flex">
               <div className="rounded-2xl bg-surface-lowest p-4">
                 <div className="flex items-center gap-3">
