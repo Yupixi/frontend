@@ -1,7 +1,7 @@
 import { useEffect, type MouseEvent } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { ANALYTICS_CONFIG_QUERY } from '../graphql/content'
-import { acceptAnalytics, refuseAnalytics, setAnalyticsConfig, useAnalyticsState, type AnalyticsConfig } from '../lib/analytics'
+import { acceptAnalytics, needsConsent, refuseAnalytics, setAnalyticsConfig, useAnalyticsState, type AnalyticsConfig } from '../lib/analytics'
 import { countryVars, useMarketCode } from '../lib/countries'
 
 // Both choices look the same: refusing is as easy as accepting.
@@ -10,13 +10,14 @@ const choiceBtn = 'min-h-11 flex-1 cursor-pointer whitespace-nowrap rounded-xl b
 /** The consent banner is on screen (other bottom banners wait). */
 export function useConsentOpen() {
   const { config, choice, reopened } = useAnalyticsState()
-  return !!config?.enabled && !!config.measurementId && (choice === null || reopened)
+  return needsConsent(config) && (choice === null || reopened)
 }
 
 // Consent banner of the « Mesure d'audience » (BO): shown while the
 // visitor's country has it on and the visitor hasn't chosen (or chose more
 // than the BO's duration ago, or opened « Gérer les cookies »). Not a wall:
-// the page stays usable, and nothing goes to Google without « Accepter ».
+// the page stays usable, and nothing goes to Google or Microsoft (Clarity)
+// without « Accepter ».
 export default function ConsentBanner({ onOpenLegal }: { onOpenLegal: (slug: string) => void }) {
   const market = useMarketCode()
   const { data } = useQuery<{ analyticsConfig: AnalyticsConfig }>(ANALYTICS_CONFIG_QUERY, { variables: countryVars(market), fetchPolicy: 'cache-first' })

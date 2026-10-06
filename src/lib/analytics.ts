@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { CLARITY_ID, setClarity } from './clarity'
 
 // « Mesure d'audience » (Google Analytics 4), set in the Backoffice per
 // country (Backend content/analytics-settings.ts, query analyticsConfig).
@@ -18,10 +19,15 @@ import { useSyncExternalStore } from 'react'
 //   page, never a listing title (sellers write anything in it); events only
 //   carry listing ids, categories, countries, counts and amounts.
 // - SPA: send_page_view false, one page_view per route change (App).
+// - Microsoft Clarity (lib/clarity) shares the banner: one « Accepter »
+//   covers what is on for the visitor's country. The choice remembers what
+//   it covered: a tool turned on later asks again (a refusal stays valid).
 
 export type AnalyticsBanner = { title: string; text: string; accept: string; refuse: string; policyLabel: string; manage: string }
-export type AnalyticsConfig = { enabled: boolean; measurementId: string | null; consentMonths: number; policyPath: string; banner: AnalyticsBanner }
+export type ClarityConfig = { enabled: boolean; projectId: string | null }
+export type AnalyticsConfig = { enabled: boolean; measurementId: string | null; consentMonths: number; policyPath: string; banner: AnalyticsBanner; clarity?: ClarityConfig }
 type Choice = 'granted' | 'denied'
+type Tool = 'ga' | 'clarity'
 
 const STORAGE_KEY = 'dilchap_analytics_consent'
 const MONTH_MS = 30.44 * 24 * 3600 * 1000
@@ -36,22 +42,25 @@ const w = (typeof window !== 'undefined' ? window : undefined) as GaWindow | und
 
 // ---- Stored choice ------------------------------------------------------
 
-function readChoice(months: number): Choice | null {
+function readChoice(months: number, needed: Tool[]): Choice | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    const v = JSON.parse(raw) as { choice?: unknown; at?: unknown }
+    const v = JSON.parse(raw) as { choice?: unknown; at?: unknown; tools?: unknown }
     if ((v.choice !== 'granted' && v.choice !== 'denied') || typeof v.at !== 'number') return null
     // Asked again once the choice is older than the BO's duration.
     if (Date.now() - v.at > months * MONTH_MS || v.at > Date.now() + 60_000) return null
+    // A yes covers the tools named when it was given (before Clarity: GA).
+    const tools = Array.isArray(v.tools) ? v.tools : ['ga']
+    if (v.choice === 'granted' && !needed.every((t) => tools.includes(t))) return null
     return v.choice
   } catch {
     return null
   }
 }
 
-function storeChoice(choice: Choice) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ choice, at: Date.now() })) } catch { /* storage blocked: asked again next visit */ }
+function storeChoice(choice: Choice, tools: Tool[]) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ choice, at: Date.now(), tools })) } catch { /* storage blocked: asked again next visit */ }
 }
 
 // ---- State (external store: the banner and the footer link read it) ----
@@ -67,6 +76,11 @@ export const useAnalyticsState = () => useSyncExternalStore(subscribe, () => sta
 
 const isOn = (c: AnalyticsConfig | null): c is AnalyticsConfig & { measurementId: string } =>
   !!c && c.enabled && !!c.measurementId && /^G-[A-Z0-9]{4,15}$/.test(c.measurementId)
+const clarityId = (c: AnalyticsConfig | null): string | null =>
+  c?.clarity?.enabled && c.clarity.projectId && CLARITY_ID.test(c.clarity.projectId) ? c.clarity.projectId : null
+const toolsOf = (c: AnalyticsConfig | null): Tool[] => [...(isOn(c) ? ['ga' as const] : []), ...(clarityId(c) ? ['clarity' as const] : [])]
+/** Something on for this country needs the visitor's consent (banner, « Gérer les cookies »). */
+export const needsConsent = (c: AnalyticsConfig | null): c is AnalyticsConfig => toolsOf(c).length > 0
 const active = () => isOn(state.config) && state.choice === 'granted'
 
 // ---- Clean page data ----------------------------------------------------
@@ -227,22 +241,25 @@ function stop() {
 
 /** The setting of the visitor's country (re-applied when the country changes). */
 export function setAnalyticsConfig(config: AnalyticsConfig | null) {
-  const choice = config ? readChoice(config.consentMonths) : null
+  const choice = config ? readChoice(config.consentMonths, toolsOf(config)) : null
   emit({ config, choice })
   if (isOn(config) && choice === 'granted') start(false)
   else if (configuredId) stop()
+  setClarity(choice === 'granted' ? clarityId(config) : null)
 }
 
 export function acceptAnalytics() {
-  storeChoice('granted')
+  storeChoice('granted', toolsOf(state.config))
   emit({ choice: 'granted', reopened: false })
   start(true)
+  setClarity(clarityId(state.config), true)
 }
 
 export function refuseAnalytics() {
-  storeChoice('denied')
+  storeChoice('denied', toolsOf(state.config))
   emit({ choice: 'denied', reopened: false })
   stop()
+  setClarity(null)
 }
 
 /** « Gérer les cookies »: shows the banner again. */

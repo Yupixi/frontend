@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { reopenConsent, useAnalyticsState } from '../lib/analytics'
+import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 
 /**
  * « Gérer les cookies »: shows the consent banner again (lib/analytics).
@@ -9,7 +9,7 @@ import { reopenConsent, useAnalyticsState } from '../lib/analytics'
  */
 export default function ManageCookies({ className, icon, onDone }: { className: string; icon?: ReactNode; onDone?: () => void }) {
   const { config } = useAnalyticsState()
-  if (!config?.enabled || !config.measurementId) return null
+  if (!needsConsent(config)) return null
   return (
     <button type="button" onClick={() => { onDone?.(); reopenConsent() }} className={className}>
       {icon}{config.banner.manage}

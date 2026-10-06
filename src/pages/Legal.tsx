@@ -3,7 +3,7 @@ import Icon from '../components/Icon'
 import { CONTENT_PAGE_QUERY, LEGAL_PAGES, type ContentPage } from '../graphql/content'
 import { richHtml } from '../lib/richText'
 import { countryVars, useMarketCode } from '../lib/countries'
-import { reopenConsent, useAnalyticsState } from '../lib/analytics'
+import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 
 // Legal & help pages (CGU, remise en main propre, FAQ, confidentialité),
 // written by the team in the Backoffice "CMS & Pages légales".
@@ -16,7 +16,7 @@ export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string;
   const page = data ? data.contentPage : previous
   const meta = LEGAL_PAGES.find((p) => p.slug === slug) ?? LEGAL_PAGES[0]
   const { config } = useAnalyticsState()
-  const manage = config?.enabled && config.measurementId ? config.banner.manage : null
+  const manage = config && needsConsent(config) ? config.banner.manage : null
 
   return (
     <div className="mx-auto max-w-[960px] px-4 py-6 lg:px-6 lg:py-10">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApolloClient, useMutation } from '@apollo/client/react'
 import BottomSheet from './BottomSheet'
+import { useClarityHold } from '../lib/clarity'
 import Icon from './Icon'
 import AccountVerifyPanel from './AccountVerifyPanel'
 import { isNotVerifiedError } from '../lib/accountVerify'
@@ -41,6 +42,8 @@ const formatPhone = (v: string) => {
 // applied by the server once the payment is confirmed.
 export default function PaymentSheet({ open, onClose, title, amount, request, children, onPaid }: Props) {
   const client = useApolloClient()
+  // Payments are never recorded by Microsoft Clarity.
+  useClarityHold(open)
   // Nothing preselected: the number field appears once an operator is picked.
   const [provider, setProvider] = useState<PaymentProvider | null>(null)
   // One remembered number per operator (an Orange number is no use for MTN).
@@ -144,6 +147,8 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
 
   return (
     <BottomSheet open={open} onClose={onClose} title={title} footer={footer} maxHeight="90vh" maxWidth="480px">
+      {/* Microsoft Clarity: masked, and stopped while open (lib/clarity). */}
+      <div data-clarity-mask="True" className="contents">
       {!intent && (
         <>
           {/* Order recap */}
@@ -284,6 +289,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.status === 'FAILED' ? intent.failedReason ?? 'L’opérateur a refusé ou annulé la transaction. Aucun montant n’a été débité.' : `Notre équipe a été alertée et ajoutera vos crédits. Réf. ${intent.reference}`}</p>
         </div>
       )}
+      </div>
     </BottomSheet>
   )
 }

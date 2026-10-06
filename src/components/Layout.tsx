@@ -42,7 +42,7 @@ import { syncAppBadge } from '../lib/pushNotifications'
 import { requestOpenCampaign, requestOpenHelp } from '../lib/navigation'
 import { replayTours } from '../lib/tourControl'
 import { useSite } from '../lib/site'
-import { reopenConsent, useAnalyticsState } from '../lib/analytics'
+import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
 import ManageCookies from './ManageCookies'
 
@@ -697,7 +697,7 @@ export default function Layout({
                   </li>
                 ))}
                 {/* « Mesure d'audience » on for this country: change one's mind. */}
-                {analytics?.enabled && analytics.measurementId && (
+                {analytics && needsConsent(analytics) && (
                   <li>
                     <button onClick={reopenConsent} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">{analytics.banner.manage}</button>
                   </li>
