@@ -53,9 +53,9 @@ function Stats({ id }: { id: string }) {
   return (
     <section className={card}>
       <h2 className="m-0 flex items-center gap-2 text-title-md text-on-surface"><Icon name="bar_chart" size={20} className="text-primary" /> Scans</h2>
-      <dl className="m-0 mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className={`m-0 mt-3 grid grid-cols-2 gap-3 ${s.launchActive !== false ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
         <div><dt className="text-label-sm uppercase text-on-surface-variant">Total</dt><dd className="m-0 text-headline-sm font-bold text-on-surface">{s.scanCount}</dd></div>
-        <div><dt className="text-label-sm uppercase text-on-surface-variant">Avant lancement</dt><dd className="m-0 text-headline-sm font-bold text-on-surface">{s.prelaunchScanCount}</dd></div>
+        {s.launchActive !== false && <div><dt className="text-label-sm uppercase text-on-surface-variant">Avant lancement</dt><dd className="m-0 text-headline-sm font-bold text-on-surface">{s.prelaunchScanCount}</dd></div>}
         <div><dt className="text-label-sm uppercase text-on-surface-variant">Premier scan</dt><dd className="m-0 text-body-md text-on-surface">{s.firstScanAt ? fdate(s.firstScanAt) : '—'}</dd></div>
         <div><dt className="text-label-sm uppercase text-on-surface-variant">Dernier scan</dt><dd className="m-0 text-body-md text-on-surface">{s.lastScanAt ? fdate(s.lastScanAt) : '—'}</dd></div>
       </dl>
@@ -147,6 +147,10 @@ export default function QrStudio({ target, intro }: { target: QrTarget; intro?: 
   }
   const q = o?.qr
   const pending = q?.state === 'PENDING'
+  // Waiting for its date (any country), or for the launch of a country
+  // still behind its launch page.
+  const scheduled = pending && q?.activation === 'SCHEDULED' && !!q.activateAt
+  const atLaunch = pending && !scheduled && q?.launchActive !== false
 
   return (
     <div className="space-y-4">
@@ -165,7 +169,7 @@ export default function QrStudio({ target, intro }: { target: QrTarget; intro?: 
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-title-md tracking-wider text-on-surface">{q.codeSpaced}</span>
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-label-sm ${q.state === 'ACTIVE' ? 'bg-tertiary-soft text-tertiary' : pending ? 'bg-surface-container text-on-surface-variant' : 'bg-primary-fixed text-primary'}`}>
-                    <Icon name={q.state === 'ACTIVE' ? 'check_circle' : pending ? 'schedule' : 'block'} size={14} /> {pending ? 'Actif au lancement' : q.stateLabel}
+                    <Icon name={q.state === 'ACTIVE' ? 'check_circle' : pending ? 'schedule' : 'block'} size={14} /> {scheduled ? `Actif le ${fdate(q.activateAt!)}` : atLaunch ? 'Actif au lancement' : q.stateLabel}
                   </span>
                 </div>
                 <p className="m-0 break-all text-body-sm text-on-surface-variant">{q.url.replace(/^https?:\/\//, '')} • {q.scanCount} scan{q.scanCount > 1 ? 's' : ''}</p>
@@ -175,7 +179,8 @@ export default function QrStudio({ target, intro }: { target: QrTarget; intro?: 
                     <span><b>Attribué par l’équipe Dilchap</b>. C’est {target.kind === 'MEMBER' ? 'votre' : 'le'} QR code unique {target.kind === 'MEMBER' ? 'de votre page' : 'de cette annonce'}, par exemple un autocollant posé par l’équipe : téléchargez-le ou imprimez-le avec un visuel, ses scans s’affichent ci-dessous.</span>
                   </p>
                 )}
-                {pending && <p className="m-0 text-body-sm text-on-surface-variant">Avant le lancement, un scan affiche la page de lancement de Dilchap ; il mènera tout seul à {target.kind === 'MEMBER' ? 'votre page' : 'l’annonce'} dès l’ouverture. Vous pouvez imprimer dès maintenant.</p>}
+                {atLaunch && <p className="m-0 text-body-sm text-on-surface-variant">Avant le lancement, un scan affiche la page de lancement de Dilchap ; il mènera tout seul à {target.kind === 'MEMBER' ? 'votre page' : 'l’annonce'} dès l’ouverture. Vous pouvez imprimer dès maintenant.</p>}
+                {scheduled && <p className="m-0 text-body-sm text-on-surface-variant">Jusqu’à cette date, un scan indique quand le QR code s’active ; il mènera ensuite tout seul à {target.kind === 'MEMBER' ? 'votre page' : 'l’annonce'}. Vous pouvez imprimer dès maintenant.</p>}
               </div>
             )}
             {o && !o.eligible && <p className="m-0 flex items-start gap-2 rounded-xl bg-primary-fixed/60 p-3 text-body-sm text-primary"><Icon name="info" size={18} className="mt-0.5 shrink-0" /> {o.reason}</p>}

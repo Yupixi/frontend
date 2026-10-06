@@ -919,7 +919,7 @@ function QrTab({ codes }: { codes: MyShopQr[] }) {
           <li key={q.id} className="rounded-xl bg-surface-container-low p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-mono text-label-lg tracking-wider text-on-surface">{q.codeSpaced}</span>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${q.state === 'ACTIVE' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}><Icon name={q.state === 'ACTIVE' ? 'check_circle' : 'schedule'} size={14} /> {q.state === 'PENDING' ? (q.activation === 'SCHEDULED' && q.activateAt ? `Actif le ${fdate(q.activateAt)}` : 'Actif au lancement') : q.stateLabel}</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${q.state === 'ACTIVE' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}><Icon name={q.state === 'ACTIVE' ? 'check_circle' : 'schedule'} size={14} /> {q.state === 'PENDING' ? (q.activation === 'SCHEDULED' && q.activateAt ? `Actif le ${fdate(q.activateAt)}` : q.launchActive !== false ? 'Actif au lancement' : q.stateLabel) : q.stateLabel}</span>
             </div>
             {q.label && <p className="m-0 mt-1 truncate text-body-sm text-on-surface-variant">{q.label}</p>}
             <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{q.scanCount} scan{q.scanCount > 1 ? 's' : ''}{q.lastScanAt ? ` • dernier le ${fdate(q.lastScanAt)}` : ''}</p>
