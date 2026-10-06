@@ -23,6 +23,8 @@ import { dateFormat } from '../lib/intl'
 import { useMemberLists } from '../lib/lists'
 import AccountVerifyPanel from './AccountVerifyPanel'
 import { isNotVerifiedError } from '../lib/accountVerify'
+import { SystemCard } from './chat/ChatCards'
+import SafetyBanners from './chat/SafetyBanners'
 
 // Short chip labels so the row wraps instead of being cut off on phones;
 // the full sentence goes into the message box.
@@ -276,8 +278,10 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
             <div key={m.id}>
               {showDivider && <div className="my-1.5 text-center"><span className="rounded-full bg-surface-container-high px-2.5 py-0.5 text-label-sm text-on-surface-variant">{messageDayLabel(m.createdAt)}</span></div>}
               <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className="max-w-[85%]">
-                  {m.offer ? (
+                <div className={m.system ? 'w-full' : 'max-w-[85%]'}>
+                  {m.kind === 'SYSTEM' && m.system ? (
+                    <SystemCard card={m.system} currency={data?.conversation?.listing?.currency ?? 'XOF'} />
+                  ) : m.offer ? (
                     <OfferBubble offer={m.offer} currency={data?.conversation?.listing?.currency ?? 'XOF'} isMine={isMe} canRespond={false} responding={false} onAccept={() => {}} onReject={() => {}} />
                   ) : (
                     <div className={`selectable px-3 py-2 text-body-sm ${isMe ? 'rounded-2xl rounded-br-md bg-primary text-white' : 'rounded-2xl rounded-bl-md bg-surface-lowest text-on-surface'}`}>{m.body}</div>
@@ -295,6 +299,9 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
       </div>
 
       {otherIsTyping && <p className="m-0 mb-1 text-label-sm italic text-on-surface-variant">{sellerName} est en train d'écrire…</p>}
+      {!!data?.conversation?.safetyAlerts?.length && (
+        <div className="mt-1.5"><SafetyBanners compact alerts={data.conversation.safetyAlerts} conversationId={conversationId} otherId={otherId} onDone={() => void refetch()} /></div>
+      )}
 
       {offerFormOpen ? (
         <div className="mt-2 rounded-xl bg-surface-lowest p-3">

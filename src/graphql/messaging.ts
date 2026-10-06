@@ -30,7 +30,14 @@ const MESSAGE_FIELDS = `
     status
     handoverCode
     handedOverAt
+    address
+    lat
+    lng
+    pointSource
+    placeId
   }
+  kind
+  system
 `
 
 const CONVERSATION_FIELDS = `
@@ -88,6 +95,7 @@ export const CONVERSATION_QUERY = gql`
   query Conversation($id: String!) {
     conversation(id: $id) {
       ${CONVERSATION_FIELDS}
+      safetyAlerts
       messages {
         ${MESSAGE_FIELDS}
       }
@@ -195,7 +203,36 @@ export type RemoteMeetup = {
   status: 'PROPOSED' | 'CONFIRMED' | 'DECLINED'
   handoverCode?: string | null
   handedOverAt?: string | null
+  // Meet-up point shared by the proposer (visible to both members only).
+  address?: string | null
+  lat?: number | null
+  lng?: number | null
+  pointSource?: 'SUGGESTED' | 'MAP' | 'CURRENT' | 'TEXT' | null
+  placeId?: string | null
 }
+
+// A Dilchap card of the thread (SYSTEM message), built by the server from
+// structured data.
+export type SystemCard = {
+  type: 'OFFER_ACCEPTED' | 'MEETUP_CONFIRMED' | 'SAFETY_NOTICE' | 'DEAL_CONCLUDED'
+  title: string
+  lines: string[]
+  listingTitle?: string
+  amount?: number
+  currency?: string
+  place?: string
+  address?: string | null
+  lat?: number | null
+  lng?: number | null
+  scheduledAt?: string
+  checklist?: string[]
+  next?: string
+  cta?: 'MEETUP' | 'REVIEW' | 'REPORT'
+  rule?: string
+}
+
+// A private safety banner (only the member at risk receives it).
+export type SafetyAlert = { id: string; rule: string; severity: 'LOW' | 'MEDIUM' | 'HIGH'; text: string; messageId: string | null; senderId: string; createdAt: string }
 
 export type RemoteMessageOffer = {
   id: string
@@ -219,6 +256,8 @@ export type RemoteMessage = {
   sender: RemoteUserRef
   offer: RemoteMessageOffer | null
   meetup?: RemoteMeetup | null
+  kind?: 'TEXT' | 'SYSTEM'
+  system?: SystemCard | null
 }
 
 export type RemoteConversation = {
@@ -242,11 +281,12 @@ export type RemoteConversation = {
   otherParticipant: RemoteUserRef
   lastMessage: RemoteMessage | null
   messages?: RemoteMessage[]
+  safetyAlerts?: SafetyAlert[]
 }
 
 export const PROPOSE_MEETUP_MUTATION = gql`
-  mutation ProposeMeetup($conversationId: String!, $place: String!, $scheduledAt: DateTime!) {
-    proposeMeetup(conversationId: $conversationId, place: $place, scheduledAt: $scheduledAt) { id }
+  mutation ProposeMeetup($conversationId: String!, $place: String!, $scheduledAt: DateTime!, $point: MeetupPointInput) {
+    proposeMeetup(conversationId: $conversationId, place: $place, scheduledAt: $scheduledAt, point: $point) { id }
   }
 `
 
@@ -257,9 +297,36 @@ export const RESPOND_TO_MEETUP_MUTATION = gql`
 `
 
 // Inbox preview of a message: its text, or what it carries.
-export const messagePreview = (m: { body: string; attachments?: string[]; audioUrl?: string | null } | null | undefined) =>
-  !m ? '' : m.body || (m.audioUrl ? 'Message vocal' : m.attachments?.length ? (m.attachments.length > 1 ? `${m.attachments.length} photos` : 'Photo') : '')
+export const messagePreview = (m: { body: string; attachments?: string[]; audioUrl?: string | null; system?: SystemCard | null } | null | undefined) =>
+  !m ? '' : m.system ? `Dilchap : ${m.system.title}` : m.body || (m.audioUrl ? 'Message vocal' : m.attachments?.length ? (m.attachments.length > 1 ? `${m.attachments.length} photos` : 'Photo') : '')
 
 // Inbox order: latest message first, conversations without messages last.
 export const byLatestMessage = (a: { lastMessageAt: string | null }, b: { lastMessageAt: string | null }) =>
   (b.lastMessageAt ? Date.parse(b.lastMessageAt) : -Infinity) - (a.lastMessageAt ? Date.parse(a.lastMessageAt) : -Infinity)
+
+export const DISMISS_SAFETY_ALERT_MUTATION = gql`
+  mutation DismissChatSafetyAlert($id: String!, $reported: Boolean) {
+    dismissChatSafetyAlert(id: $id, reported: $reported)
+  }
+`
+
+// « Lieux conseillés » for this conversation's meet-up (closest first when
+// a position is given; it is not stored).
+export const MEETUP_PLACES_QUERY = gql`
+  query MeetupPlaceSuggestions($conversationId: String!, $near: [LatLngInput!]) {
+    meetupPlaceSuggestions(conversationId: $conversationId, near: $near)
+  }
+`
+export type MeetupPlaceSuggestion = {
+  id: string
+  name: string
+  address: string
+  city: string
+  lat: number
+  lng: number
+  type: string
+  typeLabel: string
+  distanceKm: number | null
+  closest: boolean
+}
+export type MeetupPlaces = { enabled: boolean; currentPosition: boolean; city: string; places: MeetupPlaceSuggestion[] }

@@ -13,6 +13,8 @@ type Props = {
   onReply: () => void
   onOpenPhotos: (photos: string[], index: number) => void
   onJumpTo: (messageId: string) => void
+  // Part of a group of messages from the same sender (tighter corners).
+  grouped?: { top: boolean; bottom: boolean }
 }
 
 const URL_RE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g
@@ -46,7 +48,7 @@ function PhotoGrid({ photos, onOpen }: { photos: string[]; onOpen: (i: number) =
 
 // A text / photo message of the thread, with its quoted reply and actions
 // (hover buttons on desktop, long-press sheet on touch screens).
-export default function ChatBubble({ message: m, mine, quoteAuthor, onReply, onOpenPhotos, onJumpTo }: Props) {
+export default function ChatBubble({ message: m, mine, quoteAuthor, onReply, onOpenPhotos, onJumpTo, grouped }: Props) {
   const [menu, setMenu] = useState(false)
   const [copied, setCopied] = useState(false)
   const press = useRef<number | null>(null)
@@ -92,7 +94,7 @@ export default function ChatBubble({ message: m, mine, quoteAuthor, onReply, onO
         onPointerLeave={cancelPress}
         onPointerCancel={cancelPress}
         onContextMenu={e => { if (!window.matchMedia('(hover: hover)').matches) e.preventDefault() }}
-        className={`min-w-0 max-w-full select-text rounded-2xl text-body-md shadow-sm ${photos.length && !m.body && !m.replyTo ? 'p-1' : 'px-3.5 py-2.5'} ${mine ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm bg-surface-lowest text-on-surface'}`}
+        className={`min-w-0 max-w-full select-text rounded-2xl text-body-md shadow-sm ${photos.length && !m.body && !m.replyTo ? 'p-1' : 'px-3.5 py-2.5'} ${mine ? `${grouped?.top ? 'rounded-tr-md' : 'rounded-tr-sm'} ${grouped?.bottom ? 'rounded-br-md' : ''} bg-primary text-white` : `${grouped?.top ? 'rounded-tl-md' : 'rounded-tl-sm'} ${grouped?.bottom ? 'rounded-bl-md' : ''} bg-surface-lowest text-on-surface`}`}
       >
         {quote}
         {m.audioUrl && <VoicePlayer src={m.audioUrl} duration={m.audioDuration ?? 0} mine={mine} seed={m.id} />}
