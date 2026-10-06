@@ -450,7 +450,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         subcategoryId: form.subcategoryId || undefined,
         title: form.title.trim() || 'Brouillon',
         description: form.description || '<p>Description à compléter</p>',
-        price: priceNum ? priceNum : undefined,
+        price: requiresPrice && priceNum ? priceNum : undefined,
         originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
         currency: form.currency,
         countryCode: form.countryCode,
@@ -775,7 +775,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   </div>
                   <FieldError show={bad('description')}>Décrivez votre article.</FieldError>
                 </div>
-                <ListingAdvicePanel title={form.title} description={form.description} price={priceNum || null} currency={form.currency}
+                <ListingAdvicePanel title={form.title} description={form.description} price={requiresPrice ? priceNum || null : null} currency={form.currency}
                   categoryId={form.categoryId} subcategoryId={form.subcategoryId} photoCount={photoCount} listingId={listingId} />
               </div>
             </Card>
@@ -786,12 +786,10 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <div>
                   <Field label={`Votre prix de vente (${form.currency === 'XOF' || form.currency === 'XAF' ? 'F' : form.currency})`} required={requiresPrice}>
                     <div data-field="price" className={`flex items-center rounded-xl border bg-surface-container-low px-4 ${bad('price') ? 'border-[1.5px] border-primary' : 'border-outline-variant'}`}>
-                      {/* A category without a required price (Divers, Animaux, Services…) still takes one: optional, never locked. */}
-                      <input type="number" inputMode="numeric" min={0} aria-invalid={bad('price')} aria-label={requiresPrice ? undefined : 'Prix de vente (facultatif)'} className="w-full min-w-0 border-none bg-transparent py-3 text-[40px] font-extrabold leading-none text-primary outline-none" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0" />
+                      <input type="number" min={0} disabled={!requiresPrice} aria-invalid={bad('price')} className="w-full min-w-0 border-none bg-transparent py-3 text-[40px] font-extrabold leading-none text-primary outline-none" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0" />
                       <span className="text-headline-sm text-on-surface-variant">F</span>
                     </div>
                     <FieldError show={bad('price')}>Indiquez un prix.</FieldError>
-                    {!requiresPrice && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Facultatif dans cette catégorie : sans prix, l'annonce affiche « Prix sur demande ».</p>}
                   </Field>
                   <Claim><p className="m-0 mt-2 flex items-center gap-1 text-body-sm font-semibold text-tertiary"><CheckCircle2 size={14} /> 0 F de commission : 100% du montant vous revient.</p></Claim>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -977,7 +975,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <div className="p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-label-sm uppercase text-on-surface-variant">{form.brand || category?.name || 'Marque'}</span>
-                    {(requiresPrice || priceNum > 0) && <span className="shrink-0 text-headline-sm font-extrabold text-primary"><Price amount={priceNum} currency={form.currency} /></span>}
+                    {requiresPrice && <span className="shrink-0 text-headline-sm font-extrabold text-primary"><Price amount={priceNum} currency={form.currency} /></span>}
                   </div>
                   <div className="truncate text-label-md text-on-surface">{form.title || 'Titre de votre annonce'}</div>
                   <div className="mt-1 flex items-center gap-1 text-body-sm text-on-surface-variant"><ShieldCheck size={13} className="text-tertiary" /> {currentUser?.fullName ?? 'Vous'} • Particulier</div>
