@@ -9,8 +9,10 @@ import { useSite } from '../lib/site'
 // /q/<code>: a printed QR code of an official shop, a member or a listing.
 // The storefront's server (Caddyfile → Backend /seo/q/<code>) counts the
 // scan and sends an active QR straight to its page; the app only opens here
-// for the other cases — before the launch (launch page + « … arrive sur
-// Dilchap au lancement »), a blank QR, a profile or listing no longer
+// for the other cases — before the launch of the QR's country (launch page
+// + « … arrive sur Dilchap au lancement »), a QR waiting for its date (in
+// a launched country: just the date, no launch wording), a blank QR, a
+// profile or listing no longer
 // there, a QR no longer active — or when the server couldn't answer (then
 // an active QR is forwarded from here).
 const codeOf = (pathname: string) => decodeURIComponent(pathname.replace(/^\/q\//, '').replace(/\/+$/, '')).slice(0, 32)
@@ -36,8 +38,11 @@ export default function QrLandingPage() {
   const shopName = q?.shop?.name
   // Who arrives at the launch: the shop, the member, the listing.
   const pendingName = shopName ?? q?.member?.name ?? q?.listing?.title
+  // The launch page only while the QR's country is still behind it.
+  const atLaunch = q?.state === 'PENDING' && !!q.launch?.active
   useNoIndex(
-    q?.state === 'PENDING' ? `${pendingName ? `${pendingName} ${q.kind === 'SHOP' ? 'ouvre' : 'arrive'} bientôt` : `${brand.name} arrive bientôt`} | ${brand.name}`
+    atLaunch ? `${pendingName ? `${pendingName} ${q.kind === 'SHOP' ? 'ouvre' : 'arrive'} bientôt` : `${brand.name} arrive bientôt`} | ${brand.name}`
+      : q?.state === 'PENDING' ? `${pendingName ?? 'QR code pas encore actif'} | ${brand.name}`
       : q?.state === 'UNASSIGNED' ? `QR code pas encore attribué | ${brand.name}`
       : q?.state === 'SHOP_UNAVAILABLE' ? `Boutique indisponible | ${brand.name}`
       : q?.state === 'MEMBER_UNAVAILABLE' ? `Ce profil n’est plus disponible | ${brand.name}`
@@ -53,8 +58,8 @@ export default function QrLandingPage() {
 
   if (loading || q?.state === 'ACTIVE') return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
 
-  if (q?.state === 'PENDING' && q.launch) {
-    const date = q.activateAt ? new Date(q.activateAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Abidjan' }) : null
+  const date = q?.activateAt ? new Date(q.activateAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Abidjan' }) : null
+  if (atLaunch && q.launch) {
     return (
       <LaunchPage
         status={{ ...q.launch, active: true, preview: false, launchAt: q.activateAt ?? q.launch.launchAt }}
@@ -77,6 +82,22 @@ export default function QrLandingPage() {
       />
     )
   }
+
+  // Waiting for its date in a launched country: when it opens, nothing more.
+  if (q?.state === 'PENDING')
+    return (
+      <Shell icon="schedule" tone="info" title="QR code pas encore actif">
+        <p className="m-0">
+          {q.kind === 'MEMBER'
+            ? <>Ce QR code mènera à la page de {q.member?.name ? <b className="break-words">{q.member.name}</b> : 'ce vendeur'}</>
+            : q.kind === 'LISTING'
+              ? <>Ce QR code mènera à l’annonce {q.listing?.title ? <b className="break-words">« {q.listing.title} »</b> : ''}</>
+              : <>Ce QR code mènera à {shopName ? <>la boutique <b className="break-words">{shopName}</b></> : 'cette boutique'}</>}
+          {date ? <> à partir du {date}</> : null}. Gardez-le : il vous y mènera directement.
+        </p>
+        <a href="/" className={homeBtn}><Icon name="home" size={20} /> Aller sur {brand.name}</a>
+      </Shell>
+    )
 
   if (q?.state === 'UNASSIGNED')
     return (
