@@ -45,7 +45,7 @@ export function ThreadSkeleton() {
 // messages, the typing indicator; auto-scroll that respects a member
 // reading older messages (« nouveaux messages » pill), and a polite live
 // region for incoming messages.
-export default function ChatThread({ conv, messages, me, pending, otherIsTyping, top, empty, flashId, busyId, onRespondOffer, onAnswerMeetup, meetupAction, meetupLive, onReply, onOpenPhotos, onJumpTo, onCardAction, onRetry, onDiscard }: {
+export default function ChatThread({ conv, messages, me, pending, otherIsTyping, top, empty, footer, cardExtra, flashId, busyId, onRespondOffer, onAnswerMeetup, meetupAction, meetupLive, onReply, onOpenPhotos, onJumpTo, onCardAction, onRetry, onDiscard }: {
   conv: RemoteConversation
   messages: RemoteMessage[]
   me?: string
@@ -53,6 +53,10 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
   otherIsTyping: boolean
   top?: ReactNode
   empty?: ReactNode
+  // After the last message (the private « Remise » card).
+  footer?: ReactNode
+  // Inside a Dilchap card (the inline rating of « Vente conclue »).
+  cardExtra?: (card: Card) => ReactNode
   flashId: string | null
   busyId: string | null
   onRespondOffer: (offerId: string, accept: boolean) => void
@@ -140,7 +144,8 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
               <div key={m.id} id={`msg-${m.id}`} className={`chat-in scroll-mt-24 rounded-2xl transition-colors duration-500 ${flashId === m.id ? 'bg-primary-fixed/50' : ''} ${joinsPrev ? 'mt-0.5' : 'mt-3'}`}>
                 {newDay && <div className="mb-3 flex justify-center"><span className="rounded-full bg-surface-container/95 px-3 py-1 text-label-sm text-on-surface-variant shadow-sm">{dayLabel(m.createdAt)}</span></div>}
                 {sys ? (
-                  <SystemCard card={sys} currency={currency} onAction={sys.cta && !(sys.cta === 'REPORT' && mine) && !(sys.cta === 'MEETUP' && (meetupConfirmed || conv.closedAt)) ? () => onCardAction(sys, m) : undefined} />
+                  // « Laisser un avis » is answered inside the card itself.
+                  <SystemCard card={sys} currency={currency} onAction={sys.cta && sys.cta !== 'REVIEW' && !(sys.cta === 'REPORT' && mine) && !(sys.cta === 'MEETUP' && (meetupConfirmed || conv.closedAt)) ? () => onCardAction(sys, m) : undefined}>{cardExtra?.(sys)}</SystemCard>
                 ) : (
                   <div className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                     {!mine && !milestone && (joinsNext ? <span className="w-7 shrink-0" /> : <Avatar url={m.sender.avatarUrl} name={m.sender.fullName} size={28} />)}
@@ -165,6 +170,7 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
               </div>
             )
           })}
+          {footer}
           {pending.map(p => (
             <div key={p.id} className="chat-in mt-3 flex justify-end">
               <div className="flex max-w-[85%] flex-col items-end sm:max-w-[75%]">

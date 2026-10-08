@@ -15,7 +15,7 @@ import { ACCOUNT_VERIFIED_EVENT } from './lib/accountVerify'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { parsePath, pathFor, samePlace } from './lib/routes'
-import { conversationFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT } from './lib/navigation'
+import { conversationFromUrl, remiseFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -210,6 +210,8 @@ export default function App() {
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
   // Conversation to open directly (message notification / push link), consumed by BuyerMessages.
   const [openConversationId, setOpenConversationId] = useState<string | null>(() => conversationFromUrl())
+  // …on its « Remise » card (hand-over links: `&remise=1`, orders, purchases).
+  const [focusRemise, setFocusRemise] = useState(() => !!conversationFromUrl() && remiseFromUrl())
   const [categoryFilter, setCategoryFilterState] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedNav.categoryFilter ?? ''))
   const [categoryCity, setCategoryCity] = useState(initialSearch ? (initialRoute?.categoryCity ?? '') : (savedNav.categoryCity ?? ''))
   // A category page's city belongs to that category page.
@@ -606,8 +608,8 @@ export default function App() {
   // Message notifications open the thread itself: in-app bell/page
   // (OPEN_CONVERSATION_EVENT) and OS notifications clicked while the app is
   // already open (the service worker posts the push link).
-  const openConversationRef = useRef((id: string) => { setOpenConversationId(id); navigate('buyer-messages') })
-  openConversationRef.current = (id: string) => { setOpenConversationId(id); navigate('buyer-messages') }
+  const openConversationRef = useRef((id: string, remise = false) => { setOpenConversationId(id); setFocusRemise(remise); navigate('buyer-messages') })
+  openConversationRef.current = (id: string, remise = false) => { setOpenConversationId(id); setFocusRemise(remise); navigate('buyer-messages') }
   const openShopRef = useRef((slug: string) => { setShopKey(slug); navigate('shop', { shopKey: slug }) })
   openShopRef.current = (slug: string) => { setShopKey(slug); navigate('shop', { shopKey: slug }) }
   useEffect(() => {
@@ -664,7 +666,7 @@ export default function App() {
     if (route?.page === 'search' && route.category) return navigateToCategory(route.category, route.categoryCity)
     if (route && route.page !== 'account') return navigate(route.page)
     const conversation = q.get('conversation')
-    if (conversation) return openConversationRef.current(conversation)
+    if (conversation) return openConversationRef.current(conversation, q.get('remise') === '1')
     if (q.get('shop')) return openShop(q.get('shop')!)
     if (q.get('listing')) return selectListing(q.get('listing')!)
     if (q.get('seller')) return selectSeller(q.get('seller')!)
@@ -727,10 +729,19 @@ export default function App() {
     navigate('seller-profile', { sellerId: id })
   }
 
-  const openHandover = (orderId: string) => {
-    setSelectedOrderId(orderId)
-    navigate('seller-handover', { orderId })
+  // The hand-over happens in the conversation (the sale id is the
+  // conversation id): « Valider la remise », « Mon code de remise »… open
+  // it on its « Remise » card. `replace`: from a former hand-over page (an
+  // old link), so Back does not land on it again.
+  const openRemise = (conversationId: string, replace = false) => {
+    setOpenConversationId(conversationId)
+    setFocusRemise(true)
+    if (replace) {
+      startTransition(() => { setPage('buyer-messages'); setNavSeq((n) => n + 1) })
+      window.history.replaceState(historyEntry('buyer-messages'), '')
+    } else navigate('buyer-messages')
   }
+  const openHandover = (orderId: string) => openRemise(orderId)
 
   const openDispute = (disputeId: string) => {
     setSelectedDisputeId(disputeId)
@@ -738,6 +749,7 @@ export default function App() {
   }
 
   const openPurchase = (orderId: string, target: Page) => {
+    if (target === 'buyer-handover') return openRemise(orderId)
     setSelectedOrderId(orderId)
     navigate(target, { orderId })
   }
@@ -925,7 +937,7 @@ export default function App() {
         case 'seller-orders':
           return <Orders onNavigate={navigate} onSelectListing={selectListing} onOpenConversation={contactSellerAbout} onOpenHandover={openHandover} onOpenDispute={openDispute} currentUser={currentUser} onLogout={logout} />
         case 'seller-handover':
-          return <Handover orderId={selectedOrderId} onNavigate={navigate} onOpenDispute={openDispute} currentUser={currentUser} onLogout={logout} />
+          return <Handover orderId={selectedOrderId} onNavigate={navigate} onOpenDispute={openDispute} onOpenRemise={id => openRemise(id, true)} currentUser={currentUser} onLogout={logout} />
         case 'seller-disputes':
           return <Disputes onNavigate={navigate} onSelectListing={selectListing} focusDisputeId={selectedDisputeId} currentUser={currentUser} onLogout={logout} />
         case 'seller-wallet':
@@ -938,7 +950,7 @@ export default function App() {
         case 'buyer-receipts':
           return <Purchases mode={accountPage === 'buyer-receipts' ? 'receipts' : 'purchases'} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
         case 'buyer-handover':
-          return <HandoverCode orderId={selectedOrderId} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} currentUser={currentUser} onLogout={logout} />
+          return <HandoverCode orderId={selectedOrderId} onNavigate={navigate} onOpenOrder={openPurchase} onOpenDispute={openBuyerDispute} onOpenConversation={contactSellerAbout} onOpenRemise={id => openRemise(id, true)} currentUser={currentUser} onLogout={logout} />
         case 'buyer-receipt':
           return <Receipt orderId={selectedOrderId} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} currentUser={currentUser} onLogout={logout} />
         case 'buyer-dispute-new':
@@ -948,7 +960,7 @@ export default function App() {
         case 'buyer-favorites':
           return <Favorites onNavigate={navigate} onSelectListing={selectListing} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerFrom} onSearchCategory={navigateToCategory} currentUser={currentUser} onLogout={logout} />
         case 'buyer-messages':
-          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} openConversationId={openConversationId} onOpenConversationConsumed={() => setOpenConversationId(null)} onOpenHandover={(id, as) => as === 'SELLER' ? openHandover(id) : openPurchase(id, 'buyer-handover')} />
+          return <BuyerMessages onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} startWith={contactSeller} onStartWithConsumed={() => setContactSeller(null)} openConversationId={openConversationId} focusRemise={focusRemise} onOpenConversationConsumed={() => { setOpenConversationId(null); setFocusRemise(false) }} onOpenDispute={(id, as) => (as === 'SELLER' ? openDispute(id) : openBuyerDispute(id))} />
         case 'buyer-notifications':
           return <Notifications onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} currentUser={currentUser} onLogout={logout} />
         case 'buyer-history':

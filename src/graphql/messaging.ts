@@ -91,17 +91,112 @@ export const MY_CONVERSATIONS_QUERY = gql`
   }
 `
 
+// « Remise » card of the open conversation (only fetched with the thread).
+const HANDOVER_FIELDS = `
+  handover {
+    meetupId
+    role
+    status
+    place
+    scheduledAt
+    opensAt
+    closesAt
+    inWindow
+    code
+    frozen
+    disputeId
+    attemptsLeft
+    lockedUntil
+    paymentRequired
+    paymentMethods
+    defaultPaymentMethod
+    quantity
+    inlineRating
+    handedOverAt
+    myReview { rating comment }
+  }
+`
+
 export const CONVERSATION_QUERY = gql`
   query Conversation($id: String!) {
     conversation(id: $id) {
       ${CONVERSATION_FIELDS}
       safetyAlerts
+      ${HANDOVER_FIELDS}
       messages {
         ${MESSAGE_FIELDS}
       }
     }
   }
 `
+
+// « Confirmer la vente »: the buyer's code checked and the sale concluded
+// in one call.
+export const CONFIRM_SALE_MUTATION = gql`
+  mutation ConfirmSale($input: ConfirmSaleInput!) {
+    confirmSale(input: $input) {
+      id
+      dealStatus
+      closedAt
+      closedReason
+      ${HANDOVER_FIELDS}
+    }
+  }
+`
+
+// Inline rating in the « Vente conclue » card.
+export const REVIEW_DEAL_MUTATION = gql`
+  mutation ReviewDeal($conversationId: String!, $rating: Int!, $comment: String) {
+    reviewDeal(conversationId: $conversationId, rating: $rating, comment: $comment) { id rating comment }
+  }
+`
+
+export type RemoteHandover = {
+  meetupId: string | null
+  role: 'BUYER' | 'SELLER'
+  status: 'PENDING' | 'DONE'
+  place: string | null
+  scheduledAt: string | null
+  opensAt: string | null
+  closesAt: string | null
+  inWindow: boolean
+  // Buyer only.
+  code: string | null
+  frozen: boolean
+  disputeId: string | null
+  // Seller only.
+  attemptsLeft: number | null
+  lockedUntil: string | null
+  paymentRequired: boolean
+  paymentMethods: string[]
+  defaultPaymentMethod: string | null
+  quantity: number
+  inlineRating: boolean
+  handedOverAt: string | null
+  myReview: { rating: number; comment: string | null } | null
+}
+
+// Why « Confirmer la vente » was refused (see the backend HandoverService).
+export type HandoverRefusal =
+  | { reason: 'HANDOVER_CODE_INVALID'; message: string; attemptsLeft: number }
+  | { reason: 'HANDOVER_CODE_LOCKED'; message: string; lockedUntil: string }
+  | { reason: 'HANDOVER_FROZEN'; message: string; disputeId: string }
+  | { reason: 'OFFLINE'; message: string }
+  | { reason: 'OTHER'; message: string }
+
+export function handoverRefusal(e: unknown): HandoverRefusal {
+  const errors = (e as { errors?: { message: string; extensions?: Record<string, unknown> }[] } | null)?.errors
+  const first = Array.isArray(errors) ? errors[0] : undefined
+  if (first) {
+    const o = (first.extensions?.originalError ?? {}) as Record<string, unknown>
+    if (o.reason === 'HANDOVER_CODE_INVALID') return { reason: o.reason, message: first.message, attemptsLeft: Number(o.attemptsLeft) || 0 }
+    if (o.reason === 'HANDOVER_CODE_LOCKED') return { reason: o.reason, message: first.message, lockedUntil: String(o.lockedUntil) }
+    if (o.reason === 'HANDOVER_FROZEN') return { reason: o.reason, message: first.message, disputeId: String(o.disputeId) }
+    return { reason: 'OTHER', message: first.message }
+  }
+  // No GraphQL answer: the network (offline, server unreachable).
+  return { reason: 'OFFLINE', message: 'Connexion impossible. Vérifiez votre réseau puis réessayez.' }
+}
 
 export const START_CONVERSATION_MUTATION = gql`
   mutation StartConversation($recipientId: String!, $listingId: String) {
@@ -261,6 +356,8 @@ export type RemoteMessage = {
 }
 
 export type RemoteConversation = {
+  // « Remise » card (CONVERSATION_QUERY only).
+  handover?: RemoteHandover | null
   id: string
   listingId: string | null
   lastMessageAt: string | null
