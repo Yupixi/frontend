@@ -759,3 +759,17 @@ input, textarea, [contenteditable='true'], .ProseMirror {
 @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
 @keyframes chatShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @keyframes chatDrawer { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Live position on meet-up day. A position turns « stale » (greyed, with
+   « position non mise à jour ») at a precise moment without any timer: a
+   zero-length animation whose delay is the time left (set inline). */
+@keyframes live-stale { to { filter: grayscale(1); opacity: 0.55; } }
+@keyframes live-hide { to { visibility: hidden; position: absolute; } }
+@keyframes live-show { to { visibility: visible; position: static; } }
+.live-stale { animation: live-stale 0s linear forwards; }
+.live-fresh-text { animation: live-hide 0s linear forwards; }
+.live-stale-text { visibility: hidden; position: absolute; animation: live-show 0s linear forwards; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgb(22 163 74 / 0.55); } 70% { box-shadow: 0 0 0 7px rgb(22 163 74 / 0); } 100% { box-shadow: 0 0 0 0 rgb(22 163 74 / 0); } }
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot { animation: live-pulse 2s ease-out infinite; }
+}
