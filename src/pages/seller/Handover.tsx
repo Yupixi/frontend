@@ -16,7 +16,10 @@ import SellerBadge from '../../components/SellerBadge'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { Claim } from '../../lib/site'
 
-type Props = { orderId: string; onNavigate: (p: any) => void; onOpenDispute: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
+// Kept as a fallback for old links (e-mails, push, bookmarks): the
+// hand-over now happens in the conversation, which this page opens on its
+// « Remise » card as soon as the sale is found (`onOpenRemise`).
+type Props = { orderId: string; onNavigate: (p: any) => void; onOpenDispute: (id: string) => void; onOpenRemise?: (conversationId: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
 const CHECKS = [
   'Article allumé / essayé et fonctionnel, testé avec l’acheteur',
@@ -42,7 +45,7 @@ const BUYER_TAGS = ['Ponctuel au rendez-vous', 'Paiement immédiat', 'Très resp
 // "Confirmation De Remise" (mobile mockup, centred on desktop): the seller
 // types the buyer's 4-digit code, checks the item together with the buyer,
 // attests the payment and rates the buyer — the sale is then concluded.
-export default function Handover({ orderId, onNavigate, onOpenDispute, currentUser, onLogout }: Props) {
+export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRemise, currentUser, onLogout }: Props) {
   const { data, loading, refetch } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId })
   const o = data?.salesOrder
   const [code, setCode] = useState('')
@@ -62,6 +65,9 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, currentUs
   const [confirm, { loading: confirming, error: confirmError }] = useMutation(CONFIRM_HANDOVER_MUTATION)
 
   useEffect(() => { if (o && !method) setMethod(methods[0]) }, [o, method, methods])
+  // The sale exists: its conversation takes over (the sale id is the
+  // conversation id).
+  useEffect(() => { if (o && onOpenRemise) onOpenRemise(o.id) }, [o?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (code.length !== 4 || !o?.meetup) { setCodeState('idle'); return }

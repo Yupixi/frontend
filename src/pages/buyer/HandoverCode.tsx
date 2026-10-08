@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SupportAboutButton from '../../components/SupportAboutButton'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
@@ -21,6 +21,9 @@ type Props = {
   onOpenOrder: (orderId: string, page: 'buyer-receipt' | 'buyer-dispute-new') => void
   onOpenDispute: (id: string) => void
   onOpenConversation: (sellerId: string, listingId?: string) => void
+  // Fallback page for old links: the code now lives in the conversation's
+  // « Remise » card, opened as soon as the purchase is found.
+  onOpenRemise?: (conversationId: string) => void
   currentUser?: AuthUser | null
   onLogout: () => void
 }
@@ -43,7 +46,7 @@ const METHOD_BADGE: Record<string, { letter: string; cls: string; sub: string }>
 
 // "Mon code de remise" (desktop + mobile mockups): the buyer's 4-digit
 // code, to give only after checking the item, plus the meet-up details.
-export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenDispute, onOpenConversation, currentUser, onLogout }: Props) {
+export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenDispute, onOpenConversation, onOpenRemise, currentUser, onLogout }: Props) {
   const { data, loading } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId, pollInterval: 15_000 })
   const o = data?.salesOrder
   const [checks, setChecks] = useState(CHECKS.map(() => false))
@@ -53,6 +56,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
   const confirmed = o?.meetup?.status === 'CONFIRMED'
   const done = o?.stage === 'DONE'
   const amount = o?.agreedPrice ?? o?.listing.price ?? 0
+  useEffect(() => { if (o && onOpenRemise) onOpenRemise(o.id) }, [o?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const copy = () => { if (code) void navigator.clipboard?.writeText(code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) }) }
 
   return (

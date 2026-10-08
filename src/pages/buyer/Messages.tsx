@@ -30,6 +30,7 @@ import ChatThread, { Avatar, ThreadSkeleton, type PendingMessage } from '../../c
 import SafetyBanners from '../../components/chat/SafetyBanners'
 import type { AssistantUse } from '../../components/chat/AssistantPanel'
 import type { MeetupPrefill } from '../../components/chat/MeetupSheet'
+import HandoverCard, { DealDoneCard, DealReview } from '../../components/chat/HandoverCard'
 import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
@@ -50,12 +51,13 @@ type Props = {
   onLogout: () => void
   startWith?: { listingId?: string; sellerId: string } | null
   onStartWithConsumed?: () => void
-  // Thread to open directly (message notification).
+  // Thread to open directly (message notification), on its « Remise »
+  // card when `focusRemise` (hand-over links: orders, purchases, push).
   openConversationId?: string | null
+  focusRemise?: boolean
   onOpenConversationConsumed?: () => void
-  // Confirmed meet-up shortcuts: seller → "Confirmation de remise",
-  // buyer → "Mon code de remise" (the sale id is the conversation id).
-  onOpenHandover?: (conversationId: string, as: 'SELLER' | 'BUYER') => void
+  // « Voir le litige » from a frozen « Remise » card.
+  onOpenDispute?: (disputeId: string, as: 'SELLER' | 'BUYER') => void
 }
 
 let tmpSeq = 0
@@ -64,7 +66,7 @@ let tmpSeq = 0
 // on wide screens). On a phone an open thread is full-screen with its own
 // compact header, a sticky listing card, the composer above the keyboard,
 // quick actions and « Aide Dilchap » (the member's private AI assistant).
-export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, onOpenConversationConsumed, onOpenHandover }: Props) {
+export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, focusRemise, onOpenConversationConsumed, onOpenDispute }: Props) {
   const lists = useMemberLists()
   const isPhone = !useMediaQuery('(min-width: 768px)')
   // ≥ 1280 px: Aide Dilchap is a third column (in place of the recap).
@@ -114,9 +116,14 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startWith])
 
+  // « Remise » card opened by hand (header, meet-up card, links) for this
+  // conversation, and a scroll to it once the thread is there.
+  const [remiseFor, setRemiseFor] = useState<string | null>(null)
+  const [scrollRemise, setScrollRemise] = useState(false)
   useEffect(() => {
     if (!openConversationId) return
     setActiveId(openConversationId); setShowList(false)
+    if (focusRemise) { setRemiseFor(openConversationId); setScrollRemise(true) }
     onOpenConversationConsumed?.()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openConversationId])
@@ -243,14 +250,33 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     else if (u.kind === 'price') { setOfferAmount(String(u.amount)); setOfferOpen(true); setAssistantOpen(false) }
     else { setAssistantOpen(false); openMeetup({ place: u.meetup.place, placeId: u.meetup.placeId, address: u.meetup.address, lat: u.meetup.lat, lng: u.meetup.lng, scheduledAt: u.meetup.scheduledAt }) }
   }
+  // « Laisser un avis » is answered inside the « Vente conclue » card.
   const cardAction = (card: SystemCard) => {
     if (card.cta === 'MEETUP') openMeetup()
     else if (card.cta === 'REPORT') setConfirming('REPORT')
-    else if (card.cta === 'REVIEW' && conv) {
-      if (conv.canManageDeal) onNavigate('seller-reviews')
-      else onOpenHandover?.(conv.id, 'BUYER')
-    }
   }
+
+  // « Remise »: shown by itself on meet-up day (window set in the
+  // Backoffice), or opened from the header / the meet-up card.
+  const handover = conv?.handover ?? null
+  const remisePending = !!handover && handover.status === 'PENDING' && !!handover.meetupId
+  const remiseShown = remisePending && (handover!.inWindow || remiseFor === activeId)
+  const openRemise = () => { if (activeId) { setRemiseFor(activeId); setScrollRemise(true) } }
+  useEffect(() => {
+    if (!scrollRemise || !conv) return
+    if (!remiseShown) { if (!convLoading) setScrollRemise(false); return }
+    const id = window.requestAnimationFrame(() => {
+      const el = document.getElementById('remise-card')
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      if (handover?.role === 'SELLER' && !isPhone) el?.querySelector<HTMLInputElement>('input[autocomplete="one-time-code"]')?.focus({ preventScroll: true })
+      setScrollRemise(false)
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [scrollRemise, remiseShown, conv, convLoading, handover?.role, isPhone])
+  const remiseDispute = (id: string) => onOpenDispute?.(id, conv?.canManageDeal ? 'SELLER' : 'BUYER')
+  // The sale was concluded: the inline rating sits in the « Vente conclue »
+  // Dilchap card, or in a card of its own when the thread has none.
+  const hasDealCard = messages.some(m => m.system?.type === 'DEAL_CONCLUDED')
 
   // Deal summary: the accepted offer price wins over the asking price.
   const latestOffer = [...messages].reverse().find(m => m.offer)?.offer
@@ -279,6 +305,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const menuItems = !conv ? [] : [
     discussing && { icon: 'location_on', label: 'Fixer un rendez-vous', onClick: () => openMeetup() },
     conv.listing && { icon: 'open_in_new', label: 'Voir la fiche', onClick: () => onSelectListing?.(conv.listing!.id) },
+    remisePending && { icon: 'task_alt', label: conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise', onClick: openRemise },
     conv.canManageDeal && conv.listing && discussing && { icon: 'handshake', label: 'Marquer la vente conclue', onClick: () => setConfirming('CONCLUDED') },
     conv.canManageDeal && conv.listing && discussing && { icon: 'cancel', label: 'Discussion non conclue', onClick: () => setConfirming('NOT_CONCLUDED') },
     !reported && { icon: 'flag', label: 'Signaler une arnaque', onClick: () => setConfirming('REPORT'), danger: true },
@@ -305,8 +332,15 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
         </div>
         {discussing && (
           <div className="flex shrink-0 gap-1.5">
-            {canNegotiate && <button type="button" onClick={() => { setOfferOpen(o => !o) }} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white max-[379px]:px-2.5"><Icon name="sell" size={15} /> <span className="max-[379px]:hidden">Offre</span></button>}
-            <button type="button" onClick={() => openMeetup()} aria-label="Fixer un rendez-vous" className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-surface-container px-3 py-2 text-label-sm font-semibold text-on-surface max-[379px]:px-2.5"><Icon name="event" size={15} /> <span className="max-sm:hidden">Rendez-vous</span></button>
+            {canNegotiate && !remisePending && <button type="button" onClick={() => { setOfferOpen(o => !o) }} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white max-[379px]:px-2.5"><Icon name="sell" size={15} /> <span className="max-[379px]:hidden">Offre</span></button>}
+            {remisePending ? (
+              // Confirmed meet-up: the hand-over, from anywhere in the thread.
+              <button type="button" onClick={openRemise} aria-label={conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise'} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white">
+                <Icon name="task_alt" size={15} /> <span className="max-[379px]:hidden">{conv.canManageDeal ? 'Confirmer la remise' : 'Code de remise'}</span><span className="min-[380px]:hidden">Remise</span>
+              </button>
+            ) : (
+              <button type="button" onClick={() => openMeetup()} aria-label="Fixer un rendez-vous" className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-surface-container px-3 py-2 text-label-sm font-semibold text-on-surface max-[379px]:px-2.5"><Icon name="event" size={15} /> <span className="max-sm:hidden">Rendez-vous</span></button>
+            )}
           </div>
         )}
       </div>
@@ -395,7 +429,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       <Icon name="auto_awesome" size={17} /> <span className="max-[379px]:hidden">Aide Dilchap</span>
                     </button>
                   )}
-                  {conv.canManageDeal && conv.listing && discussing && (
+                  {conv.canManageDeal && conv.listing && discussing && !remisePending && (
                     <button disabled={closingDeal} onClick={() => setConfirming('CONCLUDED')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm text-white hover:bg-primary-dark max-lg:hidden">
                       <CheckCircle2 size={16} /> Marquer conclu
                     </button>
@@ -456,9 +490,16 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   )}
                   onRespondOffer={respondOffer}
                   onAnswerMeetup={answerMeetup}
-                  meetupAction={m => !onOpenHandover || !conv.listing || !m.meetup ? undefined
-                    : conv.canManageDeal ? (m.meetup.handedOverAt ? undefined : { label: 'Valider la remise', icon: 'task_alt', onClick: () => onOpenHandover(conv.id, 'SELLER') })
-                      : m.meetup.handoverCode || m.meetup.handedOverAt ? { label: m.meetup.handedOverAt ? 'Voir mon reçu' : 'Mon code de remise', icon: m.meetup.handedOverAt ? 'receipt_long' : 'qr_code_2', onClick: () => onOpenHandover(conv.id, 'BUYER') } : undefined}
+                  meetupAction={m => !remisePending || !m.meetup || m.meetup.id !== handover!.meetupId ? undefined
+                    : { label: conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise', icon: 'task_alt', onClick: openRemise }}
+                  footer={handover && (remiseShown
+                    ? <HandoverCard h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onConfirmed={() => void refresh()} onOpenDispute={remiseDispute} onHide={handover.inWindow ? undefined : () => setRemiseFor(null)} />
+                    : handover.status === 'DONE' && !hasDealCard && (handover.inlineRating || handover.myReview)
+                      ? <DealDoneCard h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} amount={agreedPrice} currency={conv.listing?.currency ?? 'XOF'} onSaved={() => void refetchConv()} />
+                      : null)}
+                  cardExtra={card => card.type === 'DEAL_CONCLUDED' && handover?.status === 'DONE'
+                    ? <DealReview h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onSaved={() => void refetchConv()} />
+                    : null}
                   onReply={replyToMessage}
                   onOpenPhotos={(photos, index) => setViewer({ photos, index })}
                   onJumpTo={jumpTo}

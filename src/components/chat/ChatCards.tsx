@@ -69,10 +69,12 @@ export function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action }: 
 }
 
 // A Dilchap card (SYSTEM message), visible to both members.
-export function SystemCard({ card, currency, onAction }: {
+export function SystemCard({ card, currency, onAction, children }: {
   card: Card
   currency: string
   onAction?: (cta: NonNullable<Card['cta']>) => void
+  // Private extra for the viewer (the inline rating of « Vente conclue »).
+  children?: React.ReactNode
 }) {
   const point = hasPoint(card) ? { lat: card.lat!, lng: card.lng! } : null
   const safety = card.type === 'SAFETY_NOTICE'
@@ -106,6 +108,7 @@ export function SystemCard({ card, currency, onAction }: {
           card.lines.map((l, i) => <p key={i} className={`m-0 text-body-sm ${safety ? 'text-amber-950 dark:text-amber-100' : 'text-on-surface-variant'}`}>{l}</p>)
         )}
         {card.next && <p className="m-0 flex items-center gap-1.5 text-label-md text-primary"><Icon name="arrow_forward" size={16} /> {card.next}</p>}
+        {children}
         {card.cta && onAction && (
           <button type="button" onClick={() => onAction(card.cta!)} className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none px-3 py-2 text-label-md ${card.cta === 'REPORT' ? 'bg-transparent text-on-surface underline' : 'bg-primary text-white'}`}>
             <Icon name={card.cta === 'MEETUP' ? 'event' : card.cta === 'REVIEW' ? 'rate_review' : 'flag'} size={17} />

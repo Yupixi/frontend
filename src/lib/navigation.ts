@@ -15,6 +15,10 @@ export const requestOpenConversation = (conversationId: string) =>
 export const conversationFromUrl = (url: string = window.location.href) => {
   try { return new URL(url, window.location.origin).searchParams.get('conversation') } catch { return null }
 }
+// `&remise=1`: the conversation opens on its « Remise » card.
+export const remiseFromUrl = (url: string = window.location.href) => {
+  try { return new URL(url, window.location.origin).searchParams.get('remise') === '1' } catch { return false }
+}
 
 // Opens a given campaign page (home promotions, category tiles, the
 // announcement bar): '' = the newest live one.
