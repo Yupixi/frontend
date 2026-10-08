@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Icon from '../Icon'
 import Price from '../Price'
 import { hasPoint } from '../../lib/maps'
@@ -23,19 +24,22 @@ function Checklist({ items }: { items: string[] }) {
 
 // A meet-up proposal in the thread: place, address, small map, date, and
 // the actions (confirm / change, then hand-over shortcuts and Maps links).
-export function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action }: {
+// `live`: on meet-up day, the live map (in place of the static one) and
+// the live position panel.
+export function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action, live: liveSlot }: {
   meetup: RemoteMeetup
   mine: boolean
   busy: boolean
   onConfirm: () => void
   onChange: () => void
   action?: { label: string; icon: string; onClick: () => void }
+  live?: { map?: ReactNode; panel?: ReactNode }
 }) {
   const point = hasPoint(meetup) ? { lat: meetup.lat!, lng: meetup.lng! } : null
   const live = meetup.status !== 'DECLINED'
   return (
     <div className="w-80 max-w-full overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
-      {point && live && <StaticMap point={point} label={meetup.place} height={112} />}
+      {point && live && (liveSlot?.map ?? <StaticMap point={point} label={meetup.place} height={112} />)}
       <div className="flex flex-col gap-2.5 p-3">
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container text-primary"><Icon name={meetup.pointSource === 'SUGGESTED' ? 'verified_user' : 'location_on'} size={20} /></span>
@@ -59,6 +63,7 @@ export function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action }: 
             <Icon name={meetup.status === 'CONFIRMED' ? 'check_circle' : 'cancel'} size={16} /> {meetup.status === 'CONFIRMED' ? (meetup.handedOverAt ? 'Remise effectuée' : 'Rendez-vous confirmé') : 'Proposition remplacée ou déclinée'}
           </p>
         )}
+        {liveSlot?.panel}
         {live && <MapsActions point={point} label={meetup.place} address={meetup.address} compact />}
         {meetup.status === 'CONFIRMED' && action && (
           <button onClick={action.onClick} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-on-surface py-2 text-label-md text-surface"><Icon name={action.icon} size={17} /> {action.label}</button>
