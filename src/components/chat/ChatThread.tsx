@@ -45,7 +45,7 @@ export function ThreadSkeleton() {
 // messages, the typing indicator; auto-scroll that respects a member
 // reading older messages (« nouveaux messages » pill), and a polite live
 // region for incoming messages.
-export default function ChatThread({ conv, messages, me, pending, otherIsTyping, top, empty, footer, cardExtra, flashId, busyId, onRespondOffer, onAnswerMeetup, meetupAction, onReply, onOpenPhotos, onJumpTo, onCardAction, onRetry, onDiscard }: {
+export default function ChatThread({ conv, messages, me, pending, otherIsTyping, top, empty, footer, cardExtra, flashId, busyId, onRespondOffer, onAnswerMeetup, meetupAction, meetupLive, onReply, onOpenPhotos, onJumpTo, onCardAction, onRetry, onDiscard }: {
   conv: RemoteConversation
   messages: RemoteMessage[]
   me?: string
@@ -62,6 +62,8 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
   onRespondOffer: (offerId: string, accept: boolean) => void
   onAnswerMeetup: (meetupId: string, confirm: boolean) => void
   meetupAction: (m: RemoteMessage) => { label: string; icon: string; onClick: () => void } | undefined
+  // Live position (map and panel) on the active meet-up's card.
+  meetupLive?: (m: RemoteMessage) => { map?: ReactNode; panel?: ReactNode } | undefined
   onReply: (m: RemoteMessage) => void
   onOpenPhotos: (photos: string[], index: number) => void
   onJumpTo: (id: string) => void
@@ -151,7 +153,7 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
                       {m.offer ? (
                         <OfferBubble offer={m.offer} currency={currency} isMine={mine} canRespond={!mine && conv.canManageDeal} responding={busyId === m.offer.id} onAccept={() => onRespondOffer(m.offer!.id, true)} onReject={() => onRespondOffer(m.offer!.id, false)} listingId={conv.listingId} acceptedBy={mine ? firstName : undefined} />
                       ) : m.meetup ? (
-                        <MeetupCard meetup={m.meetup} mine={mine} busy={busyId === m.meetup.id} onConfirm={() => onAnswerMeetup(m.meetup!.id, true)} onChange={() => onAnswerMeetup(m.meetup!.id, false)} action={meetupAction(m)} />
+                        <MeetupCard meetup={m.meetup} mine={mine} busy={busyId === m.meetup.id} onConfirm={() => onAnswerMeetup(m.meetup!.id, true)} onChange={() => onAnswerMeetup(m.meetup!.id, false)} action={meetupAction(m)} live={meetupLive?.(m)} />
                       ) : (
                         <ChatBubble message={m} mine={mine} grouped={{ top: joinsPrev, bottom: joinsNext }} quoteAuthor={id => (id === me ? 'Vous' : firstName)} onReply={() => onReply(m)} onOpenPhotos={onOpenPhotos} onJumpTo={onJumpTo} />
                       )}

@@ -28,6 +28,7 @@ import InboxList from '../../components/InboxList'
 import ImageLightbox from '../../components/ImageLightbox'
 import ChatThread, { Avatar, ThreadSkeleton, type PendingMessage } from '../../components/chat/ChatThread'
 import SafetyBanners from '../../components/chat/SafetyBanners'
+import { LiveCardMap, LiveConsentSheet, LiveHeaderPill, LiveLocationController, LiveMapSheet, LivePanel, activeLiveMeetup } from '../../components/chat/LiveLocation'
 import type { AssistantUse } from '../../components/chat/AssistantPanel'
 import type { MeetupPrefill } from '../../components/chat/MeetupSheet'
 import HandoverCard, { DealDoneCard, DealReview } from '../../components/chat/HandoverCard'
@@ -85,6 +86,8 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const [busyId, setBusyId] = useState<string | null>(null)
   const [reported, setReported] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Live position on meet-up day: consent sheet or the larger map.
+  const [liveSheet, setLiveSheet] = useState<'consent' | 'map' | null>(null)
   const [confirming, setConfirming] = useState<'CONCLUDED' | 'NOT_CONCLUDED' | 'REPORT' | null>(null)
   // Units sold, when the listing has stock.
   const [soldQty, setSoldQty] = useState(1)
@@ -159,7 +162,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   useEffect(() => {
     if (!activeId) return
     void markRead({ variables: { conversationId: activeId } }).then(() => refetchList())
-    setOfferOpen(false); setOfferAmount(''); setOfferError(null); setReported(false); setMenuOpen(false); setAssistantOpen(false)
+    setOfferOpen(false); setOfferAmount(''); setOfferError(null); setReported(false); setMenuOpen(false); setAssistantOpen(false); setLiveSheet(null)
     setReplyTo(null)
     // Unsent text is kept per conversation.
     try { setMsg(localStorage.getItem(`dilchap_chat_draft_${activeId}`) ?? '') } catch { setMsg('') }
@@ -283,6 +286,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const acceptedOffer = [...messages].reverse().find(m => m.offer?.status === 'ACCEPTED')?.offer
   const agreedPrice = acceptedOffer?.amount ?? conv?.listing?.price ?? null
   const lastMeetup = [...messages].reverse().find(m => m.meetup)?.meetup
+  const liveMeetup = conv && !conv.closedAt ? activeLiveMeetup(messages.flatMap(m => (m.meetup ? [m.meetup] : []))) : null
   const suggestions = conv?.canManageDeal ? lists.quickReplies.seller : lists.quickReplies.buyer
   const canNegotiate = !!conv && !conv.closedAt && !conv.canManageDeal && !!conv.listing?.negotiable && conv.dealStatus === 'DISCUSSING'
   const closed = !!conv?.closedAt
@@ -424,6 +428,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       )}
                     </div>
                   </div>
+                  {liveMeetup && <LiveHeaderPill onOpen={() => setLiveSheet('map')} />}
                   {assistantOn && (
                     <button type="button" onClick={() => (assistantOpen ? setAssistantOpen(false) : openAssistant())} aria-expanded={assistantOpen} className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-none bg-primary-fixed/70 px-3 py-2 text-label-sm font-semibold text-primary hover:bg-primary-fixed max-[379px]:px-2.5">
                       <Icon name="auto_awesome" size={17} /> <span className="max-[379px]:hidden">Aide Dilchap</span>
@@ -500,6 +505,10 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   cardExtra={card => card.type === 'DEAL_CONCLUDED' && handover?.status === 'DONE'
                     ? <DealReview h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onSaved={() => void refetchConv()} />
                     : null}
+                  meetupLive={m => (liveMeetup && m.meetup?.id === liveMeetup.id ? {
+                    map: <LiveCardMap meetup={liveMeetup} onOpen={() => setLiveSheet('map')} />,
+                    panel: <LivePanel point={{ lat: liveMeetup.lat!, lng: liveMeetup.lng! }} otherName={firstName} onShare={() => setLiveSheet('consent')} onOpenMap={() => setLiveSheet('map')} />,
+                  } : undefined)}
                   onReply={replyToMessage}
                   onOpenPhotos={(photos, index) => setViewer({ photos, index })}
                   onJumpTo={jumpTo}
@@ -648,6 +657,13 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
           )}
         </div>
       </div>
+      {conv && <LiveLocationController conversationId={conv.id} meetup={liveMeetup} otherName={firstName} />}
+      {liveMeetup && (
+        <>
+          <LiveConsentSheet open={liveSheet === 'consent'} onClose={() => setLiveSheet(null)} otherName={firstName || 'l’autre membre'} />
+          <LiveMapSheet open={liveSheet === 'map'} onClose={() => setLiveSheet(null)} meetup={liveMeetup} otherName={firstName} onShare={() => setLiveSheet('consent')} />
+        </>
+      )}
       {viewer && <ImageLightbox images={viewer.photos} start={viewer.index} alt={`Photos de ${other?.fullName ?? 'la discussion'}`} onClose={() => setViewer(null)} />}
       {meetup.loaded && activeId && (
         <Suspense fallback={null}>
