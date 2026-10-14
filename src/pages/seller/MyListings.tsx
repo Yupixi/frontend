@@ -306,6 +306,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                     <p className="m-0 truncate text-body-sm text-on-surface-variant">
                       {l.viewsCount.toLocaleString('fr-FR')} vue{l.viewsCount > 1 ? 's' : ''} · {l.favoritesCount} favori{l.favoritesCount > 1 ? 's' : ''}{contacts ? ` · ${contacts} demande${contacts > 1 ? 's' : ''}` : ''} · {formatRelativeDate(date).toLowerCase()}
                     </p>
+                    {l.staffEditedAt && <p className="m-0 truncate text-body-sm text-on-surface-variant" title="Corrigée par l’équipe Dilchap : le détail est dans vos notifications.">Modifiée par l’équipe Dilchap le {new Date(l.staffEditedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
                   </div>
                   <div className="relative shrink-0">
                     <button onClick={() => setMenuFor(menuFor === l.id ? null : l.id)} title="Plus d'actions" aria-label="Plus d'actions" aria-expanded={menuFor === l.id} className="-mr-2 -mt-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface hover:bg-surface-container-high"><Icon name="more_vert" size={20} /></button>

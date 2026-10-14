@@ -387,6 +387,7 @@ export const MY_LISTINGS_QUERY = gql`
         urgentUntil
         city
         locationLabel
+        staffEditedAt
       }
     }
   }
@@ -433,6 +434,8 @@ export type MyListingRow = {
   category?: { name: string; slug: string }
   city?: string
   locationLabel?: string | null
+  // Content corrected by the Dilchap team (seller only).
+  staffEditedAt?: string | null
 }
 
 export type MyListingDetail = {
