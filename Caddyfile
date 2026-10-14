@@ -62,8 +62,10 @@
 		# each environment, older external URLs), Google Fonts, map tiles,
 		# ipwho.is, Lottie and the analytics tags would each need listing
 		# (Google Analytics; Microsoft Clarity: https://*.clarity.ms and
-		# https://c.bing.com for script, connect and img, if these
-		# directives are ever added).
+		# https://c.bing.com for script, connect and img; Meta Pixel:
+		# https://connect.facebook.net for script and
+		# https://www.facebook.com for connect and img, if these directives
+		# are ever added).
 		Content-Security-Policy "frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'"
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
@@ -114,6 +116,16 @@
 	# (Backend src/modules/seo), which knows the live listings and shops.
 	@seo_files path /robots.txt /sitemap.xml /sitemaps/*
 	handle @seo_files {
+		rewrite * /seo{path}
+		import seo_backend
+	}
+
+	# Meta product catalog feed (Commerce Manager fetches it every day):
+	# /feeds/meta-catalog.csv[?country=CI][&token=…], built by the backend
+	# from the live listings (Backend src/modules/ads). Off, wrong token or
+	# unknown country: 404. Never cached on the way (the address carries
+	# the secret).
+	handle /feeds/* {
 		rewrite * /seo{path}
 		import seo_backend
 	}

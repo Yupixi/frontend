@@ -6,6 +6,7 @@ import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './co
 import ConsentBanner, { useConsentOpen } from './components/ConsentBanner'
 import { pageTitle, track, trackPageView } from './lib/analytics'
 import { setClarityPage } from './lib/clarity'
+import { metaPageView, metaTrack, setMetaPixelPage } from './lib/metaPixel'
 import SupportTab from './components/SupportTab'
 import ErrorBoundary from './components/ErrorBoundary'
 import PaymentReturn from './components/PaymentReturn'
@@ -535,12 +536,15 @@ export default function App() {
   // with the visitor's consent, address cleaned (lib/analytics).
   useEffect(() => {
     trackPageView(window.location.href, pageTitle(page, categoryFilter))
+    // Meta Pixel (same consent, same exclusions as Clarity): one PageView.
+    metaPageView(page)
   }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, helpSlug])
 
   // Microsoft Clarity (same consent): stopped on excluded pages (KYC) and
   // on addresses carrying anything but harmless parameters (lib/clarity).
   useEffect(() => {
     setClarityPage(page, window.location.href)
+    setMetaPixelPage(page)
   }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug])
 
   // Tours tied to a page know where the member is.
@@ -768,6 +772,7 @@ export default function App() {
   // in the « Mesure d'audience » with the listing id only.
   const contactSellerFrom = (sellerId: string, listingId?: string) => {
     track('contact_seller', { item_id: listingId, method: 'message' })
+    metaTrack('Lead', { content_ids: listingId ? [listingId] : undefined, content_category: 'message' })
     contactSellerAbout(sellerId, listingId)
   }
 
@@ -800,6 +805,8 @@ export default function App() {
     // cache from the mutation's answer (the new state) — it used to wait for
     // the mutation *and* a refetch of every favorite id.
     const wasFav = favorites.includes(id)
+    // Meta Pixel: a listing saved (not one taken out of the favorites).
+    if (!wasFav) metaTrack('AddToWishlist', { content_ids: [id] })
     return toggleFavoriteMutation({
       variables: { listingId: id },
       optimisticResponse: { toggleFavorite: !wasFav },

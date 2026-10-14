@@ -39,6 +39,7 @@ import ImageLightbox from '../components/ImageLightbox'
 import InlineConversation from '../components/InlineConversation'
 import QuickNegotiation from '../components/QuickNegotiation'
 import { track } from '../lib/analytics'
+import { metaTrack } from '../lib/metaPixel'
 import { ListingCard, discountedPrice } from '../components/ListingCard'
 import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
@@ -139,6 +140,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   useEffect(() => {
     if (!listing) return
     track('view_item', { country: listing.countryCode ?? undefined, items: [{ item_id: listing.id, item_category: listing.category.slug }] })
+    // Meta Pixel: the id of the catalog feed and the price asked (promotion included).
+    const price = discountedPrice(listing) ?? listing.price
+    metaTrack('ViewContent', { content_ids: [listing.id], content_category: listing.category.slug, value: price ?? undefined, currency: listing.currency })
     // Anonymous interests (this device only, see lib/interests).
     noteInterest(listing.category.slug)
   }, [listing?.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -288,6 +292,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     if (loggedIn && onContactSeller) return onContactSeller(listing.seller.id, listing.id)
     // Visitors write from the page (App counts the members' contacts).
     track('contact_seller', { item_id: listing.id, item_category: listing.category.slug, method: 'guest_chat' })
+    metaTrack('Lead', { content_ids: [listing.id], content_category: listing.category.slug })
     setChatOpen(true)
   }
   const negotiation = (

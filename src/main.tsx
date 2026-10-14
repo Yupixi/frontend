@@ -8,6 +8,7 @@ import LaunchGate from './components/LaunchGate'
 import ErrorBoundary from './components/ErrorBoundary'
 import EmailLinkPage, { isEmailLinkPath } from './components/EmailLinkPage'
 import './index.css'
+import { captureCampaignParams } from './lib/campaignParams'
 
 // /q/<code> (printed QR codes of the shops): a page of its own, outside the
 // app and the launch gate (it shows the launch page itself).
@@ -23,6 +24,10 @@ const VerifyLinkPage = lazy(() => import('./components/VerifyLinkPage'))
 ;(window as Window & { __dilchapBooted?: boolean }).__dilchapBooted = true
 
 registerServiceWorker()
+
+// Ad campaign parameters (?utm_…, ?fbclid=…, ?gclid=…): kept aside for the
+// measurement tools (after consent) and taken off the address bar.
+captureCampaignParams()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -22,6 +22,7 @@ import { slugify } from '../lib/routes'
 import { richHtml } from '../lib/richText'
 import CategoryLandingExtras from '../components/CategoryLandingExtras'
 import { track } from '../lib/analytics'
+import { metaTrack } from '../lib/metaPixel'
 
 const PAGE_SIZE = 18
 
@@ -266,6 +267,11 @@ export default function SearchPage({
     // Anonymous interests (this device only): the category searched in.
     if (categoryFilter) noteInterest(category?.slug ?? categoryFilter, 0.5)
     track('search', { search_category: categoryFilter || 'toutes', with_words: !!search.trim(), results_count: data.listings.totalCount, country: countryCode ?? undefined })
+    // Meta Pixel: the first results' ids (the catalogue's ids); a category
+    // page without words is a ViewCategory.
+    const firstIds = data.listings.items.slice(0, 10).map((l) => l.id)
+    if (search.trim()) metaTrack('Search', { search_string: search, content_ids: firstIds, content_category: categoryFilter || undefined })
+    else metaTrack('ViewCategory', { content_ids: firstIds, content_category: categoryFilter })
   }, [data, loading, page, search, categoryFilter, countryCode])
 
   const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter }, skip: rubricPending })
