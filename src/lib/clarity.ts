@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { holdMetaPixel } from './metaPixel'
 
 // Microsoft Clarity (session recordings, heatmaps), set in the Backoffice
 // next to Google Analytics (« Mesure d'audience », Backend
@@ -30,8 +31,14 @@ export const CLARITY_ID = /^[a-z0-9]{8,12}$/
 // Pages Clarity never records.
 const EXCLUDED_PAGES = new Set(['seller-kyc'])
 // Address parameters that are never personal (anything else, e.g.
-// ?acces=, ?token=, ?code=: Clarity stays off on that address).
-const ALLOWED_PARAMS = new Set(['categorie', 'category', 'legal', 'campaign', 'q', 'shortcut'])
+// ?acces=, ?token=, ?code=: Clarity stays off on that address). The ad
+// campaign ones (visitors coming from an ad) are harmless too; they are
+// taken off the address when the app starts (lib/campaignParams), so
+// recordings don't carry them.
+const ALLOWED_PARAMS = new Set([
+  'categorie', 'category', 'legal', 'campaign', 'q', 'shortcut',
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid',
+])
 // A search that looks like an e-mail or a phone number.
 const PERSONAL = /@|\+?\d[\d\s.-]{7,}\d/
 const MASKED = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
@@ -217,16 +224,21 @@ export function setClarityPage(page: string, href: string) {
   sync()
 }
 
-/** A surface that must not be recorded is on screen: Clarity stops until it goes. */
+/**
+ * A surface that must not be recorded is on screen: Clarity stops until it
+ * goes. The Meta Pixel sends nothing meanwhile either (lib/metaPixel).
+ */
 export function holdClarity(): () => void {
   holds += 1
   sync()
+  const releasePixel = holdMetaPixel()
   let released = false
   return () => {
     if (released) return
     released = true
     holds -= 1
     sync()
+    releasePixel()
   }
 }
 

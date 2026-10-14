@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { CLARITY_ID, setClarity } from './clarity'
+import { META_PIXEL_ID, metaPixelOn, metaTrack, setMetaPixel } from './metaPixel'
+import { takeGaCampaign } from './campaignParams'
 
 // « Mesure d'audience » (Google Analytics 4), set in the Backoffice per
 // country (Backend content/analytics-settings.ts, query analyticsConfig).
@@ -22,17 +24,22 @@ import { CLARITY_ID, setClarity } from './clarity'
 // - Microsoft Clarity (lib/clarity) shares the banner: one « Accepter »
 //   covers what is on for the visitor's country. The choice remembers what
 //   it covered: a tool turned on later asks again (a refusal stays valid).
+// - The Meta Pixel (lib/metaPixel) too, the same way.
+// - Visitors coming from an ad: the campaign of the landing address
+//   (utm_*, gclid; lib/campaignParams) is added to the first page_view.
 
 export type AnalyticsBanner = { title: string; text: string; accept: string; refuse: string; policyLabel: string; manage: string }
 export type ClarityConfig = { enabled: boolean; projectId: string | null }
-export type AnalyticsConfig = { enabled: boolean; measurementId: string | null; consentMonths: number; policyPath: string; banner: AnalyticsBanner; clarity?: ClarityConfig }
+export type MetaPixelConfig = { enabled: boolean; pixelId: string | null }
+export type AnalyticsConfig = { enabled: boolean; measurementId: string | null; consentMonths: number; policyPath: string; banner: AnalyticsBanner; clarity?: ClarityConfig; metaPixel?: MetaPixelConfig }
 type Choice = 'granted' | 'denied'
-type Tool = 'ga' | 'clarity'
+type Tool = 'ga' | 'clarity' | 'meta'
 
 const STORAGE_KEY = 'dilchap_analytics_consent'
 const MONTH_MS = 30.44 * 24 * 3600 * 1000
-// Parameters kept in page_location (never personal).
-const ALLOWED_PARAMS = ['categorie', 'category', 'legal', 'campaign']
+// Parameters kept in page_location (never personal), ad campaigns included.
+const ALLOWED_PARAMS = ['categorie', 'category', 'legal', 'campaign', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid']
+const PARAM_VALUE = /^[\w.\-~ %+:|/]{1,100}$/
 // GA cookies live 13 months at most (CNIL), not GA's default 2 years.
 const COOKIE_EXPIRES_S = 13 * 31 * 24 * 3600
 
@@ -78,7 +85,13 @@ const isOn = (c: AnalyticsConfig | null): c is AnalyticsConfig & { measurementId
   !!c && c.enabled && !!c.measurementId && /^G-[A-Z0-9]{4,15}$/.test(c.measurementId)
 const clarityId = (c: AnalyticsConfig | null): string | null =>
   c?.clarity?.enabled && c.clarity.projectId && CLARITY_ID.test(c.clarity.projectId) ? c.clarity.projectId : null
-const toolsOf = (c: AnalyticsConfig | null): Tool[] => [...(isOn(c) ? ['ga' as const] : []), ...(clarityId(c) ? ['clarity' as const] : [])]
+const pixelIdOf = (c: AnalyticsConfig | null): string | null =>
+  c?.metaPixel?.enabled && c.metaPixel.pixelId && META_PIXEL_ID.test(c.metaPixel.pixelId) ? c.metaPixel.pixelId : null
+const toolsOf = (c: AnalyticsConfig | null): Tool[] => [
+  ...(isOn(c) ? ['ga' as const] : []),
+  ...(clarityId(c) ? ['clarity' as const] : []),
+  ...(pixelIdOf(c) ? ['meta' as const] : []),
+]
 /** Something on for this country needs the visitor's consent (banner, « Gérer les cookies »). */
 export const needsConsent = (c: AnalyticsConfig | null): c is AnalyticsConfig => toolsOf(c).length > 0
 const active = () => isOn(state.config) && state.choice === 'granted'
@@ -102,7 +115,7 @@ export function cleanLocation(href: string): string {
     const out = new URL(u.origin + cleanPath(u.pathname))
     for (const k of ALLOWED_PARAMS) {
       const v = u.searchParams.get(k)
-      if (v && /^[\w-]{1,60}$/.test(v)) out.searchParams.set(k, v)
+      if (v && (k.startsWith('utm_') || k === 'gclid' ? PARAM_VALUE.test(v) && !PERSONAL.test(v) : /^[\w-]{1,60}$/.test(v))) out.searchParams.set(k, v)
     }
     return out.toString()
   } catch {
@@ -246,6 +259,7 @@ export function setAnalyticsConfig(config: AnalyticsConfig | null) {
   if (isOn(config) && choice === 'granted') start(false)
   else if (configuredId) stop()
   setClarity(choice === 'granted' ? clarityId(config) : null)
+  setMetaPixel(choice === 'granted' ? pixelIdOf(config) : null)
 }
 
 export function acceptAnalytics() {
@@ -253,6 +267,7 @@ export function acceptAnalytics() {
   emit({ choice: 'granted', reopened: false })
   start(true)
   setClarity(clarityId(state.config), true)
+  setMetaPixel(pixelIdOf(state.config), true)
 }
 
 export function refuseAnalytics() {
@@ -260,6 +275,7 @@ export function refuseAnalytics() {
   emit({ choice: 'denied', reopened: false })
   stop()
   setClarity(null)
+  setMetaPixel(null)
 }
 
 /** « Gérer les cookies »: shows the banner again. */
@@ -274,6 +290,13 @@ export function trackPageView(href: string, title: string) {
 }
 
 function sendPageView(page: { location: string; title: string }) {
+  // The first one of the visit carries the ad campaign it came from.
+  const campaign = takeGaCampaign()
+  if (campaign.length) {
+    const u = new URL(page.location)
+    for (const [k, v] of campaign) if (!u.searchParams.has(k)) u.searchParams.set(k, v)
+    page = { ...page, location: u.toString() }
+  }
   // Later events (view_item, search…) carry this address too.
   gtag('set', { page_location: page.location, page_title: page.title, page_referrer: cleanReferrer() })
   gtag('event', 'page_view', { page_location: page.location, page_title: page.title })
@@ -331,7 +354,7 @@ export const pageTitle = (page: string, category?: string) =>
 const PURCHASES_KEY = 'dilchap_analytics_purchases'
 /** A Mobile Money credit purchase that succeeded: amount and currency only. */
 export function trackCreditPurchase(p: { id: string; kind: string; status: string; amount: number; credits?: number | null; currency: string }) {
-  if (p.status !== 'SUCCESS' || (p.kind !== 'CREDIT_PACK' && p.kind !== 'WALLET_TOPUP') || !active()) return
+  if (p.status !== 'SUCCESS' || (p.kind !== 'CREDIT_PACK' && p.kind !== 'WALLET_TOPUP') || (!active() && !metaPixelOn())) return
   let seen: string[] = []
   try { seen = JSON.parse(sessionStorage.getItem(PURCHASES_KEY) ?? '[]') as string[] } catch { /* ignore */ }
   if (seen.includes(p.id)) return
@@ -340,4 +363,6 @@ export function trackCreditPurchase(p: { id: string; kind: string; status: strin
     currency: p.currency, value: p.amount,
     items: [{ item_id: p.kind === 'CREDIT_PACK' ? 'pack_credits' : 'credits', item_name: 'Crédits Dilchap', quantity: p.credits ?? undefined, price: p.amount }],
   })
+  // Meta: credits are not catalogue items, so no content_ids.
+  metaTrack('Purchase', { value: p.amount, currency: p.currency, content_name: 'Crédits Dilchap', content_category: p.kind === 'CREDIT_PACK' ? 'pack_credits' : 'credits', num_items: p.credits ?? undefined })
 }

@@ -16,6 +16,7 @@ import { useCountries, useHomeCountry, useMarket, useMethods, type Country } fro
 import Flag from '../components/Flag'
 import ManageCookies from '../components/ManageCookies'
 import { track } from '../lib/analytics'
+import { metaTrack } from '../lib/metaPixel'
 
 type AuthProps = {
   onNavigate: (page: any) => void
@@ -173,6 +174,7 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
     }).then(r => {
       if (!r.data) return
       track('sign_up', { method: byPhone ? 'phone' : 'email', country: country.code })
+      metaTrack('CompleteRegistration', { status: byPhone ? 'phone' : 'email' })
       onSuccess(r.data.register)
     }).catch(() => {
       // The setting may have changed since the page opened.

@@ -32,6 +32,7 @@ import { useLists } from '../../lib/lists'
 import { useRules } from '../../lib/rules'
 import HelpLink from '../../components/HelpLink'
 import { track } from '../../lib/analytics'
+import { metaTrack } from '../../lib/metaPixel'
 import AccountVerifyPanel from '../../components/AccountVerifyPanel'
 import { isNotVerifiedError } from '../../lib/accountVerify'
 
@@ -502,7 +503,10 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       }
       // « Mesure d'audience »: a listing sent for publication (new or a
       // draft), not a draft saved nor an edit.
-      if (submit && publishes) track('publish_listing', { item_id: id, item_category: category.slug, country: form.countryCode, status: live ? 'en_ligne' : 'en_validation' })
+      if (submit && publishes) {
+        track('publish_listing', { item_id: id, item_category: category.slug, country: form.countryCode, status: live ? 'en_ligne' : 'en_validation' })
+        metaTrack('PublishListing', { content_ids: [id], content_category: category.slug, status: live ? 'en_ligne' : 'en_validation' })
+      }
       setResult({ id, submitted: submit, live, fromDraft: editingDraft, campaign })
     } catch (err) {
       setUploading(false)
