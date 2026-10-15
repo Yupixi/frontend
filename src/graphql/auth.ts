@@ -10,6 +10,7 @@ export const REGISTER_MUTATION = gql`
         email
         fullName
         countryCode
+        hasPassword
       }
     }
   }
@@ -67,6 +68,7 @@ export const ME_QUERY = gql`
       coverUrl
       handle
       boostCredits
+      hasPassword
     }
   }
 `
@@ -101,12 +103,27 @@ export type AuthUser = {
   // Short public address dilchap.com/@handle.
   handle?: string | null
   handleChangedAt?: string | null
+  // False for an account without a password of its own (SMS code, Google,
+  // Facebook): Paramètres offers « Choisir un mot de passe ».
+  hasPassword?: boolean | null
 }
 
 export type AuthPayload = {
   accessToken: string
   guestSecret?: string | null
+  // Google / Facebook: the account was just created.
+  isNewAccount?: boolean | null
   user: AuthUser
+}
+
+// Why a sign-in was refused (Backend auth-errors): WRONG_PASSWORD,
+// UNKNOWN_IDENTIFIER, PHONE_FORMAT, NO_PASSWORD, INACTIVE, NOT_VERIFIED,
+// WRONG_CODE, CODE_EXPIRED, LOCKED, ACCOUNT_EXISTS, PROVIDER_ERROR, DISABLED…
+export function authReasonOf(error: unknown): string | null {
+  const first = (error as { errors?: { extensions?: { originalError?: { reason?: unknown } } }[] } | null)?.errors?.[0]
+  const reason = first?.extensions?.originalError?.reason
+  if (typeof reason === 'string') return reason
+  return /Trop de tentatives/.test((error as Error | null)?.message ?? '') ? 'LOCKED' : null
 }
 
 // E-mailed links (Backend MailModule): address confirmation and password
@@ -147,12 +164,12 @@ export const UNSUBSCRIBE_EMAILS_MUTATION = gql`
 // PhoneAuthService): what the country offers, then a 6-digit code by SMS.
 // requestPasswordResetCode answers the same whether or not the number has
 // an account.
-export type PhoneAuthOptions = { signup: boolean; passwordReset: boolean }
+export type PhoneAuthOptions = { signup: boolean; passwordReset: boolean; smsLogin: boolean }
 export type PhoneCodeSent = { expiresAt: string; resendAfterSeconds: number; phoneHint: string }
 
 export const PHONE_AUTH_OPTIONS_QUERY = gql`
   query PhoneAuthOptions($countryCode: String) {
-    phoneAuthOptions(countryCode: $countryCode) { signup passwordReset }
+    phoneAuthOptions(countryCode: $countryCode) { signup passwordReset smsLogin }
   }
 `
 
@@ -172,4 +189,61 @@ export const RESET_PASSWORD_WITH_CODE_MUTATION = gql`
   mutation ResetPasswordWithCode($input: ResetPasswordWithCodeInput!) {
     resetPasswordWithCode(input: $input)
   }
+`
+
+// « Se connecter par code SMS »: a code to the confirmed number of an
+// account, then the code typed.
+export const REQUEST_LOGIN_CODE_MUTATION = gql`
+  mutation RequestLoginCode($phone: String!, $countryCode: String!) {
+    requestLoginCode(phone: $phone, countryCode: $countryCode) { expiresAt resendAfterSeconds phoneHint }
+  }
+`
+
+export const LOGIN_WITH_CODE_MUTATION = gql`
+  mutation LoginWithCode($input: LoginWithCodeInput!) {
+    loginWithCode(input: $input) { accessToken user { id email fullName countryCode hasPassword } }
+  }
+`
+
+// A first password (an account created with an SMS code, Google or Facebook).
+export const SET_PASSWORD_MUTATION = gql`
+  mutation SetPassword($input: SetPasswordInput!) { setPassword(input: $input) }
+`
+
+// « Continuer avec Google / Facebook » (Backend auth/social).
+export type SocialLoginConfig = {
+  google: { enabled: boolean; clientId: string | null }
+  facebook: { enabled: boolean; appId: string | null }
+}
+export const SOCIAL_LOGIN_CONFIG_QUERY = gql`
+  query SocialLoginConfig($country: String) { socialLoginConfig(country: $country) }
+`
+export const GOOGLE_LOGIN_MUTATION = gql`
+  mutation GoogleLogin($input: GoogleLoginInput!) {
+    googleLogin(input: $input) { accessToken isNewAccount user { id email fullName countryCode hasPassword } }
+  }
+`
+export const FACEBOOK_LOGIN_MUTATION = gql`
+  mutation FacebookLogin($input: FacebookLoginInput!) {
+    facebookLogin(input: $input) { accessToken isNewAccount user { id email fullName countryCode hasPassword } }
+  }
+`
+
+// Paramètres › Connexion.
+export type LoginMethods = {
+  hasPassword: boolean
+  smsLogin: boolean
+  identities: { provider: 'GOOGLE' | 'FACEBOOK'; email: string | null; linkedAt: string }[]
+}
+export const MY_LOGIN_METHODS_QUERY = gql`
+  query MyLoginMethods { myLoginMethods }
+`
+export const LINK_GOOGLE_MUTATION = gql`
+  mutation LinkGoogle($input: GoogleLoginInput!) { linkGoogle(input: $input) }
+`
+export const LINK_FACEBOOK_MUTATION = gql`
+  mutation LinkFacebook($input: FacebookLoginInput!) { linkFacebook(input: $input) }
+`
+export const UNLINK_IDENTITY_MUTATION = gql`
+  mutation UnlinkIdentity($provider: String!) { unlinkIdentity(provider: $provider) }
 `

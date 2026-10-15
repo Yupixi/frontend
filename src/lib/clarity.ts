@@ -249,3 +249,8 @@ export function holdClarity(): () => void {
 export function useClarityHold(active: boolean) {
   useEffect(() => (active ? holdClarity() : undefined), [active])
 }
+
+/** A Clarity custom event (« smart event »): a name only, never data about the visitor. */
+export function clarityEvent(name: string) {
+  if (injected && running && /^[a-z0-9_]{1,50}$/.test(name)) clarity('event', name)
+}

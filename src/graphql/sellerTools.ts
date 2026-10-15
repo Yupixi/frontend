@@ -212,7 +212,7 @@ export const REVOKE_OTHER_SESSIONS_MUTATION = gql`
   mutation RevokeOtherSessions { revokeOtherSessions }
 `
 export const DELETE_MY_ACCOUNT_MUTATION = gql`
-  mutation DeleteMyAccount($password: String!) { deleteMyAccount(password: $password) }
+  mutation DeleteMyAccount($password: String) { deleteMyAccount(password: $password) }
 `
 export type UserSession = { id: string; userAgent: string | null; createdAt: string; current: boolean }
 

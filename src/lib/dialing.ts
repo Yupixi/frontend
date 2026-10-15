@@ -11,13 +11,18 @@ const intlDigits = (d: string) => COUNTRIES.some(c => d.startsWith(c.dialCode) &
 // International form of a number typed in a country's form: already
 // international (+…, 00…, or a UEMOA dial code at full length) as is, else
 // the country's dial code in front. The server normalizes it again.
+// A national number typed with a trunk « 0 » in a country whose numbers
+// have none (« 077 123 45 67 » in Senegal) is read without it, like the
+// server does (Backend common/phone.ts).
+const dropTrunk = (d: string, c: Dialing) => (d.length === c.localDigits + 1 && d.startsWith('0') ? d.slice(1) : d)
+
 export function toIntl(raw: string, country: Dialing): string | undefined {
   const t = raw.trim()
   const d = t.replace(/\D/g, '')
   if (!d) return undefined
   if (t.startsWith('+')) return `+${d}`
   if (t.startsWith('00')) return `+${d.slice(2)}`
-  return intlDigits(d) ? `+${d}` : `+${country.dialCode}${d}`
+  return intlDigits(d) ? `+${d}` : `+${country.dialCode}${dropTrunk(d, country)}`
 }
 
 // A national number must have the country's length (without dial code).
@@ -25,7 +30,7 @@ export function localNumberError(raw: string, country: Dialing & { phoneExample:
   const t = raw.trim()
   if (!t || t.startsWith('+') || t.startsWith('00')) return null
   const d = t.replace(/\D/g, '')
-  return d.length === country.localDigits || intlDigits(d) ? null : `Numéro invalide (${country.localDigits} chiffres, ex : ${country.phoneExample}).`
+  return dropTrunk(d, country).length === country.localDigits || intlDigits(d) ? null : `Numéro incomplet : ${country.localDigits} chiffres (ex : ${country.phoneExample}), avec ou sans +${country.dialCode}.`
 }
 
 // UEMOA country of an international number (+225…), by its dial code.
