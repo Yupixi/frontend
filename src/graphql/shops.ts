@@ -227,7 +227,7 @@ export type ShopListing = {
 const PROMO_ITEM = 'entryId listingId title coverUrl price discountPercent salePrice promoPrice status rejectReason'
 const SALE_FIELDS = `id name slug startsAt endsAt state notifyFollowers followersNotifiedAt salesCount salesVolume items { ${PROMO_ITEM} }`
 const CAMPAIGN_FIELDS = `id name slug description themeColor startsAt endsAt countryCodes minDiscountPercent state entryFee listingFee entryFeePaid amountDue earlyAccessUntil
-  eligible missing actions blockedReason canJoin sellerConditions sellerTerms ineligibleMessage placesLeft waitlist sellerLimitLeft validation
+  eligible missing actions blockedReason blockedCode canJoin sellerConditions sellerTerms ineligibleMessage placesLeft waitlist sellerLimitLeft validation
   categoryIds subcategoryIds conditions minPrice maxPrice minPhotos myItems { ${PROMO_ITEM} }`
 const BUNDLE_FIELDS = 'id name tiers { minQty percent } scope aisleId aisleName listingIds startsAt endsAt active state listingsCount'
 const POST_FIELDS = 'id title body imageUrl listings { id title price coverUrl } recipients views createdAt'
@@ -275,7 +275,7 @@ export type OpenCampaign = { id: string; name: string; slug: string; description
   // whether this seller qualifies, else what they lack and what gets it.
   eligible: boolean; missing: string[]; actions: CampaignAction[]
   // Qualifies but not now (registration dates, early access, own limit, full).
-  blockedReason: string | null; canJoin: boolean
+  blockedReason: string | null; blockedCode: CampaignBlock | null; canJoin: boolean
   // Every condition in plain words, and the team's own terms (rich text).
   sellerConditions: string[]; sellerTerms: string | null; ineligibleMessage: string | null
   // Places left (null = no limit), waiting list once full, items this seller may still add.
@@ -287,6 +287,8 @@ export type OpenCampaign = { id: string; name: string; slug: string; description
   countryCodes: string[] }
 // What gets a missing status: a paid badge, the identity check, an official shop.
 export type CampaignAction = 'BADGE' | 'KYC' | 'SHOP'
+// Kind of block of an eligible seller (EARLY_ACCESS: certified sellers first).
+export type CampaignBlock = 'NOT_OPEN_YET' | 'CLOSED' | 'EARLY_ACCESS' | 'SELLER_LIMIT' | 'FULL'
 export type BundleTier = { minQty: number; percent: number }
 export type ShopBundle = { id: string; name: string; tiers: BundleTier[]; scope: 'ALL' | 'AISLE' | 'LISTINGS'; aisleId: string | null; aisleName: string | null; listingIds: string[]; startsAt: string | null; endsAt: string | null; active: boolean; state: PromoState; listingsCount: number }
 export type ShopPost = { id: string; title: string; body: string; imageUrl: string | null; listings: { id: string; title: string; price: number | null; coverUrl: string | null }[]; recipients: number; views: number; createdAt: string }

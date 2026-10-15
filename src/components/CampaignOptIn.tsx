@@ -8,6 +8,7 @@ import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
 import { WALLET_BALANCE_QUERY, type WalletBalance } from '../graphql/payments'
 import { applyOffer, offerLabel, usePriceOffers } from '../lib/priceOffers'
 import { usePriceVars } from '../lib/countries'
+import { campaignBlock } from '../lib/campaignActions'
 
 // "Vendre pour {campagne}" on the campaign page: the wizard opens with that
 // campaign ticked.
@@ -24,7 +25,7 @@ const dateFr = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day:
 // "Participer à une campagne" in the listing wizard: the Dilchap campaigns
 // this seller may join, what it costs in credits (taken on publishing), the
 // balance, and a way to buy the missing credits without leaving the form.
-export default function CampaignOptIn({ price, currency, categoryId, subcategoryId, condition, countryCode, value, onChange, render = body => body }: {
+export default function CampaignOptIn({ price, currency, categoryId, subcategoryId, condition, countryCode, value, onChange, onNavigate, render = body => body }: {
   price: number
   // Category of the listing: category offers (« Offres & gratuités »), and
   // the campaigns accepting it.
@@ -37,6 +38,9 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
   currency: string
   value: CampaignChoice | null
   onChange: (v: CampaignChoice | null) => void
+  // Buttons of a campaign the seller cannot join yet (badge, KYC…): the
+  // listing draft is kept meanwhile.
+  onNavigate?: (page: any) => void
   // Wraps the block (e.g. in the wizard's card) when there is one to show.
   render?: (body: React.ReactNode) => React.ReactNode
 }) {
@@ -55,16 +59,20 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
     document.addEventListener('visibilitychange', again)
     return () => { window.removeEventListener('focus', again); document.removeEventListener('visibilitychange', again) }
   }, [refetch])
-  // Only the campaigns this listing can enter (the server checks every rule
-  // again on publishing): open to this seller, a place left, the listing's
-  // country, category, condition and price.
+  // The campaigns this listing fits (the server checks every rule again on
+  // publishing): running, the listing's country, category, condition and
+  // price. Those open to this seller with a place left can be ticked; the
+  // others are shown greyed with the server's reason (early access,
+  // registration dates, missing status…) rather than silently left out.
   const fits = (c: OpenCampaign) =>
     (!c.categoryIds.length && !c.subcategoryIds.length) || (!!categoryId && c.categoryIds.includes(categoryId)) || (!!subcategoryId && c.subcategoryIds.includes(subcategoryId))
-  const campaigns = (data?.openShopCampaigns ?? []).filter(c => c.canJoin && c.state !== 'ENDED' && c.placesLeft !== 0
+  const matching = (data?.openShopCampaigns ?? []).filter(c => c.state !== 'ENDED'
     && (!countryCode || !c.countryCodes?.length || c.countryCodes.includes(countryCode))
     && fits(c)
     && (!c.conditions.length || (!!condition && c.conditions.includes(condition)))
     && (!price || ((c.minPrice == null || price >= c.minPrice) && (c.maxPrice == null || price <= c.maxPrice))))
+  const campaigns = matching.filter(c => !campaignBlock(c, true))
+  const blocked = matching.flatMap(c => { const b = campaignBlock(c, true); return b ? [{ c, ...b }] : [] })
   // The listing moved to a country the chosen campaign doesn't run in.
   useEffect(() => {
     if (data && value && !campaigns.some(c => c.id === value.campaign.id)) onChange(null)
@@ -79,7 +87,7 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
     preselect.current = ''
     onChange({ campaign: c, discountPercent: Math.max(c.minDiscountPercent ?? 1, 10) })
   }, [campaigns, value, onChange])
-  if (!campaigns.length) return null
+  if (!matching.length) return null
 
   const balance = wallet?.myWallet.credits ?? 0
   const cost = value ? costOf(value.campaign).price : 0
@@ -127,6 +135,28 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
           </div>
         )
       })}
+      {blocked.map(({ c, reason, buttons }) => (
+        <div key={c.id} className="rounded-xl border-[1.5px] border-dashed border-outline-variant bg-surface-container-low p-3" aria-disabled="true">
+          <div className="flex items-start gap-3">
+            <Icon name="lock_clock" size={20} className="mt-0.5 shrink-0 text-on-surface-variant" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-label-lg text-on-surface-variant">« {c.name} »</span>
+              <span className="block text-body-sm text-on-surface-variant">
+                {c.state === 'LIVE' ? `En cours jusqu’au ${dateFr(c.endsAt)}` : `Du ${dateFr(c.startsAt)} au ${dateFr(c.endsAt)}`}
+                {c.minDiscountPercent ? ` · remise minimale ${c.minDiscountPercent} %` : ''}
+              </span>
+              <span className="mt-1.5 block text-body-sm text-on-surface">{reason}</span>
+            </span>
+          </div>
+          {onNavigate && buttons.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2 pl-8">
+              {buttons.map(b => (
+                <button key={b.label} type="button" onClick={() => onNavigate(b.page)} className="flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white"><Icon name={b.icon} size={17} /> {b.label}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
       {value && cost > 0 && (
         <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl p-3 text-body-sm ${missing ? 'bg-primary-fixed text-primary' : 'bg-tertiary-soft text-on-surface'}`}>
           <span className="flex items-center gap-2">
