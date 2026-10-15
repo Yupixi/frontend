@@ -11,7 +11,10 @@ import { formatRelativeDate } from '../../lib/format'
 import { thumbnailUrl } from '../../lib/media'
 import { AccountLayout } from '../account/AccountLayout'
 import ListingOffersPanel from '../../components/ListingOffersPanel'
-import { MY_LISTINGS_QUERY, DELETE_LISTING_MUTATION, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
+import { MY_LISTINGS_QUERY, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
+import { DELETE_LISTING_WITH_REASON_MUTATION, PAUSE_LISTING_MUTATION, RESUME_LISTING_MUTATION, type ListingExitReason } from '../../graphql/deals'
+import MarkSoldSheet from '../../components/MarkSoldSheet'
+import ExitReasonSheet from '../../components/ExitReasonSheet'
 import { MY_REPUTATION_QUERY, MY_WALLET_QUERY, type Reputation, type WalletSummary } from '../../graphql/sellerHub'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
@@ -77,7 +80,13 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const rep = repData?.myReputation
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const credits = walletData?.myWallet.credits ?? 0
-  const [deleteListing] = useMutation(DELETE_LISTING_MUTATION)
+  const [deleteListing] = useMutation(DELETE_LISTING_WITH_REASON_MUTATION)
+  const [pauseListing] = useMutation(PAUSE_LISTING_MUTATION)
+  const [resumeListing] = useMutation(RESUME_LISTING_MUTATION)
+  // « Mettre en pause » / « Supprimer » (reason asked), « Marquer comme vendu ».
+  const [exitFor, setExitFor] = useState<{ action: 'pause' | 'delete'; l: MyListingRow } | null>(null)
+  const [exitError, setExitError] = useState<string | null>(null)
+  const [soldFor, setSoldFor] = useState<MyListingRow | null>(null)
   const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
 
   const [tab, setTab] = useState<typeof TABS[number]['key']>('live')
@@ -123,13 +132,26 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
     const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a'); a.href = url; a.download = 'mes-annonces-dilchap.csv'; a.click(); URL.revokeObjectURL(url)
   }
-  const [deleting, setDeleting] = useState(false)
-  const remove = (l: MyListingRow) => {
-    setDeleting(true)
-    void deleteListing({ variables: { id: l.id } })
-      .then(() => refetch())
+  const [exiting, setExiting] = useState(false)
+  // The reason picked: « Vendu sur Dilchap » asks « Vendu à qui ? » instead.
+  const exit = (reason: ListingExitReason) => {
+    if (!exitFor) return
+    const { action, l } = exitFor
+    if (reason === 'SOLD_ON_DILCHAP') { setExitFor(null); setSoldFor(l); return }
+    setExiting(true)
+    setExitError(null)
+    const run = action === 'delete'
+      ? deleteListing({ variables: { id: l.id, reason } })
+      : pauseListing({ variables: { id: l.id, reason } })
+    void run
+      .then(() => { setExitFor(null); setFlash(action === 'delete' ? `« ${l.title} » est supprimée.` : `« ${l.title} » est en pause.`); return refetch() })
+      .catch((e: Error) => setExitError(e.message))
+      .finally(() => setExiting(false))
+  }
+  const resume = (l: MyListingRow) => {
+    void resumeListing({ variables: { id: l.id } })
+      .then(() => { setFlash(`« ${l.title} » est de nouveau en ligne.`); return refetch() })
       .catch((e: Error) => setFlash(e.message))
-      .finally(() => { setDeleting(false); setConfirm(null) })
   }
   const activeFilters = (cat ? 1 : 0) + (city ? 1 : 0) + (sort !== 'recent' ? 1 : 0)
   const filterSelects = (cls: string) => (
@@ -319,7 +341,10 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                           const scans = qrScans.find(q => q.listingId === l.id)?.scanCount
                           return <button onClick={() => { setMenuFor(null); setQrFor({ id: l.id, title: l.title }) }} className={`${item} text-on-surface`}><Icon name="qr_code_2" size={16} /> QR code de l’annonce{scans ? ` · ${scans} scan${scans > 1 ? 's' : ''}` : ''}</button>
                         })()}
-                        <button onClick={() => { setMenuFor(null); setConfirm({ kind: 'delete', l }) }} className={`${item} text-primary hover:bg-primary-fixed/40`}><Trash2 size={16} /> Supprimer</button>
+                        {['APPROVED', 'PAUSED', 'EXPIRED'].includes(l.status) && <button onClick={() => { setMenuFor(null); setSoldFor(l) }} className={`${item} text-on-surface`}><Icon name="handshake" size={16} /> Marquer comme vendu</button>}
+                        {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'pause', l }) }} className={`${item} text-on-surface`}><Icon name="pause" size={16} /> Mettre en pause</button>}
+                        {l.status === 'PAUSED' && <button onClick={() => { setMenuFor(null); resume(l) }} className={`${item} text-on-surface`}><Icon name="play_arrow" size={16} /> Remettre en ligne</button>}
+                        <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'delete', l }) }} className={`${item} text-primary hover:bg-primary-fixed/40`}><Trash2 size={16} /> Supprimer</button>
                       </div>
                     )}
                   </div>
@@ -338,17 +363,21 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
 
         <ListingQrSheet listing={qrFor} onClose={() => setQrFor(null)} />
 
-        <ConfirmSheet
-          open={confirm?.kind === 'delete'}
-          title="Supprimer l'annonce ?"
-          confirmLabel="Supprimer"
-          tone="danger"
-          loading={deleting}
-          onConfirm={() => confirm && remove(confirm.l)}
-          onClose={() => setConfirm(null)}
-        >
-          « {confirm?.l.title} » sera définitivement supprimée. Cette action est irréversible.
-        </ConfirmSheet>
+        <ExitReasonSheet
+          open={!!exitFor}
+          action={exitFor?.action ?? 'pause'}
+          title={exitFor?.l.title ?? ''}
+          busy={exiting}
+          error={exitError}
+          onPick={exit}
+          onClose={() => setExitFor(null)}
+        />
+        <MarkSoldSheet
+          open={!!soldFor}
+          listingId={soldFor?.id ?? null}
+          onClose={() => setSoldFor(null)}
+          onDone={status => { setFlash(status === 'SOLD' ? `« ${soldFor?.title ?? ''} » est marquée vendue.` : 'Vente enregistrée : le stock a été mis à jour.'); setSoldFor(null); void refetch() }}
+        />
         <WalletPaySheet
           open={confirm?.kind === 'boost'}
           title="Remontée flash"

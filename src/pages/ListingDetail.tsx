@@ -63,6 +63,7 @@ import { listingPath, samePlace } from '../lib/routes'
 import { usePageTitle } from '../lib/site'
 import ListingQrSheet from '../components/ListingQrSheet'
 import { useRules } from '../lib/rules'
+import { useListingIntents } from '../lib/intents'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -165,6 +166,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
   const [bumpListing, { loading: renewing }] = useMutation(BUMP_LISTING_MUTATION)
+  // « Partager », contact taps: purchase intents (first-party statistics).
+  const intents = useListingIntents()
   const [boostOpen, setBoostOpen] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
@@ -257,6 +260,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const shareUrl = `${window.location.origin}${listingPath(listing.id, listing.title)}`
 
   const share = async () => {
+    intents.share(listing.id)
     if (navigator.share) {
       try { await navigator.share({ title: listing.title, text: `${listing.title} — ${location}`, url: shareUrl }) } catch { /* cancelled */ }
       return
@@ -289,6 +293,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // "Discuter" always means chat: members go to their inbox, visitors get the
   // inline guest conversation. Price proposals live behind "Faire une offre".
   const openChat = () => {
+    intents.contactTap(listing.id)
     if (loggedIn && onContactSeller) return onContactSeller(listing.seller.id, listing.id)
     // Visitors write from the page (App counts the members' contacts).
     track('contact_seller', { item_id: listing.id, item_category: listing.category.slug, method: 'guest_chat' })
@@ -621,7 +626,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                       <MessageSquare size={18} /> <span className="max-[400px]:hidden">Discuter en direct</span><span className="min-[400px]:hidden">Discuter</span>
                     </button>
                     {listing.negotiable && (
-                      <button onClick={requireAuth(() => setOfferOpen(true), 'offer')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
+                      <button onClick={requireAuth(() => { intents.contactTap(listing.id); setOfferOpen(true) }, 'offer')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
                         <Tag size={17} /> Faire une offre
                       </button>
                     )}
@@ -747,7 +752,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         {ownerPanel ?? (
           <>
             {listing.negotiable && (
-              <button onClick={requireAuth(() => setOfferOpen(true), 'offer')} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
+              <button onClick={requireAuth(() => { intents.contactTap(listing.id); setOfferOpen(true) }, 'offer')} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
                 <Tag size={17} /> Faire une offre
               </button>
             )}

@@ -20,9 +20,10 @@ const when = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
-function Shell({ title, icon = 'handshake', children, onHide }: { title: string; icon?: string; children: React.ReactNode; onHide?: () => void }) {
+// A private Dilchap card of the thread (only this member sees it).
+export function Shell({ title, icon = 'handshake', children, onHide, id = 'remise-card' }: { title: string; icon?: string; children: React.ReactNode; onHide?: () => void; id?: string }) {
   return (
-    <section id="remise-card" aria-label={`Dilchap : ${title}`} className="chat-in mx-auto mt-3 w-full max-w-md scroll-mt-24 overflow-hidden rounded-2xl border border-solid border-primary/25 bg-surface-lowest shadow-sm">
+    <section id={id} aria-label={`Dilchap : ${title}`} className="chat-in mx-auto mt-3 w-full max-w-md scroll-mt-24 overflow-hidden rounded-2xl border border-solid border-primary/25 bg-surface-lowest shadow-sm">
       <div className="flex items-center gap-2 px-3.5 pb-1 pt-3">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white"><Icon name={icon} size={16} /></span>
         <span className="min-w-0 flex-1 text-label-lg text-on-surface">{title}</span>
@@ -314,6 +315,42 @@ export function DealReview({ h, conversationId, otherName, onSaved }: {
   )
 }
 
+// A sale recorded without the code (the seller's « Oui », « Marquer comme
+// vendu »): the buyer's code can still certify it. Optional, folded into
+// a button until asked for.
+export function CertifyWithCode({ h, otherName, onDone }: { h: RemoteHandover; otherName: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [code, setCode] = useState('')
+  const [refusal, setRefusal] = useState<HandoverRefusal | null>(null)
+  const [confirmSale, { loading }] = useMutation(CONFIRM_SALE_MUTATION)
+  if (!h.certifiable || !h.meetupId) return null
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container px-3 py-2 text-label-md text-on-surface hover:bg-surface-container-high">
+        <Icon name="verified" size={17} /> Certifier avec le code de {otherName} <span className="font-normal text-on-surface-variant">(facultatif)</span>
+      </button>
+    )
+  const submit = () => {
+    if (code.length !== 4 || loading) return
+    setRefusal(null)
+    void confirmSale({ variables: { input: { meetupId: h.meetupId, code } } })
+      .then(() => onDone())
+      .catch((e: unknown) => { setRefusal(handoverRefusal(e)); setCode('') })
+  }
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-surface-container-low p-3">
+      <label htmlFor={`certify-${h.meetupId}`} className="text-label-md text-on-surface">Code de remise de {otherName}</label>
+      <div className="flex gap-2">
+        <input id={`certify-${h.meetupId}`} value={code} onChange={e => setCode(e.target.value.replace(/D/g, '').slice(0, 4))} onKeyDown={e => { if (e.key === 'Enter') submit() }}
+          inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" maxLength={4} placeholder="••••" aria-invalid={!!refusal || undefined}
+          className="input h-11 w-28 min-w-0 !bg-surface-lowest text-center font-mono text-headline-sm tracking-[0.3em]" />
+        <button type="button" onClick={submit} disabled={code.length !== 4 || loading} className="flex-1 cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-50">{loading ? 'Vérification…' : 'Certifier la vente'}</button>
+      </div>
+      {refusal && <p role="alert" className="m-0 text-body-sm text-primary">{refusal.message}</p>}
+    </div>
+  )
+}
+
 // « Vente conclue » for a sale whose thread has no Dilchap card (cards off
 // in the Backoffice, or a sale concluded before them).
 export function DealDoneCard({ h, conversationId, otherName, amount, currency, onSaved }: {
@@ -327,8 +364,9 @@ export function DealDoneCard({ h, conversationId, otherName, amount, currency, o
   return (
     <Shell title="Vente conclue" icon="verified">
       <p className="m-0 text-body-sm text-on-surface-variant">
-        Remise confirmée{h.handedOverAt ? ` le ${when(h.handedOverAt)}` : ''}{amount != null ? <> · <Price amount={amount} currency={currency} /></> : null}.
+        {h.handoverMethod === 'CODE' || h.handoverMethod === 'BOTH_CONFIRMED' ? 'Vente confirmée' : 'Vente enregistrée'}{h.handedOverAt ? ` le ${when(h.handedOverAt)}` : ''}{amount != null ? <> · <Price amount={amount} currency={currency} /></> : null}.
       </p>
+      <CertifyWithCode h={h} otherName={otherName} onDone={onSaved} />
       <DealReview h={h} conversationId={conversationId} otherName={otherName} onSaved={onSaved} />
     </Shell>
   )

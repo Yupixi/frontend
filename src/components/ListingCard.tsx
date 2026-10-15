@@ -11,6 +11,7 @@ import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
 import { getAccessToken } from '../lib/auth'
 import { setAuthReason } from '../lib/authReason'
+import { useListingIntents } from '../lib/intents'
 import {
   getArchetype,
   archetypeHighlight,
@@ -169,7 +170,8 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
   const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
   const bought = boughtBadge(listing)
-  const contact = (e: React.MouseEvent) => { e.stopPropagation(); (onContact ?? onSelect)() }
+  const intents = useListingIntents()
+  const contact = (e: React.MouseEvent) => { e.stopPropagation(); intents.contactTap(listing.id); (onContact ?? onSelect)() }
   // Phone button of the mockup card. Sellers' numbers aren't public: the
   // number is shared in the conversation, so the button says so and leads
   // there instead of faking a call.
@@ -298,7 +300,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
                 <button onClick={contact} className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
                   <Icon name="chat" size={16} /> Discuter
                 </button>
-                <button onClick={e => { e.stopPropagation(); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border-none bg-surface-container text-on-surface">
+                <button onClick={e => { e.stopPropagation(); intents.call(listing.id); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border-none bg-surface-container text-on-surface">
                   <Icon name="call" size={18} />
                 </button>
                 <div onClick={e => e.stopPropagation()}>

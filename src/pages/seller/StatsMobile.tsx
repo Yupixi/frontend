@@ -9,6 +9,7 @@ import type { SellerStats } from '../../graphql/sellerTools'
 import Select from '../../components/Select'
 import { BADGE_LABEL, type BadgeTier } from '../../graphql/badges'
 import { useNoCommissionClaims } from '../../lib/site'
+import DealStatsPanel from './DealStatsPanel'
 
 type Props = {
   s?: SellerStats
@@ -105,6 +106,8 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
         <p className="m-0 mt-1 text-[11px] text-on-surface-variant">Échelles distinctes pour les vues et les contacts.</p>
       </section>
 
+      <DealStatsPanel d={s?.deals} loading={!s} />
+
       {advanced ? (<>
       <section>
         <div className="mb-2 flex items-center justify-between"><h2 className="m-0 text-headline-sm text-on-surface">Annonces actives &amp; récentes</h2><button onClick={() => onNavigate('seller-listings')} className="shrink-0 cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md text-primary">Voir tout ({s?.listings.length ?? 0})</button></div>
@@ -116,7 +119,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
                 <span className="min-w-0 flex-1">
                   <span className="flex items-start justify-between gap-2"><span className="truncate text-label-lg text-on-surface">{p.listing.title}</span><span className={`shrink-0 rounded px-1.5 text-label-sm uppercase ${p.listing.status === 'SOLD' ? 'bg-surface-container text-on-surface-variant' : p.pendingOffer ? 'bg-amber-100 text-amber-800' : 'bg-tertiary-soft text-tertiary'}`}>{p.listing.status === 'SOLD' ? 'Vendu' : p.pendingOffer ? 'Offre reçue' : 'Actif'}</span></span>
                   <span className="block text-headline-sm font-extrabold text-on-surface"><Price amount={p.listing.price} currency={p.listing.currency} /></span>
-                  <span className="flex gap-3 text-label-sm text-on-surface-variant"><span className="flex items-center gap-0.5"><Icon name="visibility" size={13} /> {formatNumber(p.views)}</span><span className="flex items-center gap-0.5"><Icon name="chat" size={13} /> {p.messages} messages</span></span>
+                  <span className="flex gap-3 text-label-sm text-on-surface-variant"><span className="flex items-center gap-0.5"><Icon name="visibility" size={13} /> {formatNumber(p.views)}</span><span className="flex items-center gap-0.5"><Icon name="chat" size={13} /> {p.messages} messages</span><span className="flex items-center gap-0.5"><Icon name="trending_up" size={13} /> {formatNumber(p.intents)} intentions</span></span>
                 </span>
               </span>
               {!p.boosted && p.listing.status !== 'SOLD' && (
