@@ -2,13 +2,10 @@ import Icon from '../Icon'
 import CampaignMedia from './CampaignMedia'
 import { thumbnailUrl } from '../../lib/media'
 import { pad2, useCountdown } from '../../lib/useCountdown'
-import { type CampaignType, type LiveCampaign } from '../../graphql/campaigns'
+import { CAMPAIGN_HERO_BADGE as HERO_BADGE, type LiveCampaign } from '../../graphql/campaigns'
 import { richHtml } from '../../lib/richText'
 
 const DEFAULT_TINT = '#0d4a3a'
-const HERO_BADGE: Record<CampaignType, string> = {
-  SALE: 'Soldes officielles', FLASH: 'Vente flash officielle', SEASONAL: 'Campagne saisonnière', CUSTOM: 'Campagne officielle Dilchap',
-}
 const dateFr = (iso: string, year = false) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) })
 
 // Its own component: the only thing on the page that ticks every second.

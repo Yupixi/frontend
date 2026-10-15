@@ -21,18 +21,27 @@ type PriceProps = {
 // what font-size the surrounding price-tag/heading uses.
 export default function Price({ amount, currency = 'XOF', fallback = 'Prix sur demande' }: PriceProps) {
   if (amount == null) return <>{fallback}</>
-  const normalizedCurrency = currency.toUpperCase()
   return (
     <>
-      {CFA.has(normalizedCurrency) && Number.isInteger(amount) ? groupThousands(amount) : numberFormat(localeForCurrency(normalizedCurrency), {
-        style: 'currency',
-        currency: normalizedCurrency,
-        currencyDisplay: 'code',
-        maximumFractionDigits: 2,
-      }).formatToParts(amount).filter(part => part.type !== 'currency')
-        // fr-FR groups with U+202F, which Plus Jakarta Sans has no glyph for.
-        .map(part => part.type === 'group' ? '\u00a0' : part.value).join('').trim()}
-      <span className="price-unit">{CURRENCY_SYMBOL[normalizedCurrency] ?? normalizedCurrency}</span>
+      {amountText(amount, currency)}
+      <span className="price-unit">{currencySymbol(currency)}</span>
     </>
   )
 }
+
+// The figure without its unit ("45 000"), exactly as Price prints it \u2014 for
+// code that writes the number itself (the home hero's counting prices).
+export function amountText(amount: number, currency = 'XOF') {
+  const normalizedCurrency = currency.toUpperCase()
+  if (CFA.has(normalizedCurrency) && Number.isInteger(amount)) return groupThousands(amount)
+  return numberFormat(localeForCurrency(normalizedCurrency), {
+    style: 'currency',
+    currency: normalizedCurrency,
+    currencyDisplay: 'code',
+    maximumFractionDigits: 2,
+  }).formatToParts(amount).filter(part => part.type !== 'currency')
+    // fr-FR groups with U+202F, which Plus Jakarta Sans has no glyph for.
+    .map(part => part.type === 'group' ? '\u00a0' : part.value).join('').trim()
+}
+
+export const currencySymbol = (currency = 'XOF') => CURRENCY_SYMBOL[currency.toUpperCase()] ?? currency.toUpperCase()
