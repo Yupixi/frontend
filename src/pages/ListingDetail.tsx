@@ -49,7 +49,7 @@ import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { formatRelativeDate } from '../lib/format'
-import { thumbnailUrl } from '../lib/media'
+import { GALLERY_SIZES, gallerySrcSet, thumbnailUrl } from '../lib/media'
 import { richHtml } from '../lib/richText'
 import Select from '../components/Select'
 import Icon from '../components/Icon'
@@ -105,6 +105,9 @@ function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, s
 export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser, onContactSeller }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [brokenImgs, setBrokenImgs] = useState<number[]>([])
+  // Photos whose responsive sizes failed to load (stored before the medium
+  // size existed): shown from the full photo instead.
+  const [plainImgs, setPlainImgs] = useState<number[]>([])
   const [viewer, setViewer] = useState<number | null>(null)
   const galleryTrack = useRef<HTMLDivElement>(null)
   const [tab, setTab] = useState<typeof TABS[number]['key']>('description')
@@ -406,7 +409,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                     <button key={i} onClick={() => setViewer(i)} aria-label={`Agrandir la photo ${i + 1}`} className="h-full w-full shrink-0 cursor-zoom-in snap-center border-none bg-transparent p-0">
                       {brokenImgs.includes(i)
                         ? <span className="flex h-full items-center justify-center text-outline"><Tag size={56} /></span>
-                        : <img src={src} alt={`${listing.title} — photo ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => setBrokenImgs(b => [...b, i])} className="h-full w-full select-none object-cover" />}
+                        : <img src={src} srcSet={plainImgs.includes(i) ? undefined : gallerySrcSet(src)} sizes={GALLERY_SIZES} alt={`${listing.title} — photo ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : undefined} decoding="async" draggable={false} onError={() => (!plainImgs.includes(i) && gallerySrcSet(src) ? setPlainImgs(p => [...p, i]) : setBrokenImgs(b => [...b, i]))} className="h-full w-full select-none object-cover" />}
                     </button>
                   ))}
                 </div>

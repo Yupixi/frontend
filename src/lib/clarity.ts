@@ -128,6 +128,9 @@ function inject(id: string) {
   grant()
   const s = document.createElement('script')
   s.async = true
+  // CORS-enabled tag (Access-Control-Allow-Origin: *): its errors keep
+  // their message instead of « Script error. ».
+  s.crossOrigin = 'anonymous'
   s.src = `https://www.clarity.ms/tag/${encodeURIComponent(id)}`
   watchReady(s)
   document.head.appendChild(s)

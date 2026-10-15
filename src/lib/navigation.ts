@@ -60,3 +60,9 @@ export const OPEN_LINK_EVENT = 'yupixi:open-link'
 
 export const requestOpenLink = (url: string) =>
   window.dispatchEvent(new CustomEvent<string>(OPEN_LINK_EVENT, { detail: url }))
+
+// Opens the country / city picker of the header (LocationPill): the home's
+// « Zone active » label.
+export const OPEN_LOCATION_EVENT = 'yupixi:open-location'
+
+export const requestOpenLocation = () => window.dispatchEvent(new Event(OPEN_LOCATION_EVENT))

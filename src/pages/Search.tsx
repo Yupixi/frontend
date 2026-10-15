@@ -22,6 +22,8 @@ import { slugify } from '../lib/routes'
 import { richHtml } from '../lib/richText'
 import CategoryLandingExtras from '../components/CategoryLandingExtras'
 import { track } from '../lib/analytics'
+import { GridSkeleton } from '../components/Skeleton'
+import { formatNumber } from '../lib/format'
 import { metaTrack } from '../lib/metaPixel'
 
 const PAGE_SIZE = 18
@@ -88,7 +90,7 @@ function CheckRow({ checked, label, count, onChange, highlight, logos }: { check
         {logos && <PaymentLogos methods={logos} size={16} className="shrink-0" />}
       </span>
       {count != null && (
-        <span className={`shrink-0 rounded-full px-2 text-label-sm ${checked && highlight ? 'bg-tertiary-soft text-tertiary' : 'text-outline'}`}>{count.toLocaleString('fr-FR')}</span>
+        <span className={`shrink-0 rounded-full px-2 text-label-sm ${checked && highlight ? 'bg-tertiary-soft text-tertiary' : 'text-outline'}`}>{formatNumber(count, 0)}</span>
       )}
     </label>
   )
@@ -463,7 +465,7 @@ export default function SearchPage({
 
   const title = search ? `Résultats pour « ${search} »` : rubricPending ? ' ' : rubricName ? (pageCity ? `${rubricName} à ${pageCity.name}` : rubricName) : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
   // Category pages: same tab title as the one search engines get.
-  const countText = `${total.toLocaleString('fr-FR')} annonce${total > 1 ? 's' : ''}`
+  const countText = `${formatNumber(total, 0)} annonce${total > 1 ? 's' : ''}`
   usePageTitle(categoryFilter && !search && rubricName && (data || previousData) ? (pageCity ? `${title} : ${countText}` : rubricName) : null)
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const to = Math.min(page * PAGE_SIZE, total)
@@ -522,7 +524,7 @@ export default function SearchPage({
           )}
           <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{title}</h1>
           <p className="m-0 mt-1 text-body-md text-on-surface-variant">
-            {result ? <><span className="font-bold text-on-surface">{total.toLocaleString('fr-FR')} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.</> : ' '}
+            {result ? <><span className="font-bold text-on-surface">{formatNumber(total, 0)} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.</> : ' '}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -560,10 +562,12 @@ export default function SearchPage({
           )}
 
           <div className={loading && !data ? 'opacity-60' : ''}>
-            {viewMode === 'grid' ? (
+            {/* First load: the results' room is kept (the alert box below
+                doesn't jump when they land). */}
+            {!result && loading ? <GridSkeleton count={6} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4" /> : viewMode === 'grid' ? (
               <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4">
-                {items.map(l => (
-                  <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={contact(l)} />
+                {items.map((l, i) => (
+                  <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={contact(l)} priority={i < 2} />
                 ))}
               </div>
             ) : (
@@ -600,7 +604,7 @@ export default function SearchPage({
           {/* Pagination */}
           {total > 0 && (
             <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
-              <span className="text-body-sm text-on-surface-variant">{totalPages > 1 ? `Affichage de ${from} – ${to} sur ${total.toLocaleString('fr-FR')} articles` : `${total.toLocaleString('fr-FR')} article${total > 1 ? 's' : ''} affiché${total > 1 ? 's' : ''}`}</span>
+              <span className="text-body-sm text-on-surface-variant">{totalPages > 1 ? `Affichage de ${from} – ${to} sur ${formatNumber(total, 0)} articles` : `${formatNumber(total, 0)} article${total > 1 ? 's' : ''} affiché${total > 1 ? 's' : ''}`}</span>
               {totalPages > 1 && (
                 <div className="flex items-center gap-1">
                   <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-on-surface-variant disabled:opacity-30"><ChevronLeft size={18} /></button>
