@@ -23,6 +23,7 @@ import { countryVars, fillPlacesDeep, useMarket, useMarketCode, useMarketVars, u
 import { ShopCard } from '../components/ShopCard'
 import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 import { HomePromotions, useLiveCampaignsSettled } from '../components/campaign/CampaignTiles'
+import HomePromoHero, { expectPromoHero, useHeroCampaigns } from '../components/campaign/HomePromoHero'
 import { CategoryRailSkeleton, GridSkeleton, RailSkeleton } from '../components/Skeleton'
 import InfiniteLoader from '../components/InfiniteLoader'
 import { useLoadMore } from '../lib/useLoadMore'
@@ -205,15 +206,26 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const nextFeedPage = useLoadMore({ fetchMore: feedFetchMore, page: feedData?.listings.page, totalPages: feedData?.listings.totalPages, key: feedKey })
   useEffect(() => { feedMemory.city = feedCity }, [feedCity])
 
+  // A live campaign may take the whole hero (BO « Visibilité »): it then
+  // replaces the slider on both layouts; its rotation lives in
+  // HomePromoHero. While the campaigns load after a visit that had one, the
+  // hero keeps its room instead of flashing the slider.
+  const { campaigns: heroCampaigns, ready: heroReady } = useHeroCampaigns()
+  const [expectHero] = useState(expectPromoHero)
+  const promoHero = heroCampaigns.length > 0
+  const heroPending = !heroReady && expectHero
+  const sliderOn = !promoHero && !heroPending
+
   // Hero slider (autoplay with progress bar)
   // One timer per slide (restarted by manual navigation); the progress bar
   // is a CSS animation keyed on the slide. Ticking React state every 100 ms
   // here used to re-render the whole home page ten times a second.
   const [slide, setSlide] = useState(0)
   useEffect(() => {
+    if (!sliderOn) return
     const t = setTimeout(() => setSlide(s => (s + 1) % SLIDES.length), SLIDE_MS)
     return () => clearTimeout(t)
-  }, [slide, SLIDES.length, SLIDE_MS])
+  }, [slide, SLIDES.length, SLIDE_MS, sliderOn])
   // A config with fewer slides than the current index (BO edit).
   const current = SLIDES[slide % SLIDES.length] ?? SLIDES[0]
   const goSlide = (i: number) => setSlide((i + SLIDES.length) % SLIDES.length)
@@ -571,8 +583,10 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         {/* Reassurance band: full width under the header when it comes first. */}
         {bandOnTop && reassuranceBand(true)}
         <div className="mx-auto max-w-[1320px] px-12">
-          {/* 2. Hero slider + search / flash card */}
-          <section className="mt-6 grid grid-cols-12 items-stretch gap-6">
+          {/* 2. Hero: the live campaign's, else the slider + search */}
+          {promoHero && <HomePromoHero campaigns={heroCampaigns} desktop intervalMs={SLIDE_MS} onSelectListing={onSelectListing} />}
+          {heroPending && <div aria-hidden className="mt-6 min-h-[700px] rounded-2xl bg-surface-container" />}
+          {sliderOn && <section className="mt-6 grid grid-cols-12 items-stretch gap-6">
             <div className="relative col-span-12 flex min-h-[460px] flex-col justify-between overflow-hidden rounded-2xl p-10 shadow-md">
               {SLIDES.map((s, i) => (
                 <div key={`${i}-${s.image}`} className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ${i === slide % SLIDES.length ? 'opacity-100' : 'opacity-0'}`}>
@@ -649,7 +663,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               </div>
             </div>
 
-          </section>
+          </section>}
 
           {/* The other sections, in the order set in the back-office. */}
           {laidOut(desktopOrder).map(k => <Fragment key={k}>{k === 'reassurance' ? reassuranceBand(false) : desktopSections[k]}{!settled[k] && <GridSkeleton count={4} className="mt-10 grid grid-cols-4 items-start gap-6" />}</Fragment>)}
@@ -693,6 +707,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             </button>
           </div>
         </div>
+        {promoHero && <HomePromoHero campaigns={heroCampaigns} desktop={false} intervalMs={SLIDE_MS} onSelectListing={onSelectListing} />}
+        {heroPending && <div aria-hidden className="mb-6 min-h-[600px] rounded-2xl bg-surface-container" />}
         {/* Sections in the order set in the back-office. */}
         {laidOut(mobileOrder).map(k => <Fragment key={k}>{mobileSections[k]}</Fragment>)}
       </div>}

@@ -4,13 +4,15 @@ export type Countdown = { days: number; hours: number; minutes: number; seconds:
 
 // Time left until `endsAt`, re-rendered every `tickMs` — keep it in the
 // small component that shows it (never tick a whole page).
-export function useCountdown(endsAt: string | undefined, tickMs = 1000): Countdown | null {
+// `paused` (e.g. off screen): no tick until it resumes.
+export function useCountdown(endsAt: string | undefined, tickMs = 1000, paused = false): Countdown | null {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    if (!endsAt) return
+    if (!endsAt || paused) return
+    setNow(Date.now())
     const t = setInterval(() => { if (!document.hidden) setNow(Date.now()) }, tickMs)
     return () => clearInterval(t)
-  }, [endsAt, tickMs])
+  }, [endsAt, tickMs, paused])
   if (!endsAt) return null
   const ms = Math.max(0, new Date(endsAt).getTime() - now)
   return {
