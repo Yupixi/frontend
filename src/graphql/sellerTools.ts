@@ -21,8 +21,13 @@ export const SELLER_STATS_QUERY = gql`
       origins { city share sales }
       favoritePlace favoritePlaceShare
       funnel { impressions views favorites contacts sales }
+      deals {
+        contacts activeConversations responseTimeMinutes responseRate within24hPct
+        sales salesAmount salesCode salesBoth salesDeclared salesOffsite conversionRate
+        views intents intentRate intentsByType { type count }
+      }
       listings {
-        views boostedViews clicks messages boosted pendingOffer soldInHours
+        views boostedViews clicks messages boosted pendingOffer soldInHours intents intentRate
         listing { id title price currency status condition coverImageUrl isAdult publishedAt createdAt category { name } }
       }
       boost { acceleration investment investmentCredits boostActions unlockedSales roi }
@@ -36,11 +41,22 @@ export const TRACK_LISTING_CLICK_MUTATION = gql`
 
 export type ListingPerformance = {
   views: number; boostedViews: number; clicks: number; messages: number; boosted: boolean; pendingOffer: boolean; soldInHours: number | null
+  // Purchase intents (chats, « Appeler », favourites, offers, meet-ups, shares) and their rate over the views (%).
+  intents: number; intentRate: number | null
   listing: { id: string; title: string; price: number | null; currency: string; status: string; condition: string | null; coverImageUrl: string | null; publishedAt: string | null; createdAt: string; category: { name: string } }
+}
+export type IntentType = 'CONTACT' | 'CALL' | 'FAVORITE' | 'OFFER' | 'MEETUP' | 'SHARE'
+// « Mises en relation »: the seller's conversations and sales by source
+// (code, both « Oui », declared, hors Dilchap) and the purchase intents.
+export type SellerDealStats = {
+  contacts: number; activeConversations: number; responseTimeMinutes: number | null; responseRate: number | null; within24hPct: number | null
+  sales: number; salesAmount: number; salesCode: number; salesBoth: number; salesDeclared: number; salesOffsite: number; conversionRate: number | null
+  views: number; intents: number; intentRate: number | null; intentsByType: { type: IntentType; count: number }[]
 }
 export type SellerStats = {
   // Full report ("Vendeur certifié"); basic otherwise.
   advanced: boolean
+  deals: SellerDealStats
   days: number; views: number; viewsPrev: number; contacts: number; contactsPrev: number
   conversionRate: number | null; conversionRatePrev: number | null
   revenue: number; revenuePrev: number; savedCommission: number; avgSaleDays: number | null; avgSaleDaysBoosted: number | null
