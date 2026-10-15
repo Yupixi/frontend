@@ -38,7 +38,7 @@ export const LISTINGS_QUERY = gql`
         favoritesCount
         publishedAt
         createdAt
-        coverImageUrl
+        coverImageUrl isAdult
         boostExpiresAt
         boostBadges { kind label }
         activeCampaignDiscount {
@@ -106,7 +106,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       favoritesCount
       publishedAt
       createdAt
-      coverImageUrl
+      coverImageUrl isAdult
       boostExpiresAt
       boostBadges { kind label }
       activeCampaignDiscount {
@@ -173,7 +173,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       favoritesCount
       publishedAt
       createdAt
-      coverImageUrl
+      coverImageUrl isAdult
       activeCampaignDiscount {
         campaignId
         campaignName
@@ -239,7 +239,7 @@ export const LISTING_QUERY = gql`
       favoritesCount
       publishedAt
       createdAt
-      coverImageUrl
+      coverImageUrl isAdult
       boostExpiresAt
       boostBadges { kind label }
       activeCampaignDiscount {
@@ -371,7 +371,7 @@ export const MY_LISTINGS_QUERY = gql`
         favoritesCount
         createdAt
         publishedAt
-        coverImageUrl
+        coverImageUrl isAdult
         boostExpiresAt
         contactsCount
         pendingOffersCount
@@ -504,6 +504,8 @@ export type CampaignDiscount = {
 
 export type RemoteListing = {
   id: string
+  // « Section Adultes » (lib/adult.ts): photos blurred outside the section.
+  isAdult?: boolean | null
   title: string
   description: string
   price: number | null

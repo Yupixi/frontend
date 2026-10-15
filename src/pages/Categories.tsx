@@ -10,7 +10,7 @@ import type { SearchPreset } from './Home'
 import Select from '../components/Select'
 import { thumbnailUrl } from '../lib/media'
 import PaymentLogo, { useMobileMethods } from '../components/PaymentLogo'
-import { METHOD_LABELS, useMarket, useMarketVars, type PaymentMethodCode } from '../lib/countries'
+import { METHOD_LABELS, useMarket, useMarketCode, useMarketVars, type PaymentMethodCode } from '../lib/countries'
 import { Claim, useNoCommissionClaims } from '../lib/site'
 import { useLists } from '../lib/lists'
 import { requestOpenCampaign } from '../lib/navigation'
@@ -39,7 +39,7 @@ export default function Categories({ onNavigate, onCategorySelect, onSearch }: C
   const mobile = useMobileMethods()
   const noCommission = useNoCommissionClaims()
   const { data, loading } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
-  const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 10 } })
+  const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 10, countryCode: useMarketCode() ?? null } })
   const { data: campaignsData } = useQuery<{ activeCampaigns: ActiveCampaignTile[] }>(ACTIVE_CAMPAIGNS_QUERY, { variables: useMarketVars() })
   const [q, setQ] = useState('')
   const [city, setCity] = useState('')

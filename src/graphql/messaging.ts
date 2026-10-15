@@ -55,7 +55,7 @@ const CONVERSATION_FIELDS = `
   listing {
     id
     title
-    coverImageUrl
+    coverImageUrl isAdult
     price
     currency
     status

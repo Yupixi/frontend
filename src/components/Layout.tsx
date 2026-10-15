@@ -45,6 +45,7 @@ import { useSite } from '../lib/site'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
 import ManageCookies from './ManageCookies'
+import { useAdultAccess } from '../lib/adult'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
@@ -105,7 +106,9 @@ export default function Layout({
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
-  const navCategories = (categoriesData?.categories ?? []).slice(0, 8)
+  // « Section Adultes »: in the menu only for a confirmed member.
+  const adultOk = useAdultAccess()?.status === 'OK'
+  const navCategories = (categoriesData?.categories ?? []).filter(c => adultOk || !c.adult).slice(0, 8)
 
   // BO-authored footer copy — falls back to the default copy below when
   // unconfigured, same convention as the Banner slots. The market's version

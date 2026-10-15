@@ -10,7 +10,7 @@ const OFFER_FIELDS = `
     title
     price
     currency
-    coverImageUrl
+    coverImageUrl isAdult
   }
   buyer {
     id

@@ -25,7 +25,7 @@ export const MY_FAVORITES_QUERY = gql`
         price
         currency
         city
-        coverImageUrl
+        coverImageUrl isAdult
       }
     }
   }

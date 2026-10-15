@@ -112,7 +112,7 @@ export const MY_VIEW_HISTORY_QUERY = gql`
         price
         currency
         city
-        coverImageUrl
+        coverImageUrl isAdult
       }
     }
   }

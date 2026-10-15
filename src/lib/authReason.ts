@@ -10,6 +10,7 @@ export const AUTH_REASONS = {
   report: { icon: 'flag', text: 'Connectez-vous pour envoyer un signalement.' },
   alert: { icon: 'notifications', text: 'Connectez-vous pour être alerté des nouvelles annonces.' },
   contact: { icon: 'chat', text: 'Connectez-vous pour discuter avec le vendeur.' },
+  adult: { icon: 'lock', text: 'Connectez-vous pour accéder à la section Adultes (18+).' },
 } as const
 export type AuthReason = keyof typeof AUTH_REASONS
 export const setAuthReason = (reason: AuthReason) => {

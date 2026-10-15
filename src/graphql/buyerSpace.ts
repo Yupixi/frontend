@@ -4,7 +4,7 @@ import { gql } from '@apollo/client'
 // Listing fields shown on the "Mes favoris" and "Historique" cards.
 const CARD_LISTING = `
   id title description price originalPrice currency status condition city locationLabel negotiable deliveryAvailable
-  coverImageUrl publishedAt
+  coverImageUrl isAdult publishedAt
   category { name slug }
   seller { id fullName avatarUrl badge averageRating reviewsCount }
 `

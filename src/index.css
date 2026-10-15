@@ -773,3 +773,9 @@ input, textarea, [contenteditable='true'], .ProseMirror {
 @media (prefers-reduced-motion: no-preference) {
   .live-dot { animation: live-pulse 2s ease-out infinite; }
 }
+
+/* « Section Adultes »: photos blurred outside the section (lib/adult.ts). */
+.adult-blur {
+  filter: blur(18px) saturate(0.6);
+  transform: scale(1.12);
+}

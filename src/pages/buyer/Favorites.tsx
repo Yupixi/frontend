@@ -1,3 +1,4 @@
+import ListingThumb from '../../components/ListingThumb'
 import EmptyState from '../../components/EmptyState'
 import AnimatedIcon from '../../components/AnimatedIcon'
 import { useMemo, useState } from 'react'
@@ -40,7 +41,7 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
     <article className="flex flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
       <div className="relative aspect-square overflow-hidden bg-surface-container md:aspect-[4/3]">
         <button onClick={onSelect} className="absolute inset-0 block cursor-pointer border-none bg-transparent p-0">
-          <SafeImg src={l.coverImageUrl} className={`h-full w-full object-cover ${unavailable ? 'grayscale' : ''}`} iconSize={36} />
+          <ListingThumb listing={l} src={l.coverImageUrl} className={`h-full w-full object-cover ${unavailable ? 'grayscale' : ''}`} iconSize={36} />
         </button>
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1 md:left-3 md:top-3">
           {drop > 0 && <span className="flex items-center gap-1 rounded bg-tertiary px-2 py-0.5 text-label-sm text-white"><Icon name="trending_down" size={14} /> -{formatNumber(drop)} F</span>}
