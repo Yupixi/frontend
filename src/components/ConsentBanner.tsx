@@ -1,4 +1,4 @@
-import { useEffect, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { ANALYTICS_CONFIG_QUERY } from '../graphql/content'
 import { acceptAnalytics, needsConsent, refuseAnalytics, setAnalyticsConfig, useAnalyticsState, type AnalyticsConfig } from '../lib/analytics'
@@ -25,6 +25,10 @@ export default function ConsentBanner({ onOpenLegal }: { onOpenLegal: (slug: str
   useEffect(() => { if (config) setAnalyticsConfig(config) }, [config])
   const open = useConsentOpen()
   const { config: c } = useAnalyticsState()
+  // The banner's text (BO, up to 600 characters) is folded to 3 lines on a
+  // phone: the banner covers less of the page, and the page's own content —
+  // not this text — is what loads first and biggest.
+  const [more, setMore] = useState(false)
   if (!open || !c) return null
   const b = c.banner
   const legal = /^\/legal\/([\w-]+)$/.exec(c.policyPath)?.[1]
@@ -38,8 +42,12 @@ export default function ConsentBanner({ onOpenLegal }: { onOpenLegal: (slug: str
       <div className="rounded-2xl border border-solid border-outline-variant bg-surface-lowest p-3.5 shadow-float sm:flex sm:items-end sm:gap-4 sm:p-4">
         <div className="min-w-0 flex-1">
           <h2 className="m-0 text-label-lg text-on-surface">{b.title}</h2>
-          <p className="m-0 mt-1 text-body-sm text-on-surface-variant">
-            {b.text}{' '}
+          <p className={`m-0 mt-1 text-body-sm text-on-surface-variant ${more ? '' : 'line-clamp-3 sm:line-clamp-none'}`}>{b.text}</p>
+          {/* The policy link stays visible whatever the folding. */}
+          <p className="m-0 mt-1 flex flex-wrap items-center gap-x-3 text-body-sm">
+            {!more && b.text.length > 140 && (
+              <button type="button" onClick={() => setMore(true)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary sm:hidden">Lire la suite</button>
+            )}
             <a href={c.policyPath} onClick={openPolicy} className="font-semibold text-on-surface underline underline-offset-2">{b.policyLabel}</a>
           </p>
         </div>

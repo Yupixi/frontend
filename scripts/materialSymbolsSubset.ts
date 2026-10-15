@@ -57,6 +57,13 @@ export function iconFontCssUrl(names: string[]): string {
 }
 
 const TEXT_FONT_URL = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
+// Unicode subsets of the text font the storefront ships (French: latin;
+// latin-ext only downloads for a page that has such a character).
+const TEXT_SUBSETS = ['latin', 'latin-ext'] as const
+// A local font reshaped to Plus Jakarta Sans' metrics (measured: average
+// advance of regular + semibold French text vs Arial, hhea ascent and
+// descent): the page doesn't move when the real font swaps in.
+const TEXT_FALLBACK_FACE = "@font-face{font-family:'Jakarta Fallback';src:local('Arial'),local('ArialMT'),local('Roboto'),local('Helvetica');size-adjust:103%;ascent-override:100.8%;descent-override:21.6%;line-gap-override:0%}"
 
 // Full font committed in public/ — used only when the subset can't be
 // fetched at build time (offline build).
@@ -66,6 +73,31 @@ const DEV_SUBSET_HREF = '/fonts/material-symbols-subset.woff2'
 // Google only returns woff2 to a browser user agent.
 const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
+
+type TextFont = { subset: (typeof TEXT_SUBSETS)[number]; range: string; buf: Buffer; href: string }
+
+// The text font's latin files (one variable font per subset, every weight),
+// from the same Google CSS the storefront used to link.
+async function fetchTextFont(): Promise<TextFont[] | null> {
+  try {
+    const css = await (await fetch(TEXT_FONT_URL, { headers: { 'user-agent': BROWSER_UA } })).text()
+    const out: TextFont[] = []
+    for (const subset of TEXT_SUBSETS) {
+      const block = css.split(`/* ${subset} */`)[1]?.split('}')[0] ?? ''
+      const url = block.match(/src:\s*url\(([^)]+)\)\s*format\('woff2'\)/)?.[1]
+      const range = block.match(/unicode-range:\s*([^;]+);/)?.[1]
+      if (!url || !range) return null
+      const res = await fetch(url, { headers: { 'user-agent': BROWSER_UA } })
+      if (!res.ok) return null
+      const buf = Buffer.from(await res.arrayBuffer())
+      const hash = createHash('sha256').update(buf).digest('hex').slice(0, 8)
+      out.push({ subset, range, buf, href: `/fonts/jakarta-${subset}-${hash}.woff2` })
+    }
+    return out
+  } catch {
+    return null
+  }
+}
 
 async function fetchSubsetFont(names: string[]): Promise<Buffer | null> {
   try {
@@ -82,11 +114,33 @@ async function fetchSubsetFont(names: string[]): Promise<Buffer | null> {
 // The icon subset is downloaded once at build (dev: at server start) and
 // served from our own origin — no third-party request on the critical path,
 // ~65 KB instead of the 2.4 MB full font. Offline builds fall back to the
-// committed full font. The text font stays on Google Fonts.
+// committed full font.
+// The text font (Plus Jakarta Sans, latin + latin-ext) is self-hosted the
+// same way in builds: no render-blocking stylesheet from fonts.googleapis.com
+// and no second origin before the first paint on a phone (~1.3 s on slow
+// 4G). Its latin file is preloaded, it swaps in (font-display: swap) over a
+// metric-matched local fallback. Dev servers and offline builds keep the
+// Google Fonts link.
 export function fontLinks(srcDir: string): Plugin {
   let font: Promise<Buffer | null> | null = null
   let builtHref: string | null = null
+  let text: Promise<TextFont[] | null> | null = null
   const load = () => (font ??= fetchSubsetFont(collectIconNames(srcDir)))
+  const loadText = () => (text ??= fetchTextFont())
+  const googleTextFont: HtmlTagDescriptor[] = [
+    { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' }, injectTo: 'head' },
+    { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }, injectTo: 'head' },
+    { tag: 'link', attrs: { rel: 'stylesheet', href: TEXT_FONT_URL }, injectTo: 'head' },
+    { tag: 'style', children: TEXT_FALLBACK_FACE, injectTo: 'head-prepend' },
+  ]
+  const selfHostedTextFont = (files: TextFont[]): HtmlTagDescriptor[] => [
+    { tag: 'link', attrs: { rel: 'preload', href: files[0].href, as: 'font', type: 'font/woff2', crossorigin: '' }, injectTo: 'head-prepend' },
+    {
+      tag: 'style',
+      children: files.map(f => `@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:400 800;font-display:swap;src:url('${f.href}') format('woff2');unicode-range:${f.range}}`).join('') + TEXT_FALLBACK_FACE,
+      injectTo: 'head-prepend',
+    },
+  ]
 
   const fontTags = (href: string, subset: boolean): HtmlTagDescriptor[] => [
     { tag: 'link', attrs: { rel: 'preload', href, as: 'font', type: 'font/woff2', crossorigin: '' }, injectTo: 'head-prepend' },
@@ -122,6 +176,9 @@ export function fontLinks(srcDir: string): Plugin {
     async generateBundle() {
       const buf = await load()
       if (buf && builtHref) this.emitFile({ type: 'asset', fileName: builtHref.slice(1), source: buf })
+      const files = await loadText()
+      if (!files) this.warn('Plus Jakarta Sans unavailable (offline?) — linking it from Google Fonts')
+      for (const f of files ?? []) this.emitFile({ type: 'asset', fileName: f.href.slice(1), source: f.buf })
     },
     // 'post': after Vite's own HTML asset processing, which would otherwise
     // try (and fail) to resolve the not-yet-emitted font URL.
@@ -130,11 +187,10 @@ export function fontLinks(srcDir: string): Plugin {
       async handler(_html, ctx) {
         const dev = !!ctx.server
         const subsetHref = dev ? ((await load()) ? DEV_SUBSET_HREF : null) : builtHref
+        const textFiles = dev ? null : await loadText()
         return [
           ...fontTags(subsetHref ?? FULL_FONT_HREF, !!subsetHref),
-          { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' }, injectTo: 'head' },
-          { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }, injectTo: 'head' },
-          { tag: 'link', attrs: { rel: 'stylesheet', href: TEXT_FONT_URL }, injectTo: 'head' },
+          ...(textFiles ? selfHostedTextFont(textFiles) : googleTextFont),
         ]
       },
     },

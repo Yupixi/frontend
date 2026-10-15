@@ -197,7 +197,12 @@ function inject(id: string) {
   // One gtag.js serves every measurement ID configured later.
   const s = document.createElement('script')
   s.async = true
+  // CORS-enabled (Google answers with the page's origin): an error inside
+  // gtag.js reaches window.onerror with its message, not « Script error. ».
+  s.crossOrigin = 'anonymous'
   s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`
+  // Blocked (ad blocker, network): tried again on the next consent.
+  s.addEventListener('error', () => { injected = false }, { once: true })
   document.head.appendChild(s)
 }
 
@@ -313,7 +318,10 @@ type Params = { [key: string]: Value | Item[] }
 let lastEvent = { key: '', at: 0 }
 
 /** A product event (no-op without consent or when the country's setting is off). */
-export function track(name: 'view_item' | 'search' | 'sign_up' | 'login' | 'publish_listing' | 'contact_seller' | 'purchase', params: Params = {}) {
+// Steps of the sign-in / sign-up funnel (lib/authFunnel), counted like the
+// others: method, country, reason — never who.
+export type FunnelEvent = 'login_start' | 'login_failure' | 'login_code_sent' | 'sign_up_start' | 'sign_up_code_sent' | 'sign_up_failure' | 'sign_up_password_set' | 'sign_up_password_later' | 'social_start'
+export function track(name: 'view_item' | 'search' | 'sign_up' | 'login' | 'publish_listing' | 'contact_seller' | 'purchase' | FunnelEvent, params: Params = {}) {
   if (!active()) return
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(params)) {

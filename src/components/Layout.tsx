@@ -103,7 +103,8 @@ export default function Layout({
   const userMenuRef = useRef<HTMLDivElement>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
   const msgMenuRef = useRef<HTMLDivElement>(null)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+  // Lazy: window.innerWidth forces a layout, not on every render.
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   // « Section Adultes »: in the menu only for a confirmed member.
@@ -518,7 +519,7 @@ export default function Layout({
                             className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
                           >
                             <Icon name="replay" size={17} className="text-on-surface-variant" />
-                            Revoir la visite guidée
+                            Visite guidée
                           </button>
                         </>
                       )}

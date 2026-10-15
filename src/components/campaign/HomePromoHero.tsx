@@ -37,9 +37,11 @@ export function expectPromoHero() {
 
 // The live campaigns that take the home hero, in the BO's home order.
 export function useHeroCampaigns() {
-  const { data } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { variables: useMarketVars(), fetchPolicy: 'cache-and-network' })
-  const campaigns = (data?.activeCampaigns ?? []).filter(c => isLive(c) && c.featuredOnHome !== false && c.homeHero !== false)
-  const ready = !!data
+  const { data, previousData, error } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { variables: useMarketVars(), fetchPolicy: 'cache-and-network' })
+  const live = data ?? previousData
+  const campaigns = (live?.activeCampaigns ?? []).filter(c => isLive(c) && c.featuredOnHome !== false && c.homeHero !== false)
+  // An error counts as settled: the usual slider then shows.
+  const ready = !!live || !!error
   const has = campaigns.length > 0
   useEffect(() => {
     if (!ready) return

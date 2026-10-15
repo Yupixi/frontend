@@ -128,6 +128,9 @@ function inject(id: string) {
   grant()
   const s = document.createElement('script')
   s.async = true
+  // CORS-enabled tag (Access-Control-Allow-Origin: *): its errors keep
+  // their message instead of « Script error. ».
+  s.crossOrigin = 'anonymous'
   s.src = `https://www.clarity.ms/tag/${encodeURIComponent(id)}`
   watchReady(s)
   document.head.appendChild(s)
@@ -245,4 +248,9 @@ export function holdClarity(): () => void {
 /** holdClarity() while `active`. */
 export function useClarityHold(active: boolean) {
   useEffect(() => (active ? holdClarity() : undefined), [active])
+}
+
+/** A Clarity custom event (« smart event »): a name only, never data about the visitor. */
+export function clarityEvent(name: string) {
+  if (injected && running && /^[a-z0-9_]{1,50}$/.test(name)) clarity('event', name)
 }

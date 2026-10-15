@@ -223,7 +223,7 @@ function Home({ articles, loading, onOpen, onNavigate }: { articles: HelpArticle
           {query && <button onClick={() => setQuery('')} aria-label="Effacer" className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-low text-on-surface-variant"><Icon name="close" size={16} /></button>}
         </label>
         <button onClick={() => void startTour('fe-welcome')} className="mt-3 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary hover:underline">
-          <Icon name="replay" size={17} /> Revoir la visite guidée
+          <Icon name="replay" size={17} /> Visite guidée
         </button>
         <ManageCookies icon={<Icon name="tune" size={17} />} className="mt-2 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary hover:underline" />
       </section>

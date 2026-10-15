@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition as reactStartTransition } from 'react'
 import { useApolloClient, useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import Layout from './components/Layout'
@@ -183,8 +183,31 @@ const routePage = (): Page | null =>
       : initialRoute.page
 const initialSearch = initialRoute?.page === 'search'
 
+// Every navigation is a transition: the current page stays up while the
+// next one's chunk and data load. Meanwhile a thin bar runs along the top
+// (index.css .nav-progress), so a tap always shows it was taken — on a slow
+// network it otherwise looked like nothing happened (« dead clicks »). One
+// small element of its own, shown from the DOM: no extra render of the page
+// and no style recalculation of the whole document on the tap.
+let navBar: HTMLDivElement | null = null
+function setNavPending(on: boolean) {
+  if (!on && !navBar) return
+  if (!navBar) {
+    navBar = document.createElement('div')
+    navBar.className = 'nav-progress'
+    navBar.setAttribute('aria-hidden', 'true')
+    navBar.hidden = true
+    document.body.appendChild(navBar)
+  }
+  navBar.hidden = !on
+}
+function startTransition(update: () => void) {
+  setNavPending(true)
+  reactStartTransition(update)
+}
+
 export default function App() {
-  const [page, setPage] = useState<Page>(conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
+  const [page, setPage] = useState<Page>(() => conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration
   // would fight it (it runs before the restored page has rendered).
@@ -192,9 +215,9 @@ export default function App() {
   // Bumped on every navigation, so going from one listing (seller, shop…)
   // to another of the same page type also lands at the top.
   const [navSeq, setNavSeq] = useState(0)
-  const [legalSlug, setLegalSlug] = useState(sharedLegalSlug() ?? initialRoute?.legalSlug ?? savedNav.legalSlug ?? 'cgu')
-  const [shopKey, setShopKey] = useState(sharedShopKey() ?? initialRoute?.shopKey ?? savedNav.shopKey ?? '')
-  const [campaignSlug, setCampaignSlug] = useState(sharedCampaignSlug() ?? initialRoute?.campaignSlug ?? savedNav.campaignSlug ?? '')
+  const [legalSlug, setLegalSlug] = useState(() => sharedLegalSlug() ?? initialRoute?.legalSlug ?? savedNav.legalSlug ?? 'cgu')
+  const [shopKey, setShopKey] = useState(() => sharedShopKey() ?? initialRoute?.shopKey ?? savedNav.shopKey ?? '')
+  const [campaignSlug, setCampaignSlug] = useState(() => sharedCampaignSlug() ?? initialRoute?.campaignSlug ?? savedNav.campaignSlug ?? '')
   // Centre d'aide article shown ('' = the help centre's home).
   const [helpSlug, setHelpSlug] = useState(initialRoute?.page === 'help' ? (initialRoute.helpSlug ?? '') : (savedNav.helpSlug ?? ''))
   const [dark, setDark] = useState(savedDark)
@@ -202,10 +225,10 @@ export default function App() {
   const consentOpen = useConsentOpen()
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
-  const [selectedListingId, setSelectedListingId] = useState(sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
+  const [selectedListingId, setSelectedListingId] = useState(() => sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
   const [searchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedNav.searchTerm ?? ''))
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? '')
-  const [selectedSellerId, setSelectedSellerId] = useState(sharedSellerId() ?? initialRoute?.sellerId ?? savedNav.selectedSellerId ?? 's1')
+  const [selectedSellerId, setSelectedSellerId] = useState(() => sharedSellerId() ?? initialRoute?.sellerId ?? savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
   // right conversation, not part of the session-restored nav state.
   const [contactSeller, setContactSeller] = useState<{ listingId?: string; sellerId: string } | null>(null)
@@ -217,10 +240,10 @@ export default function App() {
   const [categoryCity, setCategoryCity] = useState(initialSearch ? (initialRoute?.categoryCity ?? '') : (savedNav.categoryCity ?? ''))
   // A category page's city belongs to that category page.
   const setCategoryFilter = (cat: string) => { setCategoryFilterState(cat); setCategoryCity('') }
-  // Tab title, description and share tags when moving between pages.
-  useSeo(page, page === 'search' && !!categoryFilter)
+  // Tab title, description and share tags of each page, on every move.
+  useSeo(page, { searchTerm, category: page === 'search' ? categoryFilter : '' })
   const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
-  const [selectedDisputeId, setSelectedDisputeId] = useState(linkParam('dispute') ?? savedNav.selectedDisputeId ?? '')
+  const [selectedDisputeId, setSelectedDisputeId] = useState(() => linkParam('dispute') ?? savedNav.selectedDisputeId ?? '')
   // Support ticket to open (notification of a reply).
   const [focusTicketId, setFocusTicketId] = useState<string | null>(() => linkParam('ticket'))
   // « Prolonger » in the end-of-boost notification: Booster opens on that listing.
@@ -233,7 +256,9 @@ export default function App() {
   const [enablingPush, setEnablingPush] = useState(false)
   const [pushDismissed, setPushDismissed] = useState(false)
   const [verifyLater, setVerifyLater] = useState(verifyPromptDismissed)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  // Lazy initial value: reading window.innerWidth forces a synchronous
+  // layout of the page, and a plain argument is evaluated on every render.
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   const [location, setLocation] = useState<StoredLocation | null>(() => getStoredLocation())
   // True while a first-visit IP lookup is in flight (capped, see below).
   const [locationPending, setLocationPending] = useState(() => !getStoredLocation())
@@ -514,6 +539,7 @@ export default function App() {
   // back/forward. Instant and before paint — no slide through the old page.
   const firstPage = useRef(true)
   useLayoutEffect(() => {
+    setNavPending(false)
     // Not on the first render (already at the top): scrollTo — or even
     // reading scrollY — would force a full synchronous layout of the page
     // being mounted, ~0.5 s of blocked main thread on a mid-range phone.
