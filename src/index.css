@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+/* `dark:` utilities: the visitor's system theme (Tailwind's default), and
+   always in the « Section Adultes » dark theme (lib/adultMode.ts). */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    @slot;
+  }
+  &:where([data-mode='adult'], [data-mode='adult'] *) {
+    @slot;
+  }
+}
+
 /* "Circulaire Dynamique" design system (Stitch — SecondHand Marketplace).
    Tailwind utilities (bg-surface-container-low, text-on-surface-variant,
    text-tertiary, rounded-lg…) resolve to the runtime CSS vars below so they
@@ -14,7 +25,7 @@
   --color-primary-dark: var(--primary-dark);
   --color-primary-container: var(--primary-container);
   --color-primary-fixed: var(--primary-fixed);
-  --color-on-primary-fixed: #410002;
+  --color-on-primary-fixed: var(--on-primary-fixed, #410002);
   --color-secondary: var(--secondary);
   --color-tertiary: var(--tertiary);
   --color-tertiary-container: var(--tertiary-container);
@@ -141,6 +152,71 @@
   --shadow-primary: none;
   --shadow-yellow: none;
 }
+
+/* « Section Adultes (18+) »: its own dark theme (lib/adultMode.ts puts
+   data-mode="adult" on <html>). Anthracite surfaces with a hint of violet
+   and a bordeaux-violet accent instead of the Dilchap red; it wins over the
+   visitor's light/dark choice (.dark wrappers in App). Contrasts (AA):
+   white on --primary 6.9:1, --primary-ink on cards 7.8:1, --fg-subtle on
+   --bg 6:1. */
+[data-mode='adult'],
+[data-mode='adult'] .dark {
+  color-scheme: dark;
+  --bg: #141116;
+  --bg-card: #1C181F;
+  --surface-container-low: #221D25;
+  --surface-container: #29232C;
+  --surface-container-high: #322B35;
+  --surface-container-highest: #3C343F;
+  --inverse-surface: #EDE6EF;
+  --fg: #F5EFF6;
+  --fg-muted: #CFC1D2;
+  --fg-subtle: #A293A6;
+  --border: #372F3A;
+  --border-subtle: #241F27;
+  /* Fills (buttons, badges) under white text. */
+  --primary: #9E2B6F;
+  --primary-dark: #84225C;
+  --primary-light: #B9407F;
+  --primary-container: #B9407F;
+  --primary-fixed: #3D1A33;
+  --on-primary-fixed: #FFD8EC;
+  /* The accent as text or icon on the dark surfaces. */
+  --primary-ink: #EE8FC6;
+  --accent: #B9407F;
+  --secondary: #F5EFF6;
+  --secondary-hover: #EDE6EF;
+  --secondary-fg: #1C181F;
+  --tertiary: #4EDEA3;
+  --tertiary-soft: rgba(78, 222, 163, 0.12);
+  --verified: #5AA2FF;
+  --verified-soft: rgba(90, 162, 255, 0.14);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.6);
+}
+/* The accent used as a text colour reads in its light tone (on a white
+   chip it keeps the deep one). In the utilities layer and through :where()
+   so a page's own hover/state utilities still win as usual. */
+@layer utilities {
+  :where([data-mode='adult']) .text-primary,
+  :where([data-mode='adult']) .hover\:text-primary:hover,
+  :where([data-mode='adult']) .group:hover .group-hover\:text-primary {
+    color: var(--primary-ink);
+  }
+  :where([data-mode='adult']) .bg-white.text-primary { color: var(--primary); }
+  /* Inverse chips turn light here: their text turns dark. */
+  :where([data-mode='adult']) .bg-inverse-surface.text-white { color: var(--secondary-fg); }
+}
+[data-mode='adult'] .price-tag,
+[data-mode='adult'] .rich-text a,
+[data-mode='adult'] .tiptap a,
+[data-mode='adult'] .view-toggle-btn.active {
+  color: var(--primary-ink);
+}
+/* The logo in light monochrome (white tile, dark « di », white wordmark). */
+[data-mode='adult'] .brand-logo { filter: grayscale(1) invert(1) brightness(1.35); }
+[data-mode='adult'] .map-placeholder { background-color: #241F27; }
 
 * {
   box-sizing: border-box;

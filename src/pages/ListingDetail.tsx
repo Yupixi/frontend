@@ -65,6 +65,7 @@ import ListingQrSheet from '../components/ListingQrSheet'
 import { useRules } from '../lib/rules'
 import { AdultSectionContext, adultGateReason } from '../lib/adult'
 import AdultGate from '../components/AdultGate'
+import { enterAdultSpace, rememberAdultListing, useAdultMode, useAdultSpace } from '../lib/adultMode'
 import { metaListingSeen } from '../lib/metaPixel'
 import { useListingIntents } from '../lib/intents'
 
@@ -131,6 +132,17 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // « Section Adultes »: the server answers with the gate (never the
   // listing) to anyone without the access.
   const gateReason = adultGateReason(error)
+  // Its dark theme (lib/adultMode): an adult listing or its gate; while it
+  // loads, the address's guess.
+  const adultPage = listing ? !!listing.isAdult : gateReason ? true : undefined
+  useAdultMode(loading ? undefined : adultPage ?? false)
+  const adultSpace = useAdultSpace()
+  // Opening an adult listing (so with the access): the section's space.
+  useEffect(() => {
+    if (!adultPage) return
+    rememberAdultListing(listingId)
+    if (listing?.isAdult) enterAdultSpace()
+  }, [adultPage, listingId, listing?.isAdult])
   // Report reasons of the listing's country (the market until it loads).
   const reportReasons = useLists(listing?.countryCode || undefined).reportReasons.listing
   const qrEnabled = useRules(listing?.countryCode || undefined).QR_LISTING_ENABLED !== 0
@@ -398,7 +410,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
       <div className="hidden border-0 border-b border-solid border-outline-variant bg-surface-lowest lg:block">
         <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-12 py-2.5 text-label-md text-on-surface-variant">
           <nav className="flex min-w-0 items-center gap-1">
-            <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
+            <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> {adultSpace ? 'Section Adultes' : 'Accueil'}</button>
             <ChevronRight size={14} className="text-outline-variant" />
             <span>{listing.category.name}</span>
             {listing.subcategory && <><ChevronRight size={14} className="text-outline-variant" /><span>{listing.subcategory.name}</span></>}

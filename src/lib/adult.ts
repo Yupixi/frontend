@@ -3,6 +3,7 @@ import { useQuery } from '@apollo/client/react'
 import { createContext, useContext } from 'react'
 import { useMarketCode } from './countries'
 import { noteAdultListing } from './metaPixel'
+import { rememberAdultListing } from './adultMode'
 
 // « Section Adultes (18+) » (Backend modules/adult): open per country in the
 // Backoffice, shown only to logged-in members who ticked « J'ai 18 ans ou
@@ -89,6 +90,8 @@ export function useAdultBlur(): (listing: { id: string; isAdult?: boolean | null
   return (listing) => {
     if (!listing?.isAdult) return false
     noteAdultListing(listing.id)
+    // Its page then opens in the section's theme at once (lib/adultMode).
+    rememberAdultListing(listing.id)
     if (access?.status !== 'OK') return true
     return inSection ? false : access.blurPhotos
   }

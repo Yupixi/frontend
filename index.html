@@ -16,6 +16,35 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
     <title><!-- figma:title --></title>
     <script>
+      // « Section Adultes »: its dark theme from the first paint for a
+      // direct visit (src/lib/adultMode.ts, same storage keys): the space
+      // this session is in; the storefront server's title for the section's
+      // pages (« Contenu réservé aux adultes », Backend SeoService.adultMeta);
+      // else what this device already knows: the section's slugs, adult
+      // listings of this session.
+      (function () {
+        try {
+          var p = location.pathname, on = sessionStorage.getItem('dilchap_adult_space') === '1', m, list
+          var server = document.title.indexOf('Contenu réservé aux adultes') === 0
+          if (on) { /* in the space */ } else if ((m = /^\/categorie\/([^/]+)/.exec(p))) {
+            var slug = decodeURIComponent(m[1]).toLowerCase()
+            list = JSON.parse(localStorage.getItem('dilchap_adult_slugs') || '[]')
+            on = server || slug === (localStorage.getItem('dilchap_adult_root') || 'adultes') || list.indexOf(slug) >= 0
+            if (server && list.indexOf(slug) < 0) { list.push(slug); localStorage.setItem('dilchap_adult_slugs', JSON.stringify(list)) }
+          } else if ((m = /^\/annonce\/(?:.*-)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(p))) {
+            var id = m[1].toLowerCase()
+            list = JSON.parse(sessionStorage.getItem('dilchap_adult_ids') || '[]')
+            on = server || list.indexOf(id) >= 0
+            if (server && list.indexOf(id) < 0) { list.push(id); sessionStorage.setItem('dilchap_adult_ids', JSON.stringify(list)) }
+          }
+          if (!on) return
+          document.documentElement.setAttribute('data-mode', 'adult')
+          var t = document.querySelector('meta[name="theme-color"]')
+          if (t) { t.setAttribute('data-normal', t.getAttribute('content')); t.setAttribute('content', '#141116') }
+        } catch (e) { /* storage blocked: the page sets the theme itself */ }
+      })()
+    </script>
+    <script>
       // Stale page during a deploy: this HTML may name the previous build's
       // entry script or stylesheet, now gone (404) — a blank page. Reload
       // (at most 3 times in 2 minutes, a little later each time) until the

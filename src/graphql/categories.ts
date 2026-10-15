@@ -70,6 +70,10 @@ export type RemoteCategory = {
 export const POPULAR_SEARCHES_QUERY = gql`
   query PopularSearches($limit: Int, $countryCode: String) { popularSearches(limit: $limit, countryCode: $countryCode) { term count growth } }
 `
+// In the « Section Adultes » space: its own terms only (lib/adultMode).
+export const SECTION_POPULAR_SEARCHES_QUERY = gql`
+  query SectionPopularSearches($limit: Int, $countryCode: String) { popularSearches(limit: $limit, countryCode: $countryCode, adultSection: true) { term count growth } }
+`
 export type PopularSearch = { term: string; count: number; growth: number }
 
 // `country`: the visitor's market (the campaigns running there).
