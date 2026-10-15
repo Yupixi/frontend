@@ -6,6 +6,8 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import { AccountLayout } from '../account/AccountLayout'
 import { CHANGE_PASSWORD_MUTATION } from '../../graphql/account'
+import { MY_LOGIN_METHODS_QUERY, type LoginMethods } from '../../graphql/auth'
+import LoginMethodsCard from '../../components/LoginMethodsCard'
 import {
   DELETE_MY_ACCOUNT_MUTATION, MY_SESSIONS_QUERY, REVOKE_OTHER_SESSIONS_MUTATION, REVOKE_SESSION_MUTATION, SELLER_SETTINGS_QUERY,
   UPDATE_PREFERENCES_JSON_MUTATION, UPDATE_SELLER_PROFILE_MUTATION, type UserSession,
@@ -257,7 +259,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
   const emailChanged = !!form && !!me && form.email.trim() !== (me.email ?? '')
   const noEmail = !!me && !me.email
   const loginPhoneChanged = noEmail && !!form && form.phone.trim() !== (me?.phone ?? '')
-  const needsPw = emailChanged || loginPhoneChanged
+  // An account without a password confirms with a recent sign-in instead
+  // (the server says so when it is too old).
+  const { data: loginMethods } = useQuery<{ myLoginMethods: LoginMethods }>(MY_LOGIN_METHODS_QUERY)
+  const hasPassword = loginMethods?.myLoginMethods.hasPassword !== false
+  const needsPw = (emailChanged || loginPhoneChanged) && hasPassword
   // « Ajouter un e-mail » (account opened with a phone only).
   const [addingEmail, setAddingEmail] = useState(false)
   const [pwOpen, setPwOpen] = useState(false)
@@ -575,7 +581,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     <Icon name={me.isVerified ? 'visibility' : 'verified_user'} size={16} /> {me.isVerified ? 'Voir' : 'Vérifier mon identité'}
                   </button>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
+                <LoginMethodsCard />
+                {hasPassword && <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="password" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1">
                     <div className="text-label-md text-on-surface">Mot de passe</div>
@@ -590,7 +597,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     </div>
                   )}
                   {pwMsg && <p className={`m-0 w-full text-body-sm ${pwMsg.ok ? 'text-tertiary' : 'text-primary'}`}>{pwMsg.text}</p>}
-                </div>
+                </div>}
                 <AdultConfirmationSetting />
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <div className="text-label-md text-on-surface">Sessions et appareils actuellement connectés</div>
@@ -710,12 +717,12 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
         <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setDeleteOpen(false)}>
           <div className="w-full max-w-md rounded-t-2xl bg-surface-lowest p-5 sm:rounded-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="m-0 flex items-center gap-2 text-headline-sm text-primary"><Icon name="warning" size={22} /> Supprimer mon compte</h3>
-            <p className="m-0 mt-2 text-body-md text-on-surface-variant">Cette action est irréversible. Confirmez avec votre mot de passe.</p>
-            <input type="password" value={deletePw} onChange={e => setDeletePw(e.target.value)} placeholder="Mot de passe" className={`${field} mt-3`} />
+            <p className="m-0 mt-2 text-body-md text-on-surface-variant">{hasPassword ? 'Cette action est irréversible. Confirmez avec votre mot de passe.' : 'Cette action est irréversible. Votre compte n’a pas de mot de passe : une connexion de moins de 30 minutes la confirme.'}</p>
+            {hasPassword && <input type="password" value={deletePw} onChange={e => setDeletePw(e.target.value)} placeholder="Mot de passe" className={`${field} mt-3`} />}
             {deleteError && <p className="m-0 mt-1 text-body-sm text-primary">{deleteError.message}</p>}
             <div className="mt-4 flex gap-2">
               <button onClick={() => setDeleteOpen(false)} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface">Annuler</button>
-              <button disabled={!deletePw || deleting} onClick={() => void deleteAccount({ variables: { password: deletePw } }).then(() => onLogout())} className="flex-1 cursor-pointer rounded-xl border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-50">Supprimer définitivement</button>
+              <button disabled={(hasPassword && !deletePw) || deleting} onClick={() => void deleteAccount({ variables: { password: hasPassword ? deletePw : null } }).then(() => onLogout())} className="flex-1 cursor-pointer rounded-xl border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-50">Supprimer définitivement</button>
             </div>
           </div>
         </div>

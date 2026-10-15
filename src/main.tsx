@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import EmailLinkPage, { isEmailLinkPath } from './components/EmailLinkPage'
 import './index.css'
 import { captureCampaignParams } from './lib/campaignParams'
+import { captureFacebookReturn } from './lib/facebookReturn'
 
 // /q/<code> (printed QR codes of the shops): a page of its own, outside the
 // app and the launch gate (it shows the launch page itself).
@@ -28,6 +29,10 @@ registerServiceWorker()
 // Ad campaign parameters (?utm_…, ?fbclid=…, ?gclid=…): kept aside for the
 // measurement tools (after consent) and taken off the address bar.
 captureCampaignParams()
+
+// Back from Facebook's sign-in dialog: the code is kept aside, the address
+// cleaned before anything (Clarity, analytics) can see it.
+captureFacebookReturn()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

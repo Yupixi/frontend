@@ -111,6 +111,17 @@
 		}
 	}
 
+	# Facebook Login, Meta's side: the « data deletion » callback
+	# (POST /auth/facebook/data-deletion, a signed request from Meta) and
+	# its status page (GET /auth/facebook/data-deletion/status?code=…),
+	# answered by the backend (Backend auth/social). The OAuth return page
+	# itself, /connexion/facebook, is the app's.
+	handle /auth/facebook/* {
+		reverse_proxy {$API_UPSTREAM:https://yupixi-backend-gahuiz-52bc79-82-29-184-109.sslip.io} {
+			header_up Host {upstream_hostport}
+		}
+	}
+
 	# Search engines: robots.txt, sitemap.xml (an index) and its files
 	# under /sitemaps/ come from the backend
 	# (Backend src/modules/seo), which knows the live listings and shops.
