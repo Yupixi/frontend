@@ -45,7 +45,6 @@ import { useSite } from '../lib/site'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
 import ManageCookies from './ManageCookies'
-import { useAdultAccess } from '../lib/adult'
 import { rememberAdultSlugs, spaceCategories, useAdultModeOn, useAdultSpace } from '../lib/adultMode'
 import AdultModeBar from './AdultModeBar'
 
@@ -109,15 +108,16 @@ export default function Layout({
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
-  // « Section Adultes »: in the menu only for a confirmed member.
-  const adultOk = useAdultAccess()?.status === 'OK'
   const adultMode = useAdultModeOn()
   // In its space, the section's own subcategories only (lib/adultMode).
   const adultSpace = useAdultSpace()
   const sectionCategories = spaceCategories(categoriesData?.categories ?? [], true)
   const navCategories = adultSpace
     ? sectionCategories.flatMap(c => c.subcategories.map(s => ({ slug: s.slug, name: s.name })))
-    : (categoriesData?.categories ?? []).filter(c => adultOk || !c.adult).slice(0, 8)
+    : (categoriesData?.categories ?? []).filter(c => !c.adult).slice(0, 8)
+  // Its own entry at the end of the menu wherever the section is open (the
+  // server lists it only then): everyone sees it, the gate does the rest.
+  const adultSection = categoriesData?.categories.find(c => c.adult)
   // The section's slugs (its theme on a direct visit, its space).
   useEffect(() => {
     if (!categoriesData) return
@@ -588,14 +588,15 @@ export default function Layout({
               key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
             })),
             { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => requestOpenCampaign('') },
-            { key: 'shops', label: 'Boutiques officielles', icon: true, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
-          ]).map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: boolean }) => (
+            { key: 'shops', label: 'Boutiques officielles', icon: 'verified' as const, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
+            ...(adultSection ? [{ key: 'adult', label: 'Adultes 18+', icon: 'lock' as const, active: false, onClick: () => onNavigateCategory(adultSection.slug) }] : []),
+          ]).map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: 'verified' | 'lock' }) => (
             <button
               key={item.key}
               onClick={item.onClick}
               className={`flex cursor-pointer items-center gap-1 border-0 border-b-2 border-solid bg-transparent px-0 pb-2 pt-1 text-label-md transition-colors ${item.active ? 'border-primary font-bold text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
             >
-              {item.icon && <Icon name="verified" size={16} />}{item.label}
+              {item.icon === 'verified' && <Icon name="verified" size={16} />}{item.icon === 'lock' && <Icon name="lock" size={16} />}{item.label}
             </button>
           ))}
         </nav>
