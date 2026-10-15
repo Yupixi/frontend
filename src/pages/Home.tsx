@@ -215,6 +215,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const { campaigns: heroCampaigns, ready: heroReady } = useHeroCampaigns()
   const [expectHero] = useState(expectPromoHero)
   const promoHero = heroCampaigns.length > 0
+  // « Promotions en cours » doesn't repeat the campaigns of the hero.
+  const heroIds = heroCampaigns.map(c => c.id)
   const heroPending = !heroReady && expectHero
   const sliderOn = !promoHero && !heroPending
 
@@ -320,7 +322,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // Only the layout on screen is built (each render used to create both,
   // every card twice).
   const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = !isDesktop ? {} : {
-    campaign: <HomePromotions desktop renderCard={l => card(l)} />,
+    campaign: <HomePromotions desktop heroIds={heroIds} renderCard={l => card(l)} />,
     categories: <>
           {topCategories.length > 0 && (
             <section className="mt-10">
@@ -512,7 +514,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           </section>
         )}
     </>,
-    campaign: <HomePromotions desktop={false} renderCard={l => card(l)} />,
+    campaign: <HomePromotions desktop={false} heroIds={heroIds} renderCard={l => card(l)} />,
     // The pills of the section headings (« En vedette », « Priorité
     // visibilité », « Historique vérifié ») look tappable: they open the
     // help article that explains them.

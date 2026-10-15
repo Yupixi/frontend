@@ -1,4 +1,5 @@
 import AnimatedIcon from './AnimatedIcon'
+import { entryDiscountPercent } from '../lib/campaignDiscount'
 import { lazy, memo, Suspense, useMemo, useRef, useState } from 'react'
 import { MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, type AppIcon } from './icons'
 import Icon from './Icon'
@@ -122,6 +123,7 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
 function PromoBadge({ listing }: { listing: RemoteListing }) {
   const discount = listing.activeCampaignDiscount
   if (!discount) return null
+  const pct = entryDiscountPercent(discount, listing.price)
   return (
     <span
       className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"
@@ -129,7 +131,7 @@ function PromoBadge({ listing }: { listing: RemoteListing }) {
       title={discount.campaignName}
     >
       <Tag size={11} />
-      {discount.discountPercent != null ? `-${discount.discountPercent}%` : discount.campaignName}
+      {pct ? `-${pct}%` : discount.campaignName}
     </span>
   )
 }
