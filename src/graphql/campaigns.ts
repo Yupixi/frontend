@@ -7,6 +7,7 @@ import type { FeeTier } from '../lib/campaignFees'
 const CAMPAIGN_FIELDS = `
   id name slug description type themeColor startsAt endsAt visuals
   listingsCount sellersCount maxDiscountPercent featuredOnHome
+  homeHero homeHeroAnimated homeHeroListings homeHeroTagline
   listings { id discountPercent salePrice listing { id title coverImageUrl isAdult } }
 `
 
@@ -15,6 +16,23 @@ const CAMPAIGN_FIELDS = `
 export const LIVE_CAMPAIGNS_QUERY = gql`
   query LiveCampaigns($country: String) { activeCampaigns(country: $country) { ${CAMPAIGN_FIELDS} } }
 `
+
+// The best deals the home hero animates: only what its cards print.
+export const HERO_DEALS_QUERY = gql`
+  query HeroDeals($filter: ListingFilterInput, $pageSize: Float) {
+    listings(filter: $filter, sort: DISCOUNT_DESC, page: 1, pageSize: $pageSize) {
+      items {
+        id title price currency coverImageUrl
+        activeCampaignDiscount { campaignId campaignName campaignSlug themeColor discountPercent salePrice }
+      }
+    }
+  }
+`
+
+export type HeroDeal = {
+  id: string; title: string; price: number | null; currency: string; coverImageUrl: string | null
+  activeCampaignDiscount: { campaignId: string; discountPercent: number | null; salePrice: number | null } | null
+}
 
 export const CAMPAIGN_PAGE_QUERY = gql`
   query CampaignPage($slug: String!, $country: String) {
@@ -44,6 +62,9 @@ export type LiveCampaign = {
   // Shown in the home « Promotions en cours » (BO « Visibilité »; the API
   // already sorts by the BO's home order).
   featuredOnHome: boolean
+  // The home hero taken over while live (BO « Visibilité »): its animations,
+  // how many best deals it animates, its catchphrase (null = the type).
+  homeHero: boolean; homeHeroAnimated: boolean; homeHeroListings: number; homeHeroTagline: string | null
   listings: { id: string; discountPercent: number | null; salePrice: number | null; listing: { id: string; title: string; coverImageUrl: string | null } }[]
 }
 
@@ -58,6 +79,11 @@ export type CampaignPage = LiveCampaign & {
 
 export const CAMPAIGN_TYPE_LABEL: Record<CampaignType, string> = {
   SALE: 'Soldes', FLASH: 'Vente flash', SEASONAL: 'Saisonnière', CUSTOM: 'Campagne',
+}
+
+// The badge over a campaign's title (campaign page, home hero).
+export const CAMPAIGN_HERO_BADGE: Record<CampaignType, string> = {
+  SALE: 'Soldes officielles', FLASH: 'Vente flash officielle', SEASONAL: 'Campagne saisonnière', CUSTOM: 'Campagne officielle Dilchap',
 }
 
 // Live = what the storefront may show (campaign(slug) also returns drafts
