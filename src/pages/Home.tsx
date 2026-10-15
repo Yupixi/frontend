@@ -4,7 +4,7 @@ import EmptyState from '../components/EmptyState'
 import { Fragment, useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Search, Flame, Loader2,
+  ArrowLeft, ArrowRight, ChevronRight, Search, Flame,
   MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
@@ -25,6 +25,8 @@ import { SHOPS_QUERY, type Shop } from '../graphql/shops'
 import { HomePromotions, useLiveCampaignsSettled } from '../components/campaign/CampaignTiles'
 import HomePromoHero, { expectPromoHero, useHeroCampaigns } from '../components/campaign/HomePromoHero'
 import { CategoryRailSkeleton, GridSkeleton, RailSkeleton } from '../components/Skeleton'
+import InfiniteLoader from '../components/InfiniteLoader'
+import { useLoadMore } from '../lib/useLoadMore'
 import { trustTopicOf, useTrustSheet } from '../components/TrustSheet'
 
 // promo: only items on sale (shop sales and Dilchap campaigns).
@@ -46,7 +48,7 @@ type HomeProps = {
   onSearch?: (term: string, preset?: SearchPreset) => void
 }
 
-// Desktop fills 3 rows of 4; phones show 3 rows of 2 before "Charger plus".
+// A page of the feed: 3 rows of 4 on desktop, 3 rows of 2 on phones.
 const PAGE_SIZE = 12
 const MOBILE_PAGE_SIZE = 6
 
@@ -94,11 +96,16 @@ function Kicker({ children, className = 'text-primary' }: { children: React.Reac
 
 // Mobile follows "Dilchap Mobile – Accueil & Découverte"; desktop (lg+)
 // follows the dedicated desktop home mockup.
-type FeedState = { key: string, pages: RemoteListing[][], totalCount: number }
-// The feed's loaded pages outlive Home unmounting: opening a listing and
-// coming back restores every "Charger plus" page (and the scroll position,
-// see App), instead of dropping the visitor at the top of page 1.
-const feedMemory: { city: string | null, page: { key: string, page: number } | null, feed: FeedState | null } = { city: null, page: null, feed: null }
+// The feed's city chip outlives Home unmounting; its loaded pages stay in
+// the Apollo cache (lib/apollo, pagedList): opening a listing and coming
+// back restores every page already scrolled through (and the scroll
+// position, see App), instead of dropping the visitor at the top of page 1.
+const feedMemory: { city: string | null } = { city: null }
+// The recommendation rails' last lists (this tab), shown while new ones
+// load: back from a listing, its category now counts in the interests (a
+// new request) — the rails keep their room, so the sections below are laid
+// out at once and the scroll position deep in the feed is restored.
+const railMemory: { key: string, recommended?: RemoteListing[], forYou?: RemoteListing[] } = { key: '' }
 
 export default function Home({ onOpenShop, onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, locationPending, onContactSeller, onSearch }: HomeProps) {
   const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
@@ -143,7 +150,10 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const isFeatured = (l: RemoteListing) => !!l.boostBadges?.some(b => b.kind !== 'URGENT')
   // A showcase rail: listings with a photo only (a grey placeholder card as
   // the first "pépite" reads as broken).
-  const recommended = recommendedData?.recommendedListings ?? []
+  const railKey = JSON.stringify([isDesktop, location?.countryCode ?? null, location?.city ?? null, currentUser?.id ?? null])
+  const keptRails = railMemory.key === railKey ? railMemory : null
+  const recommendedList = recommendedData?.recommendedListings ?? keptRails?.recommended
+  const recommended = recommendedList ?? []
   const withPhoto = recommended.filter(l => !!listingImage(l))
   // "Boutiques officielles" rail (most followed first).
   const { data: shopsData, error: shopsError } = useQuery<{ shops: { items: Shop[] } }>(SHOPS_QUERY, { variables: { sort: 'POPULAR', pageSize: 8, countryCode: location?.countryCode ?? undefined }, skip: locationPending })
@@ -156,7 +166,17 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     variables: { limit: isDesktop ? 8 : 12, placement: 'FOR_YOU', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests, excludeIds: pepites.map(l => l.id) },
     skip: locationPending || !personalized || !recommendedData,
   })
-  const forYou = (forYouData?.recommendedListings ?? []).filter(l => !!listingImage(l))
+  const forYouList = forYouData?.recommendedListings ?? keptRails?.forYou
+  const forYou = (forYouList ?? []).filter(l => !!listingImage(l))
+  useEffect(() => {
+    if (!recommendedData) return
+    if (railMemory.key !== railKey) railMemory.forYou = undefined
+    railMemory.key = railKey
+    railMemory.recommended = recommendedData.recommendedListings
+  }, [recommendedData, railKey])
+  useEffect(() => {
+    if (forYouData && railMemory.key === railKey) railMemory.forYou = forYouData.recommendedListings
+  }, [forYouData, railKey])
   const forYouHint = currentUser ? 'D’après les annonces que vous consultez, aimez et recherchez.' : 'D’après les catégories consultées sur cet appareil.'
 
   // Cities (desktop quick filters + hero select) — real cities facet.
@@ -170,43 +190,21 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   })
   const certified = certifiedData?.listings.items ?? []
 
-  // Dernières annonces — scoped to the market (and city chip), grown in place:
-  // "Charger plus" fetches only the next page and appends it (it used to
-  // re-request every listing already on screen with a growing pageSize).
+  // Dernières annonces — scoped to the market (and city chip), grown in
+  // place as the visitor scrolls: each next page is appended (InfiniteLoader).
   const [feedCity, setFeedCity] = useState<string | null>(() => feedMemory.city)
   const cityFilter = feedCity ?? location?.city
   const feedFilter = marketFilter || cityFilter ? { ...marketFilter, ...(cityFilter ? { city: cityFilter } : {}) } : undefined
   const feedKey = JSON.stringify([feedFilter ?? null, sort, pageSize])
-  const [pageState, setPageState] = useState(() => feedMemory.page ?? { key: feedKey, page: 1 })
-  const page = pageState.key === feedKey ? pageState.page : 1
-  const setPage = (next: (p: number) => number) => setPageState({ key: feedKey, page: next(page) })
-  const { data: feedData, loading: feedLoading, error: feedError } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
-    variables: { sort, page, pageSize, filter: feedFilter, rotationSeed: rotationSeed() },
+  const { data: feedData, previousData: feedPrevious, loading: feedLoading, error: feedError, fetchMore: feedFetchMore } = useQuery<{ listings: { items: RemoteListing[], totalCount: number, page: number, totalPages: number } }>(LISTINGS_QUERY, {
+    variables: { sort, page: 1, pageSize, filter: feedFilter, rotationSeed: rotationSeed() },
     skip: locationPending,
   })
-  // Pages received so far for the current filter; the previous filter's
-  // list stays on screen until the new first page lands.
-  const [feed, setFeed] = useState<FeedState | null>(() => feedMemory.feed)
-  useEffect(() => {
-    const res = feedData?.listings
-    if (!res) return
-    setFeed(prev => {
-      const pages = prev?.key === feedKey ? [...prev.pages] : []
-      pages[page - 1] = res.items
-      return { key: feedKey, pages, totalCount: res.totalCount }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedData])
-  const latest = useMemo(() => {
-    const seen = new Set<string>()
-    return (feed?.pages ?? []).flat().filter(l => l && !seen.has(l.id) && !!seen.add(l.id))
-  }, [feed])
-  const canLoadMore = !!feed && feed.key === feedKey && feed.totalCount > latest.length
-  useEffect(() => {
-    feedMemory.city = feedCity
-    feedMemory.page = pageState
-    feedMemory.feed = feed
-  }, [feedCity, pageState, feed])
+  // The previous filter's list stays on screen until the new first page lands.
+  const feed = (feedData ?? feedPrevious)?.listings
+  const latest = feed?.items ?? []
+  const nextFeedPage = useLoadMore({ fetchMore: feedFetchMore, page: feedData?.listings.page, totalPages: feedData?.listings.totalPages, key: feedKey })
+  useEffect(() => { feedMemory.city = feedCity }, [feedCity])
 
   // A live campaign may take the whole hero (BO « Visibilité »): it then
   // replaces the slider on both layouts; its rotation lives in
@@ -215,6 +213,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const { campaigns: heroCampaigns, ready: heroReady } = useHeroCampaigns()
   const [expectHero] = useState(expectPromoHero)
   const promoHero = heroCampaigns.length > 0
+  // « Promotions en cours » doesn't repeat the campaigns of the hero.
+  const heroIds = heroCampaigns.map(c => c.id)
   const heroPending = !heroReady && expectHero
   const sliderOn = !promoHero && !heroPending
 
@@ -266,7 +266,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     howItWorks: true,
     categories: !!categoriesData || !!categoriesQuery.error,
     campaign: campaignSettled,
-    pepites: (!!recommendedData || !!recommendedError) && (!personalized || !recommendedData || !!forYouData || !!forYouError),
+    pepites: (!!recommendedList || !!recommendedError) && (!personalized || !recommendedList || !!forYouList || !!forYouError),
     shops: !!shopsData || !!shopsError,
     certified: !!certifiedData || !!certifiedError,
     latest: !!feed || !!feedError,
@@ -279,15 +279,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   }
   const zone = location?.city ?? market?.name ?? 'Tous les pays'
 
-  const loadMore = canLoadMore && (
-    <button
-      onClick={() => setPage(p => p + 1)}
-      disabled={feedLoading}
-      className="mx-auto mt-6 flex w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border-none bg-surface-container-low px-6 py-3.5 md:px-10 text-label-lg font-bold text-on-surface hover:bg-surface-container disabled:opacity-60 lg:w-auto"
-    >
-      {feedLoading ? <Loader2 size={18} className="animate-spin" /> : <><span className="max-[380px]:hidden">Charger plus d'annonces</span><span className="min-[380px]:hidden">Voir plus</span> <Icon name="arrow_downward" size={20} /></>}
-    </button>
-  )
+  const loadMore = !!feedData && <InfiniteLoader key={feedKey} list={nextFeedPage} pageSize={pageSize} endLabel={latest.length > pageSize ? 'Vous avez tout vu' : null} />
 
   const visibleOrder = home.sections.filter(x => x.visible).map(x => x.key)
   // Desktop: the reassurance band sits full width under the header when it
@@ -320,7 +312,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // Only the layout on screen is built (each render used to create both,
   // every card twice).
   const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = !isDesktop ? {} : {
-    campaign: <HomePromotions desktop renderCard={l => card(l)} />,
+    campaign: <HomePromotions desktop heroIds={heroIds} renderCard={l => card(l)} />,
     categories: <>
           {topCategories.length > 0 && (
             <section className="mt-10">
@@ -448,7 +440,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             </div>
             <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div>
             {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
-            <div className="flex justify-center">{loadMore}</div>
+            {loadMore}
           </section>
     </>,
     howItWorks: <>
@@ -512,12 +504,12 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           </section>
         )}
     </>,
-    campaign: <HomePromotions desktop={false} renderCard={l => card(l)} />,
+    campaign: <HomePromotions desktop={false} heroIds={heroIds} renderCard={l => card(l)} />,
     // The pills of the section headings (« En vedette », « Priorité
     // visibilité », « Historique vérifié ») look tappable: they open the
     // help article that explains them.
     pepites: <>
-        {!recommendedData && !recommendedError && <RailSkeleton featured />}
+        {!recommendedList && !recommendedError && <RailSkeleton featured />}
         {pepites.length > 0 && (
           <section className="mb-8">
             <SectionHeading
@@ -530,7 +522,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             </div>
           </section>
         )}
-        {!settled.pepites && !!recommendedData && <RailSkeleton width={200} />}
+        {!settled.pepites && !!recommendedList && <RailSkeleton width={200} />}
         {forYou.length > 0 && (
           <section className="mb-8">
             <SectionHeading

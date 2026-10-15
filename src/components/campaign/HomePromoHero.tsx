@@ -7,6 +7,7 @@ import { thumbnailUrl } from '../../lib/media'
 import { plainText } from '../../lib/format'
 import { pad2, useCountdown } from '../../lib/useCountdown'
 import { requestOpenCampaign } from '../../lib/navigation'
+import { campaignBestDiscount, entryDiscountPercent } from '../../lib/campaignDiscount'
 import { useMarketCode, useMarketVars } from '../../lib/countries'
 import {
   CAMPAIGN_HERO_BADGE, HERO_DEALS_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type HeroDeal, type LiveCampaign,
@@ -105,7 +106,7 @@ function DealCard({ d, index, animate, desktop, onSelect }: { d: HeroDeal; index
   const figure = useRef<HTMLSpanElement>(null)
   const sale = saleOf(d)!
   const price = d.price!
-  const pct = d.activeCampaignDiscount?.discountPercent ?? Math.max(1, Math.round((1 - sale / price) * 100))
+  const pct = entryDiscountPercent(d.activeCampaignDiscount!, price)
   const fmt = (n: number) => amountText(Math.round(n), d.currency)
   const finalText = fmt(sale)
   const oldText = fmt(price)
@@ -219,7 +220,7 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
   const bgVisual = hero && (v.heroMode ?? 'background') === 'background'
   const artVisual = hero && v.heroMode === 'artwork'
   const dark = !!bgVisual && v.heroTone === 'dark'
-  const best = c.maxDiscountPercent
+  const best = campaignBestDiscount(c)
   const tagline = c.homeHeroTagline || CAMPAIGN_HERO_BADGE[c.type]
   const description = plainText(c.description)
   const a = (cls: string) => (animate ? cls : '')
@@ -284,7 +285,8 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
         </div>
         {artVisual ? (
           <div className={`relative col-span-5 aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-2xl ${a('ph-pop')}`} style={delay(200)}>
-            <CampaignMedia visual={hero!} />
+            {/* The artwork whole (its text is never cropped). */}
+            <CampaignMedia visual={hero!} fit="contain" />
           </div>
         ) : !bgVisual && best ? (
           <div className="col-span-5 flex items-center justify-center">
@@ -308,7 +310,7 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
       {backdrop}
       {artVisual && (
         <div className={`relative z-10 mx-4 mt-4 aspect-[16/9] overflow-hidden rounded-xl shadow-lg ${a('ph-pop')}`}>
-          <CampaignMedia visual={hero!} />
+          <CampaignMedia visual={hero!} fit="contain" />
         </div>
       )}
       <div className={`relative z-10 flex flex-col items-start gap-3 p-4 ${bgVisual ? 'pt-28' : ''}`}>

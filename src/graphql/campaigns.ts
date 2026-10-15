@@ -7,7 +7,7 @@ import type { FeeTier } from '../lib/campaignFees'
 const CAMPAIGN_FIELDS = `
   id name slug description type themeColor startsAt endsAt visuals
   listingsCount sellersCount maxDiscountPercent featuredOnHome
-  homeHero homeHeroAnimated homeHeroListings homeHeroTagline
+  homeHero homeHeroAnimated homeHeroListings homeHeroTagline homeDealsRail
   listings { id discountPercent salePrice listing { id title coverImageUrl isAdult } }
 `
 
@@ -65,6 +65,8 @@ export type LiveCampaign = {
   // The home hero taken over while live (BO « Visibilité »): its animations,
   // how many best deals it animates, its catchphrase (null = the type).
   homeHero: boolean; homeHeroAnimated: boolean; homeHeroListings: number; homeHeroTagline: string | null
+  // Its « Les meilleures affaires » rail on the home (BO « Visibilité »).
+  homeDealsRail: boolean
   listings: { id: string; discountPercent: number | null; salePrice: number | null; listing: { id: string; title: string; coverImageUrl: string | null } }[]
 }
 
