@@ -68,6 +68,7 @@ import AdultGate from '../components/AdultGate'
 import { enterAdultSpace, rememberAdultListing, useAdultMode, useAdultSpace } from '../lib/adultMode'
 import { metaListingSeen } from '../lib/metaPixel'
 import { useListingIntents } from '../lib/intents'
+import { entryDiscountPercent } from '../lib/campaignDiscount'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -247,7 +248,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const shownPrice = promoPrice ?? listing.price
   const promoTag = promo && promoPrice != null && listing.price != null && (
     <span className="inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-label-sm text-white" style={{ background: promo.themeColor || 'var(--primary)' }}>
-      <Icon name="sell" size={14} className="shrink-0" /> <span className="truncate">-{promo.discountPercent ?? Math.round((1 - promoPrice / listing.price) * 100)} % · {promo.campaignName}</span>
+      <Icon name="sell" size={14} className="shrink-0" /> <span className="truncate">-{entryDiscountPercent(promo, listing.price)} % · {promo.campaignName}</span>
     </span>
   )
   // Unit price per tier from the price actually asked (promo included), as

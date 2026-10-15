@@ -4,6 +4,7 @@ import { thumbnailUrl } from '../../lib/media'
 import { pad2, useCountdown } from '../../lib/useCountdown'
 import { CAMPAIGN_HERO_BADGE as HERO_BADGE, type LiveCampaign } from '../../graphql/campaigns'
 import { richHtml } from '../../lib/richText'
+import { campaignBestDiscount } from '../../lib/campaignDiscount'
 
 const DEFAULT_TINT = '#0d4a3a'
 const dateFr = (iso: string, year = false) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) })
@@ -98,7 +99,7 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
   // can change well apart; with fewer they share the set, so they change
   // almost together (a longer offset would show the same photo twice).
   const stagger = photos.length >= 8 ? 1.75 : 0.15
-  const best = campaign.maxDiscountPercent
+  const best = campaignBestDiscount(campaign)
   const chip = `flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-md backdrop-blur-sm ${dark ? 'bg-white/70 text-on-surface' : 'bg-white/10 text-white'}`
 
   return (
