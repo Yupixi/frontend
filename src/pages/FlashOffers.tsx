@@ -13,6 +13,8 @@ import { useMarket, useMarketCode, useMarketVars } from '../lib/countries'
 import { richHtml } from '../lib/richText'
 import { feeOptions, feeText } from '../lib/campaignFees'
 import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
+import InfiniteLoader from '../components/InfiniteLoader'
+import { useLoadMore } from '../lib/useLoadMore'
 
 type FlashOffersProps = {
   // '' = the newest live campaign.
@@ -54,8 +56,6 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
   const [city, setCity] = useState('')
   const [minDiscount, setMinDiscount] = useState(0)
   const [sort, setSort] = useState<Sort>('DISCOUNT_DESC')
-  const [pages, setPages] = useState(1)
-  useEffect(() => setPages(1), [query, category, city, minDiscount, sort])
   const places = placeOptions(useLists())
   const market = useMarket()
   // Only the visitor's country (a campaign may run in several).
@@ -70,10 +70,12 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
     ...(city ? { city } : {}),
     ...(minDiscount ? { minDiscountPercent: minDiscount } : {}),
   }), [campaign, marketCode, query, category, city, minDiscount])
-  const { data: offersData, loading: offersLoading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number } }>(LISTINGS_QUERY, {
-    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE * pages, rotationSeed: rotationSeed() },
+  // Every offer, page after page as the visitor scrolls (InfiniteLoader).
+  const { data: offersData, loading: offersLoading, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number } }>(LISTINGS_QUERY, {
+    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE, rotationSeed: rotationSeed() },
     skip: !filter,
   })
+  const nextOffers = useLoadMore({ fetchMore, page: offersData?.listings.page, totalPages: offersData?.listings.totalPages, key: JSON.stringify([filter, sort]) })
   const { data: topData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
     variables: { filter: { campaignId: campaign?.id, ...inMarket }, sort: 'DISCOUNT_DESC', page: 1, pageSize: 8, rotationSeed: rotationSeed() },
     skip: !campaign,
@@ -188,11 +190,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
             {filtered && <button onClick={() => { setSearch(''); setCategory(''); setCity(''); setMinDiscount(0) }} className="mt-3 cursor-pointer rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white">Effacer les filtres</button>}
           </div>
         )}
-        {offers.length < total && (
-          <button onClick={() => setPages(p => p + 1)} disabled={offersLoading} className="mx-auto mt-6 flex cursor-pointer items-center gap-2 rounded-xl border-none bg-surface-container-low px-6 py-3.5 text-label-lg font-bold text-on-surface hover:bg-surface-container disabled:opacity-60">
-            Charger plus d’articles ({total - offers.length} restants) <Icon name="expand_more" size={20} />
-          </button>
-        )}
+        {offersData && <InfiniteLoader key={JSON.stringify([filter, sort])} list={nextOffers} pageSize={PAGE_SIZE} label="Charger plus d’articles" endLabel={offers.length > PAGE_SIZE ? 'Vous avez tout vu' : null} />}
       </section>
 
       {/* Sellers' invitation */}

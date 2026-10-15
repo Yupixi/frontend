@@ -1,4 +1,4 @@
-import { ApolloClient, InMemoryCache, HttpLink, from, split } from '@apollo/client'
+import { ApolloClient, InMemoryCache, HttpLink, from, split, type FieldPolicy, type Reference } from '@apollo/client'
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
 import { getMainDefinition } from '@apollo/client/utilities'
 import { ErrorLink } from '@apollo/client/link/error'
@@ -163,9 +163,27 @@ const splitLink = split(
   httpChain,
 )
 
+// Lists read page after page (infinite scroll, lib/useLoadMore): one cache
+// entry per list (every argument but `page`), each next page appended to it
+// by fetchMore — page 1 (first load, refetch) starts it over. Coming back
+// to the list reads every page already seen from the cache, without a
+// request. A listing already shown (new ones shift the pages) isn't
+// repeated.
+type PagedList = { page?: number, items: { __ref?: string }[] }
+const pagedList: FieldPolicy<PagedList> = {
+  keyArgs: args => (args ? Object.keys(args).filter(k => k !== 'page').sort() : false),
+  merge(existing, incoming, { args, readField }) {
+    if (!existing || !args?.page || args.page <= 1) return incoming
+    const seen = new Set(existing.items.map(i => readField<string>('id', i as Reference)))
+    return { ...incoming, items: [...existing.items, ...incoming.items.filter(i => !seen.has(readField<string>('id', i as Reference)))] }
+  },
+}
+
 export const apolloClient = new ApolloClient({
   link: splitLink,
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    typePolicies: { Query: { fields: { listings: pagedList, shops: pagedList } } },
+  }),
   defaultOptions: {
     // Polled badges (notifications, conversations…) stop polling while the
     // tab is hidden — a locked phone or a background tab kept hitting the API
