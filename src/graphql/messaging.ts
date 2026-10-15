@@ -384,6 +384,8 @@ export type RemoteConversation = {
   listing: {
     id: string; title: string; coverImageUrl: string | null; price: number | null; currency: string; status: string; negotiable: boolean; quantity?: number
     condition?: string | null; originalPrice?: number | null; paymentMethods?: string[]; meetupSpot?: string | null; city?: string; locationLabel?: string | null
+    // « Section Adultes » (lib/adultMode: the conversation's dark theme).
+    isAdult?: boolean | null
   } | null
   otherParticipant: RemoteUserRef
   lastMessage: RemoteMessage | null

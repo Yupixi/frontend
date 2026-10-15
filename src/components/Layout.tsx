@@ -46,6 +46,8 @@ import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics
 import OfferBanner from './OfferBanner'
 import ManageCookies from './ManageCookies'
 import { useAdultAccess } from '../lib/adult'
+import { rememberAdultSlugs, spaceCategories, useAdultModeOn, useAdultSpace } from '../lib/adultMode'
+import AdultModeBar from './AdultModeBar'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
@@ -109,7 +111,19 @@ export default function Layout({
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   // « Section Adultes »: in the menu only for a confirmed member.
   const adultOk = useAdultAccess()?.status === 'OK'
-  const navCategories = (categoriesData?.categories ?? []).filter(c => adultOk || !c.adult).slice(0, 8)
+  const adultMode = useAdultModeOn()
+  // In its space, the section's own subcategories only (lib/adultMode).
+  const adultSpace = useAdultSpace()
+  const sectionCategories = spaceCategories(categoriesData?.categories ?? [], true)
+  const navCategories = adultSpace
+    ? sectionCategories.flatMap(c => c.subcategories.map(s => ({ slug: s.slug, name: s.name })))
+    : (categoriesData?.categories ?? []).filter(c => adultOk || !c.adult).slice(0, 8)
+  // The section's slugs (its theme on a direct visit, its space).
+  useEffect(() => {
+    if (!categoriesData) return
+    const section = categoriesData.categories.find(c => c.adult)
+    rememberAdultSlugs(sectionCategories.flatMap(c => [...(c.adult ? [c.slug] : []), ...c.subcategories.map(s => s.slug)]), section?.slug)
+  }, [categoriesData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // BO-authored footer copy — falls back to the default copy below when
   // unconfigured, same convention as the Banner slots. The market's version
@@ -246,7 +260,9 @@ export default function Layout({
           while a campaign is ACTIVE and inside its date window, themed with
           the campaign's own color. No BO authoring beyond the campaign
           itself; see the Home campaign rail for the matching product grid. */}
-      {activeCampaign && (
+      {/* « Section Adultes »: its strip instead (no campaign in there). */}
+      <AdultModeBar onLeave={() => onNavigate('home')} />
+      {activeCampaign && !adultMode && (
         <button
           onClick={() => requestOpenCampaign(activeCampaign.slug)}
           className="flex w-full cursor-pointer items-center justify-center gap-2 border-none px-4 py-2 text-left text-label-md text-white"
@@ -285,8 +301,10 @@ export default function Layout({
           </div>
           <div className="flex items-center gap-4">
             <button onClick={() => onNavigate('categories')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Toutes les catégories</button>
+            {!adultSpace && <>
             <span className="text-outline-variant">•</span>
             <button onClick={() => requestOpenCampaign('')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Bonnes affaires</button>
+            </>}
             <span className="text-outline-variant">•</span>
             <a href="/aide" data-tour="help" onClick={openHelp('')} className="flex items-center gap-1 text-label-sm text-on-surface-variant no-underline hover:text-on-surface"><Icon name="help" size={15} /> Aide</a>
           </div>
@@ -311,7 +329,7 @@ export default function Layout({
               onClick={openSearchOverlay}
               className="flex min-w-0 flex-1 cursor-text items-center border-none bg-transparent px-3 py-2 text-left text-body-md text-on-surface-variant/70"
             >
-              <span className="truncate">Rechercher un iPhone, une moto, un appartement…</span>
+              <span className="truncate">{adultSpace ? 'Rechercher dans la Section Adultes…' : 'Rechercher un iPhone, une moto, un appartement…'}</span>
             </button>
             <button onClick={() => onNavigate('search')} className="cursor-pointer border-none bg-transparent p-2 text-on-surface-variant hover:text-on-surface" title="Filtres">
               <SlidersHorizontal size={19} />
@@ -559,14 +577,19 @@ export default function Layout({
         {/* Category nav — real categories, desktop only (mobile reaches
             them from the home rail and the search page). */}
         <nav data-tour="categories" className="hidden h-11 items-center gap-8 overflow-x-auto whitespace-nowrap px-4 [scrollbar-width:none] lg:flex lg:px-12">
-          {[
+          {(adultSpace ? [
+            { key: 'home', label: 'Toute la section', active: currentPage === 'search' && !navCategories.some(c => c.slug === activeCategory), onClick: () => onNavigate('home') },
+            ...navCategories.map(c => ({
+              key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
+            })),
+          ] : [
             { key: 'home', label: 'Nouveautés', active: currentPage === 'home', onClick: () => onNavigate('home') },
             ...navCategories.map(c => ({
               key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
             })),
             { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => requestOpenCampaign('') },
             { key: 'shops', label: 'Boutiques officielles', icon: true, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
-          ].map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: boolean }) => (
+          ]).map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: boolean }) => (
             <button
               key={item.key}
               onClick={item.onClick}
@@ -751,7 +774,8 @@ export default function Layout({
             { label: 'Messages', anim: 'empty-messages', ms: 'chat', page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount, tour: 'messages' },
             { label: 'Compte', anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page, tour: 'account' },
           ].map(item => {
-            const isActive = currentPage === item.page
+            // In the section's space « Accueil » is its page.
+            const isActive = adultSpace && (item.page === 'home' || item.page === 'search') ? item.page === 'home' && currentPage === 'search' : currentPage === item.page
 
             if (item.primary) {
               return (

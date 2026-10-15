@@ -16,6 +16,7 @@ import { syncAppBadge } from '../../lib/pushNotifications'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { Claim } from '../../lib/site'
 import OfferBanner from '../../components/OfferBanner'
+import AdultModeBar from '../../components/AdultModeBar'
 
 // Every member is both a buyer and a seller — one account, one space. This
 // shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
@@ -417,6 +418,8 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* A conversation about an adult listing (lib/adultMode). */}
+        <AdultModeBar onLeave={() => onNavigate('home')} />
         <div className={immersive ? 'max-md:hidden' : 'contents'}>
         <AccountHeader activeLabel={title || ACCOUNT_PAGE_LABELS[active] || active} isHome={active === 'buyer-dashboard' || active === 'seller-dashboard'} currentUser={currentUser} onToggleSidebar={() => setSidebarOpen(o => !o)} onBack={back} onNavigate={onNavigate} onLogout={onLogout} unreadMessages={unreadMessages} unreadNotifications={unreadNotifications} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
         </div>

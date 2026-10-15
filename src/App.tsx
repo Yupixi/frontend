@@ -27,6 +27,8 @@ import { useSeo } from './lib/site'
 import { ACCOUNT_COUNTRY_KEY, rememberedAccountCountry, setMarketState, useCountries } from './lib/countries'
 import Onboarding from './components/Onboarding'
 import { noteTourPage } from './lib/tourControl'
+import { adultSectionSlug, isKnownAdultListing, isKnownAdultSlug, leaveAdultSpace, setAdultRouteGuess, useAdultSpace } from './lib/adultMode'
+import { useAdultAccess } from './lib/adult'
 
 // Home is the landing page and ships in the entry chunk; every other page is
 // its own chunk so a first visit only downloads what it renders (recharts,
@@ -207,7 +209,14 @@ function startTransition(update: () => void) {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(() => conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
+  // « Section Adultes » space (lib/adultMode): the site's home is the
+  // section's page and any category its own, until « Quitter ».
+  const adultSpace = useAdultSpace()
+  const [rawPage, setPage] = useState<Page>(() => conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
+  // The site-wide directories (home, categories, campaign deals) are the
+  // section's page there.
+  const toSection = adultSpace && (rawPage === 'home' || rawPage === 'categories' || rawPage === 'flash-offers')
+  const page: Page = toSection ? 'search' : rawPage
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration
   // would fight it (it runs before the restored page has rendered).
@@ -226,7 +235,9 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [selectedListingId, setSelectedListingId] = useState(() => sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
-  const [searchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedNav.searchTerm ?? ''))
+  const [rawSearchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedNav.searchTerm ?? ''))
+  // The section's own page (its home in the space) shows no earlier words.
+  const searchTerm = toSection ? '' : rawSearchTerm
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? '')
   const [selectedSellerId, setSelectedSellerId] = useState(() => sharedSellerId() ?? initialRoute?.sellerId ?? savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
@@ -236,7 +247,8 @@ export default function App() {
   const [openConversationId, setOpenConversationId] = useState<string | null>(() => conversationFromUrl())
   // …on its « Remise » card (hand-over links: `&remise=1`, orders, purchases).
   const [focusRemise, setFocusRemise] = useState(() => !!conversationFromUrl() && remiseFromUrl())
-  const [categoryFilter, setCategoryFilterState] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedNav.categoryFilter ?? ''))
+  const [rawCategoryFilter, setCategoryFilterState] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedNav.categoryFilter ?? ''))
+  const categoryFilter = adultSpace && (toSection || !isKnownAdultSlug(rawCategoryFilter)) ? adultSectionSlug() : rawCategoryFilter
   const [categoryCity, setCategoryCity] = useState(initialSearch ? (initialRoute?.categoryCity ?? '') : (savedNav.categoryCity ?? ''))
   // A category page's city belongs to that category page.
   const setCategoryFilter = (cat: string) => { setCategoryFilterState(cat); setCategoryCity('') }
@@ -312,6 +324,17 @@ export default function App() {
     if (prev && accountCountry && prev !== accountCountry && location?.countryCode !== accountCountry) changeLocation({ countryCode: accountCountry, city: null, source: 'manual' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountCountry])
+  // « Section Adultes » dark theme while a page loads: what the address
+  // suggests (lib/adultMode; the page itself then knows).
+  useLayoutEffect(() => {
+    setAdultRouteGuess(page === 'search' ? isKnownAdultSlug(categoryFilter) : page === 'listing-detail' ? isKnownAdultListing(selectedListingId) : false)
+  }, [page, categoryFilter, selectedListingId])
+  // The space is for confirmed members only: left as soon as the access
+  // isn't OK any more (logged out, confirmation withdrawn, section closed).
+  const adultAccess = useAdultAccess()
+  useEffect(() => {
+    if (adultSpace && adultAccess && adultAccess.status !== 'OK') leaveAdultSpace()
+  }, [adultSpace, adultAccess])
   useLayoutEffect(() => {
     setMarketState({ market: marketLocation?.countryCode ?? null, account: accountCountry, signedIn: isLoggedIn })
   }, [marketLocation?.countryCode, accountCountry, isLoggedIn])
@@ -854,6 +877,7 @@ export default function App() {
     // cookie. Local state is cleared regardless of the result.
     const revoked = logoutMutation({ variables: { refreshToken: getLegacyRefreshToken() } }).catch(() => undefined)
     clearTokens()
+    leaveAdultSpace()
     setIsLoggedIn(false)
     setCurrentUser(null)
     cacheOwner.current = null

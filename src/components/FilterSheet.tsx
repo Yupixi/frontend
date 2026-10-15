@@ -47,6 +47,9 @@ type Props = {
   total: number
   // Geolocated default city: shown as "Près de vous", not as a chosen filter.
   nearCity?: string
+  // « Section Adultes » space (lib/adultMode): no other category to pick,
+  // no campaign deal there.
+  adultSpace?: boolean
 }
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter(x => x !== v) : [...list, v])
@@ -61,7 +64,7 @@ function Section({ icon, title, sub, children }: { icon: string; title: string; 
   )
 }
 
-export default function FilterSheet({ open, state, onChange, onReset, onClose, facets, categories, total, nearCity }: Props) {
+export default function FilterSheet({ open, state, onChange, onReset, onClose, facets, categories, total, nearCity, adultSpace }: Props) {
   const lists = useLists()
   const mobile = useMobileMethods()
   const conditionHint = (v: string) => lists.conditions.find(c => c.value === v)?.hint
@@ -150,7 +153,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
             </div>
           </Section>
 
-          <div>
+          {!adultSpace && <div>
             <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="category" size={20} className="text-primary" /> Catégories phares</h3>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {shownCategories.map(c => {
@@ -166,7 +169,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
                 )
               })}
             </div>
-          </div>
+          </div>}
 
           {!!facets?.conditions.length && (
             <Section icon="verified" title="État de l'article">
@@ -187,14 +190,14 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
             </Section>
           )}
 
-          <Section icon="percent" title="Bonnes affaires">
+          {!adultSpace && <Section icon="percent" title="Bonnes affaires">
             <label className="relative flex cursor-pointer items-center gap-3 py-2">
               <Icon name="local_offer" size={22} className="shrink-0 text-primary" />
               <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">En promotion</span><span className="block text-body-sm text-on-surface-variant">Soldes des boutiques et campagnes en cours</span></span>
               <input type="checkbox" className="peer sr-only" checked={state.promoOnly} onChange={() => onChange({ promoOnly: !state.promoOnly })} />
               <span className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5" />
             </label>
-          </Section>
+          </Section>}
 
           <Section icon="shield" title="Vendeurs de confiance">
             {([
