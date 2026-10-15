@@ -11,6 +11,8 @@ import { formatNumber } from '../lib/format'
 import { ShopCard } from '../components/ShopCard'
 import { useLists } from '../lib/lists'
 import { useMarketCode, useMarketVars } from '../lib/countries'
+import InfiniteLoader from '../components/InfiniteLoader'
+import { useLoadMore } from '../lib/useLoadMore'
 
 type Props = {
   onNavigate: (page: any) => void
@@ -32,23 +34,32 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
   const [category, setCategory] = useState('')
   const [city, setCity] = useState('')
   const [sort, setSort] = useState<Sort>('POPULAR')
-  const [page, setPage] = useState(1)
-  useEffect(() => setPage(1), [term, category, city, sort, countryCode])
   useEffect(() => setCity(''), [countryCode])
 
   const { data: cats } = useQuery<{ categories: { id: string, slug: string, name: string }[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
-  const { data, loading, refetch } = useQuery<{ shops: { items: Shop[], total: number } }>(SHOPS_QUERY, {
-    variables: { search: term || undefined, categorySlug: category || undefined, countryCode: countryCode ?? undefined, city: city || undefined, sort, page, pageSize: PAGE_SIZE },
+  // Page after page as the visitor scrolls (InfiniteLoader).
+  const variables = { search: term || undefined, categorySlug: category || undefined, countryCode: countryCode ?? undefined, city: city || undefined, sort }
+  const listKey = JSON.stringify(variables)
+  const { data, loading, fetchMore } = useQuery<{ shops: { items: Shop[], total: number, page: number } }>(SHOPS_QUERY, {
+    variables: { ...variables, page: 1, pageSize: PAGE_SIZE },
   })
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
   const shops = data?.shops.items ?? []
   const total = data?.shops.total ?? 0
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const nextShops = useLoadMore({ fetchMore, page: data?.shops.page, totalPages: data ? Math.ceil(data.shops.total / PAGE_SIZE) : null, key: listKey })
 
   const toggleFollow = (s: Shop) => {
     if (!isLoggedIn) { setAuthReason('follow'); onNavigate('auth'); return }
-    void (s.isFollowedByMe ? unfollow : follow)({ variables: { sellerId: s.owner.id } }).then(() => refetch())
+    // The card changes in the cache (a refetch would start the list over).
+    const following = !s.isFollowedByMe
+    void (following ? follow : unfollow)({
+      variables: { sellerId: s.owner.id },
+      update: cache => cache.modify({
+        id: cache.identify(s),
+        fields: { isFollowedByMe: () => following, followersCount: (n: number) => Math.max(0, n + (following ? 1 : -1)) },
+      }),
+    }).catch(() => undefined)
   }
 
   return (
@@ -110,15 +121,7 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
             {shops.map(s => <ShopCard key={s.id} shop={s} onOpen={() => onOpenShop(s.slug)} onFollow={() => toggleFollow(s)} />)}
           </div>
         )}
-        {pages > 1 && (
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <span className="text-body-sm text-on-surface-variant">Page {page} sur {pages}</span>
-            <div className="flex gap-2">
-              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest shadow-sm disabled:cursor-default disabled:opacity-40" aria-label="Page précédente"><Icon name="chevron_left" size={20} /></button>
-              <button disabled={page >= pages} onClick={() => setPage(p => p + 1)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest shadow-sm disabled:cursor-default disabled:opacity-40" aria-label="Page suivante"><Icon name="chevron_right" size={20} /></button>
-            </div>
-          </div>
-        )}
+        {data && <InfiniteLoader key={listKey} list={nextShops} pageSize={PAGE_SIZE} label="Charger plus de boutiques" endLabel={shops.length > PAGE_SIZE ? 'Vous avez tout vu' : null} />}
       </section>
 
       {/* Acquisition */}
