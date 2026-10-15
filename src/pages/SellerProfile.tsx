@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Star, MapPin, MessageSquare, BadgeCheck, Share2, Home, ChevronRight, Search, Handshake, Percent, ShieldCheck,
-  UserPlus, UserCheck, Calendar, Wallet, Flag, CheckCircle2, ChevronDown,
+  UserPlus, UserCheck, Calendar, Wallet, Flag, CheckCircle2,
 } from '../components/icons'
 import { ListingCard } from '../components/ListingCard'
 import { LISTINGS_QUERY, type RemoteListing, type ListingSort } from '../graphql/listings'
@@ -26,6 +26,7 @@ import { Claim, useNoCommissionClaims } from '../lib/site'
 import { useLists } from '../lib/lists'
 import { usePageTitle } from '../lib/site'
 import { rememberHandle } from '../lib/routes'
+import InfiniteLoader from '../components/InfiniteLoader'
 
 
 type SellerProfileProps = {
@@ -314,11 +315,8 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
             ))}
           </div>
           {filtered.length === 0 && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune pièce ne correspond" />}
-          {filtered.length > shown && (
-            <button onClick={() => setShown(s => s + PAGE)} className="mx-auto mt-5 flex cursor-pointer items-center gap-1 rounded-full border border-outline-variant bg-surface-lowest px-5 py-2.5 text-label-md text-on-surface">
-              Afficher les {filtered.length - shown} autres pièces en vente <ChevronDown size={16} />
-            </button>
-          )}
+          {/* The seller's listings are all here: the next ones show as the visitor scrolls. */}
+          <InfiniteLoader key={`${cat}|${q}|${sort}`} list={{ hasMore: filtered.length > shown, loading: false, error: false, loadMore: () => setShown(s => s + PAGE) }} pageSize={PAGE} label="Afficher plus de pièces" />
         </section>
       )}
 

@@ -23,6 +23,8 @@ import { richHtml } from '../lib/richText'
 import CategoryLandingExtras from '../components/CategoryLandingExtras'
 import { track } from '../lib/analytics'
 import { GridSkeleton } from '../components/Skeleton'
+import InfiniteLoader from '../components/InfiniteLoader'
+import { useLoadMore } from '../lib/useLoadMore'
 import { formatNumber } from '../lib/format'
 import { metaTrack, noteAdultSlugs } from '../lib/metaPixel'
 import { AdultSectionContext, SEARCH_ROUTING_QUERY, adultGateReason, useAdultAccess, type SearchRouting } from '../lib/adult'
@@ -188,7 +190,6 @@ export default function SearchPage({
     return () => clearTimeout(t)
   }, [minPrice, maxPrice])
   const applyPrice = (min: string, max: string) => { setMinPrice(min); setMaxPrice(max); setAppliedPrice({ min, max }) }
-  const [page, setPage] = useState(1)
   const [search, setSearch] = useState(searchTerm || '')
   const [alertState, setAlertState] = useState<'idle' | 'done' | 'error'>('idle')
 
@@ -278,12 +279,14 @@ export default function SearchPage({
     ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
   }), [countryCode, pageCity, search, category, subcategory, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
 
-  useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
+  useEffect(() => { setAlertState('idle') }, [filter, sort])
 
-  const { data, previousData, loading, error: listingsError, refetch } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; totalPages: number } }>(LISTINGS_QUERY, {
+  // Results grow as the visitor scrolls (InfiniteLoader): each next page is
+  // appended to the cached list — a new filter or sort starts it over.
+  const { data, previousData, loading, error: listingsError, refetch, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number } }>(LISTINGS_QUERY, {
     // rotationSeed: listings « en vedette » keep one order across the pages
     // of this visit.
-    variables: { filter, sort, page, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories() },
+    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories() },
     skip: rubricPending || gated || (rubricAdult && !access),
   })
   // The server refused the section's listings: the gate, with its reason.
@@ -295,10 +298,10 @@ export default function SearchPage({
   // per session — never while typing.
   useEffect(() => {
     const words = search.trim()
-    if (!words || page !== 1 || loading || !data) return
+    if (!words || !data) return
     const t = setTimeout(() => recordFinalSearch(words, countryCode), 1500)
     return () => clearTimeout(t)
-  }, [search, page, loading, data, countryCode])
+  }, [search, data, countryCode])
   const { data: routingData } = useQuery<{ searchRouting: SearchRouting }>(SEARCH_ROUTING_QUERY, {
     variables: { term: search.trim(), countryCode: countryCode ?? null },
     skip: search.trim().length < 2,
@@ -307,13 +310,14 @@ export default function SearchPage({
   const result = (data ?? previousData)?.listings
   const items = result?.items ?? []
   const total = result?.totalCount ?? 0
-  const totalPages = result?.totalPages ?? 1
+  const listKey = JSON.stringify([filter, sort])
+  const nextPage = useLoadMore({ fetchMore, page: data?.listings.page, totalPages: data?.listings.totalPages, key: listKey })
   // « Mesure d'audience »: one `search` per words / category, once its
   // results are in. Never the words themselves (they can hold a name or a
   // number): the category, whether words were typed, and the count.
   const trackedSearch = useRef('')
   useEffect(() => {
-    if (loading || !data || page !== 1 || (!search && !categoryFilter)) return
+    if (!data || (!search && !categoryFilter)) return
     const key = `${search}|${categoryFilter}`
     if (trackedSearch.current === key) return
     trackedSearch.current = key
@@ -329,7 +333,7 @@ export default function SearchPage({
     if (rubricAdult) return
     if (search.trim()) metaTrack('Search', { search_string: search, content_ids: firstIds, content_category: categoryFilter || undefined })
     else metaTrack('ViewCategory', { content_ids: firstIds, content_category: categoryFilter })
-  }, [data, loading, page, search, categoryFilter, countryCode, rubricAdult])
+  }, [data, search, categoryFilter, countryCode, rubricAdult])
 
   const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter }, skip: rubricPending || showGate || (rubricAdult && !access) })
   const facets = facetsData?.listingFacets
@@ -525,9 +529,6 @@ export default function SearchPage({
   // Category pages: same tab title as the one search engines get.
   const countText = `${formatNumber(total, 0)} annonce${total > 1 ? 's' : ''}`
   usePageTitle(categoryFilter && !search && rubricName && (data || previousData) ? (pageCity ? `${title} : ${countText}` : rubricName) : null)
-  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const to = Math.min(page * PAGE_SIZE, total)
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-5 md:px-8 lg:px-12">
@@ -641,6 +642,7 @@ export default function SearchPage({
                 ))}
               </div>
             )}
+            {!showGate && data && <InfiniteLoader key={listKey} list={nextPage} pageSize={PAGE_SIZE} endLabel={items.length > PAGE_SIZE ? 'Vous avez tout vu' : null} />}
             {!loading && items.length === 0 && (
               <>
                 <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce ne correspond"
@@ -678,25 +680,6 @@ export default function SearchPage({
             </button>
           </div>}
           {alertState === 'error' && <p className="mt-2 text-body-sm text-primary">Impossible de créer l'alerte pour le moment.</p>}
-
-          {/* Pagination */}
-          {total > 0 && (
-            <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
-              <span className="text-body-sm text-on-surface-variant">{totalPages > 1 ? `Affichage de ${from} – ${to} sur ${formatNumber(total, 0)} articles` : `${formatNumber(total, 0)} article${total > 1 ? 's' : ''} affiché${total > 1 ? 's' : ''}`}</span>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1">
-                  <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-on-surface-variant disabled:opacity-30"><ChevronLeft size={18} /></button>
-                  {pages.map((p, i) => (
-                    <span key={p} className="flex items-center">
-                      {i > 0 && p - pages[i - 1] > 1 && <span className="px-1 text-outline">…</span>}
-                      <button onClick={() => setPage(p)} className={`h-9 min-w-9 cursor-pointer rounded-lg border-none px-2 text-label-md ${p === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface hover:bg-surface-container'}`}>{p}</button>
-                    </span>
-                  ))}
-                  <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-transparent px-2 py-2 text-label-md text-on-surface disabled:opacity-30">Suivant <ChevronRight size={16} /></button>
-                </div>
-              )}
-            </div>
-          )}
 
           {landing && !search && (
             <CategoryLandingExtras
