@@ -13,7 +13,35 @@ export const WELCOME_TOUR = 'fe-welcome'
 
 // App page being shown (App keeps it current), for tours tied to a page.
 let currentPage = ''
-export const noteTourPage = (page: string) => { currentPage = page }
+// Pages seen during this visit: the welcome tour never opens on the very
+// first one, only once the member has done something (opened a listing, a
+// search, a category…) or on a later visit.
+let pagesSeen = 0
+let actedThisVisit = false
+const MEANINGFUL = ['listing-detail', 'search', 'categories', 'shop', 'shops', 'seller-profile', 'flash-offers']
+export const noteTourPage = (page: string) => {
+  if (page !== currentPage) pagesSeen++
+  if (pagesSeen > 1 && MEANINGFUL.includes(page)) actedThisVisit = true
+  currentPage = page
+}
+
+// Visits of this browser (one per browser session), counted once at start.
+const VISITS_KEY = 'dilchap_visits'
+const VISIT_COUNTED_KEY = 'dilchap_visit_counted'
+let visits = 1
+try {
+  visits = Number(localStorage.getItem(VISITS_KEY)) || 0
+  if (!sessionStorage.getItem(VISIT_COUNTED_KEY)) {
+    visits++
+    localStorage.setItem(VISITS_KEY, String(visits))
+    sessionStorage.setItem(VISIT_COUNTED_KEY, '1')
+  }
+} catch { visits = 1 /* storage blocked: treated as a first visit */ }
+
+/** The welcome tour may open by itself now: never on the page a visit
+ *  lands on; on a first visit only after a first action (a listing, a
+ *  search, a category…), from the 2nd visit on the next page. */
+export const tourMomentReached = () => pagesSeen >= 2 && (actedThisVisit || visits >= 2)
 
 // Never shown again: recorded on the account, and at once in the cache.
 export function markTourSeen(id: string) {

@@ -29,17 +29,12 @@ export const TOURS: Record<string, Tour> = {
     id: WELCOME_TOUR,
     label: 'Visite guidée',
     page: 'home',
+    // The essentials only (it used to have 8 steps, and its « Suivant » was
+    // the most tapped element of the home page): find, sell, talk.
     steps: [
-      { title: 'Bienvenue sur Dilchap !', text: 'Voici l’essentiel pour acheter et vendre près de chez vous. La visite prend moins d’une minute.' },
-      { target: 'country', title: 'Votre pays', text: 'Les annonces, les prix et les moyens de paiement suivent le pays choisi ici. Vous pouvez en changer à tout moment.' },
-      { target: 'search', title: 'Rechercher', text: 'Trouvez un article, une marque ou un service, puis affinez par ville, prix et état.' },
-      { target: 'categories', title: 'Les catégories', text: 'Parcourez les rayons : téléphones, véhicules, immobilier, mode…' },
-      { target: 'sell', title: 'Vendre un article', text: 'Publiez une annonce en quelques minutes : photos, prix et ville suffisent.' },
-      { target: 'messages', title: 'Vos messages', text: 'Discutez avec les vendeurs et les acheteurs, négociez le prix et fixez le rendez-vous de remise en main propre.' },
-      { target: 'account', only: 'desktop', title: 'Votre compte', text: 'Le menu Mon compte réunit vos annonces, vos achats, votre porte-monnaie de crédits et vos paramètres.' },
-      { target: 'account', only: 'mobile', title: 'Votre compte', text: 'L’onglet Compte réunit vos annonces, vos achats, votre porte-monnaie de crédits et vos paramètres.' },
-      { target: 'help', only: 'desktop', title: 'Besoin d’aide ?', text: 'Le Centre d’aide explique chaque étape, captures à l’appui. Vous pouvez revoir cette visite depuis vos paramètres.' },
-      { only: 'mobile', title: 'Besoin d’aide ?', text: 'Le Centre d’aide se trouve dans Compte › Aide & support. Vous pouvez revoir cette visite depuis vos paramètres.' },
+      { target: 'search', title: 'Bienvenue sur Dilchap !', text: 'Cherchez un article, une marque ou un service près de chez vous, puis affinez par ville et par prix.' },
+      { target: 'sell', title: 'Vendre en quelques minutes', text: 'Quelques photos, un prix et votre ville suffisent pour publier une annonce.' },
+      { target: 'messages', title: 'Discuter, se retrouver, payer', text: 'Négociez sur le chat, fixez le rendez-vous et payez de main à main à la remise. Revoyez cette visite quand vous voulez : « Visite guidée » dans l’aide.' },
     ],
   },
   'fe-help-center': {

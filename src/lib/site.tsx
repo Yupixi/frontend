@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { countryVars, useCountry, useMarket, useMarketCode, useMemberCountryCode } from './countries'
@@ -77,16 +77,48 @@ function setMeta(attr: 'name' | 'property', key: string, value: string) {
   el.content = value
 }
 
-// Pages that set their own tab title (usePageTitle).
-const OWN_TITLE = ['listing-detail', 'shop', 'seller-profile', 'help']
+// Default tab title of each app page, « … | Dilchap » (the server's SEO
+// titles for the pages it renders: Backend src/modules/seo).
+const PAGE_TITLES: Record<string, string> = {
+  search: 'Recherche', 'flash-offers': 'Bonnes affaires et promotions', 'listing-detail': 'Annonce', 'seller-profile': 'Vendeur',
+  categories: 'Toutes les catégories', auth: 'Connexion', legal: 'Informations légales', shop: 'Boutique officielle', shops: 'Boutiques officielles', help: 'Centre d’aide',
+  'buyer-dashboard': 'Mon compte', 'buyer-favorites': 'Mes favoris', 'buyer-messages': 'Messages', 'buyer-notifications': 'Notifications',
+  'buyer-history': 'Historique', 'buyer-settings': 'Paramètres', 'buyer-purchases': 'Mes achats', 'buyer-receipts': 'Mes reçus', 'buyer-receipt': 'Reçu',
+  'buyer-handover': 'Remise en main propre', 'buyer-dispute-new': 'Ouvrir un litige', 'buyer-disputes': 'Mes litiges',
+  'seller-dashboard': 'Mon compte', 'seller-post': 'Publier une annonce', 'seller-edit': 'Modifier une annonce', 'seller-listings': 'Mes annonces',
+  'seller-stats': 'Statistiques', 'seller-premium': 'Booster une annonce', 'seller-orders': 'Mes ventes', 'seller-wallet': 'Mes crédits',
+  'seller-reviews': 'Mes avis', 'seller-disputes': 'Litiges', 'seller-handover': 'Remise en main propre', 'seller-kyc': 'Vérification d’identité',
+  'seller-shop': 'Ma Boutique officielle', 'seller-shop-stats': 'Statistiques de la boutique', 'seller-shop-promos': 'Promotions de la boutique',
+  'seller-badge': 'Mon badge', 'seller-qr': 'Mon QR code', 'seller-campaigns': 'Campagnes Dilchap', support: 'Aide & support',
+}
 
-// Browser tab title, description and share tags from « Réglages du site »,
-// when the visitor moves to another page. The first page's come from the
-// storefront's server (Backend src/modules/seo): its title, description,
-// share image and structured data are already right for that URL and are
-// left as they are.
-// `ownTitle`: the page sets its own (a category page).
-export function useSeo(page: string, ownTitle = false) {
+// « velos-vtt » → « Velos vtt »: the category page's title until its name is loaded.
+const fromSlug = (slug: string) => {
+  const words = slug.replace(/-/g, ' ').trim()
+  return words ? words[0].toUpperCase() + words.slice(1) : ''
+}
+
+/** Default tab title of an app page (null: the site's own title, the home page). */
+export function routeTitle(page: string, ctx: { searchTerm?: string; category?: string } = {}): string | null {
+  if (page === 'home') return null
+  if (page === 'search') {
+    if (ctx.category) return fromSlug(ctx.category)
+    const q = ctx.searchTerm?.trim()
+    return q ? `Recherche : ${q.slice(0, 60)}` : PAGE_TITLES.search
+  }
+  return PAGE_TITLES[page] ?? 'Mon compte'
+}
+
+// Browser tab title, description and share tags of the page shown, set on
+// every move to another page — before the address bar changes (App updates
+// it in a later effect), so tools reading the title at each new address
+// (Microsoft Clarity, Google Analytics) see the new page's. Pages about one
+// thing (a listing, a shop, a member, a help article, a category) then put
+// their own precise title once loaded (usePageTitle, a passive effect: it
+// runs after this one). The first page's tags come from the storefront's
+// server (Backend src/modules/seo), already right for that URL: left as
+// they are.
+export function useSeo(page: string, ctx: { searchTerm?: string; category?: string } = {}) {
   const { seo: siteSeo, brand } = useSite()
   // A country's own texts (« Pays » in the BO) win over the site's (the
   // market's version of « Réglages du site » when it has one).
@@ -95,16 +127,20 @@ export function useSeo(page: string, ownTitle = false) {
   const firstPage = useRef(page)
   const moved = useRef(false)
   if (page !== firstPage.current) moved.current = true
+  const own = routeTitle(page, ctx)
+  useLayoutEffect(() => {
+    if (!moved.current) return
+    document.title = own ? `${own} | ${brand.name}` : seo.title || brand.name
+  }, [page, own, seo.title, brand.name])
   useEffect(() => {
-    if (!moved.current || ownTitle || OWN_TITLE.includes(page)) return
-    document.title = seo.title || brand.name
+    if (!moved.current) return
     setMeta('name', 'description', seo.description)
     setMeta('property', 'og:title', seo.title || brand.name)
     setMeta('property', 'og:description', seo.description)
     setMeta('property', 'og:site_name', brand.name)
     setMeta('property', 'og:image', seo.image)
     setMeta('name', 'apple-mobile-web-app-title', brand.name)
-  }, [page, ownTitle, seo.title, seo.description, seo.image, brand.name])
+  }, [page, seo.title, seo.description, seo.image, brand.name])
 }
 
 // Tab title of a page about one thing (a listing, a shop, a member).

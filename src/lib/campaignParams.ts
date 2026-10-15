@@ -17,6 +17,11 @@ const VALID = /^[\w.\-~ %+:|/]{1,500}$/
 
 let landing: Partial<Record<CampaignParam, string>> = {}
 let gaTaken = false
+// The visit started from an ad (any of the parameters, valid or not): kept
+// for the browser session, a reload included (the address no longer has
+// them). The welcome tour never opens by itself for these visitors.
+const AD_VISIT_KEY = 'dilchap_ad_visit'
+let adVisit = false
 
 /** Reads the campaign parameters of the address and removes them from the address bar (main.tsx, before the app). */
 export function captureCampaignParams() {
@@ -27,6 +32,7 @@ export function captureCampaignParams() {
     for (const k of CAMPAIGN_PARAMS) {
       if (!url.searchParams.has(k)) continue
       found = true
+      adVisit = true
       const v = url.searchParams.get(k) ?? ''
       if (VALID.test(v) && !PERSONAL.test(v)) landing[k] = v.slice(0, k === 'fbclid' || k === 'gclid' ? 500 : 100)
       url.searchParams.delete(k)
@@ -35,7 +41,14 @@ export function captureCampaignParams() {
   } catch {
     landing = {}
   }
+  try {
+    if (adVisit) sessionStorage.setItem(AD_VISIT_KEY, '1')
+    else adVisit = sessionStorage.getItem(AD_VISIT_KEY) === '1'
+  } catch { /* storage blocked: this page load only */ }
 }
+
+/** This visit came from an ad (utm_*, fbclid or gclid on its first address). */
+export const isAdVisit = () => adVisit
 
 /** UTM parameters and gclid for the first Google Analytics page view of the visit (once). */
 export function takeGaCampaign(): [string, string][] {

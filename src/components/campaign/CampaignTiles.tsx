@@ -10,6 +10,7 @@ import { CAMPAIGN_TYPE_LABEL, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignVisual,
 import { LISTINGS_QUERY, type RemoteListing } from '../../graphql/listings'
 import { plainText } from '../../lib/format'
 import { useMarketCode, useMarketVars } from '../../lib/countries'
+import { RailSkeleton } from '../Skeleton'
 
 const DEFAULT_TINT = '#EB1100'
 const tintOf = (c: LiveCampaign) => c.themeColor || DEFAULT_TINT
@@ -140,6 +141,14 @@ function useLiveCampaigns() {
   return (data?.activeCampaigns ?? []).filter(isLive)
 }
 
+// Whether the home's « Promotions en cours » knows what it shows (same
+// query, shared cache): the home lays out the sections below it only then,
+// so they never jump when it appears.
+export function useLiveCampaignsSettled() {
+  const { data, previousData, error } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { variables: useMarketVars(), fetchPolicy: 'cache-and-network' })
+  return !!(data ?? previousData) || !!error
+}
+
 // Best deals of the main campaign ("Les pépites de la …").
 function DealsRail({ c, renderCard }: { c: LiveCampaign; renderCard: (l: RemoteListing) => React.ReactNode }) {
   // Only the visitor's country (a campaign may run in several).
@@ -148,6 +157,8 @@ function DealsRail({ c, renderCard }: { c: LiveCampaign; renderCard: (l: RemoteL
     variables: { filter: { campaignId: c.id, ...(marketCode ? { countryCode: marketCode } : {}) }, sort: 'DISCOUNT_DESC', page: 1, pageSize: 10, rotationSeed: rotationSeed() },
   })
   const items = data?.listings.items ?? []
+  // Its room while it loads (the sections below don't jump when it lands).
+  if (!data) return <RailSkeleton width={200} />
   if (!items.length) return null
   return (
     <section className="mt-8">

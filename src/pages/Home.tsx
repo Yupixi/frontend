@@ -1,5 +1,5 @@
 import { interestCategories } from '../lib/interests'
-import { requestOpenHelp } from '../lib/navigation'
+import { requestOpenHelp, requestOpenLocation } from '../lib/navigation'
 import EmptyState from '../components/EmptyState'
 import { Fragment, useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
@@ -11,6 +11,7 @@ import Icon, { CategoryIcon } from '../components/Icon'
 import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { rotationSeed } from '../lib/rotationSeed'
+import { formatNumber } from '../lib/format'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type ListingSort, type RemoteListing } from '../graphql/listings'
 import { DEFAULT_HOME, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
 import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
@@ -21,7 +22,9 @@ import { PaymentLogos } from '../components/PaymentLogo'
 import { countryVars, fillPlacesDeep, useMarket, useMarketCode, useMarketVars, useMethods } from '../lib/countries'
 import { ShopCard } from '../components/ShopCard'
 import { SHOPS_QUERY, type Shop } from '../graphql/shops'
-import { HomePromotions } from '../components/campaign/CampaignTiles'
+import { HomePromotions, useLiveCampaignsSettled } from '../components/campaign/CampaignTiles'
+import { CategoryRailSkeleton, GridSkeleton, RailSkeleton } from '../components/Skeleton'
+import { trustTopicOf, useTrustSheet } from '../components/TrustSheet'
 
 // promo: only items on sale (shop sales and Dilchap campaigns).
 export type SearchPreset = { city?: string, maxPrice?: number, promo?: boolean }
@@ -116,7 +119,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const SLIDES = home.hero.slides
   const SLIDE_MS = Math.max(3, home.hero.intervalSec) * 1000
 
-  const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
+  const categoriesQuery = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
+  const categoriesData = categoriesQuery.data ?? categoriesQuery.previousData
   // « Section Adultes »: never a tile on the home page.
   const categories = (categoriesData?.categories ?? []).filter(c => !c.adult)
   const topCategories = [...categories].sort((a, b) => (b.listingsCount ?? 0) - (a.listingsCount ?? 0)).slice(0, 7)
@@ -131,7 +135,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const personalized = currentUser
     ? (currentUser.notificationPreferences as Record<string, unknown> | undefined)?.personalizeHome !== false
     : !!anonInterests
-  const { data: recommendedData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
+  const { data: recommendedData, error: recommendedError } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
     variables: { limit: isDesktop ? 4 : 12, placement: isDesktop ? 'HOME_DESKTOP' : 'HOME_MOBILE', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests },
     skip: locationPending,
   })
@@ -141,13 +145,13 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const recommended = recommendedData?.recommendedListings ?? []
   const withPhoto = recommended.filter(l => !!listingImage(l))
   // "Boutiques officielles" rail (most followed first).
-  const { data: shopsData } = useQuery<{ shops: { items: Shop[] } }>(SHOPS_QUERY, { variables: { sort: 'POPULAR', pageSize: 8, countryCode: location?.countryCode ?? undefined }, skip: locationPending })
+  const { data: shopsData, error: shopsError } = useQuery<{ shops: { items: Shop[] } }>(SHOPS_QUERY, { variables: { sort: 'POPULAR', pageSize: 8, countryCode: location?.countryCode ?? undefined }, skip: locationPending })
   const shops = shopsData?.shops.items ?? []
   const pepites = withPhoto.length ? withPhoto : recommended
   const hasBoosted = pepites.some(isFeatured)
   // « Pour vous »: personalised only (no reserved places), without the
   // cards already shown in « Pépites à la Une ».
-  const { data: forYouData } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
+  const { data: forYouData, error: forYouError } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
     variables: { limit: isDesktop ? 8 : 12, placement: 'FOR_YOU', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests, excludeIds: pepites.map(l => l.id) },
     skip: locationPending || !personalized || !recommendedData,
   })
@@ -159,7 +163,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter: marketFilter }, skip: locationPending })
   const cities = (facetsData?.listingFacets.cities ?? []).map(c => c.value)
   // "Vendeurs certifiés" rail (perk of the paid badge).
-  const { data: certifiedData } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
+  const { data: certifiedData, error: certifiedError } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
     variables: { page: 1, pageSize: 8, filter: { ...marketFilter, certifiedSellersOnly: true }, rotationSeed: rotationSeed() },
     skip: locationPending,
   })
@@ -175,7 +179,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const [pageState, setPageState] = useState(() => feedMemory.page ?? { key: feedKey, page: 1 })
   const page = pageState.key === feedKey ? pageState.page : 1
   const setPage = (next: (p: number) => number) => setPageState({ key: feedKey, page: next(page) })
-  const { data: feedData, loading: feedLoading } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
+  const { data: feedData, loading: feedLoading, error: feedError } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { sort, page, pageSize, filter: feedFilter, rotationSeed: rotationSeed() },
     skip: locationPending,
   })
@@ -233,9 +237,34 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
 
   const contact = (l: RemoteListing) => () =>
     currentUser && !currentUser.isGuest && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id)
-  const card = (l: RemoteListing, featured?: boolean) => (
-    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} featured={featured} />
+  const card = (l: RemoteListing, featured?: boolean, priority?: boolean) => (
+    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} onContact={contact(l)} featured={featured} priority={priority} />
   )
+  // « Comment ça marche » behind the reassurance badges.
+  const trust = useTrustSheet()
+
+  // Sections are laid out top-down: one still loading holds its room (a
+  // placeholder) and the ones below wait for it, so a section landing never
+  // pushes down what is already on screen (it was the home's big layout
+  // shift on phones). Errors count as settled (the section just isn't there).
+  const campaignSettled = useLiveCampaignsSettled()
+  const settled: Record<HomeSectionKey, boolean> = {
+    reassurance: true,
+    sellCta: true,
+    howItWorks: true,
+    categories: !!categoriesData || !!categoriesQuery.error,
+    campaign: campaignSettled,
+    pepites: (!!recommendedData || !!recommendedError) && (!personalized || !recommendedData || !!forYouData || !!forYouError),
+    shops: !!shopsData || !!shopsError,
+    certified: !!certifiedData || !!certifiedError,
+    latest: !!feed || !!feedError,
+  }
+  // The sections of `order` that are shown: up to the first one still
+  // loading, which shows its placeholder.
+  const laidOut = (order: HomeSectionKey[]) => {
+    const stop = order.findIndex(k => !settled[k])
+    return stop < 0 ? order : order.slice(0, stop + 1)
+  }
   const zone = location?.city ?? market?.name ?? 'Tous les pays'
 
   const loadMore = canLoadMore && (
@@ -257,25 +286,28 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const reassuranceBand = (top: boolean) => (
     <section className={top ? 'bg-surface-lowest shadow-sm' : 'mt-10 rounded-2xl bg-surface-lowest shadow-sm'}>
               <div className={`mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 py-2.5 ${top ? 'px-12' : 'px-6'}`}>
+                {/* Each badge explains itself (« Comment ça marche »). */}
                 {home.reassurance.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
+                  <button key={i} type="button" onClick={() => trust.open(trustTopicOf(item.icon, item.title))} aria-haspopup="dialog" className="flex cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent p-1 text-left hover:bg-surface-container-low">
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${['bg-primary/10 text-primary', 'bg-tertiary/10 text-tertiary', 'bg-primary-container/15 text-primary', 'bg-surface-container text-on-surface'][i % 4]}`}><CategoryIcon icon={item.icon} size={20} /></span>
-                    <div>
-                      <p className="m-0 text-label-md font-bold text-on-surface">{item.title}</p>
-                      <p className="m-0 text-body-sm text-on-surface-variant">{item.text}</p>
+                    <span className="block">
+                      <span className="block text-label-md font-bold text-on-surface">{item.title}</span>
+                      <span className="block text-body-sm text-on-surface-variant">{item.text}</span>
                       {(item.icon === 'contactless' || item.icon === 'payments') && <PaymentLogos size={18} className="mt-1" methods={methods} />}
-                    </div>
-                  </div>
+                    </span>
+                  </button>
                 ))}
-                <div className="hidden items-center gap-2 rounded-xl bg-surface-container-low px-4 py-2 2xl:flex">
+                <button type="button" onClick={requestOpenLocation} className="hidden cursor-pointer items-center gap-2 rounded-xl border-none bg-surface-container-low px-4 py-2 hover:bg-surface-container 2xl:flex">
                   <Icon name="my_location" size={20} className="text-tertiary" />
                   <span className="text-label-sm font-extrabold uppercase tracking-wider text-tertiary">Zone active :</span>
                   <span className="text-label-md text-on-surface">{zone}</span>
-                </div>
+                </button>
               </div>
             </section>
   )
-  const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = {
+  // Only the layout on screen is built (each render used to create both,
+  // every card twice).
+  const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = !isDesktop ? {} : {
     campaign: <HomePromotions desktop renderCard={l => card(l)} />,
     categories: <>
           {topCategories.length > 0 && (
@@ -296,7 +328,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                       <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
                     </span>
                     <span className="text-label-md font-bold leading-snug text-on-surface">{cat.name}</span>
-                    <span className="mt-1 text-body-sm text-on-surface-variant">{(cat.listingsCount ?? 0).toLocaleString('fr-FR')} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
+                    <span className="mt-1 text-body-sm text-on-surface-variant">{formatNumber(cat.listingsCount ?? 0, 0)} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
                   </button>
                 ))}
               </div>
@@ -314,7 +346,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                   </span>
                   <h3 className="m-0 text-headline-lg text-on-surface">Pépites à la Une{hasBoosted && ' & Annonces en vedette'}</h3>
                 </div>
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">Priorité visibilité</span>
+                <button type="button" onClick={() => requestOpenHelp('booster-une-annonce')} className="cursor-pointer rounded-full border-none bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary hover:bg-primary/15">Priorité visibilité</button>
               </div>
               <div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div>
             </section>
@@ -348,7 +380,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             <section className="mt-10">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Vendeurs certifiés</h3>
-                <span className="rounded-full bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">Historique vérifié</span>
+                <button type="button" onClick={() => requestOpenHelp('badges-payants')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">Historique vérifié</button>
               </div>
               <div className="grid grid-cols-4 items-start gap-6">{certified.slice(0, 4).map(l => card(l))}</div>
             </section>
@@ -433,20 +465,22 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           </section>
     </>,
   }
-  const mobileSections: Partial<Record<HomeSectionKey, React.ReactNode>> = {
+  const mobileSections: Partial<Record<HomeSectionKey, React.ReactNode>> = isDesktop ? {} : {
     reassurance: <>
-        <div className="mb-6 flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-high p-3 shadow-sm">
-          <div className="flex min-w-0 items-center gap-2">
+        {/* Looks like a button: it opens « Comment ça marche ». */}
+        <button type="button" onClick={() => trust.open(trustTopicOf('verified_user', home.mobileStrip.title))} aria-haspopup="dialog" className="mb-6 flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border-none bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-high p-3 text-left shadow-sm">
+          <span className="flex min-w-0 items-center gap-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-label-sm font-bold text-on-surface">{home.mobileStrip.title}</div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={methods.slice(0, 3)} /> ou espèces</div>
-            </div>
-          </div>
-          <Icon name="handshake" size={18} className="shrink-0 text-on-surface-variant" />
-        </div>
+            <span className="block min-w-0 leading-tight">
+              <span className="block truncate text-label-sm font-bold text-on-surface">{home.mobileStrip.title}</span>
+              <span className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={methods.slice(0, 3)} className="shrink-0" /> ou espèces</span>
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-0.5 text-label-sm text-primary"><span className="max-[400px]:hidden">Comment ?</span> <Icon name="chevron_right" size={18} /></span>
+        </button>
     </>,
     categories: <>
+        {!settled.categories && <CategoryRailSkeleton />}
         {categories.length > 0 && (
           <section data-tour="categories" className="mb-8">
             <SectionHeading
@@ -467,18 +501,24 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         )}
     </>,
     campaign: <HomePromotions desktop={false} renderCard={l => card(l)} />,
+    // The pills of the section headings (« En vedette », « Priorité
+    // visibilité », « Historique vérifié ») look tappable: they open the
+    // help article that explains them.
     pepites: <>
+        {!recommendedData && !recommendedError && <RailSkeleton featured />}
         {pepites.length > 0 && (
           <section className="mb-8">
             <SectionHeading
               title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
-              action={hasBoosted ? <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">En vedette</span> : undefined}
+              action={hasBoosted ? <button type="button" onClick={() => requestOpenHelp('booster-une-annonce')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">En vedette</button> : undefined}
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
-              {pepites.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
+              {/* The first cards are what a phone shows biggest at load: their photos come first. */}
+              {pepites.map((l, i) => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true, i < 2)}</div>)}
             </div>
           </section>
         )}
+        {!settled.pepites && !!recommendedData && <RailSkeleton width={200} />}
         {forYou.length > 0 && (
           <section className="mb-8">
             <SectionHeading
@@ -493,6 +533,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         )}
     </>,
     shops: <>
+        {!settled.shops && <RailSkeleton width={250} />}
         {shops.length > 0 && (
           <section className="mb-8">
             <SectionHeading
@@ -506,6 +547,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         )}
     </>,
     certified: <>
+        {!settled.certified && <RailSkeleton featured />}
         {certified.length > 0 && (
           <section className="mb-8">
             <SectionHeading title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Vendeurs certifiés</>} />
@@ -525,7 +567,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               </Select>
             }
           />
-          <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div>
+          {settled.latest ? <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div> : <GridSkeleton count={4} />}
           {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
           {loadMore}
         </section>
@@ -620,7 +662,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           </section>
 
           {/* The other sections, in the order set in the back-office. */}
-          {desktopOrder.map(k => <Fragment key={k}>{k === 'reassurance' ? reassuranceBand(false) : desktopSections[k]}</Fragment>)}
+          {laidOut(desktopOrder).map(k => <Fragment key={k}>{k === 'reassurance' ? reassuranceBand(false) : desktopSections[k]}{!settled[k] && <GridSkeleton count={4} className="mt-10 grid grid-cols-4 items-start gap-6" />}</Fragment>)}
         </div>
       </div>}
 
@@ -628,24 +670,29 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
       {!isDesktop && <div className="px-4 pb-4 pt-3 md:px-8 md:pt-6">
         <div className="mb-4 flex flex-col gap-3">
           {/* "Zone active": scopes the latest-listings feed, like the desktop city chips */}
-          {cities.length > 0 && (
-            <div className="flex items-center justify-between gap-2">
+          {/* Always there (its room is kept while the cities load). « Zone
+              active » opens the country / city picker of the header; the
+              list next to it narrows the feed below to one city. */}
+          <div className="flex min-h-8 items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-1.5">
-                <span className="shrink-0 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">Zone active</span>
+                <button type="button" onClick={requestOpenLocation} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant"><Icon name="my_location" size={15} className="text-tertiary" /> Zone active</button>
                 <span className="relative flex min-w-0 items-center rounded-full bg-surface-container shadow-sm">
                   <span className="pointer-events-none absolute left-2.5 h-2 w-2 animate-pulse rounded-full bg-tertiary" />
-                  <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Zone active" className="min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-1.5 text-label-md text-on-surface outline-none">
-                    <option value="">{location?.city ? `Tout ${location.city}` : zone}</option>
-                    {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
-                  </Select>
+                  {cities.length > 0 ? (
+                    <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Ville des dernières annonces" className="min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-1.5 text-label-md text-on-surface outline-none">
+                      <option value="">{location?.city ? `Tout ${location.city}` : zone}</option>
+                      {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
+                    </Select>
+                  ) : (
+                    <button type="button" onClick={requestOpenLocation} className="cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-2.5 text-label-md text-on-surface">{zone}</button>
+                  )}
                 </span>
               </div>
               {/* Always there: every item on sale right now. */}
               <button onClick={() => onSearch?.('', { promo: true })} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary-fixed/50 px-2 py-1 text-label-sm text-primary">
                 <Icon name="percent" size={16} /> Promos
               </button>
-            </div>
-          )}
+          </div>
           <div className="flex h-12 w-full items-center rounded-xl bg-surface-lowest px-3 shadow-sm">
             <button onClick={() => onNavigate('search')} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-body-md text-outline">
               <Search size={22} className="ml-1 shrink-0 text-primary" />
@@ -657,8 +704,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           </div>
         </div>
         {/* Sections in the order set in the back-office. */}
-        {mobileOrder.map(k => <Fragment key={k}>{mobileSections[k]}</Fragment>)}
+        {laidOut(mobileOrder).map(k => <Fragment key={k}>{mobileSections[k]}</Fragment>)}
       </div>}
+      {trust.sheet}
     </>
   )
 }

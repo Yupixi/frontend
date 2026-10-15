@@ -28,6 +28,10 @@ export const DEFAULT_RULES = {
   QR_MEMBER_ELIGIBILITY: 0,
   QR_LISTING_ENABLED: 1,
   QR_MEMBER_DAILY_MAX: 30,
+  // Welcome tour (« Règles › Visite guidée »): opens by itself (1) or only
+  // from « Visite guidée » (0), after this many seconds on the home page.
+  WELCOME_TOUR_AUTOSTART: 1,
+  WELCOME_TOUR_DELAY_SECONDS: 3,
 }
 export type MarketplaceRules = typeof DEFAULT_RULES
 

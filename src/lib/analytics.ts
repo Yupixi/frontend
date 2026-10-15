@@ -197,7 +197,12 @@ function inject(id: string) {
   // One gtag.js serves every measurement ID configured later.
   const s = document.createElement('script')
   s.async = true
+  // CORS-enabled (Google answers with the page's origin): an error inside
+  // gtag.js reaches window.onerror with its message, not « Script error. ».
+  s.crossOrigin = 'anonymous'
   s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`
+  // Blocked (ad blocker, network): tried again on the next consent.
+  s.addEventListener('error', () => { injected = false }, { once: true })
   document.head.appendChild(s)
 }
 

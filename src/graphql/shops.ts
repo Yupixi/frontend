@@ -1,5 +1,6 @@
 import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
+import { dateFormat } from '../lib/intl'
 
 // Official shops ("Boutiques officielles").
 
@@ -193,7 +194,8 @@ export const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'
 export function openNow(hours: OpeningHours[], timeZone = 'Africa/Abidjan', now = new Date()) {
   let local: Record<string, string>
   try {
-    local = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now).map(p => [p.type, p.value]))
+    // Cached formatter: building one per shop card cost ~10 ms each on a phone.
+    local = Object.fromEntries(dateFormat('en-GB', { timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now).map(p => [p.type, p.value]))
   } catch {
     local = { weekday: now.toUTCString().slice(0, 3), hour: String(now.getUTCHours()).padStart(2, '0'), minute: String(now.getUTCMinutes()).padStart(2, '0') }
   }

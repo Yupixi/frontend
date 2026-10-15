@@ -1,9 +1,8 @@
 import AnimatedIcon from './AnimatedIcon'
-import { useState } from 'react'
+import { lazy, memo, Suspense, useMemo, useRef, useState } from 'react'
 import { MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, type AppIcon } from './icons'
 import Icon from './Icon'
 import Price from './Price'
-import BoostSheet from './BoostSheet'
 import BottomSheet from './BottomSheet'
 import type { BoostBadge, RemoteListing } from '../graphql/listings'
 import { formatRelativeDate, plainText } from '../lib/format'
@@ -27,6 +26,10 @@ import { ADULT_BLUR_CLASS, useAdultBlur } from '../lib/adult'
 function AdultBadge() {
   return <span className="inline-flex items-center gap-1 rounded-md bg-inverse-surface px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"><Icon name="lock" size={11} /> Section Adultes</span>
 }
+
+// The boost sheet (credits, prices, payment) only loads for a seller who
+// opens it from their own card: not part of the first page.
+const BoostSheet = lazy(() => import('./BoostSheet'))
 
 // Visitors are sent to the login screen by the favourite toggle; tell it why.
 const favWithReason = (toggle: () => void) => { if (!getAccessToken()) setAuthReason('favorite'); toggle() }
@@ -102,14 +105,16 @@ function isActivelyBoosted(listing: RemoteListing): boolean {
 // feed renders many of these side by side.
 function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   const [open, setOpen] = useState(false)
+  // Mounted on the first opening, then kept (its closing animation).
+  const [used, setUsed] = useState(false)
   const [done, setDone] = useState(false)
   if (isActivelyBoosted(listing) || (done && !open)) return null
   return (
     <div className="mt-2" onClick={e => e.stopPropagation()}>
-      <button onClick={() => setOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary px-2 py-2 text-label-md text-white hover:bg-primary-dark">
+      <button onClick={() => { setUsed(true); setOpen(true) }} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary px-2 py-2 text-label-md text-white hover:bg-primary-dark">
         <Icon name="rocket_launch" size={16} /> <span className="whitespace-nowrap">Booster<span className="hidden md:inline"> cette annonce</span></span>
       </button>
-      <BoostSheet open={open} onClose={() => setOpen(false)} listing={listing} onBumped={() => setDone(true)} />
+      {used && <Suspense fallback={null}><BoostSheet open={open} onClose={() => setOpen(false)} listing={listing} onBumped={() => setDone(true)} /></Suspense>}
     </div>
   )
 }
@@ -153,18 +158,38 @@ function BoughtBadge({ badge }: { badge: BoostBadge }) {
   )
 }
 
-// Product card from the Stitch mockups. Phones get the compact "Dilchap
-// Mobile – Accueil" card (price first, one Contacter button); from md up
-// it's the desktop "Pépites à la Une" card (category + trust signal, title,
-// location, price, Détails / Discuter).
-export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact, featured }: {
+type ListingCardProps = {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
   // Opens the chat with the seller straight from the card. Falls back to
   // opening the listing.
   onContact?: () => void
   // "Pépites à la Une" rail: prominent red "Discuter" button on phones.
   featured?: boolean
-}) {
+  // First card(s) on screen at load: photo fetched at once, high priority
+  // (the page's largest paint on a phone), never lazy.
+  priority?: boolean
+}
+
+// Product card from the Stitch mockups. Phones get the compact "Dilchap
+// Mobile – Accueil" card (price first, one Contacter button); from md up
+// it's the desktop "Pépites à la Une" card (category + trust signal, title,
+// location, price, Détails / Discuter).
+// Feeds re-render often (each query of the home page landing, a favourite,
+// typing in a search box): the card itself only re-renders when what it
+// shows changes. Its handlers are read from the latest props when called,
+// so the parents' fresh closures never need a re-render.
+export function ListingCard(props: ListingCardProps) {
+  const latest = useRef(props)
+  latest.current = props
+  const handlers = useMemo(() => ({
+    onSelect: () => latest.current.onSelect(),
+    onToggleFav: () => latest.current.onToggleFav(),
+    onContact: () => (latest.current.onContact ?? latest.current.onSelect)(),
+  }), [])
+  return <CardView listing={props.listing} isFav={props.isFav} currentUserId={props.currentUserId} featured={props.featured} priority={props.priority} {...handlers} />
+}
+
+const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact, featured, priority }: Omit<ListingCardProps, 'onContact'> & { onContact: () => void }) {
   const image = useCardImage(listing)
   const blur = useAdultBlur()(listing)
   const salePrice = discountedPrice(listing)
@@ -178,7 +203,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
   const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
   const bought = boughtBadge(listing)
   const intents = useListingIntents()
-  const contact = (e: React.MouseEvent) => { e.stopPropagation(); intents.contactTap(listing.id); (onContact ?? onSelect)() }
+  const contact = (e: React.MouseEvent) => { e.stopPropagation(); intents.contactTap(listing.id); onContact() }
   // Phone button of the mockup card. Sellers' numbers aren't public: the
   // number is shared in the conversation, so the button says so and leads
   // there instead of faking a call.
@@ -230,8 +255,9 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
             <img
               src={image.src}
               alt={`${listing.title} — photo 1`}
-              loading="lazy"
-              decoding="async"
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : undefined}
+              decoding={priority ? 'sync' : 'async'}
               className={`h-full w-full object-cover transition-transform duration-500 ${blur ? ADULT_BLUR_CLASS : 'group-hover:scale-105'}`}
               onError={image.onError}
             />
@@ -336,7 +362,7 @@ export function ListingCard({ listing, onSelect, onToggleFav, isFav, currentUser
       )}
     </div>
   )
-}
+})
 
 export function ListingListCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null

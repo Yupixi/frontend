@@ -1,9 +1,10 @@
 import AnimatedIcon from './AnimatedIcon'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import { useCountries } from '../lib/countries'
 import type { StoredLocation } from '../lib/location'
 import Flag from './Flag'
+import { OPEN_LOCATION_EVENT } from '../lib/navigation'
 
 type LocationPillProps = {
   location: StoredLocation | null | undefined
@@ -28,6 +29,15 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
 
   useEffect(() => setCity(location?.city ?? ''), [location?.city])
 
+  // « Zone active » on the home page opens the picker of the header (the
+  // pill shown at this width: phones and desktops each have their own).
+  const button = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const onOpen = () => { if (button.current?.offsetParent) { setOpen(true); button.current.focus() } }
+    window.addEventListener(OPEN_LOCATION_EVENT, onOpen)
+    return () => window.removeEventListener(OPEN_LOCATION_EVENT, onOpen)
+  }, [])
+
   const pick = (countryCode: string | null) => {
     // A city belongs to the previous market; retaining it would create
     // impossible pairs such as Dakar/CI and an empty feed.
@@ -47,6 +57,7 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
   return (
     <div className="relative">
       <button
+        ref={button}
         onClick={() => setOpen(o => !o)}
         title={label}
         data-tour="country"

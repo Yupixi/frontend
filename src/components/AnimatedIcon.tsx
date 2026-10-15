@@ -107,9 +107,12 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
   const anim = useRef<{ goToAndPlay: (v: number, f?: boolean) => void; goToAndStop: (v: number, f?: boolean) => void; destroy: () => void; totalFrames: number } | null>(null)
   const [ready, setReady] = useState(false)
   const file = fileFor(name)
-  // Only bar icons: a card's heart must keep going through the idle queue.
+  // Bar icons: built as soon as the page has loaded and the browser is
+  // idle (not during the first render: the player and five animations cost
+  // ~0.3 s of main thread on a mid-range phone, before the page's first
+  // paint). Their static Iconsax glyph stands in until then.
   const eager = preload && !!file && !reducedMotion()
-  const [armed, setArmed] = useState(eager)
+  const [armed, setArmed] = useState(false)
   const [failed, setFailed] = useState(false)
   // Icons that only ever animate in response to the user (a card's heart,
   // the bell, the tab bar) have nothing to show until then: they build their
@@ -128,6 +131,11 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
     host.addEventListener('focusin', arm)
     return () => { host.removeEventListener('pointerenter', arm); host.removeEventListener('pointerdown', arm); host.removeEventListener('focusin', arm) }
   }, [onDemand, file, armed, playOnInteract])
+
+  useEffect(() => {
+    if (!eager || armed) return
+    return whenIdle(() => setArmed(true))
+  }, [eager, armed])
 
   // Arm when (nearly) on screen and the browser is idle — see armQueue.
   useEffect(() => {
@@ -184,6 +192,18 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
     return () => { io.disconnect(); clearInterval(t) }
   }, [replayEvery, ready])
 
+  // A looping animation only runs while on screen (and the tab visible).
+  useEffect(() => {
+    if (!loop || !ready || !box.current) return
+    const a = anim.current as unknown as { play?: () => void; pause?: () => void } | null
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) a?.play?.()
+      else a?.pause?.()
+    })
+    io.observe(box.current)
+    return () => io.disconnect()
+  }, [loop, ready])
+
   // Hover (desktop) or press (touch) on the enclosing control replays it.
   useEffect(() => {
     if (!playOnInteract || !ready || !box.current) return
@@ -211,12 +231,14 @@ export default function AnimatedIcon({ name, fallback, size = 24, fill, classNam
 
   const snapshot = eager ? snapshots.get(name) : undefined
   return (
-    <span className={`relative inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: size, height: size }} aria-hidden>
+    // pointer-events: none — a tap lands on the button or tile around the
+    // icon (the whole control is the target, never the SVG inside).
+    <span className={`pointer-events-none relative inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: size, height: size }} aria-hidden>
       {/* Lottie colours are baked in: tint the rendered SVG with currentColor */}
       <span ref={box} className={`lottie-tint absolute inset-0 ${ready ? '' : 'invisible'}`} />
       {!ready && (snapshot && !failed
         ? <span className="lottie-tint absolute inset-0" dangerouslySetInnerHTML={{ __html: snapshot }} />
-        : (!eager || failed) && <Icon name={fallback} size={size} fill={fill} />)}
+        : <Icon name={fallback} size={size} fill={fill} />)}
     </span>
   )
 }
