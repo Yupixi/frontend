@@ -1,8 +1,8 @@
+import ListingThumb from '../../components/ListingThumb'
 import AnimatedIcon from '../../components/AnimatedIcon'
 import { useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from './AccountLayout'
 import AccountVerifyPanel from '../../components/AccountVerifyPanel'
 import { formatNumber } from '../../lib/format'
@@ -128,7 +128,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           <section className="mt-4 rounded-2xl bg-primary p-4 text-white md:hidden">
             <div className="flex items-center justify-between"><span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-label-sm uppercase"><Icon name="alarm" size={14} /> {upcomingIsToday ? "Rendez-vous aujourd'hui" : 'Prochain rendez-vous'}</span><span className="text-label-lg">{time(upcoming.at)}</span></div>
             <div className="mt-3 flex gap-3">
-              <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white/20"><SafeImg src={upcoming.listing.coverImageUrl} fallbackClassName="flex h-full w-full items-center justify-center text-white/80" /></span>
+              <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white/20"><ListingThumb listing={upcoming.listing} src={upcoming.listing.coverImageUrl} fallbackClassName="flex h-full w-full items-center justify-center text-white/80" /></span>
               <div className="min-w-0"><div className="truncate text-label-lg">{upcoming.listing.title}</div><div className="flex items-center gap-1 text-body-sm text-white/85"><Icon name="location_on" size={14} /> {upcoming.place}</div><div className="text-label-md"><Price amount={upcoming.amount} currency={upcoming.listing.currency} /></div></div>
             </div>
             <div className="mt-3 flex gap-2">
@@ -176,7 +176,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
           {upcoming ? (
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
               <div className="relative h-60 overflow-hidden rounded-2xl bg-surface-container">
-                <SafeImg src={upcoming.listing.coverImageUrl} iconSize={40} />
+                <ListingThumb listing={upcoming.listing} src={upcoming.listing.coverImageUrl} iconSize={40} />
                 {upcoming.listing.condition && upcoming.listing.condition !== 'N/A' && <span className="absolute left-3 top-3 rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm uppercase text-tertiary">{upcoming.listing.condition}</span>}
                 <span className="absolute bottom-3 right-3 rounded bg-inverse-surface/80 px-2 py-0.5 text-label-sm text-white">Réf : #{upcoming.reference}</span>
               </div>
@@ -208,7 +208,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
             <div className="mb-2 flex items-center justify-between"><h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="verified_user" size={20} className="text-tertiary" /> Achats sécurisés</h2><span className="text-label-sm text-on-surface-variant">{activePurchases.length} actif{activePurchases.length > 1 ? 's' : ''}</span></div>
             <div className="rounded-2xl bg-surface-lowest p-3 shadow-sm">
               <div className="flex gap-3">
-                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={codePurchase.listing.coverImageUrl} icon="shopping_bag" /></span>
+                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={codePurchase.listing} src={codePurchase.listing.coverImageUrl} icon="shopping_bag" /></span>
                 <div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><span className="rounded bg-tertiary-soft px-1.5 text-label-sm text-tertiary">Remise en main propre</span><span className="text-label-md text-on-surface"><Price amount={codePurchase.agreedPrice} /></span></div><div className="truncate text-label-lg text-on-surface">{codePurchase.listing.title}</div><div className="text-body-sm text-on-surface-variant">Vendeur : {codePurchase.seller.fullName}</div></div>
               </div>
               <div className="mt-2 flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
@@ -236,7 +236,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                 const boosted = !!l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()
                 return (
                   <article key={l.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm">
-                    <button onClick={() => onSelectListing(l.id)} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0"><SafeImg src={l.coverImageUrl} /></button>
+                    <button onClick={() => onSelectListing(l.id)} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0"><ListingThumb listing={l} src={l.coverImageUrl} /></button>
                     {/* min width: on narrow phones the Booster button wraps under instead of covering the price */}
                     <div className="min-w-[8.5rem] flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-label-sm text-on-surface-variant">{l.condition && l.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 text-tertiary">{l.condition}</span>}<span>{l.city}</span></div>

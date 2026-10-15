@@ -1,9 +1,9 @@
+import ListingThumb from '../../components/ListingThumb'
 import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
 import { PhotoPicker } from '../../components/DisputeParts'
 import { BuyerTabs, Breadcrumb, TrustFooter } from './BuyerShared'
@@ -76,7 +76,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
               )}
               {candidates.map(p => (
                 <button key={p.id} onClick={() => onSelectOrder(p.id)} className="flex cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-3 text-left hover:border-primary">
-                  <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container"><SafeImg src={p.listing.coverImageUrl} icon="shopping_bag" /></span>
+                  <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container"><ListingThumb listing={p.listing} src={p.listing.coverImageUrl} icon="shopping_bag" /></span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-label-md text-on-surface">{p.listing.title}</span><span className="block text-body-sm text-on-surface-variant">#{p.reference} • {p.seller.fullName}</span></span>
                   <Icon name="chevron_right" size={20} className="text-on-surface-variant" />
                 </button>
@@ -100,7 +100,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
             {/* Mobile: the order under dispute comes first (Stitch mobile) */}
             <section className="mb-4 rounded-2xl bg-surface-lowest p-3 shadow-sm lg:hidden">
               <div className="flex gap-3">
-                <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
+                <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2"><span className="text-label-sm text-on-surface-variant">#{o.reference}</span><span className="text-label-lg font-extrabold text-primary"><Price amount={amount} currency={o.listing.currency} /></span></div>
                   <div className="truncate text-label-lg text-on-surface">{o.listing.title}</div>
@@ -166,7 +166,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
                     <span className="rounded bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">Litige imminent</span>
                   </div>
                   <div className="mt-3 flex gap-3">
-                    <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
+                    <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
                     <div className="min-w-0"><div className="text-label-sm uppercase text-on-surface-variant">{o.listing.category.name}</div><div className="truncate text-label-lg text-on-surface">{o.listing.title}</div>{o.listing.condition && <div className="text-body-sm text-on-surface-variant">État déclaré : {o.listing.condition}</div>}</div>
                   </div>
                   <div className="mt-3 flex items-center justify-between rounded-xl bg-surface-container-low p-3">

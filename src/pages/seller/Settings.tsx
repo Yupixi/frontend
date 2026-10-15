@@ -1,3 +1,4 @@
+import AdultConfirmationSetting from '../../components/AdultConfirmationSetting'
 import PersonalizeHomeSetting from '../../components/PersonalizeHomeSetting'
 import { requestOpenHelp } from '../../lib/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -590,6 +591,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   )}
                   {pwMsg && <p className={`m-0 w-full text-body-sm ${pwMsg.ok ? 'text-tertiary' : 'text-primary'}`}>{pwMsg.text}</p>}
                 </div>
+                <AdultConfirmationSetting />
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <div className="text-label-md text-on-surface">Sessions et appareils actuellement connectés</div>
                   {sessions.some(x => x.current) && sessions.length > 1 && <button disabled={revokingOthers} onClick={() => void revokeOthers().then(() => refetchSessions())} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary"><span className="md:hidden">Déconnecter les autres</span><span className="max-md:hidden">Déconnecter tous les autres appareils</span></button>}

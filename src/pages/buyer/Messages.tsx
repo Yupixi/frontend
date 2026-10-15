@@ -1,3 +1,4 @@
+import ListingThumb from '../../components/ListingThumb'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
@@ -6,7 +7,6 @@ import {
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import SafeImg from '../../components/SafeImg'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import BottomSheet from '../../components/BottomSheet'
 import PriceSuggestionHint from '../../components/PriceSuggestionHint'
@@ -330,7 +330,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const listingBar = conv?.listing && (
     <div className="z-10 shrink-0 border-0 border-b border-solid border-outline-variant/70 bg-surface-lowest/95 px-3 py-2 sm:px-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => onSelectListing?.(conv.listing!.id)} aria-label={`Voir l’annonce ${conv.listing.title}`} className="h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-high p-0"><SafeImg src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></button>
+        <button type="button" onClick={() => onSelectListing?.(conv.listing!.id)} aria-label={`Voir l’annonce ${conv.listing.title}`} className="h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-high p-0"><ListingThumb listing={conv.listing} src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></button>
         <div className="min-w-0 flex-1">
           <div className="truncate text-label-md font-bold text-on-surface">{conv.listing.title}</div>
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">

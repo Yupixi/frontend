@@ -15,10 +15,12 @@ export const CATEGORIES_QUERY = gql`
       description
       highlight
       requiresPrice
+      adult
       subcategories {
         id
         slug
         name
+        adult
       }
       attributes {
         key
@@ -35,6 +37,8 @@ export type CategorySubcategory = {
   id: string
   slug: string
   name: string
+  // « Section Adultes (18+) » (lib/adult.ts).
+  adult?: boolean
 }
 
 export type CategoryAttribute = {
@@ -55,12 +59,16 @@ export type RemoteCategory = {
   description?: string | null
   highlight?: string | null
   requiresPrice: boolean
+  // « Adultes (18+) »: never a home tile; its pages need the age gate.
+  adult?: boolean
   subcategories: CategorySubcategory[]
   attributes: CategoryAttribute[]
 }
 
+// The visitor's market: searches made by several visitors there that find
+// live listings (Backend listings/search-stats.service.ts).
 export const POPULAR_SEARCHES_QUERY = gql`
-  query PopularSearches($limit: Int) { popularSearches(limit: $limit) { term count growth } }
+  query PopularSearches($limit: Int, $countryCode: String) { popularSearches(limit: $limit, countryCode: $countryCode) { term count growth } }
 `
 export type PopularSearch = { term: string; count: number; growth: number }
 
@@ -69,7 +77,7 @@ export const ACTIVE_CAMPAIGNS_QUERY = gql`
   query ActiveCampaigns($country: String) {
     activeCampaigns(country: $country) {
       id name slug description type themeColor endsAt
-      listings { listing { id coverImageUrl } }
+      listings { listing { id coverImageUrl isAdult } }
     }
   }
 `

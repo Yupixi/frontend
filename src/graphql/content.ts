@@ -32,7 +32,7 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
           favoritesCount
           publishedAt
           createdAt
-          coverImageUrl
+          coverImageUrl isAdult
           media {
             url
           }

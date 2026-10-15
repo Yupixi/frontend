@@ -1,9 +1,9 @@
+import ListingThumb from '../../components/ListingThumb'
 import EmptyState from '../../components/EmptyState'
 import AnimatedIcon from '../../components/AnimatedIcon'
 import { useState } from 'react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import SafeImg from '../../components/SafeImg'
 import BottomSheet from '../../components/BottomSheet'
 import type { MyListingRow } from '../../graphql/listings'
 import type { BoostPack, BoostPackInfo } from '../../graphql/promotions'
@@ -95,7 +95,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           </div>
           <div className="mt-3 flex items-center gap-3">
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container">
-              <SafeImg src={listing.coverImageUrl} />
+              <ListingThumb listing={listing} src={listing.coverImageUrl} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-headline-sm text-on-surface">{listing.title}</div>
@@ -243,7 +243,7 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         <div className="flex flex-col gap-2 px-4 pb-4">
           {live.map(l => (
             <button key={l.id} onClick={() => { onSelectListing(l.id); setPicking(false) }} className={`flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-solid p-2 text-left ${l.id === listing?.id ? 'border-primary bg-primary-fixed/30' : 'border-outline-variant bg-surface-lowest'}`}>
-              <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container"><SafeImg src={l.coverImageUrl} iconSize={18} /></span>
+              <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container"><ListingThumb listing={l} src={l.coverImageUrl} iconSize={18} /></span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-label-md text-on-surface">{l.title}</span>
                 <span className="block text-body-sm text-primary"><Price amount={l.price} currency={l.currency} /></span>

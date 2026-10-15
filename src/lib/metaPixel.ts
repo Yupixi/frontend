@@ -213,9 +213,44 @@ function flush() {
   for (const e of fresh) dispatch(e.name, clean(e.params))
 }
 
+// ---- « Section Adultes » ----------------------------------------------------------
+// Nothing about the section reaches Meta: no PageView of its category
+// pages or listings, no event naming one of its listings (an event with
+// adult listings among others keeps only the others' ids).
+const adultIds = new Set<string>()
+const adultSlugs = new Set<string>(['adultes'])
+let listingViewPending = false
+
+/** Listings of the section met on screen (cards, a listing page). */
+export function noteAdultListing(id: string) { adultIds.add(id) }
+/** Slugs of the section's category and subcategories. */
+export function noteAdultSlugs(slugs: string[]) { slugs.forEach((s) => adultSlugs.add(s)) }
+const onAdultCategory = () => {
+  if (!w) return false
+  const m = /^\/categorie\/([^/?#]+)/.exec(w.location.pathname)
+  return !!m && adultSlugs.has(decodeURIComponent(m[1]).toLowerCase())
+}
+
+/** A listing page knows what it shows: its PageView is sent only now, and never for an adult one. */
+export function metaListingSeen(listing: { id: string; isAdult?: boolean | null } | null) {
+  const wasPending = listingViewPending
+  listingViewPending = false
+  if (!listing || listing.isAdult) {
+    if (listing) adultIds.add(listing.id)
+    return
+  }
+  if (wasPending) sendPageView()
+}
+
 /** A Meta event (no-op without consent, when off for the country, or on an excluded page). */
 export function metaTrack(name: MetaEvent, params: Params = {}) {
   if (!pixelId) return
+  if (onAdultCategory()) return
+  if (params.content_ids?.length) {
+    const ids = params.content_ids.filter((id) => !adultIds.has(id))
+    if (!ids.length) return
+    params = { ...params, content_ids: ids }
+  }
   if (!allowed()) {
     // A confirmed purchase is never lost to a payment sheet on screen.
     if (name === 'Purchase' && pending.length < 5) pending.push({ name, params, at: Date.now() })
@@ -228,7 +263,15 @@ let lastPageView = ''
 /** One PageView per page (App, after the address bar is set). */
 export function metaPageView(pageName: string) {
   page = pageName
-  if (!allowed() || !w) return
+  // A listing page: sent once it is known not to be an adult one
+  // (metaListingSeen).
+  if (pageName === 'listing-detail') { listingViewPending = true; return }
+  listingViewPending = false
+  sendPageView()
+}
+
+function sendPageView() {
+  if (!allowed() || !w || onAdultCategory()) return
   const here = w.location.pathname + w.location.search
   if (here === lastPageView) return
   lastPageView = here
@@ -267,7 +310,7 @@ export function setMetaPixel(id: string | null, immediate = false) {
   init(next)
   if (immediate) inject()
   // Accepted on this page: it counts as viewed.
-  if (!was && w) {
+  if (!was && w && !onAdultCategory() && !listingViewPending) {
     lastPageView = w.location.pathname + w.location.search
     dispatch('PageView', {})
   }

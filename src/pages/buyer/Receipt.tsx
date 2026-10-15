@@ -1,3 +1,4 @@
+import ListingThumb from '../../components/ListingThumb'
 import AnimatedIcon from '../../components/AnimatedIcon'
 import SupportAboutButton from '../../components/SupportAboutButton'
 import { useState } from 'react'
@@ -120,7 +121,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                       <span className="flex shrink-0 items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Payé &amp; Livré</span>
                     </div>
                     <div className="mt-3 flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
-                      <span className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container"><SafeImg src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
+                      <span className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
                       <div className="min-w-0"><div className="truncate text-label-lg text-on-surface">{o.listing.title}</div><div className="truncate text-body-sm text-on-surface-variant">{[o.listing.condition && o.listing.condition !== 'N/A' ? o.listing.condition : null, o.listing.city].filter(Boolean).join(' • ')}</div></div>
                     </div>
                     <dl className="m-0 mt-3 flex flex-col gap-2 text-body-sm">
@@ -142,7 +143,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                   </div>
                   <div className="hidden md:block print:block">
                   <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-surface-container-low p-4">
-                    <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
+                    <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
                     <div className="min-w-0 flex-1">
                       <div className="text-label-sm text-on-surface-variant">Réf : #{o.reference}</div>
                       <div className="truncate text-label-lg text-on-surface">{o.listing.title}</div>

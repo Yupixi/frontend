@@ -211,7 +211,7 @@ export const MY_SHOP_LISTINGS_QUERY = gql`
   query MyShopListings {
     myListings(status: APPROVED, page: 1, pageSize: 100) {
       totalCount
-      items { id title price currency status coverImageUrl quantity aisleId featuredAt category { name } }
+      items { id title price currency status coverImageUrl isAdult quantity aisleId featuredAt category { name } }
     }
   }
 `

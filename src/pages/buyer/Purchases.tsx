@@ -1,3 +1,4 @@
+import ListingThumb from '../../components/ListingThumb'
 import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
@@ -143,7 +144,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)_220px] md:items-center">
                   <div className="flex gap-3">
-                    <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-24 md:w-24"><SafeImg src={o.listing.coverImageUrl} icon="shopping_bag" iconSize={28} /></span>
+                    <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container md:h-24 md:w-24"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" iconSize={28} /></span>
                     <div className="min-w-0">
                       <span className="rounded bg-surface-container px-1.5 py-0.5 text-label-sm uppercase text-on-surface-variant">{o.listing.category.name}</span>
                       <div className="mt-1 truncate text-headline-sm text-on-surface">{o.listing.title}</div>

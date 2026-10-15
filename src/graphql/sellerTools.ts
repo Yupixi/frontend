@@ -7,7 +7,7 @@ import { gql } from '@apollo/client'
 // few comparables come back with insufficientSample and no range.
 export const MY_MARKET_POSITIONS_QUERY = gql`
   query MyMarketPositions {
-    myMarketPositions(includeInsufficient: true) { categoryName insufficientSample low median high sampleSize gapPct listing { id title price currency coverImageUrl } }
+    myMarketPositions(includeInsufficient: true) { categoryName insufficientSample low median high sampleSize gapPct listing { id title price currency coverImageUrl isAdult } }
   }
 `
 export type MarketPosition = { categoryName: string; insufficientSample: boolean; low: number | null; median: number | null; high: number | null; sampleSize: number; gapPct: number | null; listing: { id: string; title: string; price: number | null; currency: string; coverImageUrl: string | null } }
@@ -28,7 +28,7 @@ export const SELLER_STATS_QUERY = gql`
       }
       listings {
         views boostedViews clicks messages boosted pendingOffer soldInHours intents intentRate
-        listing { id title price currency status condition coverImageUrl publishedAt createdAt category { name } }
+        listing { id title price currency status condition coverImageUrl isAdult publishedAt createdAt category { name } }
       }
       boost { acceleration investment investmentCredits boostActions unlockedSales roi }
       advice { categoryName lift weekday startHour endHour nextSlot topCities }
@@ -73,7 +73,7 @@ export type SellerStats = {
 const DISPUTE_FIELDS = `
   id reference orderReference conversationId openedBy reason description photos amount status deadlineAt
   proposal discountAmount verdict resolvedAt meetupPlace paymentMethod createdAt
-  listing { id title price currency condition coverImageUrl city category { name } }
+  listing { id title price currency condition coverImageUrl isAdult city category { name } }
   buyer { id fullName avatarUrl city badge buyerRating buyerReviewsCount }
   seller { id fullName avatarUrl city badge averageRating reviewsCount }
   events { id actor title body photos createdAt }
@@ -142,7 +142,7 @@ export const SALES_ORDER_QUERY = gql`
       buyer { id fullName avatarUrl city badge buyerRating buyerReviewsCount }
       seller { id fullName avatarUrl city badge averageRating reviewsCount }
       listing {
-        id title price currency condition brand size coverImageUrl paymentMethods meetupSpot countryCode city locationLabel
+        id title price currency condition brand size coverImageUrl isAdult paymentMethods meetupSpot countryCode city locationLabel
         category { name }
       }
     }
@@ -154,7 +154,7 @@ export const MY_PURCHASE_ORDERS_QUERY = gql`
       id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus paymentMethod
       meetup { id place scheduledAt status proposedById handoverCode handedOverAt handoverMethod }
       seller { id fullName avatarUrl badge averageRating reviewsCount }
-      listing { id title price currency condition size coverImageUrl paymentMethods meetupSpot city category { name } }
+      listing { id title price currency condition size coverImageUrl isAdult paymentMethods meetupSpot city category { name } }
     }
   }
 `

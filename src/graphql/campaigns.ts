@@ -7,7 +7,7 @@ import type { FeeTier } from '../lib/campaignFees'
 const CAMPAIGN_FIELDS = `
   id name slug description type themeColor startsAt endsAt visuals
   listingsCount sellersCount maxDiscountPercent featuredOnHome
-  listings { id discountPercent salePrice listing { id title coverImageUrl } }
+  listings { id discountPercent salePrice listing { id title coverImageUrl isAdult } }
 `
 
 // `country`: the visitor's market — only the campaigns running there, with
