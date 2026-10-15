@@ -1,3 +1,5 @@
+import { useMarketCode } from '../../lib/countries'
+import ListingThumb from '../../components/ListingThumb'
 import PersonalizeHomeSetting from '../../components/PersonalizeHomeSetting'
 import { clearInterests } from '../../lib/interests'
 import { requestOpenHelp } from '../../lib/navigation'
@@ -6,7 +8,6 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
 import { CLEAR_VIEW_HISTORY_MUTATION, REMOVE_VIEW_HISTORY_ITEM_MUTATION } from '../../graphql/account'
 import { UPDATE_PREFERENCES_JSON_MUTATION } from '../../graphql/sellerTools'
@@ -46,7 +47,7 @@ const GROUPS = [
 // "Historique de navigation" (Stitch desktop grid / mobile list).
 export default function History({ onNavigate, onSelectListing, onContactSeller, onSearch, onSearchCategory, currentUser, onProfileUpdated, onLogout }: Props) {
   const { data, loading, refetch } = useQuery<{ myViewHistory: HistoryEntry[] }>(MY_VIEW_HISTORY_FULL_QUERY, { fetchPolicy: 'cache-and-network' })
-  const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 5 } })
+  const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 5, countryCode: useMarketCode() ?? null } })
   const [removeItem] = useMutation(REMOVE_VIEW_HISTORY_ITEM_MUTATION)
   const [clearAll, { loading: clearing }] = useMutation(CLEAR_VIEW_HISTORY_MUTATION)
   const [updatePrefs] = useMutation<{ updateNotificationPreferences: { notificationPreferences: Record<string, unknown> } }>(UPDATE_PREFERENCES_JSON_MUTATION)
@@ -119,7 +120,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                   return (
                     <article key={l.id} className="flex flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
                       <div className="relative aspect-square overflow-hidden bg-surface-container">
-                        <button onClick={() => onSelectListing(l.id)} className="absolute inset-0 block cursor-pointer border-none bg-transparent p-0"><SafeImg src={l.coverImageUrl} className={`h-full w-full object-cover ${off ? 'opacity-50 grayscale' : ''}`} iconSize={36} /></button>
+                        <button onClick={() => onSelectListing(l.id)} className="absolute inset-0 block cursor-pointer border-none bg-transparent p-0"><ListingThumb listing={l} src={l.coverImageUrl} className={`h-full w-full object-cover ${off ? 'opacity-50 grayscale' : ''}`} iconSize={36} /></button>
                         {l.condition && l.condition !== 'N/A' && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-surface-lowest/90 px-2 py-0.5 text-label-sm text-on-surface"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {l.condition}</span>}
                         {off && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm uppercase text-primary"><Icon name="cancel" size={14} /> {l.status === 'SOLD' ? 'Article vendu' : 'Indisponible'}</span>}
                         <button onClick={() => remove(l.id)} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest text-on-surface shadow" aria-label="Retirer de l'historique"><Icon name="close" size={17} /></button>
@@ -148,7 +149,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                   return (
                     <div key={l.id} className={`flex items-center gap-3 rounded-2xl p-2.5 shadow-sm ${off ? 'bg-surface-container-low' : 'bg-surface-lowest'}`}>
                       <button onClick={() => onSelectListing(l.id)} className="relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0">
-                        <SafeImg src={l.coverImageUrl} className={`h-full w-full object-cover ${off ? 'grayscale' : ''}`} />
+                        <ListingThumb listing={l} src={l.coverImageUrl} className={`h-full w-full object-cover ${off ? 'grayscale' : ''}`} />
                         {off && <span className="absolute inset-x-1 bottom-1 rounded bg-primary px-1 text-center text-label-sm uppercase text-white">Vendu</span>}
                       </button>
                       <button onClick={() => onSelectListing(l.id)} className="min-w-0 flex-1 cursor-pointer border-none bg-transparent p-0 text-left">

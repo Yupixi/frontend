@@ -1,5 +1,6 @@
 import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
+import { CHECKIN_FIELDS, type RemoteCheckin } from './deals'
 
 const MESSAGE_FIELDS = `
   id
@@ -55,7 +56,7 @@ const CONVERSATION_FIELDS = `
   listing {
     id
     title
-    coverImageUrl
+    coverImageUrl isAdult
     price
     currency
     status
@@ -114,6 +115,8 @@ const HANDOVER_FIELDS = `
     inlineRating
     handedOverAt
     myReview { rating comment }
+    handoverMethod
+    certifiable
   }
 `
 
@@ -123,6 +126,7 @@ export const CONVERSATION_QUERY = gql`
       ${CONVERSATION_FIELDS}
       safetyAlerts
       ${HANDOVER_FIELDS}
+      ${CHECKIN_FIELDS}
       messages {
         ${MESSAGE_FIELDS}
       }
@@ -174,6 +178,10 @@ export type RemoteHandover = {
   inlineRating: boolean
   handedOverAt: string | null
   myReview: { rating: number; comment: string | null } | null
+  // CODE, SELLER_DECLARED or BOTH_CONFIRMED.
+  handoverMethod?: string | null
+  // Seller: a sale recorded without the code can still be certified with it.
+  certifiable?: boolean
 }
 
 // Why « Confirmer la vente » was refused (see the backend HandoverService).
@@ -221,8 +229,8 @@ export const MARK_CONVERSATION_READ_MUTATION = gql`
 `
 
 export const SET_CONVERSATION_DEAL_STATUS_MUTATION = gql`
-  mutation SetConversationDealStatus($conversationId: String!, $status: ConversationDealStatus!, $quantity: Int) {
-    setConversationDealStatus(conversationId: $conversationId, status: $status, quantity: $quantity) {
+  mutation SetConversationDealStatus($conversationId: String!, $status: ConversationDealStatus!, $quantity: Int, $reason: String) {
+    setConversationDealStatus(conversationId: $conversationId, status: $status, quantity: $quantity, reason: $reason) {
       ${CONVERSATION_FIELDS}
     }
   }
@@ -358,6 +366,8 @@ export type RemoteMessage = {
 export type RemoteConversation = {
   // « Remise » card (CONVERSATION_QUERY only).
   handover?: RemoteHandover | null
+  // « La vente a-t-elle eu lieu ? » (CONVERSATION_QUERY only, private).
+  checkin?: RemoteCheckin | null
   id: string
   listingId: string | null
   lastMessageAt: string | null

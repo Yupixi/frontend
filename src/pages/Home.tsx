@@ -121,7 +121,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
 
   const categoriesQuery = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   const categoriesData = categoriesQuery.data ?? categoriesQuery.previousData
-  const categories = categoriesData?.categories ?? []
+  // « Section Adultes »: never a tile on the home page.
+  const categories = (categoriesData?.categories ?? []).filter(c => !c.adult)
   const topCategories = [...categories].sort((a, b) => (b.listingsCount ?? 0) - (a.listingsCount ?? 0)).slice(0, 7)
 
 

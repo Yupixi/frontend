@@ -1,3 +1,4 @@
+import ListingThumb from './ListingThumb'
 import { useMemo, useState } from 'react'
 import Icon from './Icon'
 import Price from './Price'
@@ -115,7 +116,7 @@ export default function InboxList({ conversations, activeId, currentUserId, onOp
         {/* Listing thumbnail with the contact's photo as a badge */}
         <span className="relative shrink-0">
           <span className="block h-14 w-14 overflow-hidden rounded-xl bg-surface-container">
-            {c.listing?.coverImageUrl ? <SafeImg src={thumbnailUrl(c.listing.coverImageUrl)} alt={c.listing.title} icon="sell" /> : <span className="flex h-full w-full items-center justify-center text-outline"><Icon name={c.listing ? 'sell' : 'forum'} size={24} /></span>}
+            {c.listing?.coverImageUrl ? <ListingThumb listing={c.listing} src={thumbnailUrl(c.listing.coverImageUrl)} alt={c.listing.title} icon="sell" /> : <span className="flex h-full w-full items-center justify-center text-outline"><Icon name={c.listing ? 'sell' : 'forum'} size={24} /></span>}
           </span>
           <span className="absolute -bottom-1 -right-1 rounded-full ring-2 ring-surface-lowest"><Avatar c={c} size={26} /></span>
         </span>
@@ -178,7 +179,7 @@ export default function InboxList({ conversations, activeId, currentUserId, onOp
                 <section key={g.key} className="overflow-hidden rounded-2xl border border-solid border-outline-variant/60 bg-surface-lowest">
                   <button onClick={() => toggleGroup(g.key)} aria-expanded={open} className="flex w-full cursor-pointer items-center gap-3 border-none bg-surface-container-low/60 px-3 py-2.5 text-left hover:bg-surface-container-low">
                     <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container">
-                      {g.listing?.coverImageUrl ? <SafeImg src={thumbnailUrl(g.listing.coverImageUrl)} alt={g.listing.title} icon="sell" /> : <span className="flex h-full w-full items-center justify-center text-outline"><Icon name="forum" size={22} /></span>}
+                      {g.listing?.coverImageUrl ? <ListingThumb listing={g.listing} src={thumbnailUrl(g.listing.coverImageUrl)} alt={g.listing.title} icon="sell" /> : <span className="flex h-full w-full items-center justify-center text-outline"><Icon name="forum" size={22} /></span>}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-label-lg text-on-surface">{g.listing?.title ?? 'Sans annonce'}</span>

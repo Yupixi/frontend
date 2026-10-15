@@ -6,6 +6,7 @@ import { formatNumber } from '../../lib/format'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import StatsMobile from './StatsMobile'
+import DealStatsPanel from './DealStatsPanel'
 import CertifiedLock from '../../components/CertifiedLock'
 import { MY_MARKET_POSITIONS_QUERY, SELLER_STATS_QUERY, type ListingPerformance, type MarketPosition, type SellerStats } from '../../graphql/sellerTools'
 import type { AuthUser } from '../../graphql/auth'
@@ -161,6 +162,8 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           </div>
         </section>
 
+        <div className="mt-5"><DealStatsPanel d={s?.deals} loading={loading} /></div>
+
         {/* Traffic + origin */}
         <section className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
@@ -277,8 +280,8 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
-                  {['Article', 'Prix net', 'Mise en ligne', 'Vues (boost)', 'Clics', 'Messages', 'Statut', 'Action'].map((h, i) => (
-                    <th key={h} className={`px-3 py-3 font-semibold ${i === 0 ? 'rounded-l-xl' : ''} ${i === 7 ? 'rounded-r-xl text-right' : ''}`}>{h}</th>
+                  {['Article', 'Prix net', 'Mise en ligne', 'Vues (boost)', 'Clics', 'Intentions', 'Messages', 'Statut', 'Action'].map((h, i) => (
+                    <th key={h} className={`px-3 py-3 font-semibold ${i === 0 ? 'rounded-l-xl' : ''} ${i === 8 ? 'rounded-r-xl text-right' : ''}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -298,6 +301,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
                     <td className="whitespace-nowrap px-3 py-3 text-body-sm text-on-surface-variant">{ago(p.listing.publishedAt ?? p.listing.createdAt)}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-label-md text-on-surface">{nf(p.views)} <span className={`text-label-sm ${p.boostedViews ? 'text-primary' : 'text-on-surface-variant'}`}>{p.boostedViews ? `(+${nf(p.boostedViews)} boost)` : '(organique)'}</span></td>
                     <td className="px-3 py-3 text-label-md text-on-surface">{nf(p.clicks)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-label-md text-on-surface" title="Discussions, « Appeler », favoris, offres, rendez-vous et partages, rapportés aux vues">{nf(p.intents)} <span className="text-label-sm text-on-surface-variant">{p.intentRate != null ? `(${formatNumber(p.intentRate)} %)` : ''}</span></td>
                     <td className="px-3 py-3"><span className="flex items-center gap-1 text-label-md text-tertiary"><Icon name="chat" size={15} /> {p.messages}</span></td>
                     <td className="px-3 py-3"><StatusChip p={p} /></td>
                     <td className="px-3 py-3 text-right"><RowAction p={p} onNavigate={onNavigate} /></td>

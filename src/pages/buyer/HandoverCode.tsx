@@ -1,3 +1,4 @@
+import ListingThumb from '../../components/ListingThumb'
 import { useEffect, useState } from 'react'
 import SupportAboutButton from '../../components/SupportAboutButton'
 import { useQuery } from '@apollo/client/react'
@@ -182,7 +183,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
               <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm max-lg:-order-2">
                 <div className="text-label-sm uppercase text-on-surface-variant">Article réservé</div>
                 <div className="mt-2 flex gap-3">
-                  <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
+                  <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
                   <div className="min-w-0">
                     {o.listing.condition && o.listing.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 py-0.5 text-label-sm uppercase text-tertiary">{o.listing.condition}</span>}
                     <div className="mt-1 truncate text-headline-sm text-on-surface">{o.listing.title}</div>

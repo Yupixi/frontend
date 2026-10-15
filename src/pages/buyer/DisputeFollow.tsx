@@ -1,3 +1,4 @@
+import ListingThumb from '../../components/ListingThumb'
 import EmptyState from '../../components/EmptyState'
 import SupportAboutButton from '../../components/SupportAboutButton'
 import { useState } from 'react'
@@ -196,7 +197,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                       <span className={`rounded bg-surface-container px-1.5 normal-case ${disputeIsOpen(d.status) ? 'max-md:hidden' : ''}`}>{d.listing.category.name}</span>
                     </div>
                     <div className="mt-2 flex gap-3">
-                      <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><SafeImg src={d.listing.coverImageUrl} icon="shopping_bag" /></span>
+                      <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={d.listing} src={d.listing.coverImageUrl} icon="shopping_bag" /></span>
                       <div className="min-w-0"><div className="truncate text-label-lg text-on-surface">{d.listing.title}</div><div className="text-headline-sm font-extrabold text-primary"><Price amount={d.amount} currency={d.listing.currency} /></div></div>
                     </div>
                     <dl className="m-0 mt-3 flex flex-col gap-1.5 text-body-sm">

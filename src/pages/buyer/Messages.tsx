@@ -1,3 +1,4 @@
+import ListingThumb from '../../components/ListingThumb'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useSubscription } from '@apollo/client/react'
 import {
@@ -6,7 +7,6 @@ import {
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
-import SafeImg from '../../components/SafeImg'
 import ConfirmSheet from '../../components/ConfirmSheet'
 import BottomSheet from '../../components/BottomSheet'
 import PriceSuggestionHint from '../../components/PriceSuggestionHint'
@@ -31,7 +31,10 @@ import SafetyBanners from '../../components/chat/SafetyBanners'
 import { LiveCardMap, LiveConsentSheet, LiveHeaderPill, LiveLocationController, LiveMapSheet, LivePanel, activeLiveMeetup } from '../../components/chat/LiveLocation'
 import type { AssistantUse } from '../../components/chat/AssistantPanel'
 import type { MeetupPrefill } from '../../components/chat/MeetupSheet'
-import HandoverCard, { DealDoneCard, DealReview } from '../../components/chat/HandoverCard'
+import HandoverCard, { CertifyWithCode, DealDoneCard, DealReview } from '../../components/chat/HandoverCard'
+import CheckinCard from '../../components/chat/CheckinCard'
+import MarkSoldSheet from '../../components/MarkSoldSheet'
+import { NOT_CONCLUDED_REASONS, type NotConcludedReason } from '../../graphql/deals'
 import { setActiveConversation } from '../../lib/activeConversation'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
@@ -88,9 +91,11 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const [menuOpen, setMenuOpen] = useState(false)
   // Live position on meet-up day: consent sheet or the larger map.
   const [liveSheet, setLiveSheet] = useState<'consent' | 'map' | null>(null)
-  const [confirming, setConfirming] = useState<'CONCLUDED' | 'NOT_CONCLUDED' | 'REPORT' | null>(null)
-  // Units sold, when the listing has stock.
-  const [soldQty, setSoldQty] = useState(1)
+  const [confirming, setConfirming] = useState<'NOT_CONCLUDED' | 'REPORT' | null>(null)
+  // « Discussion non conclue »: why (optional).
+  const [ncReason, setNcReason] = useState<NotConcludedReason | null>(null)
+  // « Marquer comme vendu » (« Vendu à qui ? »).
+  const [markSoldOpen, setMarkSoldOpen] = useState(false)
   const inputRef = useRef<ComposerHandle>(null)
   const [replyTo, setReplyTo] = useState<ComposerReply | null>(null)
   const [viewer, setViewer] = useState<{ photos: string[]; index: number } | null>(null)
@@ -219,9 +224,9 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     setFlashId(id)
     window.setTimeout(() => setFlashId(f => (f === id ? null : f)), 1400)
   }
-  const closeDeal = (status: 'CONCLUDED' | 'NOT_CONCLUDED') => {
+  const closeNotConcluded = () => {
     if (!activeId) return
-    void setDealStatus({ variables: { conversationId: activeId, status, ...(status === 'CONCLUDED' ? { quantity: soldQty } : {}) } }).then(refresh).finally(() => { setConfirming(null); setSoldQty(1) })
+    void setDealStatus({ variables: { conversationId: activeId, status: 'NOT_CONCLUDED', reason: ncReason } }).then(refresh).finally(() => { setConfirming(null); setNcReason(null) })
   }
   // Quick replies fill the input rather than sending blind.
   const suggest = (text: string) => { setMsg(text); saveDraft(text); inputRef.current?.focus() }
@@ -310,7 +315,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
     discussing && { icon: 'location_on', label: 'Fixer un rendez-vous', onClick: () => openMeetup() },
     conv.listing && { icon: 'open_in_new', label: 'Voir la fiche', onClick: () => onSelectListing?.(conv.listing!.id) },
     remisePending && { icon: 'task_alt', label: conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise', onClick: openRemise },
-    conv.canManageDeal && conv.listing && discussing && { icon: 'handshake', label: 'Marquer la vente conclue', onClick: () => setConfirming('CONCLUDED') },
+    conv.canManageDeal && conv.listing && discussing && conv.listing.status !== 'SOLD' && { icon: 'handshake', label: 'Marquer comme vendu', onClick: () => setMarkSoldOpen(true) },
     conv.canManageDeal && conv.listing && discussing && { icon: 'cancel', label: 'Discussion non conclue', onClick: () => setConfirming('NOT_CONCLUDED') },
     !reported && { icon: 'flag', label: 'Signaler une arnaque', onClick: () => setConfirming('REPORT'), danger: true },
   ].filter(Boolean) as { icon: string, label: string, onClick: () => void, danger?: boolean }[]
@@ -325,7 +330,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const listingBar = conv?.listing && (
     <div className="z-10 shrink-0 border-0 border-b border-solid border-outline-variant/70 bg-surface-lowest/95 px-3 py-2 sm:px-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => onSelectListing?.(conv.listing!.id)} aria-label={`Voir l’annonce ${conv.listing.title}`} className="h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-high p-0"><SafeImg src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></button>
+        <button type="button" onClick={() => onSelectListing?.(conv.listing!.id)} aria-label={`Voir l’annonce ${conv.listing.title}`} className="h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-high p-0"><ListingThumb listing={conv.listing} src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></button>
         <div className="min-w-0 flex-1">
           <div className="truncate text-label-md font-bold text-on-surface">{conv.listing.title}</div>
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -434,9 +439,9 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       <Icon name="auto_awesome" size={17} /> <span className="max-[379px]:hidden">Aide Dilchap</span>
                     </button>
                   )}
-                  {conv.canManageDeal && conv.listing && discussing && !remisePending && (
-                    <button disabled={closingDeal} onClick={() => setConfirming('CONCLUDED')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm text-white hover:bg-primary-dark max-lg:hidden">
-                      <CheckCircle2 size={16} /> Marquer conclu
+                  {conv.canManageDeal && conv.listing && discussing && conv.listing.status !== 'SOLD' && !remisePending && (
+                    <button onClick={() => setMarkSoldOpen(true)} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm text-white hover:bg-primary-dark max-lg:hidden">
+                      <CheckCircle2 size={16} /> Marquer comme vendu
                     </button>
                   )}
                   {menuItems.length > 0 && (
@@ -497,13 +502,19 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   onAnswerMeetup={answerMeetup}
                   meetupAction={m => !remisePending || !m.meetup || m.meetup.id !== handover!.meetupId ? undefined
                     : { label: conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise', icon: 'task_alt', onClick: openRemise }}
-                  footer={handover && (remiseShown
+                  footer={<>
+                    {conv.checkin && <CheckinCard c={conv.checkin} otherName={firstName || 'l’autre membre'} concluded={conv.dealStatus === 'CONCLUDED'} onAnswered={() => void refresh()} onReschedule={() => openMeetup()} />}
+                    {handover && (remiseShown
                     ? <HandoverCard h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onConfirmed={() => void refresh()} onOpenDispute={remiseDispute} onHide={handover.inWindow ? undefined : () => setRemiseFor(null)} />
-                    : handover.status === 'DONE' && !hasDealCard && (handover.inlineRating || handover.myReview)
+                    : handover.status === 'DONE' && !hasDealCard && (handover.inlineRating || handover.myReview || handover.certifiable)
                       ? <DealDoneCard h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} amount={agreedPrice} currency={conv.listing?.currency ?? 'XOF'} onSaved={() => void refetchConv()} />
                       : null)}
+                  </>}
                   cardExtra={card => card.type === 'DEAL_CONCLUDED' && handover?.status === 'DONE'
-                    ? <DealReview h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onSaved={() => void refetchConv()} />
+                    ? <>
+                      <CertifyWithCode h={handover} otherName={firstName || 'l’autre membre'} onDone={() => void refresh()} />
+                      <DealReview h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onSaved={() => void refetchConv()} />
+                    </>
                     : null}
                   meetupLive={m => (liveMeetup && m.meetup?.id === liveMeetup.id ? {
                     map: <LiveCardMap meetup={liveMeetup} onOpen={() => setLiveSheet('map')} />,
@@ -679,28 +690,33 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
       )}
       <ConfirmSheet
         open={!!confirming}
-        title={confirming === 'REPORT' ? 'Signaler une tentative d’arnaque' : confirming === 'CONCLUDED' ? 'Confirmer la remise ?' : 'Discussion non conclue ?'}
+        title={confirming === 'REPORT' ? 'Signaler une tentative d’arnaque' : 'Discussion non conclue ?'}
         confirmLabel={confirming === 'REPORT' ? 'Signaler' : 'Confirmer'}
         loading={closingDeal}
         tone={confirming === 'REPORT' ? 'danger' : 'primary'}
-        onClose={() => setConfirming(null)}
-        onConfirm={() => confirming === 'REPORT' ? reportScam() : confirming && closeDeal(confirming)}
+        onClose={() => { setConfirming(null); setNcReason(null) }}
+        onConfirm={() => (confirming === 'REPORT' ? reportScam() : closeNotConcluded())}
       >
         {confirming === 'REPORT' ? `Signaler ${other?.fullName ?? 'ce membre'} à l’équipe Dilchap ? La conversation sera jointe au signalement.`
-          : confirming === 'CONCLUDED' ? ((conv?.listing?.quantity ?? 1) > 1
-            ? <>
-              La remise est enregistrée maintenant et la discussion sera fermée. Les exemplaires vendus sont retirés du stock ({conv!.listing!.quantity} disponibles).
-              <span className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-surface-container-low p-3">
-                <span className="text-label-md text-on-surface">Exemplaires vendus</span>
-                <span className="flex items-center gap-1">
-                  <button type="button" aria-label="Un de moins" disabled={soldQty <= 1} onClick={() => setSoldQty(q => Math.max(1, q - 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={17} /></button>
-                  <span className="w-8 text-center text-label-lg text-on-surface">{soldQty}</span>
-                  <button type="button" aria-label="Un de plus" disabled={soldQty >= conv!.listing!.quantity!} onClick={() => setSoldQty(q => Math.min(conv!.listing!.quantity!, q + 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="add" size={17} /></button>
-                </span>
-              </span>
-            </>
-            : 'La remise est enregistrée maintenant : l’annonce passe en vendue et la discussion sera fermée. Si vous êtes avec l’acheteur, préférez son code de remise.') : 'Cette discussion sera marquée comme n’ayant pas abouti.'}
+          : <>
+            Cette discussion sera marquée comme n’ayant pas abouti. Pourquoi ? <span className="text-on-surface-variant">(facultatif)</span>
+            <span className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Raison">
+              {NOT_CONCLUDED_REASONS.map(r => (
+                <button key={r.key} type="button" role="radio" aria-checked={ncReason === r.key} onClick={() => setNcReason(cur => (cur === r.key ? null : r.key))}
+                  className={`cursor-pointer rounded-full border border-solid px-3 py-1.5 text-label-sm font-semibold ${ncReason === r.key ? 'border-primary bg-primary-fixed/40 text-on-surface' : 'border-outline-variant bg-surface-lowest text-on-surface-variant'}`}>
+                  {r.label}
+                </button>
+              ))}
+            </span>
+          </>}
       </ConfirmSheet>
+      <MarkSoldSheet
+        open={markSoldOpen}
+        listingId={conv?.listing?.id ?? null}
+        preselect={activeId}
+        onClose={() => setMarkSoldOpen(false)}
+        onDone={() => { setMarkSoldOpen(false); void refresh() }}
+      />
     </AccountLayout>
   )
 }

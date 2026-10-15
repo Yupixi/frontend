@@ -24,7 +24,11 @@ import CategoryLandingExtras from '../components/CategoryLandingExtras'
 import { track } from '../lib/analytics'
 import { GridSkeleton } from '../components/Skeleton'
 import { formatNumber } from '../lib/format'
-import { metaTrack } from '../lib/metaPixel'
+import { metaTrack, noteAdultSlugs } from '../lib/metaPixel'
+import { AdultSectionContext, SEARCH_ROUTING_QUERY, adultGateReason, useAdultAccess, type SearchRouting } from '../lib/adult'
+import AdultGate from '../components/AdultGate'
+import { AdultSearchNotice } from '../components/AdultSearchNotice'
+import { matchesAll, recordFinalSearch, searchTokens } from '../lib/searchText'
 
 const PAGE_SIZE = 18
 
@@ -201,10 +205,31 @@ export default function SearchPage({
     : undefined
   const category = subOwner ?? categories.find(c => c.slug === categoryFilter)
   const subcategory = subOwner?.subcategories.find(s => s.slug === categoryFilter)
+  // « Section Adultes »: its pages need the visitor's access (else the gate,
+  // and no listing query at all).
+  const access = useAdultAccess()
+  const adultOk = access?.status === 'OK'
+  const rubricAdult = !!(category?.adult || subcategory?.adult) || (!!categoryFilter && categoryFilter === 'adultes')
+  const gated = rubricAdult && !!access && !adultOk
+  useEffect(() => {
+    const slugs = categories.flatMap(c => [...(c.adult ? [c.slug] : []), ...c.subcategories.filter(x => c.adult || x.adult).map(x => x.slug)])
+    if (slugs.length) noteAdultSlugs(slugs)
+  }, [categories])
+  // Filters: the section's category only for a member who may enter it.
+  const filterCategories = categories.filter(c => adultOk || !c.adult)
+  const closeCategories = useMemo(() => {
+    if (!search.trim()) return []
+    const out: { slug: string, name: string }[] = []
+    for (const c of filterCategories) {
+      if (matchesAll(c.name, search)) out.push({ slug: c.slug, name: c.name })
+      for (const sc of c.subcategories) if ((adultOk || !sc.adult) && matchesAll(sc.name, search)) out.push({ slug: sc.slug, name: sc.name })
+    }
+    return out.slice(0, 5)
+  }, [search, filterCategories, adultOk])
   // Category page: the team's texts and the links to neighbouring pages.
   const { data: landingData } = useQuery<{ categoryLanding: CategoryLanding | null }>(CATEGORY_LANDING_QUERY, {
     variables: { slug: categoryFilter ?? '', city: categoryCity || null, country: countryCode ?? null },
-    skip: !categoryFilter,
+    skip: !categoryFilter || rubricAdult,
   })
   const landing = categoryFilter ? landingData?.categoryLanding ?? null : null
   // The city of a city page, from the country lists (at once), else the server's.
@@ -247,12 +272,30 @@ export default function SearchPage({
 
   useEffect(() => { setPage(1); setAlertState('idle') }, [filter, sort])
 
-  const { data, previousData, loading } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; totalPages: number } }>(LISTINGS_QUERY, {
+  const { data, previousData, loading, error: listingsError, refetch } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; totalPages: number } }>(LISTINGS_QUERY, {
     // rotationSeed: listings « en vedette » keep one order across the pages
     // of this visit.
     variables: { filter, sort, page, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories() },
-    skip: rubricPending,
+    skip: rubricPending || gated || (rubricAdult && !access),
   })
+  // The server refused the section's listings: the gate, with its reason.
+  const gateReason = adultGateReason(listingsError)
+  const showGate = gated || !!gateReason
+
+  // A search shown with its results is counted once settled (typing on the
+  // phone's input lifts the words after a pause: a short wait more), once
+  // per session — never while typing.
+  useEffect(() => {
+    const words = search.trim()
+    if (!words || page !== 1 || loading || !data) return
+    const t = setTimeout(() => recordFinalSearch(words, countryCode), 1500)
+    return () => clearTimeout(t)
+  }, [search, page, loading, data, countryCode])
+  const { data: routingData } = useQuery<{ searchRouting: SearchRouting }>(SEARCH_ROUTING_QUERY, {
+    variables: { term: search.trim(), countryCode: countryCode ?? null },
+    skip: search.trim().length < 2,
+  })
+  const routing = search.trim().length >= 2 ? routingData?.searchRouting ?? null : null
   const result = (data ?? previousData)?.listings
   const items = result?.items ?? []
   const total = result?.totalCount ?? 0
@@ -266,17 +309,21 @@ export default function SearchPage({
     const key = `${search}|${categoryFilter}`
     if (trackedSearch.current === key) return
     trackedSearch.current = key
-    // Anonymous interests (this device only): the category searched in.
-    if (categoryFilter) noteInterest(category?.slug ?? categoryFilter, 0.5)
+    // Anonymous interests (this device only): the category searched in
+    // (never the « Section Adultes »).
+    if (categoryFilter && !rubricAdult) noteInterest(category?.slug ?? categoryFilter, 0.5)
     track('search', { search_category: categoryFilter || 'toutes', with_words: !!search.trim(), results_count: data.listings.totalCount, country: countryCode ?? undefined })
     // Meta Pixel: the first results' ids (the catalogue's ids); a category
     // page without words is a ViewCategory.
     const firstIds = data.listings.items.slice(0, 10).map((l) => l.id)
+    // Nothing about the « Section Adultes » (its listings' ids are left out
+    // by lib/metaPixel; its pages send nothing).
+    if (rubricAdult) return
     if (search.trim()) metaTrack('Search', { search_string: search, content_ids: firstIds, content_category: categoryFilter || undefined })
     else metaTrack('ViewCategory', { content_ids: firstIds, content_category: categoryFilter })
-  }, [data, loading, page, search, categoryFilter, countryCode])
+  }, [data, loading, page, search, categoryFilter, countryCode, rubricAdult])
 
-  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter }, skip: rubricPending })
+  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter }, skip: rubricPending || showGate || (rubricAdult && !access) })
   const facets = facetsData?.listingFacets
   const noCommission = useNoCommissionClaims()
 
@@ -375,7 +422,7 @@ export default function SearchPage({
           </>
         ) : (
           <div className="flex flex-col">
-            {categories.map(c => (
+            {filterCategories.map(c => (
               <button key={c.id} onClick={() => onCategorySelect?.(c.slug)} title={c.name} className="flex cursor-pointer items-center justify-between gap-2 border-none bg-transparent px-0 py-1 text-left text-body-sm text-on-surface hover:text-primary">
                 <span className="flex min-w-0 items-center gap-2"><CategoryIcon icon={c.icon} size={18} className="shrink-0 text-on-surface-variant" /> <span className="truncate">{c.name}</span></span>
                 <ChevronRight size={14} className="text-outline" />
@@ -561,6 +608,12 @@ export default function SearchPage({
             </div>
           )}
 
+          {routing && <AdultSearchNotice routing={routing} onOpenSection={slug => onCategorySelect?.(slug)} className="mb-4" />}
+
+          {showGate ? (
+            <div className="py-6"><AdultGate reason={gateReason} onNavigate={onNavigate} onConfirmed={() => { void refetch() }} /></div>
+          ) : (
+          <AdultSectionContext.Provider value={rubricAdult && adultOk}>
           <div className={loading && !data ? 'opacity-60' : ''}>
             {/* First load: the results' room is kept (the alert box below
                 doesn't jump when they land). */}
@@ -578,12 +631,26 @@ export default function SearchPage({
               </div>
             )}
             {!loading && items.length === 0 && (
-              <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce ne correspond" text="Élargissez vos filtres ou créez une alerte ci-dessous." />
+              <>
+                <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce ne correspond"
+                  text={search && searchTokens(search).length > 2 ? 'Essayez avec moins de mots, élargissez vos filtres ou créez une alerte ci-dessous.' : 'Vérifiez l’orthographe, élargissez vos filtres ou créez une alerte ci-dessous.'} />
+                {/* Nearby categories (« telephone » → Téléphones). */}
+                {search && closeCategories.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    <span className="text-body-sm text-on-surface-variant">Voir aussi :</span>
+                    {closeCategories.map(c => (
+                      <a key={c.slug} href={`/categorie/${c.slug}`} onClick={goCategory(c.slug)} className="rounded-full bg-surface-lowest px-3.5 py-1.5 text-label-md text-on-surface no-underline hover:text-primary">{c.name}</a>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
+          </AdultSectionContext.Provider>
+          )}
 
           {/* Saved-search alert */}
-          <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-2xl bg-surface-container-low p-5 sm:flex-row sm:items-center">
+          {!showGate && <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-2xl bg-surface-container-low p-5 sm:flex-row sm:items-center">
             <div className="flex items-center gap-4">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><BellRing size={22} /></span>
               <div>
@@ -598,7 +665,7 @@ export default function SearchPage({
             >
               {alertState === 'done' ? <><Check size={16} className="text-tertiary" /> Alerte créée</> : <><BellRing size={16} className="text-primary" /> Créer une alerte</>}
             </button>
-          </div>
+          </div>}
           {alertState === 'error' && <p className="mt-2 text-body-sm text-primary">Impossible de créer l'alerte pour le moment.</p>}
 
           {/* Pagination */}
@@ -651,7 +718,7 @@ export default function SearchPage({
           onReset={resetAll}
           onClose={() => setFiltersOpen(false)}
           facets={facets}
-          categories={categories}
+          categories={filterCategories}
           total={total}
           nearCity={nearCity}
         />

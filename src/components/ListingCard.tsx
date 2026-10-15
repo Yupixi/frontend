@@ -10,6 +10,7 @@ import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
 import { getAccessToken } from '../lib/auth'
 import { setAuthReason } from '../lib/authReason'
+import { useListingIntents } from '../lib/intents'
 import {
   getArchetype,
   archetypeHighlight,
@@ -19,6 +20,12 @@ import {
   type ArchetypeKey,
 } from '../lib/listingArchetype'
 import SellerBadge from '../components/SellerBadge'
+import { ADULT_BLUR_CLASS, useAdultBlur } from '../lib/adult'
+
+// « Section Adultes »: the card's tag (search results of a confirmed member).
+function AdultBadge() {
+  return <span className="inline-flex items-center gap-1 rounded-md bg-inverse-surface px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"><Icon name="lock" size={11} /> Section Adultes</span>
+}
 
 // The boost sheet (credits, prices, payment) only loads for a seller who
 // opens it from their own card: not part of the first page.
@@ -184,6 +191,7 @@ export function ListingCard(props: ListingCardProps) {
 
 const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact, featured, priority }: Omit<ListingCardProps, 'onContact'> & { onContact: () => void }) {
   const image = useCardImage(listing)
+  const blur = useAdultBlur()(listing)
   const salePrice = discountedPrice(listing)
   const priceSuffix = archetypePriceSuffix(listing)
   const isRoute = getArchetype(listing) === 'route'
@@ -194,7 +202,8 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
   const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
   const bought = boughtBadge(listing)
-  const contact = (e: React.MouseEvent) => { e.stopPropagation(); onContact() }
+  const intents = useListingIntents()
+  const contact = (e: React.MouseEvent) => { e.stopPropagation(); intents.contactTap(listing.id); onContact() }
   // Phone button of the mockup card. Sellers' numbers aren't public: the
   // number is shared in the conversation, so the button says so and leads
   // there instead of faking a call.
@@ -249,7 +258,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
               loading={priority ? 'eager' : 'lazy'}
               fetchPriority={priority ? 'high' : undefined}
               decoding={priority ? 'sync' : 'async'}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className={`h-full w-full object-cover transition-transform duration-500 ${blur ? ADULT_BLUR_CLASS : 'group-hover:scale-105'}`}
               onError={image.onError}
             />
           ) : (
@@ -262,6 +271,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
               one neutral fact. Everything else (seller badge, stock) is in
               the card body or on the listing page. */}
           <div className="absolute left-2 right-10 top-2 flex flex-wrap items-start gap-1 md:left-3 md:right-12 md:top-3">
+            {listing.isAdult && <AdultBadge />}
             {bought && <BoughtBadge badge={bought} />}
             {listing.activeCampaignDiscount && <PromoBadge listing={listing} />}
           </div>
@@ -324,7 +334,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
                 <button onClick={contact} className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
                   <Icon name="chat" size={16} /> Discuter
                 </button>
-                <button onClick={e => { e.stopPropagation(); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border-none bg-surface-container text-on-surface">
+                <button onClick={e => { e.stopPropagation(); intents.call(listing.id); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border-none bg-surface-container text-on-surface">
                   <Icon name="call" size={18} />
                 </button>
                 <div onClick={e => e.stopPropagation()}>
@@ -358,6 +368,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
 }) {
   const image = useCardImage(listing)
+  const blur = useAdultBlur()(listing)
   const salePrice = discountedPrice(listing)
   const priceSuffix = archetypePriceSuffix(listing)
   const highlight = archetypeHighlight(listing)
@@ -371,15 +382,16 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
     <div onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm transition-shadow hover:shadow-card-hover sm:flex-row sm:gap-4 sm:p-3">
       <div className="aspect-video w-full shrink-0 overflow-hidden bg-surface-container sm:aspect-auto sm:h-28 sm:w-28 sm:rounded-xl md:h-32 md:w-40">
         {image.src
-          ? <img loading="lazy" decoding="async" src={image.src} alt={`${listing.title} — photo 1`} onError={image.onError} className="h-full w-full object-cover" />
+          ? <img loading="lazy" decoding="async" src={image.src} alt={`${listing.title} — photo 1`} onError={image.onError} className={`h-full w-full object-cover ${blur ? ADULT_BLUR_CLASS : ''}`} />
           : <span className="flex h-full items-center justify-center text-on-surface-variant"><Tag size={28} /></span>}
       </div>
 
       <div className="min-w-0 flex-1 p-3 sm:p-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {(listing.activeCampaignDiscount || listing.negotiable) && (
+            {(listing.activeCampaignDiscount || listing.negotiable || listing.isAdult) && (
               <div className="mb-1 flex flex-wrap gap-1.5">
+                {listing.isAdult && <AdultBadge />}
                 <PromoBadge listing={listing} />
                 {listing.negotiable && <span className="rounded bg-primary-fixed/60 px-1.5 text-label-sm text-primary">Négociable</span>}
               </div>

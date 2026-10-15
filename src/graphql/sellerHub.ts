@@ -32,7 +32,7 @@ export const MY_SALES_ORDERS_QUERY = gql`
       meetup { id place scheduledAt status proposedById }
       buyer { id fullName avatarUrl city badge averageRating reviewsCount buyerRating buyerReviewsCount }
       listing {
-        id title price currency condition brand size coverImageUrl paymentMethods meetupSpot city locationLabel deliveryAvailable
+        id title price currency condition brand size coverImageUrl isAdult paymentMethods meetupSpot city locationLabel deliveryAvailable
         category { name }
       }
     }
@@ -69,7 +69,7 @@ export const SELLER_REVIEWS_FULL_QUERY = gql`
     sellerReviews(sellerId: $sellerId) {
       id rating comment createdAt reply repliedAt
       author { id fullName avatarUrl city }
-      listing { id title price currency condition coverImageUrl category { name } }
+      listing { id title price currency condition coverImageUrl isAdult category { name } }
     }
   }
 `

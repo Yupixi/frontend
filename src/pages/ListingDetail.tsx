@@ -63,6 +63,10 @@ import { listingPath, samePlace } from '../lib/routes'
 import { usePageTitle } from '../lib/site'
 import ListingQrSheet from '../components/ListingQrSheet'
 import { useRules } from '../lib/rules'
+import { AdultSectionContext, adultGateReason } from '../lib/adult'
+import AdultGate from '../components/AdultGate'
+import { metaListingSeen } from '../lib/metaPixel'
+import { useListingIntents } from '../lib/intents'
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -122,15 +126,24 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile] = useState(() => window.innerWidth < 1024)
 
-  const { data, loading } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
+  const { data, loading, error, refetch } = useQuery<{ listing: RemoteListingDetail | null }>(LISTING_QUERY, { variables: { id: listingId } })
   const listing = data?.listing
+  // « Section Adultes »: the server answers with the gate (never the
+  // listing) to anyone without the access.
+  const gateReason = adultGateReason(error)
   // Report reasons of the listing's country (the market until it loads).
   const reportReasons = useLists(listing?.countryCode || undefined).reportReasons.listing
   const qrEnabled = useRules(listing?.countryCode || undefined).QR_LISTING_ENABLED !== 0
   const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   // Same tab title as search engines get for a sold or expired listing.
   const archiveLabel = listing?.status === 'SOLD' ? 'Vendu' : listing?.status === 'EXPIRED' ? 'Annonce expirée' : null
-  usePageTitle(listing ? (archiveLabel ? `${archiveLabel} — ${listing.title}` : listing.title) : null)
+  usePageTitle(gateReason ? 'Contenu réservé aux adultes' : listing ? (archiveLabel ? `${archiveLabel} — ${listing.title}` : listing.title) : null)
+  // Meta Pixel: this page's PageView waits to know it is not an adult
+  // listing (lib/metaPixel).
+  useEffect(() => {
+    if (loading) return
+    metaListingSeen(listing ? { id: listing.id, isAdult: listing.isAdult } : gateReason ? { id: listingId, isAdult: true } : null)
+  }, [loading, listing?.id, gateReason]) // eslint-disable-line react-hooks/exhaustive-deps
   // /annonce/<id> (or old words) → /annonce/<words of the title>-<id>.
   useEffect(() => {
     if (!listing) return
@@ -141,7 +154,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   }, [listing?.id, listing?.title])
   // « Mesure d'audience »: the listing id, its category and country only.
   useEffect(() => {
-    if (!listing) return
+    if (!listing || listing.isAdult) return
     track('view_item', { country: listing.countryCode ?? undefined, items: [{ item_id: listing.id, item_category: listing.category.slug }] })
     // Meta Pixel: the id of the catalog feed and the price asked (promotion included).
     const price = discountedPrice(listing) ?? listing.price
@@ -154,7 +167,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // that was clicked.
   // The visitor's market (the listing's own country when « Tous les pays »).
   const market = useMarketCode()
-  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4, countryCode: market ?? undefined } })
+  const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4, countryCode: market ?? undefined }, skip: !!gateReason })
   const similar = similarData?.similarListings ?? []
   const apollo = useApolloClient()
   const sellerId = listing?.seller.id
@@ -168,12 +181,21 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   const [createReport, { loading: reporting }] = useMutation(CREATE_REPORT_MUTATION)
   const [bumpListing, { loading: renewing }] = useMutation(BUMP_LISTING_MUTATION)
+  // « Partager », contact taps: purchase intents (first-party statistics).
+  const intents = useListingIntents()
   const [boostOpen, setBoostOpen] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
 
   if (loading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
+  if (gateReason)
+    return (
+      <div className="mx-auto max-w-[720px] px-4 py-10">
+        <AdultGate reason={gateReason} onNavigate={onNavigate} onConfirmed={() => { void refetch() }} />
+        <p className="m-0 mt-6 text-center"><button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent text-label-md text-primary">Retour à l’accueil</button></p>
+      </div>
+    )
   if (!listing) {
     return (
       <div className="p-12 text-center">
@@ -260,6 +282,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const shareUrl = `${window.location.origin}${listingPath(listing.id, listing.title)}`
 
   const share = async () => {
+    intents.share(listing.id)
     if (navigator.share) {
       try { await navigator.share({ title: listing.title, text: `${listing.title} — ${location}`, url: shareUrl }) } catch { /* cancelled */ }
       return
@@ -292,6 +315,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // "Discuter" always means chat: members go to their inbox, visitors get the
   // inline guest conversation. Price proposals live behind "Faire une offre".
   const openChat = () => {
+    intents.contactTap(listing.id)
     if (loggedIn && onContactSeller) return onContactSeller(listing.seller.id, listing.id)
     // Visitors write from the page (App counts the members' contacts).
     track('contact_seller', { item_id: listing.id, item_category: listing.category.slug, method: 'guest_chat' })
@@ -624,7 +648,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                       <MessageSquare size={18} /> <span className="max-[400px]:hidden">Discuter en direct</span><span className="min-[400px]:hidden">Discuter</span>
                     </button>
                     {listing.negotiable && (
-                      <button onClick={requireAuth(() => setOfferOpen(true), 'offer')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
+                      <button onClick={requireAuth(() => { intents.contactTap(listing.id); setOfferOpen(true) }, 'offer')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-high py-3 text-label-lg text-on-surface hover:bg-surface-container-highest">
                         <Tag size={17} /> Faire une offre
                       </button>
                     )}
@@ -737,11 +761,14 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         <section className="mx-auto mt-10 max-w-[1320px] px-4 lg:px-12">
           <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Articles similaires qui pourraient vous intéresser</h2>
           <p className="m-0 mb-4 mt-1 text-body-sm text-on-surface-variant">{listing.subcategory?.name ?? listing.category.name} dans une gamme de prix proche</p>
+          {/* An adult listing's similar ones are inside the section. */}
+          <AdultSectionContext.Provider value={!!listing.isAdult}>
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4 md:gap-4">
             {similar.map(l => (
               <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
             ))}
           </div>
+          </AdultSectionContext.Provider>
         </section>
       )}
 
@@ -750,7 +777,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         {ownerPanel ?? (
           <>
             {listing.negotiable && (
-              <button onClick={requireAuth(() => setOfferOpen(true), 'offer')} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
+              <button onClick={requireAuth(() => { intents.contactTap(listing.id); setOfferOpen(true) }, 'offer')} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
                 <Tag size={17} /> Faire une offre
               </button>
             )}

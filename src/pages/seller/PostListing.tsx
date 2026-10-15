@@ -35,6 +35,7 @@ import { track } from '../../lib/analytics'
 import { metaTrack } from '../../lib/metaPixel'
 import AccountVerifyPanel from '../../components/AccountVerifyPanel'
 import { isNotVerifiedError } from '../../lib/accountVerify'
+import { adultSellerError } from '../../lib/adult'
 
 const TITLE_MAX = 80
 
@@ -194,6 +195,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [prefilled, setPrefilled] = useState(false)
   const initialForm = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // « Section Adultes »: refused for a seller without the verification it asks.
+  const [adultBlocked, setAdultBlocked] = useState(false)
   // Publishing refused: the account is confirmed by neither its phone nor
   // its e-mail. « Recevoir un code par SMS » right here, then the same
   // save runs again.
@@ -511,6 +514,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     } catch (err) {
       setUploading(false)
       if (isNotVerifiedError(err)) { setNeedsVerify(true); return }
+      setAdultBlocked(!!adultSellerError(err))
       const message = err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.'
       // The category isn't open in the listing's country (changed since, or
       // limited by the team meanwhile): pick another one.
@@ -929,7 +933,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               </div>
             </Card>
 
-            {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}</p>}
+            {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Faire vérifier mon identité</button></>}</p>}
             {needsVerify && <div className="hidden lg:block"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat, et la publication reprend toute seule." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
             <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
               {publishes ? (
@@ -1004,7 +1008,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         {/* Mobile wizard bar: the wizard has no account tabs, so it sits at the very bottom */}
         <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))] lg:hidden" />
         <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5 lg:hidden">
-          {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
+          {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Faire vérifier mon identité</button></>}</p>}
           {needsVerify && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
           <div className="flex items-center gap-2">
             {step > 0 ? (

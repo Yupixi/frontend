@@ -50,7 +50,7 @@ export const MY_BOOSTS_QUERY = gql`
       contactsGained
       impressions
       upcoming
-      listing { id title coverImageUrl media { url } }
+      listing { id title coverImageUrl isAdult media { url } }
     }
   }
 `

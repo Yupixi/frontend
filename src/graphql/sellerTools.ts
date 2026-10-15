@@ -7,7 +7,7 @@ import { gql } from '@apollo/client'
 // few comparables come back with insufficientSample and no range.
 export const MY_MARKET_POSITIONS_QUERY = gql`
   query MyMarketPositions {
-    myMarketPositions(includeInsufficient: true) { categoryName insufficientSample low median high sampleSize gapPct listing { id title price currency coverImageUrl } }
+    myMarketPositions(includeInsufficient: true) { categoryName insufficientSample low median high sampleSize gapPct listing { id title price currency coverImageUrl isAdult } }
   }
 `
 export type MarketPosition = { categoryName: string; insufficientSample: boolean; low: number | null; median: number | null; high: number | null; sampleSize: number; gapPct: number | null; listing: { id: string; title: string; price: number | null; currency: string; coverImageUrl: string | null } }
@@ -21,9 +21,14 @@ export const SELLER_STATS_QUERY = gql`
       origins { city share sales }
       favoritePlace favoritePlaceShare
       funnel { impressions views favorites contacts sales }
+      deals {
+        contacts activeConversations responseTimeMinutes responseRate within24hPct
+        sales salesAmount salesCode salesBoth salesDeclared salesOffsite conversionRate
+        views intents intentRate intentsByType { type count }
+      }
       listings {
-        views boostedViews clicks messages boosted pendingOffer soldInHours
-        listing { id title price currency status condition coverImageUrl publishedAt createdAt category { name } }
+        views boostedViews clicks messages boosted pendingOffer soldInHours intents intentRate
+        listing { id title price currency status condition coverImageUrl isAdult publishedAt createdAt category { name } }
       }
       boost { acceleration investment investmentCredits boostActions unlockedSales roi }
       advice { categoryName lift weekday startHour endHour nextSlot topCities }
@@ -36,11 +41,22 @@ export const TRACK_LISTING_CLICK_MUTATION = gql`
 
 export type ListingPerformance = {
   views: number; boostedViews: number; clicks: number; messages: number; boosted: boolean; pendingOffer: boolean; soldInHours: number | null
+  // Purchase intents (chats, « Appeler », favourites, offers, meet-ups, shares) and their rate over the views (%).
+  intents: number; intentRate: number | null
   listing: { id: string; title: string; price: number | null; currency: string; status: string; condition: string | null; coverImageUrl: string | null; publishedAt: string | null; createdAt: string; category: { name: string } }
+}
+export type IntentType = 'CONTACT' | 'CALL' | 'FAVORITE' | 'OFFER' | 'MEETUP' | 'SHARE'
+// « Mises en relation »: the seller's conversations and sales by source
+// (code, both « Oui », declared, hors Dilchap) and the purchase intents.
+export type SellerDealStats = {
+  contacts: number; activeConversations: number; responseTimeMinutes: number | null; responseRate: number | null; within24hPct: number | null
+  sales: number; salesAmount: number; salesCode: number; salesBoth: number; salesDeclared: number; salesOffsite: number; conversionRate: number | null
+  views: number; intents: number; intentRate: number | null; intentsByType: { type: IntentType; count: number }[]
 }
 export type SellerStats = {
   // Full report ("Vendeur certifié"); basic otherwise.
   advanced: boolean
+  deals: SellerDealStats
   days: number; views: number; viewsPrev: number; contacts: number; contactsPrev: number
   conversionRate: number | null; conversionRatePrev: number | null
   revenue: number; revenuePrev: number; savedCommission: number; avgSaleDays: number | null; avgSaleDaysBoosted: number | null
@@ -57,7 +73,7 @@ export type SellerStats = {
 const DISPUTE_FIELDS = `
   id reference orderReference conversationId openedBy reason description photos amount status deadlineAt
   proposal discountAmount verdict resolvedAt meetupPlace paymentMethod createdAt
-  listing { id title price currency condition coverImageUrl city category { name } }
+  listing { id title price currency condition coverImageUrl isAdult city category { name } }
   buyer { id fullName avatarUrl city badge buyerRating buyerReviewsCount }
   seller { id fullName avatarUrl city badge averageRating reviewsCount }
   events { id actor title body photos createdAt }
@@ -126,7 +142,7 @@ export const SALES_ORDER_QUERY = gql`
       buyer { id fullName avatarUrl city badge buyerRating buyerReviewsCount }
       seller { id fullName avatarUrl city badge averageRating reviewsCount }
       listing {
-        id title price currency condition brand size coverImageUrl paymentMethods meetupSpot countryCode city locationLabel
+        id title price currency condition brand size coverImageUrl isAdult paymentMethods meetupSpot countryCode city locationLabel
         category { name }
       }
     }
@@ -138,7 +154,7 @@ export const MY_PURCHASE_ORDERS_QUERY = gql`
       id reference stage agreedPrice dealStatus dealClosedAt agreedAt disputeId disputeStatus paymentMethod
       meetup { id place scheduledAt status proposedById handoverCode handedOverAt handoverMethod }
       seller { id fullName avatarUrl badge averageRating reviewsCount }
-      listing { id title price currency condition size coverImageUrl paymentMethods meetupSpot city category { name } }
+      listing { id title price currency condition size coverImageUrl isAdult paymentMethods meetupSpot city category { name } }
     }
   }
 `
