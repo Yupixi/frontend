@@ -4,7 +4,8 @@ import { useQuery } from '@apollo/client/react'
 import Icon, { CategoryIcon } from './Icon'
 import Price from './Price'
 import { type RemoteListing } from '../graphql/listings'
-import { CATEGORIES_QUERY, POPULAR_SEARCHES_QUERY, type PopularSearch, type RemoteCategory } from '../graphql/categories'
+import { CATEGORIES_QUERY, POPULAR_SEARCHES_QUERY, SECTION_POPULAR_SEARCHES_QUERY, type PopularSearch, type RemoteCategory } from '../graphql/categories'
+import { spaceCategories, useAdultSpace } from '../lib/adultMode'
 import { thumbnailUrl } from '../lib/media'
 import { useMarketCode, useMarketVars } from '../lib/countries'
 import { fold, highlightParts, matchesAll, recordFinalSearch, searchKey } from '../lib/searchText'
@@ -26,6 +27,15 @@ type Props = {
 const SEARCH_SUGGESTIONS_QUERY = gql`
   query SearchSuggestions($term: String!, $countryCode: String) {
     searchSuggestions(term: $term, countryCode: $countryCode) {
+      listings { id title price currency city coverImageUrl isAdult category { slug name } }
+      categories { categorySlug categoryName subcategorySlug subcategoryName count }
+    }
+  }
+`
+// The same in the « Section Adultes » space: its listings only.
+const SECTION_SUGGESTIONS_QUERY = gql`
+  query SectionSearchSuggestions($term: String!, $countryCode: String) {
+    searchSuggestions(term: $term, countryCode: $countryCode, adultSection: true) {
       listings { id title price currency city coverImageUrl isAdult category { slug name } }
       categories { categorySlug categoryName subcategorySlug subcategoryName count }
     }
@@ -75,6 +85,9 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const countryCode = useMarketCode()
   const marketVars = useMarketVars()
   const adultOk = useAdultAccess()?.status === 'OK'
+  // « Section Adultes » space: suggestions, popular searches and
+  // categories of the section only.
+  const adultSpace = useAdultSpace()
   const blurOf = useAdultBlur()
 
   useEffect(() => {
@@ -107,18 +120,22 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: marketVars })
   // Empty categories would lead to a blank results page; the « Section
   // Adultes » only for a member who may enter it.
-  const allCategories = (categoriesData?.categories ?? []).filter(c => adultOk || !c.adult)
+  const allCategories = adultSpace ? spaceCategories(categoriesData?.categories ?? [], true) : (categoriesData?.categories ?? []).filter(c => adultOk || !c.adult)
   const categories = allCategories.filter(c => c.listingsCount !== 0)
-  const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(POPULAR_SEARCHES_QUERY, { variables: { limit: 8, countryCode: countryCode ?? null } })
+  // The tiles: the categories, or the section's subcategories in its space.
+  const tiles: { id: string; slug: string; name: string; icon: string; listingsCount?: number }[] = adultSpace
+    ? allCategories.flatMap(c => c.subcategories.map(s => ({ id: s.id, slug: s.slug, name: s.name, icon: c.icon })))
+    : categories
+  const { data: popularData } = useQuery<{ popularSearches: PopularSearch[] }>(adultSpace ? SECTION_POPULAR_SEARCHES_QUERY : POPULAR_SEARCHES_QUERY, { variables: { limit: 8, countryCode: countryCode ?? null } })
   const popular = popularData?.popularSearches ?? []
   const { data: suggestData, previousData: previousSuggest, loading: suggestLoading } = useQuery<{ searchSuggestions: Suggestions }>(
-    SEARCH_SUGGESTIONS_QUERY,
+    adultSpace ? SECTION_SUGGESTIONS_QUERY : SEARCH_SUGGESTIONS_QUERY,
     { variables: { term: debouncedQuery, countryCode: countryCode ?? null }, skip: !debouncedQuery },
   )
   const { data: routingData } = useQuery<{ searchRouting: SearchRouting }>(SEARCH_ROUTING_QUERY, {
-    variables: { term: debouncedQuery, countryCode: countryCode ?? null }, skip: debouncedQuery.length < 2,
+    variables: { term: debouncedQuery, countryCode: countryCode ?? null }, skip: adultSpace || debouncedQuery.length < 2,
   })
-  const routing = debouncedQuery ? routingData?.searchRouting ?? null : null
+  const routing = debouncedQuery && !adultSpace ? routingData?.searchRouting ?? null : null
   const suggest = debouncedQuery ? (suggestData ?? previousSuggest)?.searchSuggestions : undefined
   const suggestions = suggest?.listings ?? []
 
@@ -191,7 +208,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const allIdx = options.length - 1
 
   return (
-    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label="Rechercher sur Dilchap" className="safe-pt fixed inset-0 z-[9999] flex flex-col bg-surface">
+    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label={adultSpace ? 'Rechercher dans la Section Adultes' : 'Rechercher sur Dilchap'} className="safe-pt fixed inset-0 z-[9999] flex flex-col bg-surface">
       <div className="border-0 border-b border-solid border-outline-variant bg-surface-lowest">
         <div className="mx-auto flex max-w-[760px] items-center gap-3 px-4 py-3">
           <div className="relative min-w-0 flex-1" role="none">
@@ -199,7 +216,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
             <input
               ref={inputRef}
               className={`h-13 w-full rounded-2xl border border-transparent bg-surface-container-low py-3.5 pl-12 ${query ? 'pr-12' : 'pr-4'} text-body-lg text-on-surface outline-none focus:border-primary`}
-              placeholder="Que cherchez-vous ?"
+              placeholder={adultSpace ? 'Rechercher dans la section' : 'Que cherchez-vous ?'}
               value={query}
               onChange={e => { onQueryChange(e.target.value); setSelectedIdx(-1) }}
               onKeyDown={handleKeyDown}
@@ -324,9 +341,9 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                   </div>
                 </>
               )}
-              {section('category', 'Catégories')}
+              {section('category', adultSpace ? 'Rayons de la section' : 'Catégories')}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {categories.map(cat => (
+                {tiles.map(cat => (
                   <button key={cat.id} type="button" onClick={() => { onSelectCategory(cat.slug); onClose() }} className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-xl border-none bg-surface-lowest p-3 text-left hover:bg-surface-container-low">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-fixed text-primary"><CategoryIcon icon={cat.icon} size={20} /></span>
                     <span className="min-w-0"><span className="line-clamp-2 text-label-md leading-tight text-on-surface">{cat.name}</span>{cat.listingsCount != null && <span className="block text-label-sm text-on-surface-variant">{cat.listingsCount} annonce{cat.listingsCount > 1 ? 's' : ''}</span>}</span>

@@ -27,6 +27,7 @@ import { formatNumber } from '../lib/format'
 import { metaTrack, noteAdultSlugs } from '../lib/metaPixel'
 import { AdultSectionContext, SEARCH_ROUTING_QUERY, adultGateReason, useAdultAccess, type SearchRouting } from '../lib/adult'
 import AdultGate from '../components/AdultGate'
+import { enterAdultSpace, spaceCategories, useAdultMode, useAdultSpace } from '../lib/adultMode'
 import { AdultSearchNotice } from '../components/AdultSearchNotice'
 import { matchesAll, recordFinalSearch, searchTokens } from '../lib/searchText'
 
@@ -122,7 +123,7 @@ function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
 // Keeps keystrokes local: typing re-renders this input only, not the App,
 // the layout and every result card. The term goes up after a 300 ms pause
 // (which is when the results query runs anyway).
-function DebouncedSearchInput({ value, onCommit }: { value: string, onCommit: (term: string) => void }) {
+function DebouncedSearchInput({ value, onCommit, placeholder }: { value: string, onCommit: (term: string) => void, placeholder: string }) {
   const [draft, setDraft] = useState(value)
   const committed = useRef(value)
   const commit = useRef(onCommit)
@@ -140,7 +141,7 @@ function DebouncedSearchInput({ value, onCommit }: { value: string, onCommit: (t
       value={draft}
       onChange={e => setDraft(e.target.value)}
       onKeyDown={e => { if (e.key === 'Enter' && draft !== committed.current) { committed.current = draft; commit.current(draft) } }}
-      placeholder="Rechercher sur Dilchap"
+      placeholder={placeholder}
       aria-label="Rechercher"
       className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80"
     />
@@ -215,8 +216,15 @@ export default function SearchPage({
     const slugs = categories.flatMap(c => [...(c.adult ? [c.slug] : []), ...c.subcategories.filter(x => c.adult || x.adult).map(x => x.slug)])
     if (slugs.length) noteAdultSlugs(slugs)
   }, [categories])
+  // Its dark theme (lib/adultMode), the gate included; a rubric not known
+  // yet keeps the address's guess.
+  useAdultMode(!categoryFilter ? false : rubricAdult ? true : categoriesData ? false : undefined)
+  // A confirmed member inside the section: its own space until « Quitter ».
+  useEffect(() => { if (rubricAdult && adultOk) enterAdultSpace() }, [rubricAdult, adultOk])
+  const adultSpace = useAdultSpace()
   // Filters: the section's category only for a member who may enter it.
-  const filterCategories = categories.filter(c => adultOk || !c.adult)
+  // In the section's space: its own categories only.
+  const filterCategories = adultSpace ? spaceCategories(categories, true) : categories.filter(c => adultOk || !c.adult)
   const closeCategories = useMemo(() => {
     if (!search.trim()) return []
     const out: { slug: string, name: string }[] = []
@@ -404,9 +412,12 @@ export default function SearchPage({
       <FilterBlock title="Catégorie">
         {category ? (
           <>
-            <button onClick={() => onClearCategoryFilter?.()} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">
-              <ChevronLeft size={14} /> Toutes les catégories
-            </button>
+            {/* In the section's space its category is the whole site. */}
+            {!(adultSpace && !subcategory) && (
+              <button onClick={() => onClearCategoryFilter?.()} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">
+                <ChevronLeft size={14} /> {adultSpace ? 'Toute la section' : 'Toutes les catégories'}
+              </button>
+            )}
             <div className="mb-1 flex items-center gap-2 text-label-md text-on-surface"><CategoryIcon icon={category.icon} size={20} className="text-primary" /> {category.name}</div>
             {subcategory ? (
               // A subcategory's own page: its neighbours are pages too.
@@ -494,9 +505,9 @@ export default function SearchPage({
         </FilterBlock>
       )}
 
-      <FilterBlock title="Bonnes affaires">
+      {!adultSpace && <FilterBlock title="Bonnes affaires">
         <CheckRow checked={promoOnly} label="En promotion (soldes & campagnes)" onChange={() => setPromoOnly(v => !v)} />
-      </FilterBlock>
+      </FilterBlock>}
 
       <FilterBlock title="Vendeurs de confiance">
         <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
@@ -525,24 +536,24 @@ export default function SearchPage({
       <div className="mb-4 flex items-center gap-2 lg:hidden">
         <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-xl border border-solid border-outline-variant bg-surface-lowest">
           <SearchIcon size={20} className="pointer-events-none absolute left-3.5 text-primary" />
-          <DebouncedSearchInput value={searchTerm ?? ''} onCommit={term => onSearchTermChange?.(term)} />
+          <DebouncedSearchInput value={searchTerm ?? ''} onCommit={term => onSearchTermChange?.(term)} placeholder={adultSpace ? 'Rechercher dans la section' : 'Rechercher sur Dilchap'} />
         </label>
         <button onClick={() => setFiltersOpen(true)} aria-label="Filtres" className="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-inverse-surface text-white">
           <SlidersHorizontal size={20} />
           {chosenCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] text-white">{chosenCount}</span>}
         </button>
       </div>
-      {/* Mobile: one tap to the items on sale. */}
-      <div className="-mt-2 mb-4 lg:hidden">
+      {/* Mobile: one tap to the items on sale (no campaign in the section). */}
+      {!adultSpace && <div className="-mt-2 mb-4 lg:hidden">
         <button type="button" aria-pressed={promoOnly} onClick={() => setPromoOnly(v => !v)}
           className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-solid px-3 py-1.5 text-label-md ${promoOnly ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
           <Icon name="percent" size={16} /> En promotion
         </button>
-      </div>
+      </div>}
 
       {/* Category pages: the same trail as their structured data (Backend seo). */}
       <nav aria-label="Fil d'ariane" className={`mb-2 flex-wrap items-center gap-1 text-label-md text-on-surface-variant ${category ? 'flex' : 'hidden lg:flex'}`}>
-        <a href="/" onClick={e => { e.preventDefault(); onNavigate('home') }} className="text-label-md text-on-surface-variant no-underline hover:text-primary">Accueil</a>
+        <a href="/" onClick={e => { e.preventDefault(); onNavigate('home') }} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{adultSpace ? 'Section Adultes' : 'Accueil'}</a>
         <ChevronRight size={14} className="text-outline-variant" />
         {category ? (
           <>
@@ -719,6 +730,7 @@ export default function SearchPage({
           onClose={() => setFiltersOpen(false)}
           facets={facets}
           categories={filterCategories}
+          adultSpace={adultSpace}
           total={total}
           nearCity={nearCity}
         />

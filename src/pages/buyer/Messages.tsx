@@ -36,6 +36,7 @@ import CheckinCard from '../../components/chat/CheckinCard'
 import MarkSoldSheet from '../../components/MarkSoldSheet'
 import { NOT_CONCLUDED_REASONS, type NotConcludedReason } from '../../graphql/deals'
 import { setActiveConversation } from '../../lib/activeConversation'
+import { useAdultMode } from '../../lib/adultMode'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
 import { Claim } from '../../lib/site'
@@ -147,6 +148,10 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   // data that matches the selection.
   const conv = convData?.conversation?.id === activeId ? convData.conversation : undefined
   const messages = conv?.messages ?? []
+  // A conversation about an adult listing, on screen: the « Section
+  // Adultes » dark theme (lib/adultMode).
+  const shownListing = (conv ?? conversations.find(c => c.id === activeId))?.listing
+  useAdultMode((isPhone ? threadOpen : !!activeId) && !!shownListing?.isAdult)
   const other = conv?.otherParticipant
   const { data: otherData } = useQuery<{ sellerProfile: RemoteSellerProfile }>(SELLER_PROFILE_QUERY, { variables: { sellerId: other?.id ?? '' }, skip: !other })
   const otherProfile = otherData?.sellerProfile
