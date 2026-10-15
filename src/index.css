@@ -782,12 +782,13 @@ input, textarea, [contenteditable='true'], .ProseMirror {
 
 /* Navigation in progress (App startTransition): a bar sweeping along the top,
    shown after 120 ms so an instant navigation doesn't flash it. */
-.nav-pending body::before {
-  content: ''; position: fixed; inset: 0 0 auto 0; z-index: 10000; height: 3px; pointer-events: none;
+.nav-progress {
+  position: fixed; inset: 0 0 auto 0; z-index: 10000; height: 3px; pointer-events: none;
   background: linear-gradient(90deg, transparent, var(--primary) 35%, var(--primary) 65%, transparent) no-repeat;
   background-size: 40% 100%;
   opacity: 0; animation: nav-progress-in 0.15s 0.12s forwards, nav-progress-sweep 1.1s ease-in-out infinite;
 }
 @keyframes nav-progress-in { to { opacity: 1; } }
 @keyframes nav-progress-sweep { from { background-position: -70% 0; } to { background-position: 170% 0; } }
-@media (prefers-reduced-motion: reduce) { .nav-pending body::before { animation: nav-progress-in 0.15s 0.12s forwards; background-size: 100% 100%; } }
+.nav-progress[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .nav-progress { animation: nav-progress-in 0.15s 0.12s forwards; background-size: 100% 100%; } }

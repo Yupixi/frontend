@@ -185,11 +185,24 @@ const initialSearch = initialRoute?.page === 'search'
 
 // Every navigation is a transition: the current page stays up while the
 // next one's chunk and data load. Meanwhile a thin bar runs along the top
-// (index.css .nav-pending), so a tap always shows it was taken — on a slow
-// network it otherwise looked like nothing happened (« dead clicks »). Set
-// on the DOM, not in React state: no extra render of the page on the tap.
+// (index.css .nav-progress), so a tap always shows it was taken — on a slow
+// network it otherwise looked like nothing happened (« dead clicks »). One
+// small element of its own, shown from the DOM: no extra render of the page
+// and no style recalculation of the whole document on the tap.
+let navBar: HTMLDivElement | null = null
+function setNavPending(on: boolean) {
+  if (!on && !navBar) return
+  if (!navBar) {
+    navBar = document.createElement('div')
+    navBar.className = 'nav-progress'
+    navBar.setAttribute('aria-hidden', 'true')
+    navBar.hidden = true
+    document.body.appendChild(navBar)
+  }
+  navBar.hidden = !on
+}
 function startTransition(update: () => void) {
-  document.documentElement.classList.add('nav-pending')
+  setNavPending(true)
   reactStartTransition(update)
 }
 
@@ -526,7 +539,7 @@ export default function App() {
   // back/forward. Instant and before paint — no slide through the old page.
   const firstPage = useRef(true)
   useLayoutEffect(() => {
-    document.documentElement.classList.remove('nav-pending')
+    setNavPending(false)
     // Not on the first render (already at the top): scrollTo — or even
     // reading scrollY — would force a full synchronous layout of the page
     // being mounted, ~0.5 s of blocked main thread on a mid-range phone.
