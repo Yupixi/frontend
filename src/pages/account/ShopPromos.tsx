@@ -11,11 +11,12 @@ import {
   CREATE_SHOP_POST_MUTATION, CREATE_SHOP_SALE_MUTATION, END_SHOP_SALE_MUTATION, JOIN_CAMPAIGN_MUTATION, MY_SHOP_LISTINGS_QUERY,
   MY_SHOP_PROMOS_QUERY, MY_SHOP_QUERY, PROMO_STATE_LABEL, SAVE_SHOP_BUNDLE_MUTATION, STOP_SHOP_BUNDLE_MUTATION, DELETE_SHOP_BUNDLE_MUTATION,
   UPDATE_SHOP_SALE_MUTATION, WITHDRAW_CAMPAIGN_ENTRY_MUTATION,
-  type BundleTier, type CampaignAction, type MyShopData, type OpenCampaign, type PromoItem, type PromoState, type ShopListing, type ShopPromos, type ShopSale, type ShopBundle, type ShopPost,
+  type BundleTier, type MyShopData, type OpenCampaign, type PromoItem, type PromoState, type ShopListing, type ShopPromos, type ShopSale, type ShopBundle, type ShopPost,
 } from '../../graphql/shops'
 import { uploadImages } from '../../lib/upload'
 import { formatNumber } from '../../lib/format'
 import { feeText } from '../../lib/campaignFees'
+import { ACTION_BUTTON, EARLY_ACCESS_BUTTON } from '../../lib/campaignActions'
 import type { AuthUser } from '../../graphql/auth'
 import { Claim } from '../../lib/site'
 import RichTextEditor from '../../components/RichTextEditor'
@@ -455,12 +456,6 @@ export function CampaignConditions({ c }: { c: OpenCampaign }) {
   )
 }
 
-const ACTION_BUTTON: Record<CampaignAction, { page: string; icon: string; label: string }> = {
-  BADGE: { page: 'seller-badge', icon: 'verified', label: 'Obtenir un badge' },
-  KYC: { page: 'seller-kyc', icon: 'badge', label: 'Vérifier mon identité' },
-  SHOP: { page: 'seller-shop', icon: 'storefront', label: 'Ouvrir ma Boutique officielle' },
-}
-
 // « Vous pouvez vous inscrire », or exactly what is missing and the button
 // that gets it (the server decides; this only shows its answer).
 export function Eligibility({ c, onNavigate }: { c: OpenCampaign, onNavigate: (p: any) => void }) {
@@ -480,7 +475,14 @@ export function Eligibility({ c, onNavigate }: { c: OpenCampaign, onNavigate: (p
       </div>
     )
   if (c.blockedReason)
-    return <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-tertiary-soft px-3 py-2.5 text-body-sm text-on-surface"><Icon name="lock_clock" size={18} className="mt-0.5 shrink-0 text-tertiary" /> <span className="min-w-0">{c.blockedReason}</span></p>
+    return (
+      <div className="mb-2 rounded-xl bg-tertiary-soft px-3 py-2.5 text-body-sm text-on-surface">
+        <p className="m-0 flex items-start gap-2"><Icon name="lock_clock" size={18} className="mt-0.5 shrink-0 text-tertiary" /> <span className="min-w-0">{c.blockedReason}</span></p>
+        {c.blockedCode === 'EARLY_ACCESS' && (
+          <button onClick={() => onNavigate(EARLY_ACCESS_BUTTON.page)} className="mt-2 flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-3 text-label-md text-white sm:w-auto"><Icon name={EARLY_ACCESS_BUTTON.icon} size={18} /> {EARLY_ACCESS_BUTTON.label}</button>
+        )}
+      </div>
+    )
   const left = [
     c.placesLeft != null ? (c.placesLeft > 0 ? `${c.placesLeft} place${c.placesLeft > 1 ? 's' : ''} restante${c.placesLeft > 1 ? 's' : ''}` : 'Campagne complète : liste d’attente') : '',
     c.sellerLimitLeft != null ? `vous pouvez inscrire ${c.sellerLimitLeft} annonce${c.sellerLimitLeft > 1 ? 's' : ''}` : '',

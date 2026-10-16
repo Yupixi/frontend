@@ -85,7 +85,8 @@ function loadDraft(): { form: Form, savedAt: string } | null {
   } catch { return null }
 }
 
-// The opt-in card, rendered only when the seller has a campaign to join.
+// The opt-in card, rendered when a running campaign fits the listing (the
+// ones this seller cannot join yet show why).
 function CampaignSection({ className, ...props }: { className: string } & React.ComponentProps<typeof CampaignOptIn>) {
   return (
     <div className={`empty:hidden ${className}`}>
@@ -864,7 +865,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
             {/* Dilchap campaign, joined and paid on publishing */}
             {publishes && requiresPrice && (
-              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} categoryId={form.categoryId} subcategoryId={form.subcategoryId || null} condition={form.condition || null} countryCode={form.countryCode} value={campaignChoice} onChange={setCampaignChoice} />
+              <CampaignSection className={only(2)} price={priceNum} currency={form.currency} categoryId={form.categoryId} subcategoryId={form.subcategoryId || null} condition={form.condition || null} countryCode={form.countryCode} value={campaignChoice} onChange={setCampaignChoice} onNavigate={isEditing ? undefined : onNavigate} />
             )}
 
             {/* Exchange */}
