@@ -54,6 +54,8 @@ export function setMarketState(patch: Partial<MarketState>) {
 }
 
 export const useMarketCode = () => useSyncExternalStore(subscribe, () => state.market)
+/** The current market, outside React. */
+export const getMarketCode = () => state.market
 export const useAccountCountryCode = () => useSyncExternalStore(subscribe, () => state.account)
 // Member screens (support, disputes, chat): the account's country, else
 // the visitor's market (signed out, or no country on the account).

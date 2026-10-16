@@ -144,3 +144,11 @@ export const LEGAL_PAGES = [
 export const ANALYTICS_CONFIG_QUERY = gql`
   query AnalyticsConfig($country: String) { analyticsConfig(country: $country) }
 `
+
+// The signed-in member's cookie choice (lib/consentAccount).
+export const MY_COOKIE_CONSENT_QUERY = gql`
+  query MyCookieConsent { myCookieConsent }
+`
+export const SAVE_MY_COOKIE_CONSENT = gql`
+  mutation SaveMyCookieConsent($value: JSON!) { saveMyCookieConsent(value: $value) }
+`
