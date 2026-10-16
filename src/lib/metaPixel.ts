@@ -225,7 +225,7 @@ let listingViewPending = false
 export function noteAdultListing(id: string) { adultIds.add(id) }
 /** Slugs of the section's category and subcategories. */
 export function noteAdultSlugs(slugs: string[]) { slugs.forEach((s) => adultSlugs.add(s)) }
-const onAdultCategory = () => {
+export const onAdultCategory = () => {
   if (!w) return false
   const m = /^\/categorie\/([^/?#]+)/.exec(w.location.pathname)
   return !!m && adultSlugs.has(decodeURIComponent(m[1]).toLowerCase())
