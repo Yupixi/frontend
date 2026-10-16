@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 
 /**
- * « Gérer les cookies »: shows the consent banner again (lib/analytics).
+ * « Gérer les cookies »: opens the consent window, one switch per purpose
+ * (components/ConsentBanner, lib/analytics).
  * Rendered only while the « Mesure d'audience » of the visitor's country is
  * on. Places reachable on a phone (no footer there): the account menu, the
  * help centre and the sign-in screen (where visitors land from « Compte »).

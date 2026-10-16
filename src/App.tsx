@@ -584,7 +584,7 @@ export default function App() {
   // address bar above; not when only the search words change). Sent only
   // with the visitor's consent, address cleaned (lib/analytics).
   useEffect(() => {
-    trackPageView(window.location.href, pageTitle(page, categoryFilter))
+    trackPageView(window.location.href, pageTitle(page, categoryFilter), page)
     // Meta Pixel (same consent, same exclusions as Clarity): one PageView.
     metaPageView(page)
   }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, helpSlug])

@@ -38,7 +38,7 @@ import BoostSheet from '../components/BoostSheet'
 import ImageLightbox from '../components/ImageLightbox'
 import InlineConversation from '../components/InlineConversation'
 import QuickNegotiation from '../components/QuickNegotiation'
-import { track } from '../lib/analytics'
+import { adsListingSeen, track } from '../lib/analytics'
 import { metaTrack } from '../lib/metaPixel'
 import { ListingCard, discountedPrice } from '../components/ListingCard'
 import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
@@ -152,10 +152,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const archiveLabel = listing?.status === 'SOLD' ? 'Vendu' : listing?.status === 'EXPIRED' ? 'Annonce expirée' : null
   usePageTitle(gateReason ? 'Contenu réservé aux adultes' : listing ? (archiveLabel ? `${archiveLabel} — ${listing.title}` : listing.title) : null)
   // Meta Pixel: this page's PageView waits to know it is not an adult
-  // listing (lib/metaPixel).
+  // listing (lib/metaPixel); Google's ad signals too (lib/analytics).
   useEffect(() => {
     if (loading) return
-    metaListingSeen(listing ? { id: listing.id, isAdult: listing.isAdult } : gateReason ? { id: listingId, isAdult: true } : null)
+    const seen = listing ? { id: listing.id, isAdult: listing.isAdult } : gateReason ? { id: listingId, isAdult: true } : null
+    metaListingSeen(seen)
+    // Google Ads: retargeting only on a listing known not to be an adult one.
+    adsListingSeen(seen)
   }, [loading, listing?.id, gateReason]) // eslint-disable-line react-hooks/exhaustive-deps
   // /annonce/<id> (or old words) → /annonce/<words of the title>-<id>.
   useEffect(() => {
