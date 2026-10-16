@@ -34,12 +34,21 @@ import { takeGaCampaign } from './campaignParams'
 // - Two purposes, one switch each in the consent window (« Gérer les
 //   cookies »): « Mesure d'audience » = Google Analytics + Microsoft Clarity
 //   (lib/clarity), « Publicité » = Meta Pixel (lib/metaPixel) + Google Ads.
-//   The banner's « Accepter » grants every tool on for the country, «
-//   Refuser » none. The stored choice remembers which tools were asked
-//   about: a tool turned on later asks again (the banner comes back), while
-//   the tools already answered keep their answer until then — a yes to GA
-//   still measures, the new tool stays off. A refusal of everything stays
-//   valid (no new question until it expires).
+//   The banner (BO « Mode du bandeau ») offers « Accepter » / « Refuser »
+//   (+ « Personnaliser »), or « OK » alone (+ « Paramétrer »): « Accepter »
+//   and « OK » grant every tool on for the country, « Refuser » none.
+// - Asked once. The stored choice keeps the tools asked about, the tools
+//   accepted and the answer per purpose, for `consentMonths` (13 by
+//   default). A tool turned on later is covered by the answer already given
+//   to its purpose (accepted → on, refused → off): the banner only comes
+//   back for a purpose never asked about — or for any new tool when the BO
+//   « Redemander l'accord quand un outil est ajouté » is on (the tools
+//   already answered keep their answer meanwhile). A refusal of everything
+//   stays valid until it expires. Stored in localStorage AND in a
+//   first-party cookie on the root domain (in-app browsers of WhatsApp /
+//   Facebook / Instagram, Safari ITP, storage cleared or blocked); the
+//   newest copy wins. A signed-in member's choice is also kept on the
+//   account (lib/consentAccount): no new question on another device.
 // - Visitors coming from an ad: the campaign of the landing address
 //   (utm_*, gclid; lib/campaignParams) is added to the first page_view.
 
@@ -47,11 +56,18 @@ export type AnalyticsBanner = {
   title: string; text: string; accept: string; refuse: string; policyLabel: string; manage: string
   // Older API answers may lack these (defaults below).
   customize?: string; analyticsLabel?: string; analyticsText?: string; adsLabel?: string; adsText?: string; save?: string
+  ok?: string; settings?: string
 }
 export type ClarityConfig = { enabled: boolean; projectId: string | null }
 export type MetaPixelConfig = { enabled: boolean; pixelId: string | null }
 export type GoogleAdsConfig = { enabled: boolean; adsId: string | null }
-export type AnalyticsConfig = { enabled: boolean; measurementId: string | null; consentMonths: number; policyPath: string; banner: AnalyticsBanner; clarity?: ClarityConfig; metaPixel?: MetaPixelConfig; googleAds?: GoogleAdsConfig }
+export type BannerMode = 'choice' | 'ok'
+export type AnalyticsConfig = {
+  enabled: boolean; measurementId: string | null; consentMonths: number; policyPath: string; banner: AnalyticsBanner
+  clarity?: ClarityConfig; metaPixel?: MetaPixelConfig; googleAds?: GoogleAdsConfig
+  // Older API answers lack these: « Accepter / Refuser », no re-ask.
+  bannerMode?: BannerMode; reaskOnNewTool?: boolean
+}
 export type Tool = 'ga' | 'clarity' | 'meta' | 'gads'
 export type Purpose = 'analytics' | 'ads'
 export const PURPOSE_OF: Record<Tool, Purpose> = { ga: 'analytics', clarity: 'analytics', meta: 'ads', gads: 'ads' }
@@ -67,6 +83,8 @@ export const bannerTexts = (b: AnalyticsBanner) => ({
   adsLabel: b.adsLabel || 'Publicité personnalisée',
   adsText: b.adsText || 'Mesurer l’efficacité des publicités Dilchap et vous en montrer sur d’autres sites et applications selon les pages consultées (reciblage).',
   save: b.save || 'Enregistrer mes choix',
+  ok: b.ok || 'OK',
+  settings: b.settings || 'Paramétrer',
 })
 
 const STORAGE_KEY = 'dilchap_analytics_consent'
@@ -88,33 +106,142 @@ const w = (typeof window !== 'undefined' ? window : undefined) as GaWindow | und
 // ---- Stored choice ------------------------------------------------------
 
 // What the visitor answered: the tools they were asked about, those they
-// accepted, and when.
-export type Consent = { asked: Tool[]; granted: Tool[]; at: number }
+// accepted, the answer per purpose (covers the tools added later), when,
+// how (banner « Accepter / Refuser », banner « OK », consent window), and
+// whether it was made or loaded while signed in (`account`: never pushed
+// to another member's account signing in on the same device).
+export type ConsentMode = 'choice' | 'ok' | 'window'
+export type Consent = { asked: Tool[]; granted: Tool[]; purposes: Partial<Record<Purpose, boolean>>; at: number; mode: ConsentMode; account?: boolean }
+export const CONSENT_VERSION = 3
+const MAX_MONTHS = 13
+const COOKIE_NAME = 'dilchap_consent'
+const PURPOSES: Purpose[] = ['analytics', 'ads']
+const MODES: ConsentMode[] = ['choice', 'ok', 'window']
 
-function readConsent(months: number): Consent | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const v = JSON.parse(raw) as { v?: unknown; at?: unknown; asked?: unknown; granted?: unknown; choice?: unknown; tools?: unknown }
-    if (typeof v.at !== 'number') return null
-    // Asked again once the choice is older than the BO's duration.
-    if (Date.now() - v.at > months * MONTH_MS || v.at > Date.now() + 60_000) return null
-    if (v.v === 2) {
-      if (!Array.isArray(v.asked) || !Array.isArray(v.granted)) return null
-      return { asked: v.asked.filter(isTool), granted: v.granted.filter(isTool), at: v.at }
+// Purposes answered by a list of tools asked about / accepted (choices
+// stored before the purposes: the banner answered every tool at once).
+function purposesFrom(asked: Tool[], granted: Tool[]): Consent['purposes'] {
+  const out: Consent['purposes'] = {}
+  for (const p of PURPOSES) {
+    const tools = asked.filter((t) => PURPOSE_OF[t] === p)
+    if (tools.length) out[p] = tools.some((t) => granted.includes(t))
+  }
+  return out
+}
+
+/** A stored choice (any version), or null when unreadable. Not checked for expiry. */
+export function parseConsent(raw: unknown): Consent | null {
+  if (!raw || typeof raw !== 'object') return null
+  const v = raw as { v?: unknown; version?: unknown; at?: unknown; asked?: unknown; granted?: unknown; purposes?: unknown; mode?: unknown; account?: unknown; choice?: unknown; tools?: unknown }
+  if (typeof v.at !== 'number' || !Number.isFinite(v.at)) return null
+  const version = v.v ?? v.version
+  if (version === 3 || version === 2) {
+    if (!Array.isArray(v.asked) || !Array.isArray(v.granted)) return null
+    const asked = [...new Set(v.asked.filter(isTool))]
+    const granted = [...new Set(v.granted.filter(isTool))].filter((t) => asked.includes(t))
+    let purposes = purposesFrom(asked, granted)
+    if (version === 3 && v.purposes && typeof v.purposes === 'object') {
+      const p = v.purposes as Record<string, unknown>
+      purposes = {}
+      for (const k of PURPOSES) if (typeof p[k] === 'boolean') purposes[k] = p[k] as boolean
     }
-    // Before the purposes: one choice for the tools named (GA only before
-    // Clarity). A refusal covered everything.
-    if (v.choice !== 'granted' && v.choice !== 'denied') return null
-    const tools = Array.isArray(v.tools) ? v.tools.filter(isTool) : ['ga' as const]
-    return v.choice === 'granted' ? { asked: tools, granted: tools, at: v.at } : { asked: [...ALL_TOOLS], granted: [], at: v.at }
+    const mode = MODES.includes(v.mode as ConsentMode) ? (v.mode as ConsentMode) : 'choice'
+    return { asked, granted, purposes, at: v.at, mode, ...(v.account === true ? { account: true } : {}) }
+  }
+  // Before the purposes: one choice for the tools named (GA only before
+  // Clarity). A refusal covered everything.
+  if (v.choice !== 'granted' && v.choice !== 'denied') return null
+  const tools = Array.isArray(v.tools) ? v.tools.filter(isTool) : ['ga' as const]
+  const c = v.choice === 'granted' ? { asked: tools, granted: tools } : { asked: [...ALL_TOOLS], granted: [] as Tool[] }
+  return { ...c, purposes: purposesFrom(c.asked, c.granted), at: v.at, mode: 'choice' }
+}
+
+// Asked again once the choice is older than the BO's duration (or dated in
+// the future: a wrong clock).
+const fresh = (c: Consent | null, months: number): Consent | null =>
+  c && Date.now() - c.at <= Math.min(months, MAX_MONTHS) * MONTH_MS && c.at <= Date.now() + 5 * 60_000 ? c : null
+
+// ---- Cookie copy: « 3.<at>.<asked>.<granted>.<purposes>.<mode>[.a] » ------
+// One letter per tool, one character per purpose (1 yes, 0 no, - not asked).
+const TOOL_CODE: Record<Tool, string> = { ga: 'g', clarity: 'c', meta: 'm', gads: 'a' }
+const CODE_TOOL = Object.fromEntries(Object.entries(TOOL_CODE).map(([t, c]) => [c, t])) as Record<string, Tool>
+const MODE_CODE: Record<ConsentMode, string> = { choice: 'c', ok: 'o', window: 'w' }
+const tc = (ts: Tool[]) => ts.map((t) => TOOL_CODE[t]).join('')
+const ct = (s: string) => [...s].map((c) => CODE_TOOL[c]).filter(isTool)
+
+export function encodeConsentCookie(c: Consent): string {
+  const p = PURPOSES.map((k) => (c.purposes[k] === undefined ? '-' : c.purposes[k] ? '1' : '0')).join('')
+  return [CONSENT_VERSION, c.at, tc(c.asked), tc(c.granted), p, MODE_CODE[c.mode], ...(c.account ? ['a'] : [])].join('.')
+}
+
+export function decodeConsentCookie(value: string): Consent | null {
+  const m = /^3\.(\d{10,15})\.([gcma]{0,4})\.([gcma]{0,4})\.([-01]{2})\.([cow])(\.a)?$/.exec(value)
+  if (!m) return null
+  const purposes: Consent['purposes'] = {}
+  PURPOSES.forEach((k, i) => { if (m[4][i] !== '-') purposes[k] = m[4][i] === '1' })
+  const mode = (Object.entries(MODE_CODE).find(([, c]) => c === m[5])?.[0] ?? 'choice') as ConsentMode
+  return parseConsent({ v: 3, at: Number(m[1]), asked: ct(m[2]), granted: ct(m[3]), purposes, mode, account: !!m[6] })
+}
+
+function readCookie(): Consent | null {
+  try {
+    const hit = document.cookie.split(';').map((s) => s.trim()).find((s) => s.startsWith(`${COOKIE_NAME}=`))
+    return hit ? decodeConsentCookie(decodeURIComponent(hit.slice(COOKIE_NAME.length + 1))) : null
   } catch {
     return null
   }
 }
 
-function storeConsent(c: Consent) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 2, at: c.at, asked: c.asked, granted: c.granted })) } catch { /* storage blocked: asked again next visit */ }
+// On the widest domain the browser accepts (« dilchap.com » covers www and
+// the apex; a public suffix is refused by the browser, the next one is
+// tried), never on an IP or localhost (host only).
+function writeCookie(value: string, maxAgeS: number) {
+  if (!w) return
+  try {
+    const host = w.location.hostname
+    const secure = w.location.protocol === 'https:' ? '; Secure' : ''
+    const base = `${COOKIE_NAME}=${encodeURIComponent(value)}; Max-Age=${Math.max(0, Math.round(maxAgeS))}; path=/; SameSite=Lax${secure}`
+    const parts = host.split('.')
+    const isIp = /^[\d.]+$/.test(host) || host.includes(':')
+    if (!isIp && parts.length > 1) {
+      for (let i = parts.length - 2; i >= 0; i--) {
+        const domain = parts.slice(i).join('.')
+        document.cookie = `${base}; domain=${domain}`
+        if (readCookie() && document.cookie.includes(`${COOKIE_NAME}=${encodeURIComponent(value)}`)) {
+          // A host-only copy left by an older write would shadow it.
+          if (i > 0) document.cookie = `${COOKIE_NAME}=; Max-Age=0; path=/`
+          return
+        }
+      }
+    }
+    document.cookie = base
+  } catch { /* cookies blocked */ }
+}
+
+function readLocal(): Consent | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? parseConsent(JSON.parse(raw)) : null
+  } catch {
+    return null
+  }
+}
+
+// The newest valid copy of localStorage and of the cookie; the other one is
+// brought up to date (cleared storage, in-app browser…).
+function readConsent(months: number): Consent | null {
+  const local = fresh(readLocal(), months)
+  const cookie = fresh(readCookie(), months)
+  const best = !local ? cookie : !cookie ? local : cookie.at > local.at ? cookie : local
+  if (best && (!local || !cookie || local.at !== cookie.at)) storeConsent(best, months)
+  return best
+}
+
+function storeConsent(c: Consent, months = state.config?.consentMonths ?? MAX_MONTHS) {
+  const payload = { v: CONSENT_VERSION, at: c.at, asked: c.asked, granted: c.granted, purposes: c.purposes, mode: c.mode, ...(c.account ? { account: true } : {}) }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)) } catch { /* storage blocked: the cookie remains */ }
+  // Lives as long as the choice is valid.
+  writeCookie(encodeConsentCookie(c), (Math.min(months, MAX_MONTHS) * MONTH_MS - (Date.now() - c.at)) / 1000)
 }
 
 // ---- State (external store: the banner and the footer link read it) ----
@@ -126,12 +253,15 @@ type State = {
   pending: boolean
   // The consent window (« Gérer les cookies ») is open.
   managing: boolean
+  // A signed-in member's choice is being read from the account: the banner
+  // waits (no flash of a question already answered elsewhere).
+  hold: boolean
 }
-let state: State = { config: null, consent: null, pending: false, managing: false }
+let state: State = { config: null, consent: null, pending: false, managing: false, hold: false }
 const listeners = new Set<() => void>()
 const emit = (patch: Partial<State>) => {
   const next = { ...state, ...patch }
-  next.pending = isPending(next.config, next.consent)
+  next.pending = !next.hold && isPending(next.config, next.consent)
   state = next
   listeners.forEach((l) => l())
 }
@@ -165,16 +295,27 @@ export const purposesOf = (c: AnalyticsConfig | null): { purpose: Purpose; tools
     .map((purpose) => ({ purpose, tools: toolsOf(c).filter((t) => PURPOSE_OF[t] === purpose) }))
     .filter((p) => p.tools.length > 0)
 
-// A tool on for the country that the visitor hasn't answered about (a
-// refusal of everything is not asked again before it expires).
-function isPending(c: AnalyticsConfig | null, consent: Consent | null) {
+// Something on for the country that the visitor hasn't answered about: a
+// purpose never asked about, or (BO « Redemander l'accord quand un outil
+// est ajouté ») a tool never asked about. A refusal of everything is not
+// asked again before it expires.
+export function isPending(c: AnalyticsConfig | null, consent: Consent | null) {
   const needed = toolsOf(c)
   if (!needed.length) return false
   if (!consent) return true
-  if (!consent.granted.length) return false
-  return needed.some((t) => !consent.asked.includes(t))
+  const refusedAll = !consent.granted.length && !Object.values(consent.purposes).some(Boolean)
+  if (refusedAll) return false
+  if (c?.reaskOnNewTool) return needed.some((t) => !consent.asked.includes(t))
+  return needed.some((t) => consent.purposes[PURPOSE_OF[t]] === undefined)
 }
-const granted = (t: Tool) => !!state.consent?.granted.includes(t) && toolsOf(state.config).includes(t)
+
+/** Does this choice allow this tool? A tool asked about keeps its answer; a newer one follows its purpose (unless the BO re-asks). */
+export function consentGrants(consent: Consent | null, t: Tool, reask = false): boolean {
+  if (!consent) return false
+  if (consent.asked.includes(t)) return consent.granted.includes(t)
+  return !reask && consent.purposes[PURPOSE_OF[t]] === true
+}
+const granted = (t: Tool) => toolsOf(state.config).includes(t) && consentGrants(state.consent, t, !!state.config?.reaskOnNewTool)
 const active = () => granted('ga')
 
 // ---- Clean page data ----------------------------------------------------
@@ -423,36 +564,73 @@ function apply(now: boolean) {
   setMetaPixel(granted('meta') ? pixelIdOf(c) : null, now)
 }
 
-function answer(grant: Tool[]) {
+// Who is told about a choice the visitor just made (lib/consentAccount
+// saves it on the signed-in member's account).
+const answerListeners = new Set<(c: Consent) => void>()
+export const onConsentAnswer = (l: (c: Consent) => void) => { answerListeners.add(l); return () => { answerListeners.delete(l) } }
+// A member is signed in: choices made now belong to the account.
+let signedIn = false
+export const setConsentSignedIn = (on: boolean) => { signedIn = on }
+let holdTimer: ReturnType<typeof setTimeout> | undefined
+/** The banner waits for the account's choice (at most 4 s: the network may fail). */
+export function holdConsentBanner(on: boolean) {
+  if (holdTimer) clearTimeout(holdTimer)
+  holdTimer = on ? setTimeout(() => holdConsentBanner(false), 4000) : undefined
+  if (state.hold !== on) emit({ hold: on })
+}
+
+/** The choice in force on this device (null: none, or expired). */
+export const currentConsent = () => state.consent
+
+/** The newer choice of the member's account: it applies on this device too. */
+export function adoptConsent(c: Consent) {
+  const months = state.config?.consentMonths ?? MAX_MONTHS
+  if (!fresh(c, months)) return
+  if (state.consent && state.consent.at >= c.at) return
+  const consent = { ...c, account: true }
+  storeConsent(consent, months)
+  emit({ consent })
+  apply(false)
+}
+
+function answer(grant: Tool[], mode: ConsentMode) {
   const needed = toolsOf(state.config)
   const prev = state.consent
+  // The purposes shown get their answer; the others (off in this country)
+  // keep theirs, and so do the tools of other countries.
+  const purposes = { ...(prev?.purposes ?? {}) }
+  for (const { purpose, tools } of purposesOf(state.config)) purposes[purpose] = tools.every((t) => grant.includes(t))
   const consent: Consent = {
     asked: [...new Set([...(prev?.asked ?? []), ...needed])],
-    granted: needed.filter((t) => grant.includes(t)),
+    granted: [...new Set([...(prev?.granted ?? []).filter((t) => !needed.includes(t)), ...needed.filter((t) => grant.includes(t))])],
+    purposes,
     at: Date.now(),
+    mode,
+    ...(signedIn ? { account: true } : {}),
   }
   storeConsent(consent)
   emit({ consent, managing: false })
   apply(true)
+  answerListeners.forEach((l) => { try { l(consent) } catch { /* ignore */ } })
 }
 
 /** The setting of the visitor's country (re-applied when the country changes). */
 export function setAnalyticsConfig(config: AnalyticsConfig | null) {
-  emit({ config, consent: config ? readConsent(config.consentMonths) : null })
+  emit({ config, consent: config ? readConsent(config.consentMonths) : state.consent })
   apply(false)
 }
 
-/** « Accepter »: every tool on for the country. */
-export const acceptAnalytics = () => answer(toolsOf(state.config))
+/** « Accepter » (or « OK »): every tool on for the country. */
+export const acceptAnalytics = (mode: ConsentMode = 'choice') => answer(toolsOf(state.config), mode)
 /** « Refuser »: none. */
-export const refuseAnalytics = () => answer([])
+export const refuseAnalytics = (mode: ConsentMode = 'choice') => answer([], mode)
 /** The consent window's choice, purpose by purpose. */
-export const saveConsent = (purposes: Record<Purpose, boolean>) => answer(toolsOf(state.config).filter((t) => purposes[PURPOSE_OF[t]]))
+export const saveConsent = (purposes: Record<Purpose, boolean>) => answer(toolsOf(state.config).filter((t) => purposes[PURPOSE_OF[t]]), 'window')
 
 /** Is this purpose accepted (all its tools on for the country)? */
 export function purposeGranted(p: Purpose): boolean {
   const tools = toolsOf(state.config).filter((t) => PURPOSE_OF[t] === p)
-  return tools.length > 0 && tools.every((t) => !!state.consent?.granted.includes(t))
+  return tools.length > 0 && tools.every((t) => granted(t))
 }
 
 /** « Gérer les cookies »: opens the consent window. */

@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
 import ConsentBanner, { useConsentOpen } from './components/ConsentBanner'
 import { pageTitle, track, trackPageView } from './lib/analytics'
+import { useAccountConsent } from './lib/consentAccount'
 import { setClarityPage } from './lib/clarity'
 import { metaPageView, metaTrack, setMetaPixelPage } from './lib/metaPixel'
 import SupportTab from './components/SupportTab'
@@ -234,6 +235,8 @@ export default function App() {
   const consentOpen = useConsentOpen()
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!getAccessToken())
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
+  // The cookie choice follows the member's account (other devices).
+  useAccountConsent(currentUser?.id, isLoggedIn)
   const [selectedListingId, setSelectedListingId] = useState(() => sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
   const [rawSearchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedNav.searchTerm ?? ''))
   // The section's own page (its home in the space) shows no earlier words.
