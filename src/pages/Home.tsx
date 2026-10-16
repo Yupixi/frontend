@@ -1,5 +1,6 @@
 import { interestCategories } from '../lib/interests'
 import { requestOpenHelp, requestOpenLocation } from '../lib/navigation'
+import CityPagesBlock from '../components/CityPagesBlock'
 import EmptyState from '../components/EmptyState'
 import { Fragment, useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
@@ -38,7 +39,7 @@ type HomeProps = {
   onSelectListing: (id: string) => void
   favorites: string[]
   onToggleFavorite: (id: string) => void
-  onCategorySelect?: (categoryId: string) => void
+  onCategorySelect?: (categoryId: string, city?: string) => void
   currentUser?: AuthUser | null
   location?: StoredLocation | null
   // First visit: market detection still running — hold the market-scoped
@@ -669,6 +670,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
 
           {/* The other sections, in the order set in the back-office. */}
           {laidOut(desktopOrder).map(k => <Fragment key={k}>{k === 'reassurance' ? reassuranceBand(false) : desktopSections[k]}{!settled[k] && <GridSkeleton count={4} className="mt-10 grid grid-cols-4 items-start gap-6" />}</Fragment>)}
+          {/* « Par ville »: the category pages of each city (Backend seo). */}
+          <CityPagesBlock onOpen={(slug, city) => onCategorySelect?.(slug, city)} className="mb-6 mt-10" />
         </div>
       </div>}
 
@@ -713,6 +716,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         {heroPending && <div aria-hidden className="mb-6 min-h-[600px] rounded-2xl bg-surface-container" />}
         {/* Sections in the order set in the back-office. */}
         {laidOut(mobileOrder).map(k => <Fragment key={k}>{mobileSections[k]}</Fragment>)}
+        <CityPagesBlock onOpen={(slug, city) => onCategorySelect?.(slug, city)} className="mt-8" />
       </div>}
       {trust.sheet}
     </>

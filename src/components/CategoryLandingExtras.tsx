@@ -48,7 +48,7 @@ export default function CategoryLandingExtras({ landing, rubricName, cityName, i
 
       {landing.otherCities.length > 0 && (
         <nav aria-labelledby="category-cities">
-          <h2 id="category-cities" className="m-0 mb-3 text-headline-sm text-on-surface">{rubricName} dans d’autres villes</h2>
+          <h2 id="category-cities" className="m-0 mb-3 text-headline-sm text-on-surface">{cityName ? `${rubricName} dans d’autres villes` : 'Par ville'}</h2>
           <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
             {landing.otherCities.map(c => (
               <li key={c.slug}>
