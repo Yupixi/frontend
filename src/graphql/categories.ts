@@ -105,7 +105,7 @@ export const CATEGORY_LANDING_QUERY = gql`
       categorySlug
       categoryName
       subcategorySlug
-      city { slug name countryCode }
+      city { slug name countryCode parentCity }
       path
       count
       introText
@@ -118,6 +118,22 @@ export const CATEGORY_LANDING_QUERY = gql`
 
 export type LandingLink = { slug: string; name: string; count: number; path: string }
 
+// « Par ville » of the home page: the category pages of each city (then
+// district) offered to search engines — the links crawlers get too.
+export const CITY_PAGES_QUERY = gql`
+  query CityPages($country: String) {
+    cityPages(country: $country) {
+      city { slug name countryCode parentCity }
+      pages { name rubricName count path }
+    }
+  }
+`
+
+export type CityPages = {
+  city: { slug: string; name: string; countryCode: string; parentCity: string | null }
+  pages: { name: string; rubricName: string; count: number; path: string }[]
+}
+
 export type CategoryLanding = {
   slug: string
   name: string
@@ -125,7 +141,8 @@ export type CategoryLanding = {
   categorySlug: string
   categoryName: string
   subcategorySlug: string | null
-  city: { slug: string; name: string; countryCode: string } | null
+  // parentCity: a district's city (« Cocody » → « Abidjan »).
+  city: { slug: string; name: string; countryCode: string; parentCity: string | null } | null
   path: string
   count: number
   introText: string | null

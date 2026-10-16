@@ -571,6 +571,8 @@ export type ListingFilterInput = {
   brands?: string[]
   sizes?: string[]
   cities?: string[]
+  // Districts of the city (« Cocody »): its « Locations à Cocody » pages.
+  districts?: string[]
   verifiedSellersOnly?: boolean
   categorySlugs?: string[]
   handoverOnly?: boolean

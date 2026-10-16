@@ -17,7 +17,7 @@ import Select from '../components/Select'
 import { setAuthReason } from '../lib/authReason'
 import { PaymentLogos, useMobileMethods } from '../components/PaymentLogo'
 import { useCountries, useMarketCode, useMarketVars } from '../lib/countries'
-import { useNoCommissionClaims, usePageTitle } from '../lib/site'
+import { useNoCommissionClaims, usePageTitle, useSite } from '../lib/site'
 import { slugify } from '../lib/routes'
 import { richHtml } from '../lib/richText'
 import CategoryLandingExtras from '../components/CategoryLandingExtras'
@@ -241,16 +241,26 @@ export default function SearchPage({
     skip: !categoryFilter || rubricAdult,
   })
   const landing = categoryFilter ? landingData?.categoryLanding ?? null : null
-  // The city of a city page, from the country lists (at once), else the server's.
+  // The city of a city page, from the country lists (at once), else the
+  // server's: a city, else a district of a main city (« Cocody », whose
+  // listings are Abidjan's with that « quartier ») — the server's order.
   const countries = useCountries()
-  const pageCity = useMemo(() => {
+  const market = countries.find(c => c.code === countryCode)
+  const pageCity = useMemo((): { name: string, countryCode: string, parent: string | null } | null => {
     if (!categoryCity) return null
+    const word = slugify(categoryCity)
     for (const c of countries) {
-      const name = c.cities.find(n => slugify(n) === slugify(categoryCity))
-      if (name) return { name, countryCode: c.code }
+      const name = c.cities.find(n => slugify(n) === word)
+      if (name) return { name, countryCode: c.code, parent: null }
     }
-    return landing?.city ? { name: landing.city.name, countryCode: landing.city.countryCode } : null
+    for (const c of countries) {
+      const name = c.mainCity ? c.districts.find(n => slugify(n) === word) : undefined
+      if (name) return { name, countryCode: c.code, parent: c.mainCity }
+    }
+    return landing?.city ? { name: landing.city.name, countryCode: landing.city.countryCode, parent: landing.city.parentCity } : null
   }, [categoryCity, countries, landing])
+  // « Abidjan », « Cocody, Abidjan ».
+  const pagePlace = pageCity ? (pageCity.parent ? `${pageCity.name}, ${pageCity.parent}` : pageCity.name) : ''
   const rubricName = subcategory?.name ?? category?.name ?? landing?.name
   // A category address opened directly: wait for the categories (a
   // subcategory's page needs its category) rather than flash « 0 article ».
@@ -268,7 +278,7 @@ export default function SearchPage({
     ...(conditions.length ? { conditions } : {}),
     ...(brands.length ? { brands } : {}),
     ...(sizes.length ? { sizes } : {}),
-    ...(pageCity ? { cities: [pageCity.name] } : cities.length ? { cities } : {}),
+    ...(pageCity ? { cities: [pageCity.parent ?? pageCity.name], ...(pageCity.parent ? { districts: [pageCity.name] } : {}) } : cities.length ? { cities } : {}),
     ...(verifiedOnly ? { verifiedSellersOnly: true } : {}),
     ...(shopsOnly ? { officialShopsOnly: true } : {}),
     ...(handoverOnly ? { handoverOnly: true } : {}),
@@ -342,7 +352,7 @@ export default function SearchPage({
   const [createSavedSearch, { loading: savingAlert }] = useMutation(CREATE_SAVED_SEARCH_MUTATION)
   const createAlert = async () => {
     if (!isLoggedIn) { setAuthReason('alert'); onNavigate('auth'); return }
-    const label = search || (pageCity && rubricName ? `${rubricName} à ${pageCity.name}` : rubricName) || 'Ma recherche'
+    const label = search || (pageCity && rubricName ? `${rubricName} à ${pagePlace}` : rubricName) || 'Ma recherche'
     try {
       await createSavedSearch({ variables: { label, filter } })
       setAlertState('done')
@@ -363,7 +373,7 @@ export default function SearchPage({
     ...(search ? [{ key: 'q', label: `« ${search} »`, clear: () => onSearchTermChange?.('') }] : []),
     ...(promoOnly ? [{ key: 'promo', label: 'En promotion', clear: () => setPromoOnly(false) }] : []),
     ...(category ? [{ key: 'cat', label: rubricName ?? category.name, clear: () => onClearCategoryFilter?.() }] : []),
-    ...(pageCity ? [{ key: 'page-city', label: `À ${pageCity.name}`, clear: () => onCategoryCityChange?.('') }] : []),
+    ...(pageCity ? [{ key: 'page-city', label: `À ${pagePlace}`, clear: () => onCategoryCityChange?.('') }] : []),
     ...subcategories.map(v => ({ key: `sub-${v}`, label: facets?.subcategories.find(f => f.value === v)?.label ?? v, clear: () => setSubcategories(s => s.filter(x => x !== v)) })),
     ...cities.map(v => ({ key: `city-${v}`, label: v === nearCity ? `Près de vous : ${v}` : v, near: v === nearCity, clear: () => setCities(s => s.filter(x => x !== v)) })),
     ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
@@ -525,10 +535,16 @@ export default function SearchPage({
     </div>
   )
 
-  const title = search ? `Résultats pour « ${search} »` : rubricPending ? ' ' : rubricName ? (pageCity ? `${rubricName} à ${pageCity.name}` : rubricName) : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
+  // Category pages: « Mode à Abidjan » (city page), « Mode à Abidjan et en
+  // Côte d’Ivoire » (the visitor's country), as search engines get them.
+  const rubricTitle = rubricName ? (pageCity ? `${rubricName} à ${pagePlace}` : market ? `${rubricName} à ${market.mainCity} et ${market.inName}` : rubricName) : ''
+  const title = search ? `Résultats pour « ${search} »` : rubricPending ? ' ' : rubricName ? rubricTitle : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
   // Category pages: same tab title as the one search engines get.
   const countText = `${formatNumber(total, 0)} annonce${total > 1 ? 's' : ''}`
-  usePageTitle(categoryFilter && !search && rubricName && (data || previousData) ? (pageCity ? `${title} : ${countText}` : rubricName) : null)
+  // With its count while the whole title stays within ~60 characters.
+  const brandName = useSite().brand.name
+  const counted = `${title} : ${countText}`
+  usePageTitle(categoryFilter && !search && rubricName && (data || previousData) ? (total > 0 && counted.length + brandName.length + 3 <= 60 ? counted : title) : null)
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-5 md:px-8 lg:px-12">
@@ -685,7 +701,7 @@ export default function SearchPage({
             <CategoryLandingExtras
               landing={landing}
               rubricName={rubricName ?? landing.name}
-              cityName={pageCity?.name}
+              cityName={pagePlace || undefined}
               introHtml={landing.introText ? richHtml(landing.introText) : ''}
               onOpen={(slug, city) => onCategorySelect?.(slug, city)}
             />

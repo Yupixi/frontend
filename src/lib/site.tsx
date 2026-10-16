@@ -109,6 +109,25 @@ export function routeTitle(page: string, ctx: { searchTerm?: string; category?: 
   return PAGE_TITLES[page] ?? 'Mon compte'
 }
 
+// A country's own home title only when it names the site (a stray label
+// typed in « Pays » › Titre SEO never becomes the title), its own
+// description only when it is a sentence; else written from its main city.
+export function marketSeo(
+  market: { seoTitle?: string, seoDescription?: string, mainCity: string, inName: string } | undefined,
+  site: { title: string, description: string },
+  brand: string,
+) {
+  const ownTitle = market?.seoTitle?.trim() ?? ''
+  const ownDescription = market?.seoDescription?.trim() ?? ''
+  const local = market ? `à ${market.mainCity} et ${market.inName}` : ''
+  const generated = market ? [`${brand} : petites annonces ${local}`, `${brand} : petites annonces ${market.inName}`].find(t => t.length <= 60) ?? `${brand} : petites annonces ${market.inName}` : ''
+  const description = market ? `Petites annonces ${local}. ${site.description}` : site.description
+  return {
+    title: (ownTitle && ownTitle.toLowerCase().includes(brand.toLowerCase()) ? ownTitle : '') || generated || site.title,
+    description: ownDescription.length >= 50 ? ownDescription : description.length > 155 ? `${description.slice(0, 154).replace(/\s+\S*$/, '')}…` : description,
+  }
+}
+
 // Browser tab title, description and share tags of the page shown, set on
 // every move to another page — before the address bar changes (App updates
 // it in a later effect), so tools reading the title at each new address
@@ -120,10 +139,11 @@ export function routeTitle(page: string, ctx: { searchTerm?: string; category?: 
 // they are.
 export function useSeo(page: string, ctx: { searchTerm?: string; category?: string } = {}) {
   const { seo: siteSeo, brand } = useSite()
-  // A country's own texts (« Pays » in the BO) win over the site's (the
-  // market's version of « Réglages du site » when it has one).
+  // The visitor's country: its own texts (« Pays » in the BO), else « Dilchap :
+  // petites annonces à Abidjan et en Côte d’Ivoire » — what search engines
+  // get (Backend seo homeMeta) — else the site's.
   const market = useMarket()
-  const seo = { ...siteSeo, title: market?.seoTitle || siteSeo.title, description: market?.seoDescription || siteSeo.description }
+  const seo = { ...siteSeo, ...marketSeo(market, siteSeo, brand.name) }
   const firstPage = useRef(page)
   const moved = useRef(false)
   if (page !== firstPage.current) moved.current = true
