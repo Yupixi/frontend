@@ -44,7 +44,7 @@ import { ListingCard, cardPill, discountedPrice } from '../components/ListingCar
 import PromoPill from '../components/PromoPill'
 import HelpLink from '../components/HelpLink'
 import { ImpressionScope } from '../lib/impressions'
-import { BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
+import { ALSO_VIEWED_LISTINGS_QUERY, BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteSellerProfile } from '../graphql/reviews'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
@@ -192,6 +192,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const market = useMarketCode()
   const { data: similarData } = useQuery<{ similarListings: RemoteListing[] }>(SIMILAR_LISTINGS_QUERY, { variables: { listingId, limit: 4, countryCode: market ?? undefined }, skip: !!gateReason })
   const similar = similarData?.similarListings ?? []
+  const { data: alsoData } = useQuery<{ alsoViewedListings: RemoteListing[] }>(ALSO_VIEWED_LISTINGS_QUERY, { variables: { listingId, limit: 8, countryCode: market ?? undefined }, skip: !!gateReason })
+  // Not the cards already shown as similar; four at most (one row).
+  const alsoViewed = (alsoData?.alsoViewedListings ?? []).filter(l => !similar.some(s => s.id === l.id)).slice(0, 4)
   const apollo = useApolloClient()
   const sellerId = listing?.seller.id
     ?? apollo.readFragment<{ seller: { id: string } }>({ id: apollo.cache.identify({ __typename: 'Listing', id: listingId }), fragment: LISTING_SELLER_ID_FRAGMENT })?.seller.id
@@ -797,6 +800,24 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           <ImpressionScope placement="SIMILAR">
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4 md:gap-4">
             {similar.map(l => (
+              <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
+            ))}
+          </div>
+          </ImpressionScope>
+          </AdultSectionContext.Provider>
+        </section>
+      )}
+
+      {/* « Ceux qui ont vu ceci ont aussi vu » (members' co-interest, only
+          shown with enough of them). */}
+      {alsoViewed.length >= 2 && (
+        <section className="mx-auto mt-10 max-w-[1320px] px-4 lg:px-12">
+          <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Ceux qui ont vu cette annonce ont aussi regardé</h2>
+          <p className="m-0 mb-4 mt-1 text-body-sm text-on-surface-variant">D’après les annonces consultées, aimées et contactées par d’autres membres</p>
+          <AdultSectionContext.Provider value={!!listing.isAdult}>
+          <ImpressionScope placement="SIMILAR">
+          <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4 md:gap-4">
+            {alsoViewed.map(l => (
               <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
             ))}
           </div>
