@@ -22,13 +22,15 @@ type Props = {
   onNavigate: (page: any) => void
 }
 
-// While typing: a few listings and the subcategories where the words are
-// found (never counted as a search, Backend searchSuggestions).
+// While typing: a few listings, the subcategories where the words are
+// found and the searches of other visitors that start like them, the most
+// successful first (never counted as a search, Backend searchSuggestions).
 const SEARCH_SUGGESTIONS_QUERY = gql`
   query SearchSuggestions($term: String!, $countryCode: String) {
     searchSuggestions(term: $term, countryCode: $countryCode) {
       listings { id title price currency city coverImageUrl isAdult category { slug name } }
       categories { categorySlug categoryName subcategorySlug subcategoryName count }
+      terms
     }
   }
 `
@@ -44,6 +46,8 @@ const SECTION_SUGGESTIONS_QUERY = gql`
 type Suggestions = {
   listings: (Pick<RemoteListing, 'id' | 'title' | 'price' | 'currency' | 'city' | 'coverImageUrl' | 'isAdult'> & { category: { slug: string; name: string } })[]
   categories: { categorySlug: string; categoryName: string; subcategorySlug: string; subcategoryName: string; count: number }[]
+  // Not in the « Section Adultes » space.
+  terms?: string[]
 }
 
 const RECENT_KEY = 'dilchap_recent_searches'
@@ -66,6 +70,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 }
 
 type Option =
+  | { kind: 'term'; term: string }
   | { kind: 'listing'; id: string }
   | { kind: 'category'; slug: string; label: string }
   | { kind: 'all' }
@@ -138,6 +143,8 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const routing = debouncedQuery && !adultSpace ? routingData?.searchRouting ?? null : null
   const suggest = debouncedQuery ? (suggestData ?? previousSuggest)?.searchSuggestions : undefined
   const suggestions = suggest?.listings ?? []
+  // The typed words themselves are « Voir tous les résultats ».
+  const terms = (suggest?.terms ?? []).filter(t => fold(t) !== fold(q)).slice(0, 4)
 
   // Categories whose name holds the words (« telephone » → Téléphones), then
   // those where the matching listings are (« pantalon » → Mode › Vêtements).
@@ -157,8 +164,9 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
     return out.slice(0, 4)
   }, [debouncedQuery, allCategories, suggest, adultOk])
 
-  // Keyboard order: listings, categories, « Voir tous les résultats ».
+  // Keyboard order: searches, listings, categories, « Voir tous les résultats ».
   const options: Option[] = q ? [
+    ...terms.map(t => ({ kind: 'term' as const, term: t })),
     ...suggestions.map(s => ({ kind: 'listing' as const, id: s.id })),
     ...categoryHits.map(c => ({ kind: 'category' as const, slug: c.slug, label: c.label })),
     { kind: 'all' as const },
@@ -174,7 +182,8 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
     onClose()
   }
   const choose = (o: Option) => {
-    if (o.kind === 'listing') { onSelectListing(o.id); onClose() }
+    if (o.kind === 'term') runSearch(o.term)
+    else if (o.kind === 'listing') { onSelectListing(o.id); onClose() }
     else if (o.kind === 'category') { onSelectCategory(o.slug); onClose() }
     else runSearch()
   }
@@ -204,7 +213,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
       {extra}
     </div>
   )
-  const noResults = q && debouncedQuery === q && !suggestLoading && suggest && suggestions.length === 0
+  const noResults = q && debouncedQuery === q && !suggestLoading && suggest && suggestions.length === 0 && terms.length === 0
   const allIdx = options.length - 1
 
   return (
@@ -245,6 +254,25 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
 
           {q && suggest && !noResults && (
             <div role="listbox" id={listboxId} aria-label="Suggestions">
+              {terms.length > 0 && (
+                <>
+                  {section('search', 'Recherches fréquentes')}
+                  <div className="mb-1 flex flex-col gap-1">
+                    {terms.map(t => {
+                      const i = indexOf({ kind: 'term', term: t })
+                      return (
+                        <button key={t} id={optionId(i)} role="option" aria-selected={i === selectedIdx} type="button"
+                          onClick={() => choose({ kind: 'term', term: t })} onMouseEnter={() => setSelectedIdx(i)}
+                          className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-none px-2 py-2 text-left ${i === selectedIdx ? 'bg-surface-container-low' : 'bg-transparent'}`}>
+                          <Icon name="search" size={18} className="shrink-0 text-on-surface-variant" />
+                          <span className="min-w-0 flex-1 truncate text-label-lg text-on-surface"><Highlight text={t} query={q} /></span>
+                          <Icon name="north_west" size={16} className="shrink-0 text-on-surface-variant" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
               {suggestions.length > 0 && section('trending_up', 'Suggestions')}
               <div className="flex flex-col gap-1">
                 {suggestions.map(s => {
