@@ -32,7 +32,8 @@ import AdultGate from '../components/AdultGate'
 import { enterAdultSpace, spaceCategories, useAdultMode, useAdultSpace } from '../lib/adultMode'
 import { AdultSearchNotice } from '../components/AdultSearchNotice'
 import { matchesAll, recordFinalSearch, searchTokens } from '../lib/searchText'
-import { noteSearchOpen } from '../lib/searchAttribution'
+import { noteResultOpen } from '../lib/searchAttribution'
+import HelpLink from '../components/HelpLink'
 
 const PAGE_SIZE = 18
 
@@ -297,7 +298,7 @@ export default function SearchPage({
   // « Rechercher plutôt … »: the words as typed, without the automatic
   // correction of a search that finds nothing (until the words change).
   const [asTyped, setAsTyped] = useState('')
-  const { data, previousData, loading, error: listingsError, refetch, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number; searchCorrection: SearchCorrection | null } }>(LISTINGS_QUERY, {
+  const { data, previousData, loading, error: listingsError, refetch, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number; searchCorrection: SearchCorrection | null; rankingVariant?: string | null } }>(LISTINGS_QUERY, {
     // rotationSeed: listings « en vedette » keep one order across the pages
     // of this visit.
     variables: { filter, sort, page: 1, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories(), searchAsTyped: !!search && asTyped === search },
@@ -328,7 +329,9 @@ export default function SearchPage({
   // a result opened, then a contact, count as this search's success.
   const effectiveSearch = correction?.applied ? correction.corrected : search
   const openResult = (id: string) => {
-    if (effectiveSearch.trim()) noteSearchOpen(id, effectiveSearch, countryCode)
+    // The « Pertinence » group the page was served with (A/B measure).
+    const variant = sort === 'RELEVANCE' ? data?.listings.rankingVariant ?? null : null
+    noteResultOpen(id, { term: effectiveSearch, countryCode, variant, placement: search.trim() ? 'SEARCH' : 'CATEGORY' })
     onSelectListing(id)
   }
   const total = result?.totalCount ?? 0
@@ -613,6 +616,8 @@ export default function SearchPage({
           <p className="m-0 mt-1 text-body-md text-on-surface-variant">
             {result ? <><span className="font-bold text-on-surface">{formatNumber(total, 0)} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.</> : ' '}
           </p>
+          {/* Transparency: how « Pertinence » ranks (help center). */}
+          {sort === 'RELEVANCE' && <HelpLink article="comment-sont-classees-les-annonces" label="Comment sont classées les annonces ?" className="mt-1" />}
         </div>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-1.5">

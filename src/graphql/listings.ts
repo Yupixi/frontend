@@ -6,6 +6,7 @@ export const LISTINGS_QUERY = gql`
     listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize, rotationSeed: $rotationSeed, interestCategories: $interestCategories, searchAsTyped: $searchAsTyped) {
       totalCount
       searchCorrection { original corrected applied learned }
+      rankingVariant
       page
       pageSize
       totalPages
@@ -81,8 +82,8 @@ export const LISTINGS_QUERY = gql`
 export type SearchCorrection = { original: string; corrected: string; applied: boolean; learned: boolean }
 
 export const RECOMMENDED_LISTINGS_QUERY = gql`
-  query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!]) {
-    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds) {
+  query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!], $rotationSeed: String) {
+    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds, rotationSeed: $rotationSeed) {
       id
       title
       description
