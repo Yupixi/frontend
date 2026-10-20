@@ -24,6 +24,11 @@ import { packOperation } from '../../lib/priceOffers'
 import { Claim, useNoCommissionClaims } from '../../lib/site'
 import PaymentLogo, { useMobileMethods } from '../../components/PaymentLogo'
 import { usePriceVars } from '../../lib/countries'
+import { BumpHistory, BumpStatusPanel, useBumpProof } from '../../components/BumpProof'
+import { MY_LISTING_BUMPS_QUERY, type BumpEntry, type BumpStatus } from '../../graphql/bumps'
+
+// Formulas that bump the listing at once (journaled, proof shown).
+const BUMPS_NOW: BoostPack[] = ['BUMP_FLASH', 'BUMP_DAILY_7', 'TURBO_7D']
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, initialListingId?: string | null }
 
@@ -75,7 +80,9 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
   const [featuredChoice, setFeaturedChoice] = useState<BoostPack>('FEATURED_48H')
   const [done, setDone] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
+  const [bumpListing, { loading: bumping }] = useMutation<{ bumpListing: BumpStatus }>(BUMP_LISTING_MUTATION)
+  const proof = useBumpProof()
+  const { data: bumpsData } = useQuery<{ myListingBumps: BumpEntry[] }>(MY_LISTING_BUMPS_QUERY, { variables: { take: 30 }, fetchPolicy: 'cache-and-network' })
 
   const pack = (p: BoostPack) => packs.find(x => x.pack === p)
   // A paid pack is never activated on a single tap: the buttons open a
@@ -86,6 +93,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
     if (!listing) return
     setError(null)
     setDone(`${pack(p)?.label ?? 'Formule'} activée sur « ${listing.title} »`)
+    if (BUMPS_NOW.includes(p)) proof.showFor(listing.id)
     void refetchListings(); void refetchBoosts(); void refetchWallet()
   }
   const [confirmBump, setConfirmBump] = useState(false)
@@ -94,8 +102,9 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
     if (!listing) return
     setError(null); setDone(null)
     try {
-      await bumpListing({ variables: { id: listing.id } })
-      setDone('Annonce remontée en tête des plus récentes')
+      const r = await bumpListing({ variables: { id: listing.id } })
+      setDone(`« ${listing.title} » est remontée en tête`)
+      if (r.data) proof.show(r.data.bumpListing)
       void refetchListings(); void refetchWallet()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de remonter l’annonce.')
@@ -139,6 +148,11 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
           onBump={() => setConfirmBump(true)}
           onNavigate={onNavigate}
         />
+        {listing && <BumpStatusPanel key={listing.id} listingId={listing.id} />}
+        <section className="mt-4 pb-6">
+          <h2 className="m-0 mb-2 text-label-lg text-on-surface">Historique des remontées</h2>
+          <BumpHistory entries={bumpsData?.myListingBumps ?? []} showListing />
+        </section>
       </div>
       <div className="mx-auto hidden max-w-[1120px] lg:block">
         {/* Hero */}
@@ -228,6 +242,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
               <ArrowUp size={16} /> Remonter cette annonce · {creditsLabel(bumpCost ?? 0)}
             </button>
           )}
+          {listing && <BumpStatusPanel key={listing.id} listingId={listing.id} className="mt-3" />}
           {!listing && (
             <div className="rounded-2xl bg-surface-container-low p-6 text-center">
               <p className="m-0 text-body-md text-on-surface-variant">Aucune annonce en ligne à booster pour le moment.</p>
@@ -411,6 +426,13 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
           </div>
         </section>
 
+        {/* Every bump, on every listing: date, type, credits, place obtained. */}
+        <section className="mt-8">
+          <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Historique des remontées</h2>
+          <p className="m-0 mb-3 text-body-sm text-on-surface-variant">Chaque remontée de vos annonces — à la demande, par une formule, automatique ou offerte — avec les crédits utilisés et la place obtenue dans sa catégorie et sa ville.</p>
+          <BumpHistory entries={bumpsData?.myListingBumps ?? []} showListing />
+        </section>
+
         {/* Reassurance */}
         <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
@@ -426,6 +448,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
           ))}
         </section>
       </div>
+      {proof.sheet}
       <ConfirmSheet
         open={confirmBump}
         title="Remonter l'annonce"

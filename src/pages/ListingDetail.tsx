@@ -49,6 +49,9 @@ import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
 import { formatRelativeDate } from '../lib/format'
+import { agoLabel } from '../lib/bumps'
+import { BumpLine } from '../components/BumpProof'
+import { requestOpenLink } from '../lib/navigation'
 import { GALLERY_SIZES, gallerySrcSet, thumbnailUrl } from '../lib/media'
 import { richHtml } from '../lib/richText'
 import Select from '../components/Select'
@@ -366,9 +369,16 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         </button>
       )
     ) : (
-      <button onClick={() => setBoostOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
-        <Rocket size={18} /> Booster cette annonce
-      </button>
+      <>
+        <button onClick={() => setBoostOpen(true)} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-primary py-3 text-label-lg text-white">
+          <Rocket size={18} /> Booster cette annonce
+        </button>
+        {/* The seller's proof: last bump, next automatic one, history. */}
+        <BumpLine s={listing} />
+        <button onClick={() => requestOpenLink(`/?shortcut=seller-premium&boost=${listing.id}`)} className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-transparent text-label-md text-primary hover:bg-surface-container-low">
+          <Icon name="history" size={16} /> Remontées &amp; boosts de l’annonce
+        </button>
+      </>
     )
   }{qrButton}</>) : !canContact ? (
     <p className="m-0 flex items-start gap-2 rounded-lg bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
@@ -556,7 +566,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <section className={tab === 'description' ? '' : 'lg:hidden'}>
                 <h2 className="m-0 mb-3 text-label-lg text-on-surface lg:hidden">Description de l'article</h2>
                 <div className="rich-text selectable rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface max-lg:border max-lg:border-solid max-lg:border-outline-variant/60 max-lg:p-4 lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: richHtml(listing.description) }} />
-                <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</p>
+                <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · {listing.bumpedAt ? <>remontée {agoLabel(listing.bumpedAt)}</> : <>publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</>}</p>
               </section>
               <section className={tab === 'specs' ? 'hidden lg:block' : 'hidden'}>
                 {specs.length === 0 ? <p className="m-0 text-body-md text-on-surface-variant">Le vendeur n'a pas renseigné de caractéristiques.</p> : (

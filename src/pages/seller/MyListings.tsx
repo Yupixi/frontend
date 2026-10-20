@@ -29,6 +29,9 @@ import { creditsLabel } from '../../components/Credits'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { useNoCommissionClaims } from '../../lib/site'
 import { useMemberCountryCode, usePriceVars } from '../../lib/countries'
+import { BumpLine, useBumpProof } from '../../components/BumpProof'
+import type { BumpStatus } from '../../graphql/bumps'
+import { requestOpenLink } from '../../lib/navigation'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -87,7 +90,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const [exitFor, setExitFor] = useState<{ action: 'pause' | 'delete'; l: MyListingRow } | null>(null)
   const [exitError, setExitError] = useState<string | null>(null)
   const [soldFor, setSoldFor] = useState<MyListingRow | null>(null)
-  const [bumpListing, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION)
+  const [bumpListing, { loading: bumping }] = useMutation<{ bumpListing: BumpStatus }>(BUMP_LISTING_MUTATION)
+  // « Annonce remontée en tête de … à 14 h 32 », credits, place, next auto.
+  const proof = useBumpProof()
 
   const [tab, setTab] = useState<typeof TABS[number]['key']>('live')
   const [q, setQ] = useState('')
@@ -167,7 +172,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
     </>
   )
   const spendCredit = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } })
-    .then(() => { setFlash(`« ${l.title} » est remontée en tête (${creditsLabel(flashPrice ?? 0)} utilisés).`); void refetch(); void refetchWallet() })
+    .then(r => { setFlash(null); if (r.data) proof.show(r.data.bumpListing); void refetch(); void refetchWallet() })
     .catch((e: Error) => setFlash(e.message))
   const republish = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } }).then(() => { setFlash('Annonce remise en ligne.'); void refetch() })
 
@@ -328,6 +333,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                     <p className="m-0 truncate text-body-sm text-on-surface-variant">
                       {l.viewsCount.toLocaleString('fr-FR')} vue{l.viewsCount > 1 ? 's' : ''} · {l.favoritesCount} favori{l.favoritesCount > 1 ? 's' : ''}{contacts ? ` · ${contacts} demande${contacts > 1 ? 's' : ''}` : ''} · {formatRelativeDate(date).toLowerCase()}
                     </p>
+                    {l.status === 'APPROVED' && <BumpLine s={l} />}
                     {l.staffEditedAt && <p className="m-0 truncate text-body-sm text-on-surface-variant" title="Corrigée par l’équipe Dilchap : le détail est dans vos notifications.">Modifiée par l’équipe Dilchap le {new Date(l.staffEditedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
                   </div>
                   <div className="relative shrink-0">
@@ -337,6 +343,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                         <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className={`${item} text-on-surface`}><Eye size={16} /> Voir l'annonce</button>
                         <button onClick={() => { setMenuFor(null); onEditListing(l.id) }} className={`${item} text-on-surface`}><Edit3 size={16} /> Modifier</button>
                         <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className={`${item} text-on-surface`}><Tag size={16} /> Offres reçues</button>
+                        {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); requestOpenLink(`/?shortcut=seller-premium&boost=${l.id}`) }} className={`${item} text-on-surface`}><Icon name="history" size={16} /> Remontées & boosts</button>}
                         {qrEnabled && l.status !== 'DRAFT' && l.status !== 'REJECTED' && (() => {
                           const scans = qrScans.find(q => q.listingId === l.id)?.scanCount
                           return <button onClick={() => { setMenuFor(null); setQrFor({ id: l.id, title: l.title }) }} className={`${item} text-on-surface`}><Icon name="qr_code_2" size={16} /> QR code de l’annonce{scans ? ` · ${scans} scan${scans > 1 ? 's' : ''}` : ''}</button>
@@ -362,6 +369,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         </div>
 
         <ListingQrSheet listing={qrFor} onClose={() => setQrFor(null)} />
+        {proof.sheet}
 
         <ExitReasonSheet
           open={!!exitFor}
@@ -384,7 +392,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           amount={flashPrice ?? 0}
           request={confirm?.kind === 'boost' ? { kind: 'BOOST_PACK', product: 'BUMP_FLASH', listingId: confirm.l.id } : null}
           onClose={() => setConfirm(null)}
-          onPaid={() => { if (confirm) setFlash(`« ${confirm.l.title} » est remontée en tête.`); void refetch() }}
+          onPaid={() => { if (confirm) proof.showFor(confirm.l.id); void refetch(); void refetchWallet() }}
         >
           <b className="block text-label-lg text-on-surface">Remontée en tête</b>
           <span className="line-clamp-1">« {confirm?.l.title} »</span>

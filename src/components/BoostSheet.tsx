@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { useMutation, useQuery } from '@apollo/client/react'
 import BottomSheet from './BottomSheet'
 import Icon from './Icon'
-import { BUMP_LISTING_MUTATION } from '../graphql/listings'
+import { BUMP_LISTING_MUTATION, MY_LISTING_BUMPS_QUERY, type BumpStatus } from '../graphql/bumps'
+import { BumpDone } from './BumpProof'
 import { MY_WALLET_QUERY } from '../graphql/sellerHub'
 import { useBumpCost } from '../lib/useBumpCost'
 import { creditsLabel } from './Credits'
@@ -24,10 +25,10 @@ export default function BoostSheet({ open, onClose, listing, onBumped }: Props) 
   const { data, loading } = useQuery<{ myWallet: { credits: number } }>(MY_WALLET_QUERY, { variables: usePriceVars(), skip: !open, fetchPolicy: 'cache-and-network' })
   // A bump costs the "Remontée instantanée" price, in credits (BO).
   const cost = useBumpCost(!open, listing.id)
-  const [bump, { loading: bumping }] = useMutation(BUMP_LISTING_MUTATION, { refetchQueries: [MY_WALLET_QUERY] })
-  const [done, setDone] = useState(false)
+  const [bump, { loading: bumping }] = useMutation<{ bumpListing: BumpStatus }>(BUMP_LISTING_MUTATION, { refetchQueries: [MY_WALLET_QUERY, MY_LISTING_BUMPS_QUERY] })
+  const [done, setDone] = useState<BumpStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { if (!open) { setDone(false); setError(null) } }, [open])
+  useEffect(() => { if (!open) { setDone(null); setError(null) } }, [open])
 
   const credits = cost === undefined ? undefined : data?.myWallet.credits
   const hasCredit = (credits ?? 0) >= (cost ?? 1)
@@ -35,7 +36,7 @@ export default function BoostSheet({ open, onClose, listing, onBumped }: Props) 
   const spend = () => {
     setError(null)
     bump({ variables: { id: listing.id } })
-      .then(() => { setDone(true); onBumped?.() })
+      .then(r => { setDone(r.data?.bumpListing ?? null); onBumped?.() })
       .catch((e: Error) => setError(e.message))
   }
   const topUp = () => { onClose(); requestNavigate('seller-wallet') }
@@ -64,11 +65,7 @@ export default function BoostSheet({ open, onClose, listing, onBumped }: Props) 
   return createPortal(
     <BottomSheet open={open} onClose={onClose} title="Booster l’annonce" footer={footer}>
       {done ? (
-        <div className="flex flex-col items-center gap-2 py-4 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={40} fill /></span>
-          <p className="m-0 text-headline-sm text-on-surface">Annonce remontée en tête</p>
-          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">« {listing.title} » apparaît de nouveau parmi les premières annonces.{credits !== undefined && ` Il vous reste ${creditsLabel(Math.max(0, credits - (cost ?? 0)))}.`}</p>
-        </div>
+        <BumpDone status={done} />
       ) : credits === undefined ? (
         <div className="flex justify-center py-8">{loading && <Icon name="progress_activity" size={32} className="animate-spin text-primary" />}</div>
       ) : (
