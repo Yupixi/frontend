@@ -52,9 +52,11 @@ export const SEARCH_ROUTING_QUERY = gql`
   }
 `
 
-// The visitor's standing in their market (one shared query).
-export function useAdultAccess(skip = false): AdultAccess | null {
-  const countryCode = useMarketCode()
+// The visitor's standing in their market (one shared query), or in
+// `country` (a listing published in another country).
+export function useAdultAccess(skip = false, country?: string | null): AdultAccess | null {
+  const market = useMarketCode()
+  const countryCode = country || market
   const { data, previousData } = useQuery<{ adultAccess: AdultAccess }>(ADULT_ACCESS_QUERY, {
     variables: { countryCode: countryCode ?? null },
     skip,
@@ -71,12 +73,29 @@ export function adultGateReason(error: unknown): AdultStatus | null {
   return hit ? ((hit.extensions?.reason as AdultStatus) ?? 'LOGIN') : null
 }
 
-// Publishing in the section without the verification it asks.
-export function adultSellerError(error: unknown): string | null {
-  const errs = (error as { graphQLErrors?: { message: string; extensions?: Record<string, unknown> }[] } | undefined)
-  const hit = errs?.graphQLErrors?.find((e) => e.extensions?.code === 'ADULT_SELLER')
-  return hit ? hit.message : null
+// Publishing in the section refused. `reason`: NOT_ELIGIBLE (the seller
+// rule of the country asks a verification, `rule` VERIFIED / CERTIFIED /
+// OFFICIAL), CONFIRM_AGE (« Tous les membres »: « J'ai 18 ans ou plus » not
+// ticked yet, asked right there), UNDERAGE, DISABLED.
+export type AdultSellerRefusal = { message: string; reason: string; rule: string | null }
+export function adultSellerError(error: unknown): AdultSellerRefusal | null {
+  // Apollo 4 (CombinedGraphQLErrors): `errors`; older shapes: `graphQLErrors`.
+  type GqlError = { message: string; extensions?: Record<string, unknown> }
+  const errs = (error as { graphQLErrors?: GqlError[]; errors?: GqlError[] } | undefined)
+  const hit = (errs?.graphQLErrors ?? errs?.errors ?? []).find((e) => e.extensions?.code === 'ADULT_SELLER')
+  if (!hit) return null
+  const ext = hit.extensions ?? {}
+  return {
+    message: hit.message,
+    reason: typeof ext.reason === 'string' ? ext.reason : 'NOT_ELIGIBLE',
+    rule: typeof ext.rule === 'string' ? ext.rule : null,
+  }
 }
+
+// The refusal is solved by an identity check (« Faire vérifier mon
+// identité »), not with « Tous les membres ».
+export const needsSellerVerification = (r: AdultSellerRefusal | null) =>
+  !!r && r.reason === 'NOT_ELIGIBLE' && !!r.rule && r.rule !== 'ALL'
 
 // Inside the section (its category pages, its listings): photos shown to a
 // confirmed member.
