@@ -7,6 +7,7 @@ import Price from './Price'
 import BottomSheet from './BottomSheet'
 import type { BoostBadge, RemoteListing } from '../graphql/listings'
 import { formatRelativeDate, plainText } from '../lib/format'
+import { agoLabel } from '../lib/bumps'
 import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
 import { getAccessToken } from '../lib/auth'
@@ -280,8 +281,10 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
 
           {/* Phone: size, condition or category. Desktop: the condition. */}
           <div className="absolute bottom-2 left-2 right-2 flex md:bottom-3 md:left-3 md:right-3">
-            <span className="max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface md:hidden">{phoneTag}</span>
+            <span className="min-w-0 max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface md:hidden">{phoneTag}</span>
             {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface md:inline">{condition}</span>}
+            {/* « Remontée il y a … » while the BO setting shows it (BUMP_HINT_HOURS). */}
+            {listing.bumpedAt && <span title="Annonce remontée en tête par son vendeur" className="ml-auto flex shrink-0 items-center gap-0.5 rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-semibold text-tertiary md:text-label-sm"><Icon name="arrow_upward" size={12} /><span className="max-md:hidden">Remontée&nbsp;</span>{agoLabel(listing.bumpedAt)}</span>}
           </div>
 
           <button
@@ -422,7 +425,10 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-label-sm text-on-surface-variant">
           {highlight && <span className="flex items-center gap-1" style={{ color: accent }}><ArchetypeIcon archetype={getArchetype(listing)} size={13} />{highlight}</span>}
           {!isRoute && <span className="flex items-center gap-1"><MapPin size={13} />{listingLocation(listing)}</span>}
-          <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>
+          {/* « Remontée il y a … » while the BO setting shows it (BUMP_HINT_HOURS). */}
+          {listing.bumpedAt
+            ? <span className="flex items-center gap-0.5 text-tertiary"><Icon name="arrow_upward" size={12} />Remontée {agoLabel(listing.bumpedAt)}</span>
+            : <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>}
           <span className="flex items-center gap-1"><Eye size={13} />{listing.viewsCount}</span>
         </div>
 

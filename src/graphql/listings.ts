@@ -37,6 +37,7 @@ export const LISTINGS_QUERY = gql`
         viewsCount
         favoritesCount
         publishedAt
+        bumpedAt
         createdAt
         coverImageUrl isAdult
         boostExpiresAt
@@ -105,6 +106,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       viewsCount
       favoritesCount
       publishedAt
+      bumpedAt
       createdAt
       coverImageUrl isAdult
       boostExpiresAt
@@ -172,6 +174,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       viewsCount
       favoritesCount
       publishedAt
+      bumpedAt
       createdAt
       coverImageUrl isAdult
       activeCampaignDiscount {
@@ -238,6 +241,10 @@ export const LISTING_QUERY = gql`
       viewsCount
       favoritesCount
       publishedAt
+      bumpedAt
+      lastBumpedAt
+      nextAutoBumpAt
+      autoBumpsLeft
       createdAt
       coverImageUrl isAdult
       boostExpiresAt
@@ -388,6 +395,9 @@ export const MY_LISTINGS_QUERY = gql`
         city
         locationLabel
         staffEditedAt
+        lastBumpedAt
+        nextAutoBumpAt
+        autoBumpsLeft
       }
     }
   }
@@ -399,14 +409,8 @@ export const DELETE_LISTING_MUTATION = gql`
   }
 `
 
-export const BUMP_LISTING_MUTATION = gql`
-  mutation BumpListing($id: String!) {
-    bumpListing(id: $id) {
-      id
-      publishedAt
-    }
-  }
-`
+// « Remonter »: the answer carries the proof (graphql/bumps.ts).
+export { BUMP_LISTING_MUTATION } from './bumps'
 
 export type MyListingRow = {
   id: string
@@ -418,6 +422,8 @@ export type MyListingRow = {
   favoritesCount: number
   createdAt: string
   publishedAt: string | null
+  // « Remontée il y a … » (BO BUMP_HINT_HOURS), null otherwise.
+  bumpedAt?: string | null
   coverImageUrl: string | null
   boostExpiresAt: string | null
   contactsCount?: number
@@ -436,6 +442,10 @@ export type MyListingRow = {
   locationLabel?: string | null
   // Content corrected by the Dilchap team (seller only).
   staffEditedAt?: string | null
+  // Last bump on top, next automatic bump and how many are left (seller only).
+  lastBumpedAt?: string | null
+  nextAutoBumpAt?: string | null
+  autoBumpsLeft?: number | null
 }
 
 export type MyListingDetail = {
@@ -483,6 +493,10 @@ export type CreateListingInput = {
 }
 
 export type RemoteListingDetail = RemoteListing & {
+  // Seller only: last bump on top, next automatic bump, how many left.
+  lastBumpedAt?: string | null
+  nextAutoBumpAt?: string | null
+  autoBumpsLeft?: number | null
   seller: {
     id: string
     fullName: string
@@ -529,6 +543,8 @@ export type RemoteListing = {
   viewsCount: number
   favoritesCount: number
   publishedAt: string | null
+  // « Remontée il y a … » (BO BUMP_HINT_HOURS), null otherwise.
+  bumpedAt?: string | null
   createdAt: string
   coverImageUrl: string | null
   boostExpiresAt?: string | null
