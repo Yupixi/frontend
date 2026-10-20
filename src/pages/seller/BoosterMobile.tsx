@@ -67,9 +67,9 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
           <span className="flex min-w-0 items-center gap-1.5 text-label-md text-on-surface"><Icon name="rocket_launch" size={18} className="text-primary" /> Boost &amp; Visibilité</span>
           <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary-fixed px-2.5 py-1 text-label-sm text-primary"><Icon name="stars" size={14} /> {creditsLabel(credits)} restant{credits > 1 ? 's' : ''}</span>
         </div>
-        <h1 className="m-0 mt-2 text-headline-sm text-on-surface">Propulsez vos annonces en tête de liste</h1>
+        <h1 className="m-0 mt-2 text-headline-sm text-on-surface">Mettez vos annonces en avant, bilan à l’appui</h1>
         <div className="mt-2 flex items-end justify-between gap-3">
-          <p className="m-0 text-body-sm text-on-surface-variant">{flash ? <>Une remontée immédiate en tête des plus récentes : {creditsLabel(flashCost)}.</> : 'Remontée immédiate en tête des plus récentes.'}</p>
+          <p className="m-0 text-body-sm text-on-surface-variant">{flash ? <>Une remontée immédiate en tête du tri « Plus récents » : {creditsLabel(flashCost)}.</> : 'Remontée immédiate en tête du tri « Plus récents ».'}</p>
           <button onClick={() => onNavigate('seller-wallet')} className="flex h-10 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container-high px-3 text-label-md text-on-surface">
             <Icon name="add_circle" size={17} /> Acheter
           </button>
@@ -149,12 +149,13 @@ export default function BoosterMobile({ live, listing, onSelectListing, packs, c
         <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="m-0 text-headline-sm text-on-surface">Remontée Flash en Tête</h3>
+              <h3 className="m-0 text-headline-sm text-on-surface">Remontée en tête</h3>
               <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{flash?.description}</p>
             </div>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="arrow_upward" size={20} /></span>
           </div>
-          {daily && <PackPromises info={daily} className="mt-3" />}
+          <PackPromises info={flash} className="mt-3" />
+          {daily && <p className="m-0 mt-2 text-body-sm text-on-surface-variant"><b className="text-on-surface">{daily.label}</b> : {daily.description}</p>}
           <div className={`mt-3 grid gap-2 ${bumpTiles.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {bumpTiles.map(t => (
               <button key={t.p.pack} disabled={disabled} onClick={() => onChoose(t.p.pack)} aria-label={`${t.p.label} · ${creditsLabel(t.p.price)}`} className={`relative flex cursor-pointer flex-col items-center gap-0.5 overflow-hidden rounded-xl border-none px-1 pb-2 text-on-surface disabled:opacity-50 ${t.eco ? 'bg-primary-fixed/40 pt-6' : 'bg-surface-container-low pt-2.5'}`}>

@@ -10,6 +10,7 @@ import { useBumpCost } from '../lib/useBumpCost'
 import { creditsLabel } from './Credits'
 import { requestNavigate } from '../lib/navigation'
 import { usePriceVars } from '../lib/countries'
+import { BOOST_PACKS_QUERY } from '../graphql/promotions'
 
 type Props = {
   open: boolean
@@ -18,13 +19,15 @@ type Props = {
   onBumped?: () => void
 }
 
-// "Booster cette annonce": spends the bump price in credits to put the
-// listing back at the top of the catalogue, or sends the seller to buy
-// credits.
+// "Booster cette annonce": spends the bump price in credits to bump the
+// listing (what it does exactly: the formula's own words, from the API), or
+// sends the seller to buy credits.
 export default function BoostSheet({ open, onClose, listing, onBumped }: Props) {
   const { data, loading } = useQuery<{ myWallet: { credits: number } }>(MY_WALLET_QUERY, { variables: usePriceVars(), skip: !open, fetchPolicy: 'cache-and-network' })
   // A bump costs the "Remontée instantanée" price, in credits (BO).
   const cost = useBumpCost(!open, listing.id)
+  const priceVars = usePriceVars()
+  const effect = useQuery<{ boostPacks: { pack: string; description: string }[] }>(BOOST_PACKS_QUERY, { variables: priceVars, skip: !open }).data?.boostPacks.find(p => p.pack === 'BUMP_FLASH')?.description
   const [bump, { loading: bumping }] = useMutation<{ bumpListing: BumpStatus }>(BUMP_LISTING_MUTATION, { refetchQueries: [MY_WALLET_QUERY, MY_LISTING_BUMPS_QUERY] })
   const [done, setDone] = useState<BumpStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -79,7 +82,7 @@ export default function BoostSheet({ open, onClose, listing, onBumped }: Props) 
           </div>
           <p className="m-0 mt-4 text-body-md text-on-surface-variant">
             {hasCredit
-              ? <>« {listing.title} » repasse en tête du catalogue. <b className="text-on-surface">{creditsLabel(cost ?? 0)}</b> {(cost ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.</>
+              ? <>« {listing.title} » : {effect ?? 'remontée en tête.'} <b className="text-on-surface">{creditsLabel(cost ?? 0)}</b> {(cost ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.</>
               : <>Une remontée coûte <b className="text-on-surface">{creditsLabel(cost ?? 0)}</b>. Achetez des crédits par Mobile Money pour booster vos annonces en un clic.</>}
           </p>
           {error && <p className="m-0 mt-3 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}

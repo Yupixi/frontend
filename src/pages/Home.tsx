@@ -13,7 +13,8 @@ import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { rotationSeed } from '../lib/rotationSeed'
 import { formatNumber } from '../lib/format'
-import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, type ListingFacets, type ListingSort, type RemoteListing } from '../graphql/listings'
+import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, RECOMMENDED_RAIL_QUERY, type ListingFacets, type ListingSort, type PromotedPlace, type RemoteListing } from '../graphql/listings'
+import { ImpressionScope } from '../lib/impressions'
 import { DEFAULT_HOME, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
 import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
 import type { StoredLocation } from '../lib/location'
@@ -106,7 +107,7 @@ const feedMemory: { city: string | null } = { city: null }
 // load: back from a listing, its category now counts in the interests (a
 // new request) — the rails keep their room, so the sections below are laid
 // out at once and the scroll position deep in the feed is restored.
-const railMemory: { key: string, recommended?: RemoteListing[], forYou?: RemoteListing[] } = { key: '' }
+const railMemory: { key: string, recommended?: RemoteListing[], promoted?: PromotedPlace[], forYou?: RemoteListing[] } = { key: '' }
 
 export default function Home({ onOpenShop, onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, locationPending, onContactSeller, onSearch }: HomeProps) {
   const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
@@ -144,7 +145,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const personalized = currentUser
     ? (currentUser.notificationPreferences as Record<string, unknown> | undefined)?.personalizeHome !== false
     : !!anonInterests
-  const { data: recommendedData, error: recommendedError } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
+  const { data: recommendedData, error: recommendedError } = useQuery<{ recommendedRail: { items: RemoteListing[], promoted: PromotedPlace[] } }>(RECOMMENDED_RAIL_QUERY, {
     variables: { limit: isDesktop ? 4 : 12, placement: isDesktop ? 'HOME_DESKTOP' : 'HOME_MOBILE', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests },
     skip: locationPending,
   })
@@ -153,7 +154,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // the first "pépite" reads as broken).
   const railKey = JSON.stringify([isDesktop, location?.countryCode ?? null, location?.city ?? null, currentUser?.id ?? null])
   const keptRails = railMemory.key === railKey ? railMemory : null
-  const recommendedList = recommendedData?.recommendedListings ?? keptRails?.recommended
+  const recommendedList = recommendedData?.recommendedRail.items ?? keptRails?.recommended
+  // Its reserved « En vedette » places (impressions « en position boostée »).
+  const pepitesPromoted = recommendedData?.recommendedRail.promoted ?? keptRails?.promoted
   const recommended = recommendedList ?? []
   const withPhoto = recommended.filter(l => !!listingImage(l))
   // "Boutiques officielles" rail (most followed first).
@@ -173,7 +176,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     if (!recommendedData) return
     if (railMemory.key !== railKey) railMemory.forYou = undefined
     railMemory.key = railKey
-    railMemory.recommended = recommendedData.recommendedListings
+    railMemory.recommended = recommendedData.recommendedRail.items
+    railMemory.promoted = recommendedData.recommendedRail.promoted
   }, [recommendedData, railKey])
   useEffect(() => {
     if (forYouData && railMemory.key === railKey) railMemory.forYou = forYouData.recommendedListings
@@ -197,7 +201,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const cityFilter = feedCity ?? location?.city
   const feedFilter = marketFilter || cityFilter ? { ...marketFilter, ...(cityFilter ? { city: cityFilter } : {}) } : undefined
   const feedKey = JSON.stringify([feedFilter ?? null, sort, pageSize])
-  const { data: feedData, previousData: feedPrevious, loading: feedLoading, error: feedError, fetchMore: feedFetchMore } = useQuery<{ listings: { items: RemoteListing[], totalCount: number, page: number, totalPages: number } }>(LISTINGS_QUERY, {
+  const { data: feedData, previousData: feedPrevious, loading: feedLoading, error: feedError, fetchMore: feedFetchMore } = useQuery<{ listings: { items: RemoteListing[], totalCount: number, page: number, totalPages: number, promoted?: PromotedPlace[] | null } }>(LISTINGS_QUERY, {
     variables: { sort, page: 1, pageSize, filter: feedFilter, rotationSeed: rotationSeed() },
     skip: locationPending,
   })
@@ -313,7 +317,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // Only the layout on screen is built (each render used to create both,
   // every card twice).
   const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = !isDesktop ? {} : {
-    campaign: <HomePromotions desktop heroIds={heroIds} renderCard={l => card(l)} />,
+    campaign: <ImpressionScope placement="HOME_OTHER"><HomePromotions desktop heroIds={heroIds} renderCard={l => card(l)} /></ImpressionScope>,
     categories: <>
           {topCategories.length > 0 && (
             <section className="mt-10">
@@ -351,9 +355,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                   </span>
                   <h3 className="m-0 text-headline-lg text-on-surface">Pépites à la Une{hasBoosted && ' & Annonces en vedette'}</h3>
                 </div>
-                <button type="button" onClick={() => requestOpenHelp('booster-une-annonce')} className="cursor-pointer rounded-full border-none bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary hover:bg-primary/15">Priorité visibilité</button>
+                <button type="button" onClick={() => requestOpenHelp('badges-des-annonces')} className="cursor-pointer rounded-full border-none bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary hover:bg-primary/15">Priorité visibilité</button>
               </div>
-              <div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div>
+              <ImpressionScope placement="HOME_FEATURED" promoted={pepitesPromoted}><div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div></ImpressionScope>
             </section>
           )}
           {forYou.length > 0 && (
@@ -365,7 +369,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 </div>
                 <button onClick={() => requestOpenHelp('accueil-personnalise')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Pourquoi ces annonces ?</button>
               </div>
-              <div className="grid grid-cols-4 items-start gap-6">{forYou.slice(0, 8).map(l => card(l))}</div>
+              <ImpressionScope placement="HOME_FOR_YOU"><div className="grid grid-cols-4 items-start gap-6">{forYou.slice(0, 8).map(l => card(l))}</div></ImpressionScope>
             </section>
           )}
     </>,
@@ -387,7 +391,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Vendeurs certifiés</h3>
                 <button type="button" onClick={() => requestOpenHelp('badges-payants')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">Historique vérifié</button>
               </div>
-              <div className="grid grid-cols-4 items-start gap-6">{certified.slice(0, 4).map(l => card(l))}</div>
+              <ImpressionScope placement="HOME_OTHER"><div className="grid grid-cols-4 items-start gap-6">{certified.slice(0, 4).map(l => card(l))}</div></ImpressionScope>
             </section>
           )}
     </>,
@@ -439,7 +443,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div>
+            <ImpressionScope placement="HOME_LATEST" promoted={feed?.promoted}><div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div></ImpressionScope>
             {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
             {loadMore}
           </section>
@@ -505,7 +509,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           </section>
         )}
     </>,
-    campaign: <HomePromotions desktop={false} heroIds={heroIds} renderCard={l => card(l)} />,
+    campaign: <ImpressionScope placement="HOME_OTHER"><HomePromotions desktop={false} heroIds={heroIds} renderCard={l => card(l)} /></ImpressionScope>,
     // The pills of the section headings (« En vedette », « Priorité
     // visibilité », « Historique vérifié ») look tappable: they open the
     // help article that explains them.
@@ -515,11 +519,11 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           <section className="mb-8">
             <SectionHeading
               title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
-              action={hasBoosted ? <button type="button" onClick={() => requestOpenHelp('booster-une-annonce')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">En vedette</button> : undefined}
+              action={hasBoosted ? <button type="button" onClick={() => requestOpenHelp('badges-des-annonces')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">En vedette</button> : undefined}
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {/* The first cards are what a phone shows biggest at load: their photos come first. */}
-              {pepites.map((l, i) => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true, i < 2)}</div>)}
+              <ImpressionScope placement="HOME_FEATURED" promoted={pepitesPromoted}>{pepites.map((l, i) => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true, i < 2)}</div>)}</ImpressionScope>
             </div>
           </section>
         )}
@@ -532,7 +536,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             />
             <p className="m-0 -mt-1 mb-2 text-body-sm text-on-surface-variant">{forYouHint}</p>
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
-              {forYou.map(l => <div key={l.id} className="w-[200px] shrink-0 snap-start">{card(l)}</div>)}
+              <ImpressionScope placement="HOME_FOR_YOU">{forYou.map(l => <div key={l.id} className="w-[200px] shrink-0 snap-start">{card(l)}</div>)}</ImpressionScope>
             </div>
           </section>
         )}
@@ -557,7 +561,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           <section className="mb-8">
             <SectionHeading title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Vendeurs certifiés</>} />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
-              {certified.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}
+              <ImpressionScope placement="HOME_OTHER">{certified.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}</ImpressionScope>
             </div>
           </section>
         )}
@@ -572,7 +576,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               </Select>
             }
           />
-          {settled.latest ? <div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div> : <GridSkeleton count={4} />}
+          {settled.latest ? <ImpressionScope placement="HOME_LATEST" promoted={feed?.promoted}><div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div></ImpressionScope> : <GridSkeleton count={4} />}
           {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
           {loadMore}
         </section>

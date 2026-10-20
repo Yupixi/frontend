@@ -10,8 +10,10 @@ import { ListingCard, ListingListCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, CATEGORY_LANDING_QUERY, type CategoryLanding, type RemoteCategory } from '../graphql/categories'
 import {
   LISTINGS_QUERY, LISTING_FACETS_QUERY, CREATE_SAVED_SEARCH_MUTATION,
-  type RemoteListing, type ListingSort, type ListingFacets, type ListingFilterInput, type FacetCount,
+  type RemoteListing, type ListingSort, type ListingFacets, type ListingFilterInput, type FacetCount, type PromotedPlace,
 } from '../graphql/listings'
+import { ImpressionScope } from '../lib/impressions'
+import HelpLink from '../components/HelpLink'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
 import { setAuthReason } from '../lib/authReason'
@@ -293,7 +295,7 @@ export default function SearchPage({
 
   // Results grow as the visitor scrolls (InfiniteLoader): each next page is
   // appended to the cached list — a new filter or sort starts it over.
-  const { data, previousData, loading, error: listingsError, refetch, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number } }>(LISTINGS_QUERY, {
+  const { data, previousData, loading, error: listingsError, refetch, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number; promoted?: PromotedPlace[] | null } }>(LISTINGS_QUERY, {
     // rotationSeed: listings « en vedette » keep one order across the pages
     // of this visit.
     variables: { filter, sort, page: 1, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories() },
@@ -319,6 +321,9 @@ export default function SearchPage({
   const routing = search.trim().length >= 2 ? routingData?.searchRouting ?? null : null
   const result = (data ?? previousData)?.listings
   const items = result?.items ?? []
+  // Where these cards are counted as seen: words typed = a search, else
+  // a category page, else a city page.
+  const placement = search ? 'SEARCH' : filter.categorySlug || filter.subcategorySlugs?.length || filter.categorySlugs?.length ? 'CATEGORY' : pageCity || filter.city ? 'CITY' : 'SEARCH'
   const total = result?.totalCount ?? 0
   const listKey = JSON.stringify([filter, sort])
   const nextPage = useLoadMore({ fetchMore, page: data?.listings.page, totalPages: data?.listings.totalPages, key: listKey })
@@ -601,6 +606,7 @@ export default function SearchPage({
           <p className="m-0 mt-1 text-body-md text-on-surface-variant">
             {result ? <><span className="font-bold text-on-surface">{formatNumber(total, 0)} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.</> : ' '}
           </p>
+          {!!result?.promoted?.length && <HelpLink article="badges-des-annonces" label="Pourquoi certaines annonces sont en tête ?" className="mt-1" />}
         </div>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-1.5">
@@ -642,6 +648,7 @@ export default function SearchPage({
             <div className="py-6"><AdultGate reason={gateReason} onNavigate={onNavigate} onConfirmed={() => { void refetch() }} /></div>
           ) : (
           <AdultSectionContext.Provider value={rubricAdult && adultOk}>
+          <ImpressionScope placement={placement} promoted={result?.promoted}>
           <div className={loading && !data ? 'opacity-60' : ''}>
             {/* First load: the results' room is kept (the alert box below
                 doesn't jump when they land). */}
@@ -675,6 +682,7 @@ export default function SearchPage({
               </>
             )}
           </div>
+          </ImpressionScope>
           </AdultSectionContext.Provider>
           )}
 

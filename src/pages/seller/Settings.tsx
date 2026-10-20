@@ -57,7 +57,7 @@ const TABS = [
 const ALERTS = [
   { key: 'messages', sms: true, icon: 'forum', title: 'Nouveaux messages & Offres directes', sub: "Alerte instantanée dès qu'un acheteur négocie ou pose une question sur un article." },
   { key: 'meetups', sms: true, icon: 'calendar_clock', title: 'Confirmations & Rappels Remises', sub: 'Rendez-vous proposés, confirmés et litiges sur vos remises.' },
-  { key: 'boosts', sms: false, icon: 'rocket_launch', title: 'Performance & Fin des Boosts', sub: "Expiration d'un boost ou remontée en tête avec bilan des vues." },
+  { key: 'boosts', sms: false, icon: 'rocket_launch', title: 'Performance & Fin des Boosts', sub: "Fin d’un boost avec son bilan (affichages, vues, contacts) et chaque remontée automatique effectuée." },
   { key: 'advice', sms: false, icon: 'insights', title: "Conseils & Pics d'affluence", sub: 'Nouvelles annonces correspondant à vos recherches et pics de recherche.' },
   { key: 'campaigns', sms: false, icon: 'campaign', title: 'Campagnes promos Dilchap', sub: 'Opportunités de visibilité collective (Black Friday, braderies P2P).' },
 ]
