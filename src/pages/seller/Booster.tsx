@@ -26,6 +26,8 @@ import PaymentLogo, { useMobileMethods } from '../../components/PaymentLogo'
 import { usePriceVars } from '../../lib/countries'
 import { BumpHistory, BumpStatusPanel, useBumpProof } from '../../components/BumpProof'
 import { MY_LISTING_BUMPS_QUERY, type BumpEntry, type BumpStatus } from '../../graphql/bumps'
+import BoostPreview from '../../components/BoostPreview'
+import { ReportLine } from '../../components/VisibilityReport'
 
 // Formulas that bump the listing at once (journaled, proof shown).
 const BUMPS_NOW: BoostPack[] = ['BUMP_FLASH', 'BUMP_DAILY_7', 'TURBO_7D']
@@ -39,11 +41,10 @@ function boostStatus(b: RemoteBoost): { label: string, active: boolean } {
   return { label: active ? 'En cours' : 'Terminé', active }
 }
 
-// « +65 vues • +3 contacts • 240 affichages en vedette ».
-function boostGains(b: RemoteBoost) {
-  const parts = [`+${b.viewsGained ?? 0} vues`, `+${b.contactsGained ?? 0} contacts`]
-  if (b.impressions != null) parts.push(`${b.impressions} affichage${b.impressions > 1 ? 's' : ''} en vedette`)
-  return parts.join(' • ')
+// The bilan measured by the API (period vs before); « À venir » before it starts.
+function BoostGains({ b }: { b: RemoteBoost }) {
+  if (b.report) return <ReportLine report={b.report} />
+  return <span className="text-body-sm text-on-surface-variant">{b.upcoming ? 'Bilan dès le début de la période' : '—'}</span>
 }
 
 const isFuture = (iso?: string | null) => !!iso && new Date(iso) > new Date()
@@ -112,6 +113,8 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
   }
 
   const visible = listing && (isFuture(listing.boostExpiresAt) || isFuture(listing.autoBumpUntil) || isFuture(listing.urgentUntil))
+  // The listing's latest boost with a bilan (running or last ended).
+  const current = listing ? history.find(b => b.listing?.id === listing.id && !!b.report) : undefined
   const turbo = pack('TURBO_7D')
   const urgent = pack('URGENT_72H')
   const bumpHour = pack('BUMP_DAILY_7')?.autoBumpHour ?? turbo?.autoBumpHour
@@ -149,6 +152,21 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
           onNavigate={onNavigate}
         />
         {listing && <BumpStatusPanel key={listing.id} listingId={listing.id} />}
+        {listing && <BoostPreview listing={listing} packs={packs} className="mt-4" />}
+        <section className="mt-4">
+          <h2 className="m-0 mb-1 text-label-lg text-on-surface">Bilan de vos boosts</h2>
+          <p className="m-0 mb-2 text-body-sm text-on-surface-variant">Affichages (dont en position boostée), vues et contacts de chaque boost, comparés à la même durée juste avant.</p>
+          {history.length === 0 && <p className="m-0 rounded-2xl bg-surface-container-low p-4 text-center text-body-sm text-on-surface-variant">Aucun boost pour le moment.</p>}
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {history.slice(0, 10).map(b => (
+              <li key={b.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-3">
+                <div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-label-md text-on-surface">{b.listing?.title ?? '—'}</span><span className="shrink-0 rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span></div>
+                <div className="text-body-sm text-on-surface-variant">{formatDate(b.createdAt)} · {boostStatus(b).label}</div>
+                <div className="mt-1"><BoostGains b={b} /></div>
+              </li>
+            ))}
+          </ul>
+        </section>
         <section className="mt-4 pb-6">
           <h2 className="m-0 mb-2 text-label-lg text-on-surface">Historique des remontées</h2>
           <BumpHistory entries={bumpsData?.myListingBumps ?? []} showListing />
@@ -160,8 +178,8 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
           <div className="grid items-center gap-6 md:grid-cols-[1.5fr_1fr]">
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-fixed px-3 py-1 text-label-sm uppercase text-primary"><Rocket size={14} /> Accélérateur de ventes P2P</span>
-              <h1 className="m-0 mt-3 text-headline-lg-mobile text-on-surface md:text-[40px] md:font-extrabold md:leading-[48px]">Boostez vos ventes &amp; dominez le fil d'affichage</h1>
-              <p className="m-0 mt-2 text-body-md text-on-surface-variant">Vendez plus vite grâce aux options de visibilité ciblées.<Claim> <b className="text-tertiary">100% du produit de la vente reste pour vous</b> (0% de commission Dilchap).</Claim></p>
+              <h1 className="m-0 mt-3 text-headline-lg-mobile text-on-surface md:text-[40px] md:font-extrabold md:leading-[48px]">Plus de visibilité, mesurée pour chaque boost</h1>
+              <p className="m-0 mt-2 text-body-md text-on-surface-variant">Chaque formule dit exactement où votre annonce apparaît ; son bilan montre ensuite combien d’acheteurs l’ont vue, en position boostée ou non.<Claim> <b className="text-tertiary">100% du produit de la vente reste pour vous</b> (0% de commission Dilchap).</Claim></p>
             </div>
             <div data-tour="boost-credits" className="rounded-2xl bg-surface-lowest p-4 border border-outline-variant">
               <div className="flex items-center justify-between">
@@ -175,6 +193,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
                   <div className="text-headline-sm text-on-surface">{creditsLabel(credits)} restant{credits > 1 ? 's' : ''}</div>
                 </div>
               </div>
+              {current?.report && <div className="mt-3 rounded-xl bg-tertiary-soft/60 p-2"><div className="text-label-sm text-on-surface-variant">{packLabel(current.pack)} · {boostStatus(current).label.toLowerCase()}</div><ReportLine report={current.report} /></div>}
               <div className="mt-3 flex items-start gap-2 text-body-sm text-on-surface-variant">
                 <Clock size={16} className="mt-0.5 text-primary" />
                 {isFuture(listing?.autoBumpUntil)
@@ -258,13 +277,13 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
               <div className="text-label-sm uppercase text-primary">Étape 2 sur 2</div>
               <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Choisissez la formule adaptée à votre objectif</h2>
             </div>
-            <span className="flex items-center gap-1.5 rounded-lg bg-surface-container px-3 py-1.5 text-label-sm text-on-surface-variant"><ShieldCheck size={15} className="text-tertiary" /> Activation immédiate</span>
+            <span className="flex items-center gap-1.5 rounded-lg bg-surface-container px-3 py-1.5 text-label-sm text-on-surface-variant"><ShieldCheck size={15} className="text-tertiary" /> Activation immédiate (à sa mise en ligne pour une annonce en validation)</span>
           </div>
           <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-4">
             {/* Remontée */}
             <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <span className="self-start rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">Recommandé pour relancer</span>
-              <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><ArrowUp size={22} className="text-primary" /> Remontée Flash en Tête</div>
+              <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><ArrowUp size={22} className="text-primary" /> Remontée en tête</div>
               <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{pack('BUMP_FLASH')?.description}</p>
               <div className="mt-3 flex flex-col gap-2">
                 {radio('BUMP_FLASH', bumpChoice, setBumpChoice)}
@@ -280,7 +299,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
             {/* Vedette */}
             <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <span className="flex items-center gap-1 self-start rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><TrendingUp size={13} /> Meilleur impact</span>
-              <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><Star size={22} className="text-tertiary" /> Badge En Vedette &amp; Carrousel</div>
+              <div className="mt-3 flex items-center gap-2 text-headline-sm text-on-surface"><Star size={22} className="text-tertiary" /> En Vedette : places réservées</div>
               <div className="mt-3 flex flex-col gap-2">
                 {radio('FEATURED_48H', featuredChoice, setFeaturedChoice)}
                 {radio('FEATURED_7D', featuredChoice, setFeaturedChoice, '1 semaine complète')}
@@ -331,43 +350,17 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
           </div>
         </section>
 
-        {/* Preview */}
-        {listing && (
-          <section className="mt-8 rounded-3xl bg-surface-container-low p-5 md:p-6">
-            <div className="text-label-sm uppercase text-primary">Simulateur en direct</div>
-            <h2 className="m-0 mb-4 text-headline-sm text-on-surface">Aperçu de votre annonce dans le fil d'actualité</h2>
-            <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
-              <div className="min-w-0">
-                <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-outline" /> Sans boost (affichage standard)</div>
-                <div className="flex items-center gap-3 rounded-xl bg-surface-lowest p-3 opacity-70">
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container">{listing.coverImageUrl && <img src={listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</div>
-                  <div className="min-w-0"><div className="text-[11px] text-outline">Publiée il y a quelques jours</div><div className="truncate text-label-md text-on-surface">{listing.title}</div><div className="text-label-md"><Price amount={listing.price} currency={listing.currency} /></div></div>
-                </div>
-                <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Descend dans le fil au fil des nouvelles publications.</p>
-              </div>
-              <div className="min-w-0">
-                <div className="mb-2 flex items-center gap-1.5 text-label-md text-primary"><span className="h-2 w-2 rounded-full bg-primary" /> En vedette (en tête de liste)</div>
-                <div className="relative flex items-center gap-3 rounded-xl border-2 border-solid border-primary bg-surface-lowest p-3">
-                  <span className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-full bg-tertiary px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Star size={11} /> En vedette</span>
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container">
-                    {listing.coverImageUrl && <img src={listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}
-                  </div>
-                  <div className="min-w-0"><div className="text-[11px] text-primary">Remontée à l'instant</div><div className="truncate text-label-md text-on-surface">{listing.title}</div><div className="text-label-md font-bold text-primary"><Price amount={listing.price} currency={listing.currency} /></div></div>
-                </div>
-                <p className="m-0 mt-2 flex items-center gap-1.5 rounded-lg bg-tertiary-soft p-2 text-body-sm text-tertiary"><TrendingUp size={15} /> En tête des pages de sa catégorie et des recherches, à tour de rôle avec les autres annonces en vedette</p>
-              </div>
-            </div>
-          </section>
-        )}
+        {/* What buyers will see, formula by formula. */}
+        {listing && <BoostPreview listing={listing} packs={packs} className="mt-8" />}
 
         {/* History */}
         <section className="mt-8">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
               <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Historique des boosts &amp; performances</h2>
-              <p className="m-0 text-body-sm text-on-surface-variant">Gains de vues et de contacts depuis chaque activation, et affichages obtenus en vedette.</p>
+              <p className="m-0 text-body-sm text-on-surface-variant">Bilan de chaque boost : affichages de l’annonce (dont en position boostée), vues et contacts pendant la période, comparés à la même durée juste avant.</p>
             </div>
-            <span className="flex items-center gap-1.5 text-label-sm text-tertiary"><span className="h-2 w-2 rounded-full bg-tertiary" /> Mise à jour en temps réel</span>
+            <span className="flex items-center gap-1.5 text-label-sm text-tertiary"><span className="h-2 w-2 rounded-full bg-tertiary" /> Compteurs mis à jour toutes les quelques minutes</span>
           </div>
           {/* Mobile: one card per boost instead of a sideways-scrolling table. */}
           <div className="flex flex-col gap-2 md:hidden">
@@ -389,7 +382,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
                     <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span>
                     <span className="whitespace-nowrap text-label-md font-bold text-on-surface"><Credits n={b.price} /></span>
                   </div>
-                  <div className="mt-1.5 flex items-center gap-1 text-body-sm text-tertiary"><TrendingUp size={14} /> {boostGains(b)}</div>
+                  <div className="mt-1.5"><BoostGains b={b} /></div>
                 </div>
               )
             })}
@@ -416,7 +409,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
                       </td>
                       <td className="px-4 py-3"><span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{packLabel(b.pack)}</span></td>
                       <td className="whitespace-nowrap px-4 py-3 font-semibold text-on-surface"><Credits n={b.price} /></td>
-                      <td className="px-4 py-3 text-tertiary"><span className="flex items-center gap-1"><TrendingUp size={14} /> {boostGains(b)}</span></td>
+                      <td className="max-w-[320px] px-4 py-3"><BoostGains b={b} /></td>
                       <td className="px-4 py-3"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${active ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{status}</span></td>
                     </tr>
                   )
@@ -457,7 +450,7 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
         onClose={() => setConfirmBump(false)}
         onConfirm={() => void spendCredit()}
       >
-        {listing && <p className="m-0">« {listing.title} » repasse en tête du tri « Plus récents ». <b className="text-on-surface">{creditsLabel(bumpCost ?? 0)}</b> {(bumpCost ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.</p>}
+        {listing && <p className="m-0">« {listing.title} » : {pack('BUMP_FLASH')?.description ?? 'remontée en tête.'} <b className="text-on-surface">{creditsLabel(bumpCost ?? 0)}</b> {(bumpCost ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.</p>}
       </ConfirmSheet>
       <WalletPaySheet
         open={!!confirmPack}

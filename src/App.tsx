@@ -30,6 +30,7 @@ import Onboarding from './components/Onboarding'
 import { noteTourPage } from './lib/tourControl'
 import { adultSectionSlug, isKnownAdultListing, isKnownAdultSlug, leaveAdultSpace, setAdultRouteGuess, useAdultSpace } from './lib/adultMode'
 import { useAdultAccess } from './lib/adult'
+import { newImpressionPageView } from './lib/impressions'
 
 // Home is the landing page and ships in the entry chunk; every other page is
 // its own chunk so a first visit only downloads what it renders (recharts,
@@ -522,6 +523,7 @@ export default function App() {
   // Native back/forward navigation through the browser history
   useEffect(() => {
     const onPop = () => {
+      newImpressionPageView()
       const st = window.history.state
       // Same transition as navigate() — the current page stays up while the
       // target page's chunk loads.
@@ -641,6 +643,8 @@ export default function App() {
     // chunk loads, instead of flashing the Suspense fallback.
     startTransition(() => { setPage(p); setNavSeq((n) => n + 1) })
     window.history.pushState(historyEntry(p, sel), '')
+    // A new page view: listing cards count as seen again (lib/impressions).
+    newImpressionPageView()
   }
 
   // Page requests from components without an onNavigate prop (lib/navigation).

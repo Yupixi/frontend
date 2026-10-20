@@ -14,6 +14,7 @@ import Select from '../../components/Select'
 import Credits from '../../components/Credits'
 import { PaymentLogos } from '../../components/PaymentLogo'
 import { Claim } from '../../lib/site'
+import VisibilityPanel from '../../components/VisibilityPanel'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -117,6 +118,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
     <AccountLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="md:hidden">
         <StatsMobile s={s} period={period} periods={PERIODS} onPeriod={setPeriod} badge={currentUser?.badge} onNavigate={onNavigate} onSelectListing={onSelectListing} advanced={advanced} />
+        <VisibilityPanel days={days} className="mt-4" />
       </div>
       <div className="mx-auto hidden max-w-[1180px] pb-8 md:block">
         <nav className="mb-2 hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
@@ -153,7 +155,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
 
         {/* KPIs */}
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Kpi label="Vues catalogue" icon="visibility" iconCls="bg-primary-fixed text-primary" value={loading ? '—' : nf(s?.views ?? 0)} foot={<><Trend now={s?.views ?? null} prev={s?.viewsPrev ?? null} /> vs période précédente</>} />
+          <Kpi label="Vues des annonces" icon="visibility" iconCls="bg-primary-fixed text-primary" value={loading ? '—' : nf(s?.views ?? 0)} foot={<><Trend now={s?.views ?? null} prev={s?.viewsPrev ?? null} /> vs période précédente</>} />
           <Kpi label="Contacts chat" icon="chat_bubble" iconCls="bg-surface-container text-tertiary" value={loading ? '—' : nf(s?.contacts ?? 0)} foot={<><Trend now={s?.contacts ?? null} prev={s?.contactsPrev ?? null} /> échanges initiés</>} />
           <Kpi label="Conversion chat" icon="price_check" iconCls="bg-surface-container text-primary" value={loading ? '—' : pct(s?.conversionRate)} foot={<><Trend now={s?.conversionRate ?? null} prev={s?.conversionRatePrev ?? null} /> conclus en deal</>} />
           <Kpi label="Volume d'affaires" icon="payments" iconCls="bg-tertiary-soft text-tertiary" value={loading ? '—' : <Price amount={s?.revenue ?? 0} />} foot={<Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="savings" size={14} /> Économisé : <Price amount={s?.savedCommission ?? 0} /></span></Claim>} />
@@ -161,6 +163,8 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             <Kpi label="Délai moyen vente" icon="bolt" iconCls="bg-surface-container text-primary" value={loading ? '—' : s?.avgSaleDays != null ? <>{formatNumber(s.avgSaleDays)} <span className="text-headline-sm font-semibold">jours</span></> : '—'} foot={s?.avgSaleDaysBoosted != null ? <span className="rounded bg-primary-fixed px-1.5 text-label-sm text-primary">{formatNumber(s.avgSaleDaysBoosted)} j si boosté</span> : 'publication → vente conclue'} />
           </div>
         </section>
+
+        <VisibilityPanel days={days} className="mt-5" />
 
         <div className="mt-5"><DealStatsPanel d={s?.deals} loading={loading} /></div>
 
@@ -170,11 +174,11 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="m-0 text-headline-sm text-on-surface">Évolution du trafic d'annonces</h2>
-                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Comparaison journalière entre visites directes et remises en tête payantes</p>
+                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vues de vos annonces chaque jour : pendant une formule en cours (Quotidienne, En Vedette, Turbo, Urgent) et le reste du temps</p>
               </div>
               <div className="flex gap-3 text-label-sm text-on-surface">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" /> Trafic boosté ({boostedShare}%)</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#9c6b6b]" /> Organique ({100 - boostedShare}%)</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" /> Pendant un boost ({boostedShare}%)</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#9c6b6b]" /> Hors boost ({100 - boostedShare}%)</span>
               </div>
             </div>
             {peak && peak.total > 0 && (
@@ -344,7 +348,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               <h2 className="m-0 flex-1 text-headline-sm text-on-surface">Rentabilité des Boosts Visibilité</h2>
               {s?.boost.roi != null && s.boost.roi > 0 && <span className="rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary">ROI x{formatNumber(s.boost.roi)} constaté</span>}
             </div>
-            <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Impact direct de vos remontées en tête de catalogue sur la période.</p>
+            <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Crédits dépensés en boosts sur la période et ventes de vos annonces boostées, comparées à vos annonces non boostées.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl bg-surface-container-low p-3">
                 <div className="text-label-sm text-on-surface-variant">Accélération</div>

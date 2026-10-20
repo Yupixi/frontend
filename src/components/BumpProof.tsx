@@ -7,6 +7,7 @@ import { creditsLabel } from './Credits'
 import { LISTING_BUMP_STATUS_QUERY, MY_LISTING_BUMPS_QUERY, type BumpEntry, type BumpStatus } from '../graphql/bumps'
 import { agoLabel, bumpCostLabel, clock, ordinal, placeLabel, whenLabel } from '../lib/bumps'
 import { requestOpenLink } from '../lib/navigation'
+import { ReportLine } from './VisibilityReport'
 
 // The proof of a bump, everywhere the seller looks: right after it (BumpDone),
 // on the listing's management (BumpStatusPanel) and in the history
@@ -99,6 +100,7 @@ export function BumpHistory({ entries, showListing = false, empty = 'Aucune remo
               {whenLabel(b.createdAt).replace(/^./, c => c.toUpperCase())}
               {b.rank != null && b.peers != null && <> · {ordinal(b.rank)} sur {b.peers} en {b.categoryName ?? 'catégorie'} à {b.city}</>}
             </div>
+            {b.source !== 'REPUBLISH' && <ReportLine report={b.report} className="mt-0.5" />}
           </div>
         </li>
       ))}

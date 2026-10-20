@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import { REPORT_FIELDS, type VisibilityReport } from './visibility'
 
 // Proof of the bumps (Backend listing_bumps journal): where a listing
 // stands after its last bump, the automatic bumps still to come, and the
@@ -53,12 +54,15 @@ export type BumpEntry = {
   peers: number | null
   categoryName: string | null
   city: string
+  // Bilan of the hours it kept a place in front.
+  report?: VisibilityReport | null
 }
 
 export const MY_LISTING_BUMPS_QUERY = gql`
   query MyListingBumps($listingId: String, $take: Int) {
     myListingBumps(listingId: $listingId, take: $take) {
       id listingId listingTitle createdAt source sourceLabel packLabel credits offerPercent rank peers categoryName city
+      ${REPORT_FIELDS}
     }
   }
 `

@@ -4,6 +4,7 @@ import { gql } from '@apollo/client'
 export const LISTINGS_QUERY = gql`
   query Listings($filter: ListingFilterInput, $sort: ListingSort, $page: Float, $pageSize: Float, $rotationSeed: String, $interestCategories: [String!], $searchAsTyped: Boolean) {
     listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize, rotationSeed: $rotationSeed, interestCategories: $interestCategories, searchAsTyped: $searchAsTyped) {
+      promoted { listingId slot }
       totalCount
       searchCorrection { original corrected applied learned }
       rankingVariant
@@ -40,6 +41,7 @@ export const LISTINGS_QUERY = gql`
         favoritesCount
         publishedAt
         bumpedAt
+        promoBadge { kind label percent at }
         createdAt
         coverImageUrl isAdult
         boostExpiresAt
@@ -113,6 +115,7 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
       favoritesCount
       publishedAt
       bumpedAt
+      promoBadge { kind label percent at }
       createdAt
       coverImageUrl isAdult
       boostExpiresAt
@@ -149,6 +152,80 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
   }
 `
 
+// « Pépites à la Une » with its reserved places (impressions « en position
+// boostée »).
+export const RECOMMENDED_RAIL_QUERY = gql`
+  query RecommendedRail($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!], $rotationSeed: String) {
+    recommendedRail(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds, rotationSeed: $rotationSeed) {
+      promoted { listingId slot }
+      items {
+      id
+      title
+      description
+      price
+      currency
+      countryCode
+      city
+      locationLabel
+      condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
+      negotiable
+      quantity
+      aisleId
+      featuredAt
+      bundleOffer { name tiers { minQty percent } }
+      deliveryAvailable
+      tags
+      attributes
+      viewsCount
+      favoritesCount
+      publishedAt
+      bumpedAt
+      promoBadge { kind label percent at }
+      createdAt
+      coverImageUrl isAdult
+      boostExpiresAt
+      boostBadges { kind label }
+      activeCampaignDiscount {
+        campaignId
+        campaignName
+        campaignSlug
+        themeColor
+        discountPercent
+        salePrice
+      }
+      media {
+        url
+      }
+      category {
+        slug
+        name
+      }
+      subcategory {
+        slug
+        name
+      }
+      seller {
+        id
+        fullName
+        avatarUrl
+        badge
+        averageRating
+        reviewsCount
+        shop { id slug name logoUrl }
+      }
+    }
+      }
+  }
+`
+
 export const SIMILAR_LISTINGS_QUERY = gql`
   query SimilarListings($listingId: String!, $limit: Float, $countryCode: String) {
     similarListings(listingId: $listingId, limit: $limit, countryCode: $countryCode) {
@@ -181,6 +258,7 @@ export const SIMILAR_LISTINGS_QUERY = gql`
       favoritesCount
       publishedAt
       bumpedAt
+      promoBadge { kind label percent at }
       createdAt
       coverImageUrl isAdult
       activeCampaignDiscount {
@@ -249,6 +327,7 @@ export const ALSO_VIEWED_LISTINGS_QUERY = gql`
       favoritesCount
       publishedAt
       bumpedAt
+      promoBadge { kind label percent at }
       createdAt
       coverImageUrl isAdult
       activeCampaignDiscount {
@@ -316,6 +395,7 @@ export const LISTING_QUERY = gql`
       favoritesCount
       publishedAt
       bumpedAt
+      promoBadge { kind label percent at }
       lastBumpedAt
       nextAutoBumpAt
       autoBumpsLeft
@@ -625,6 +705,9 @@ export type RemoteListing = {
   // Badges of the boosts running now, the first one is shown on the card
   // (FEATURED « En vedette », TURBO « Prix Choc », URGENT « Vente Urgente »).
   boostBadges?: BoostBadge[]
+  // The card's one pill (« Badges des annonces », BO › Classement): why it
+  // is placed where it is, only while it really is.
+  promoBadge?: PromoBadge | null
   status?: string
   activeCampaignDiscount?: CampaignDiscount | null
   media: { url: string }[]
@@ -639,6 +722,13 @@ export type RemoteListing = {
 }
 
 export type BoostBadge = { kind: 'FEATURED' | 'TURBO' | 'URGENT'; label: string }
+
+export type PromoBadgeKind = 'FEATURED' | 'TURBO' | 'URGENT' | 'PROMO' | 'BUMP'
+export type PromoBadge = { kind: PromoBadgeKind; label: string; percent?: number | null; at?: string | null }
+
+// A card a paid formula placed in the list (reserved « En vedette » place,
+// place in front after a bump).
+export type PromotedPlace = { listingId: string; slot: 'FEATURED' | 'BUMP' }
 
 export type BundleOffer = { name: string; tiers: { minQty: number; percent: number }[] }
 

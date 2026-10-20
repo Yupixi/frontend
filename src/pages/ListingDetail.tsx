@@ -40,7 +40,10 @@ import InlineConversation from '../components/InlineConversation'
 import QuickNegotiation from '../components/QuickNegotiation'
 import { adsListingSeen, track } from '../lib/analytics'
 import { metaTrack } from '../lib/metaPixel'
-import { ListingCard, discountedPrice } from '../components/ListingCard'
+import { ListingCard, cardPill, discountedPrice } from '../components/ListingCard'
+import PromoPill from '../components/PromoPill'
+import HelpLink from '../components/HelpLink'
+import { ImpressionScope } from '../lib/impressions'
 import { ALSO_VIEWED_LISTINGS_QUERY, BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteSellerProfile } from '../graphql/reviews'
@@ -141,6 +144,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const adultPage = listing ? !!listing.isAdult : gateReason ? true : undefined
   useAdultMode(loading ? undefined : adultPage ?? false)
   const adultSpace = useAdultSpace()
+  const pill = listing ? cardPill(listing, adultSpace) : null
   // Opening an adult listing (so with the access): the section's space.
   useEffect(() => {
     if (!adultPage) return
@@ -478,9 +482,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 {listing.condition && listing.condition !== 'N/A' && (
                   <span className="rounded-full bg-surface-lowest px-2.5 py-1 text-label-sm uppercase text-on-surface">{listing.condition}</span>
                 )}
-                {listing.urgentUntil && new Date(listing.urgentUntil) > new Date() && (
-                  <span className="rounded-full bg-primary px-2.5 py-1 text-label-sm uppercase text-white">Urgent</span>
-                )}
+                {/* The listing's one pill, as on its card (« Badges des annonces »). */}
+                {pill && <PromoPill badge={pill} size="page" />}
               </div>
               {/* Mobile: the favourite sits on the photo (mockup); desktop has it in the meta bar. */}
               <button onClick={toggleFav} className="absolute right-3 top-3 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 shadow-sm backdrop-blur-sm lg:hidden" aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
@@ -519,6 +522,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </div>
             {archiveLabel && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-inverse-surface px-2.5 py-0.5 text-label-md uppercase text-white"><Archive size={13} /> {archiveLabel}</span>}
             <h1 className="m-0 mt-1 text-headline-md text-on-surface">{listing.title}</h1>
+            {pill && <HelpLink article="badges-des-annonces" label="Que signifie ce badge ?" className="mt-1" />}
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="text-headline-lg font-extrabold text-primary"><Price amount={shownPrice} currency={listing.currency} /></span>
               {promoPrice != null
@@ -620,6 +624,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
             </div>
             {archiveLabel && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-inverse-surface px-2.5 py-0.5 text-label-md uppercase text-white"><Archive size={13} /> {archiveLabel}</span>}
             <h1 className="m-0 text-headline-md text-on-surface">{listing.title}</h1>
+            {pill && <HelpLink article="badges-des-annonces" label="Que signifie ce badge ?" className="mt-1" />}
 
             <div className="mt-4 rounded-xl bg-surface-container-low p-4">
               <div className="flex flex-wrap items-baseline gap-3">
@@ -792,11 +797,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           <p className="m-0 mb-4 mt-1 text-body-sm text-on-surface-variant">{listing.subcategory?.name ?? listing.category.name} dans une gamme de prix proche</p>
           {/* An adult listing's similar ones are inside the section. */}
           <AdultSectionContext.Provider value={!!listing.isAdult}>
+          <ImpressionScope placement="SIMILAR">
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4 md:gap-4">
             {similar.map(l => (
               <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
             ))}
           </div>
+          </ImpressionScope>
           </AdultSectionContext.Provider>
         </section>
       )}
@@ -808,11 +815,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
           <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Ceux qui ont vu cette annonce ont aussi regardé</h2>
           <p className="m-0 mb-4 mt-1 text-body-sm text-on-surface-variant">D’après les annonces consultées, aimées et contactées par d’autres membres</p>
           <AdultSectionContext.Provider value={!!listing.isAdult}>
+          <ImpressionScope placement="SIMILAR">
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-4 md:gap-4">
             {alsoViewed.map(l => (
               <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
             ))}
           </div>
+          </ImpressionScope>
           </AdultSectionContext.Provider>
         </section>
       )}

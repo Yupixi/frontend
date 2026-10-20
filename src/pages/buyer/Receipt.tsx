@@ -14,6 +14,7 @@ import { BuyerTabs, TrustFooter } from './BuyerShared'
 import { PAYMENT_LABELS } from '../ListingDetail'
 import { SALES_ORDER_QUERY, type HandoverOrder } from '../../graphql/sellerTools'
 import { SIMILAR_LISTINGS_QUERY, type RemoteListing } from '../../graphql/listings'
+import { ImpressionScope } from '../../lib/impressions'
 import { CREATE_REVIEW_MUTATION, SELLER_PROFILE_QUERY } from '../../graphql/reviews'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
@@ -236,7 +237,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
                   {similar.map(l => (
-                    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} />
+                    <ImpressionScope key={l.id} placement="SIMILAR"><ListingCard listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUser?.id} /></ImpressionScope>
                   ))}
                 </div>
               </section>
