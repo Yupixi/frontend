@@ -7,6 +7,7 @@ export const LISTINGS_QUERY = gql`
       promoted { listingId slot }
       totalCount
       searchCorrection { original corrected applied learned }
+      rankingVariant
       page
       pageSize
       totalPages
@@ -83,8 +84,8 @@ export const LISTINGS_QUERY = gql`
 export type SearchCorrection = { original: string; corrected: string; applied: boolean; learned: boolean }
 
 export const RECOMMENDED_LISTINGS_QUERY = gql`
-  query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!]) {
-    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds) {
+  query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!], $rotationSeed: String) {
+    recommendedListings(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds, rotationSeed: $rotationSeed) {
       id
       title
       description
@@ -154,8 +155,8 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
 // « Pépites à la Une » with its reserved places (impressions « en position
 // boostée »).
 export const RECOMMENDED_RAIL_QUERY = gql`
-  query RecommendedRail($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!]) {
-    recommendedRail(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds) {
+  query RecommendedRail($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!], $rotationSeed: String) {
+    recommendedRail(limit: $limit, countryCode: $countryCode, city: $city, placement: $placement, interestCategories: $interestCategories, excludeIds: $excludeIds, rotationSeed: $rotationSeed) {
       promoted { listingId slot }
       items {
       id

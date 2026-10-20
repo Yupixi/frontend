@@ -146,7 +146,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     ? (currentUser.notificationPreferences as Record<string, unknown> | undefined)?.personalizeHome !== false
     : !!anonInterests
   const { data: recommendedData, error: recommendedError } = useQuery<{ recommendedRail: { items: RemoteListing[], promoted: PromotedPlace[] } }>(RECOMMENDED_RAIL_QUERY, {
-    variables: { limit: isDesktop ? 4 : 12, placement: isDesktop ? 'HOME_DESKTOP' : 'HOME_MOBILE', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests },
+    variables: { limit: isDesktop ? 4 : 12, placement: isDesktop ? 'HOME_DESKTOP' : 'HOME_MOBILE', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests, rotationSeed: rotationSeed() },
     skip: locationPending,
   })
   const isFeatured = (l: RemoteListing) => !!l.boostBadges?.some(b => b.kind !== 'URGENT')
@@ -167,7 +167,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // « Pour vous »: personalised only (no reserved places), without the
   // cards already shown in « Pépites à la Une ».
   const { data: forYouData, error: forYouError } = useQuery<{ recommendedListings: RemoteListing[] }>(RECOMMENDED_LISTINGS_QUERY, {
-    variables: { limit: isDesktop ? 8 : 12, placement: 'FOR_YOU', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests, excludeIds: pepites.map(l => l.id) },
+    variables: { limit: isDesktop ? 8 : 12, placement: 'FOR_YOU', countryCode: location?.countryCode ?? undefined, city: location?.city ?? undefined, interestCategories: anonInterests, excludeIds: pepites.map(l => l.id), rotationSeed: rotationSeed() },
     skip: locationPending || !personalized || !recommendedData,
   })
   const forYouList = forYouData?.recommendedListings ?? keptRails?.forYou
