@@ -35,7 +35,8 @@ import { track } from '../../lib/analytics'
 import { metaTrack } from '../../lib/metaPixel'
 import AccountVerifyPanel from '../../components/AccountVerifyPanel'
 import { isNotVerifiedError } from '../../lib/accountVerify'
-import { adultSellerError } from '../../lib/adult'
+import { adultSellerError, needsSellerVerification } from '../../lib/adult'
+import AdultGate from '../../components/AdultGate'
 
 const TITLE_MAX = 80
 
@@ -196,8 +197,12 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const [prefilled, setPrefilled] = useState(false)
   const initialForm = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // « Section Adultes »: refused for a seller without the verification it asks.
+  // « Section Adultes »: refused for a seller without the verification the
+  // country's rule asks (« Faire vérifier mon identité »), or, with « Tous
+  // les membres », until « J'ai 18 ans ou plus » is ticked: asked right
+  // here, then the same save runs again.
   const [adultBlocked, setAdultBlocked] = useState(false)
+  const [needsAge, setNeedsAge] = useState(false)
   // Publishing refused: the account is confirmed by neither its phone nor
   // its e-mail. « Recevoir un code par SMS » right here, then the same
   // save runs again.
@@ -434,6 +439,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
   const save = async (submit: boolean) => {
     setError(null)
+    setNeedsAge(false)
     lastSubmit.current = submit
     if (submit && missing.length) {
       setError(`Complétez ${missing.map(k => FIELD_LABELS[k]).join(', ')}.`)
@@ -515,7 +521,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     } catch (err) {
       setUploading(false)
       if (isNotVerifiedError(err)) { setNeedsVerify(true); return }
-      setAdultBlocked(!!adultSellerError(err))
+      const refusal = adultSellerError(err)
+      setAdultBlocked(needsSellerVerification(refusal))
+      if (refusal?.reason === 'CONFIRM_AGE') { setNeedsAge(true); return }
       const message = err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.'
       // The category isn't open in the listing's country (changed since, or
       // limited by the team meanwhile): pick another one.
@@ -935,6 +943,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Faire vérifier mon identité</button></>}</p>}
+            {needsAge && <div className="hidden lg:block"><AdultGate compact reason="CONFIRM" countryCode={form.countryCode} onNavigate={onNavigate} confirmTitle="Confirmez votre âge pour publier" confirmText="La section Adultes est ouverte aux membres qui ont 18 ans ou plus. Une seule fois : votre réponse est gardée sur votre compte." confirmLabel={lastSubmit.current ? 'Confirmer et publier' : 'Confirmer et enregistrer'} onConfirmed={() => { setNeedsAge(false); void save(lastSubmit.current) }} /></div>}
             {needsVerify && <div className="hidden lg:block"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat, et la publication reprend toute seule." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
             <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
               {publishes ? (
@@ -1010,6 +1019,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))] lg:hidden" />
         <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5 lg:hidden">
           {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Faire vérifier mon identité</button></>}</p>}
+          {needsAge && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AdultGate compact reason="CONFIRM" countryCode={form.countryCode} onNavigate={onNavigate} confirmTitle="Confirmez votre âge pour publier" confirmText="La section Adultes est ouverte aux membres qui ont 18 ans ou plus. Une seule fois : votre réponse est gardée sur votre compte." confirmLabel={lastSubmit.current ? 'Confirmer et publier' : 'Confirmer et enregistrer'} onConfirmed={() => { setNeedsAge(false); void save(lastSubmit.current) }} /></div>}
           {needsVerify && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
           <div className="flex items-center gap-2">
             {step > 0 ? (
