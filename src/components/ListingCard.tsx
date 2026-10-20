@@ -1,11 +1,14 @@
 import AnimatedIcon from './AnimatedIcon'
-import { entryDiscountPercent } from '../lib/campaignDiscount'
 import { lazy, memo, Suspense, useMemo, useRef, useState } from 'react'
 import { MapPin, Eye, Tag, Car, Wrench, Gauge, Home as HomeIcon, Shirt, Briefcase, PawPrint, type AppIcon } from './icons'
 import Icon from './Icon'
 import Price from './Price'
 import BottomSheet from './BottomSheet'
-import type { BoostBadge, RemoteListing } from '../graphql/listings'
+import type { PromoBadge, RemoteListing } from '../graphql/listings'
+import PromoPill from './PromoPill'
+import { useImpressionRef } from '../lib/impressions'
+import { useAdultSpace } from '../lib/adultMode'
+import { entryDiscountPercent as discountPct } from '../lib/campaignDiscount'
 import { formatRelativeDate, plainText } from '../lib/format'
 import { agoLabel } from '../lib/bumps'
 import { prefetchOnIntent } from '../lib/prefetchListing'
@@ -121,44 +124,20 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   )
 }
 
-function PromoBadge({ listing }: { listing: RemoteListing }) {
-  const discount = listing.activeCampaignDiscount
-  if (!discount) return null
-  const pct = entryDiscountPercent(discount, listing.price)
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"
-      style={{ background: discount.themeColor || 'var(--primary)' }}
-      title={discount.campaignName}
-    >
-      <Tag size={11} />
-      {pct ? `-${pct}%` : discount.campaignName}
-    </span>
-  )
-}
-
-// The badge of the formula the seller bought, worded as the formula
-// promises it (server-side `boostBadges`; older queries without it fall
-// back on the boost dates).
-function boughtBadge(listing: RemoteListing): BoostBadge | null {
-  if (listing.boostBadges) return listing.boostBadges[0] ?? null
-  const now = new Date()
-  const pinned = !!listing.boostExpiresAt && new Date(listing.boostExpiresAt) > now
-  const urgent = !!listing.urgentUntil && new Date(listing.urgentUntil) > now
-  if (pinned && urgent) return { kind: 'TURBO', label: 'Prix Choc' }
-  if (pinned) return { kind: 'FEATURED', label: 'En vedette' }
-  if (urgent) return { kind: 'URGENT', label: 'Vente Urgente' }
+// The card's one pill (API `promoBadge`: « En vedette » > « Prix Choc » >
+// « Vente Urgente » > campaign discount > recent bump, as set in the
+// Backoffice). A query without it falls back on the fields it has. An adult
+// listing outside the section's space shows none: its paid places only
+// exist inside the section.
+export function cardPill(listing: RemoteListing, inAdultSpace: boolean): PromoBadge | null {
+  if (listing.isAdult && !inAdultSpace) return null
+  if (listing.promoBadge !== undefined) return listing.promoBadge
+  const bought = listing.boostBadges?.[0]
+  if (bought) return bought
+  const d = listing.activeCampaignDiscount
+  if (d) return { kind: 'PROMO', label: 'Promo', percent: discountPct(d, listing.price) || null }
+  if (listing.bumpedAt) return { kind: 'BUMP', label: 'Remontée', at: listing.bumpedAt }
   return null
-}
-
-const BADGE_ICON: Record<BoostBadge['kind'], string> = { FEATURED: 'star', TURBO: 'bolt', URGENT: 'timer' }
-
-function BoughtBadge({ badge }: { badge: BoostBadge }) {
-  return (
-    <span className={`flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold uppercase md:rounded-md md:px-2 md:text-label-sm ${badge.kind === 'FEATURED' ? 'bg-tertiary text-white' : 'bg-primary text-white'}`}>
-      <Icon name={BADGE_ICON[badge.kind]} size={12} fill={badge.kind === 'FEATURED'} /> {badge.label}
-    </span>
-  )
 }
 
 type ListingCardProps = {
@@ -204,7 +183,8 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
   const struck = salePrice != null ? listing.price : (listing.originalPrice && listing.price != null && listing.originalPrice > listing.price ? listing.originalPrice : null)
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
   const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
-  const bought = boughtBadge(listing)
+  const pill = cardPill(listing, useAdultSpace())
+  const seenRef = useImpressionRef(listing.id, listing.seller.id, currentUserId)
   const intents = useListingIntents()
   const contact = (e: React.MouseEvent) => { e.stopPropagation(); intents.contactTap(listing.id); onContact() }
   // Phone button of the mockup card. Sellers' numbers aren't public: the
@@ -248,6 +228,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
 
   return (
     <div
+      ref={seenRef}
       className="group flex cursor-pointer flex-col justify-between overflow-hidden rounded-[12px] bg-surface-lowest shadow-sm transition-[transform,box-shadow] duration-300 active:scale-[0.98] hover:shadow-card-hover md:rounded-2xl md:active:scale-100"
       onClick={onSelect}
       {...prefetchOnIntent(listing.id)}
@@ -268,23 +249,19 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
             <div className="flex h-full w-full items-center justify-center text-outline"><Tag size={40} /></div>
           )}
 
-          {/* Top of the photo: the badge the seller paid for (« En vedette »,
-              « Prix Choc », « Vente Urgente ») and the campaign discount,
-              side by side — a promo never hides a bought badge. Bottom:
-              one neutral fact. Everything else (seller badge, stock) is in
-              the card body or on the listing page. */}
-          <div className="absolute left-2 right-10 top-2 flex flex-wrap items-start gap-1 md:left-3 md:right-12 md:top-3">
+          {/* Top of the photo: the one pill (why it is placed here: a paid
+              formula, a campaign, a recent bump). Bottom: one neutral
+              fact. Everything else (seller badge, stock) is in the card
+              body or on the listing page. */}
+          <div className="absolute left-2 right-10 top-2 flex min-w-0 flex-wrap items-start gap-1 md:left-3 md:right-12 md:top-3">
             {listing.isAdult && <AdultBadge />}
-            {bought && <BoughtBadge badge={bought} />}
-            {listing.activeCampaignDiscount && <PromoBadge listing={listing} />}
+            {pill && <PromoPill badge={pill} />}
           </div>
 
           {/* Phone: size, condition or category. Desktop: the condition. */}
           <div className="absolute bottom-2 left-2 right-2 flex md:bottom-3 md:left-3 md:right-3">
             <span className="min-w-0 max-w-full truncate rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-on-surface md:hidden">{phoneTag}</span>
             {condition && <span className="hidden rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface md:inline">{condition}</span>}
-            {/* « Remontée il y a … » while the BO setting shows it (BUMP_HINT_HOURS). */}
-            {listing.bumpedAt && <span title="Annonce remontée en tête par son vendeur" className="ml-auto flex shrink-0 items-center gap-0.5 rounded bg-surface-lowest/90 px-1.5 py-0.5 text-[10px] font-semibold text-tertiary md:text-label-sm"><Icon name="arrow_upward" size={12} /><span className="max-md:hidden">Remontée&nbsp;</span>{agoLabel(listing.bumpedAt)}</span>}
           </div>
 
           <button
@@ -380,11 +357,13 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
   const isRoute = getArchetype(listing) === 'route'
   const accent = ARCHETYPE_ACCENT[getArchetype(listing)]
   const isOwn = !!currentUserId && listing.seller.id === currentUserId
+  const pill = cardPill(listing, useAdultSpace())
+  const seenRef = useImpressionRef(listing.id, listing.seller.id, currentUserId)
 
   return (
     // Phones: big picture on top, text below (YouTube-style feed); from
     // sm up: thumbnail on the left.
-    <div onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm transition-shadow hover:shadow-card-hover sm:flex-row sm:gap-4 sm:p-3">
+    <div ref={seenRef} onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm transition-shadow hover:shadow-card-hover sm:flex-row sm:gap-4 sm:p-3">
       <div className="aspect-video w-full shrink-0 overflow-hidden bg-surface-container sm:aspect-auto sm:h-28 sm:w-28 sm:rounded-xl md:h-32 md:w-40">
         {image.src
           ? <img loading="lazy" decoding="async" src={image.src} alt={`${listing.title} — photo 1`} onError={image.onError} className={`h-full w-full object-cover ${blur ? ADULT_BLUR_CLASS : ''}`} />
@@ -394,10 +373,10 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
       <div className="min-w-0 flex-1 p-3 sm:p-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            {(listing.activeCampaignDiscount || listing.negotiable || listing.isAdult) && (
+            {(pill || listing.negotiable || listing.isAdult) && (
               <div className="mb-1 flex flex-wrap gap-1.5">
                 {listing.isAdult && <AdultBadge />}
-                <PromoBadge listing={listing} />
+                {pill && <PromoPill badge={pill} />}
                 {listing.negotiable && <span className="rounded bg-primary-fixed/60 px-1.5 text-label-sm text-primary">Négociable</span>}
               </div>
             )}

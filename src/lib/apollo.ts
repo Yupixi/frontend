@@ -169,13 +169,18 @@ const splitLink = split(
 // to the list reads every page already seen from the cache, without a
 // request. A listing already shown (new ones shift the pages) isn't
 // repeated.
-type PagedList = { page?: number, items: { __ref?: string }[] }
+type PagedList = { page?: number, items: { __ref?: string }[], promoted?: unknown[] | null }
 const pagedList: FieldPolicy<PagedList> = {
   keyArgs: args => (args ? Object.keys(args).filter(k => k !== 'page').sort() : false),
   merge(existing, incoming, { args, readField }) {
     if (!existing || !args?.page || args.page <= 1) return incoming
     const seen = new Set(existing.items.map(i => readField<string>('id', i as Reference)))
-    return { ...incoming, items: [...existing.items, ...incoming.items.filter(i => !seen.has(readField<string>('id', i as Reference)))] }
+    return {
+      ...incoming,
+      items: [...existing.items, ...incoming.items.filter(i => !seen.has(readField<string>('id', i as Reference)))],
+      // The paid places of every page read (impressions « en position boostée »).
+      ...(incoming.promoted || existing.promoted ? { promoted: [...(existing.promoted ?? []), ...(incoming.promoted ?? [])] } : {}),
+    }
   },
 }
 

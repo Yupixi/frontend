@@ -24,7 +24,8 @@ import ListingQrSheet from '../../components/ListingQrSheet'
 import { MY_LISTING_QR_CODES_QUERY, type MyListingQr } from '../../graphql/memberQr'
 import { useRules } from '../../lib/rules'
 import WalletPaySheet from '../../components/WalletPaySheet'
-import { BOOST_PACKS_QUERY } from '../../graphql/promotions'
+import { BOOST_PACKS_QUERY, MY_BOOSTS_QUERY, type RemoteBoost } from '../../graphql/promotions'
+import { ReportLine } from '../../components/VisibilityReport'
 import { creditsLabel } from '../../components/Credits'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { useNoCommissionClaims } from '../../lib/site'
@@ -79,7 +80,12 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const all = data?.myListings.items ?? []
   const { data: repData } = useQuery<{ myReputation: Reputation }>(MY_REPUTATION_QUERY)
   // Prices from "Tarifs & abonnements" (BO).
-  const flashPrice = useQuery<{ boostPacks: { pack: string; price: number }[] }>(BOOST_PACKS_QUERY, { variables: usePriceVars() }).data?.boostPacks.find(p => p.pack === 'BUMP_FLASH')?.price
+  const flashPack = useQuery<{ boostPacks: { pack: string; price: number; description: string }[] }>(BOOST_PACKS_QUERY, { variables: usePriceVars() }).data?.boostPacks.find(p => p.pack === 'BUMP_FLASH')
+  const flashPrice = flashPack?.price
+  // The bilan of each listing's latest boost (running or last ended).
+  const { data: boostsData } = useQuery<{ myBoosts: RemoteBoost[] }>(MY_BOOSTS_QUERY, { fetchPolicy: 'cache-and-network' })
+  const lastBoost = new Map<string, RemoteBoost>()
+  for (const b of boostsData?.myBoosts ?? []) if (b.listing && b.report && !lastBoost.has(b.listing.id)) lastBoost.set(b.listing.id, b)
   const rep = repData?.myReputation
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const credits = walletData?.myWallet.credits ?? 0
@@ -255,9 +261,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <section className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary-container p-3 text-white lg:mb-5 lg:gap-4 lg:p-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:h-12 lg:w-12"><Rocket size={22} /></span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Vendez plus vite</span><span className="hidden lg:inline">Besoin de vendre plus vite ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Flash 48h</span></div>
+            <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Plus de visibilité</span><span className="hidden lg:inline">Besoin de plus de visibilité ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Bilan de chaque boost</span></div>
             <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant{flashPrice ? ` dès ${creditsLabel(flashPrice)}` : ''}</p>
-            <p className="m-0 hidden text-body-sm text-white/90 lg:block">Les annonces boostées passent en tête des résultats et dans les pépites de l'accueil. {flashPrice ? <>Remontées dès <b className="underline">{creditsLabel(flashPrice)}</b>.</> : null}</p>
+            <p className="m-0 hidden text-body-sm text-white/90 lg:block">En Vedette et Turbo : places réservées dans « Pépites à la Une » et en tête des recherches et catégories. Une remontée remet l’annonce en tête du tri « Plus récents ». Chaque boost a son bilan. {flashPrice ? <>Remontées dès <b className="underline">{creditsLabel(flashPrice)}</b>.</> : null}</p>
           </div>
           <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-white px-3 py-2 text-label-md text-primary lg:px-4 lg:py-2.5"><Rocket size={16} /> <span className="lg:hidden">Booster</span><span className="hidden lg:inline">Booster une annonce</span></button>
         </section>
@@ -334,6 +340,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                       {l.viewsCount.toLocaleString('fr-FR')} vue{l.viewsCount > 1 ? 's' : ''} · {l.favoritesCount} favori{l.favoritesCount > 1 ? 's' : ''}{contacts ? ` · ${contacts} demande${contacts > 1 ? 's' : ''}` : ''} · {formatRelativeDate(date).toLowerCase()}
                     </p>
                     {l.status === 'APPROVED' && <BumpLine s={l} />}
+                    {lastBoost.get(l.id) && <ReportLine report={lastBoost.get(l.id)!.report} className="mt-0.5" />}
                     {l.staffEditedAt && <p className="m-0 truncate text-body-sm text-on-surface-variant" title="Corrigée par l’équipe Dilchap : le détail est dans vos notifications.">Modifiée par l’équipe Dilchap le {new Date(l.staffEditedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
                   </div>
                   <div className="relative shrink-0">
@@ -406,7 +413,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           onConfirm={() => { if (confirm) { spendCredit(confirm.l); setConfirm(null) } }}
           onClose={() => setConfirm(null)}
         >
-          « {confirm?.l.title} » repasse en tête du catalogue. <b className="text-on-surface">{creditsLabel(flashPrice ?? 0)}</b> {(flashPrice ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.
+          « {confirm?.l.title} » : {flashPack?.description ?? 'remontée en tête.'} <b className="text-on-surface">{creditsLabel(flashPrice ?? 0)}</b> {(flashPrice ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.
         </ConfirmSheet>
 
         {rows.length > 0 && (

@@ -8,6 +8,7 @@ import {
 } from '../components/icons'
 import { ListingCard } from '../components/ListingCard'
 import { LISTINGS_QUERY, type RemoteListing, type ListingSort } from '../graphql/listings'
+import { ImpressionScope, promotedOf } from '../lib/impressions'
 import {
   SELLER_ID_BY_HANDLE_QUERY, SELLER_PROFILE_QUERY, SELLER_REVIEWS_QUERY, CREATE_REVIEW_MUTATION, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION,
   formatResponseTime, type RemoteSellerProfile, type RemoteReview,
@@ -309,11 +310,13 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
               <option value="POPULAR">Plus populaires</option>
             </Select>
           </div>
+          <ImpressionScope placement="SELLER" promoted={promotedOf(listingsData?.listings)}>
           <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {filtered.slice(0, shown).map(l => (
               <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(seller.id, l.id), 'contact')} />
             ))}
           </div>
+          </ImpressionScope>
           {filtered.length === 0 && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune pièce ne correspond" />}
           {/* The seller's listings are all here: the next ones show as the visitor scrolls. */}
           <InfiniteLoader key={`${cat}|${q}|${sort}`} list={{ hasMore: filtered.length > shown, loading: false, error: false, loadMore: () => setShown(s => s + PAGE) }} pageSize={PAGE} label="Afficher plus de pièces" />

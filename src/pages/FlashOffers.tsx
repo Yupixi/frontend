@@ -8,6 +8,7 @@ import { CampaignBanner, CampaignCompact } from '../components/campaign/Campaign
 import { POST_CAMPAIGN_KEY } from '../components/CampaignOptIn'
 import { CAMPAIGN_PAGE_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type CampaignPage, type LiveCampaign } from '../graphql/campaigns'
 import { LISTINGS_QUERY, type RemoteListing } from '../graphql/listings'
+import { ImpressionScope, promotedOf } from '../lib/impressions'
 import { placeOptions, useLists } from '../lib/lists'
 import { useMarket, useMarketCode, useMarketVars } from '../lib/countries'
 import { richHtml } from '../lib/richText'
@@ -85,9 +86,12 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
   const top = topData?.listings.items ?? []
   const filtered = !!(query || category || city || minDiscount)
 
+  const promoted = [...(promotedOf(offersData?.listings) ?? []), ...(promotedOf(topData?.listings) ?? [])]
   const card = (l: RemoteListing) => (
-    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)}
-      onContact={() => (isLoggedIn && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id))} />
+    <ImpressionScope key={l.id} placement="CAMPAIGN" promoted={promoted}>
+      <ListingCard listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)}
+        onContact={() => (isLoggedIn && onContactSeller ? onContactSeller(l.seller.id, l.id) : onSelectListing(l.id))} />
+    </ImpressionScope>
   )
 
   if ((liveLoading && !liveData) || (loading && !data)) {

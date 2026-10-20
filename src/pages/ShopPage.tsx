@@ -6,6 +6,7 @@ import Select from '../components/Select'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { ListingCard } from '../components/ListingCard'
 import { LISTINGS_QUERY, type ListingSort, type RemoteListing } from '../graphql/listings'
+import { ImpressionScope, promotedOf } from '../lib/impressions'
 import { FOLLOW_SELLER_MUTATION, SELLER_REVIEWS_QUERY, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteReview } from '../graphql/reviews'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import { DAYS, SHOP_POSTS_QUERY, SHOP_QUERY, TRACK_SHOP_POST_VIEWS_MUTATION, TRACK_SHOP_VISIT_MUTATION, openNow, shopUrl, type Shop, type ShopPost } from '../graphql/shops'
@@ -224,7 +225,9 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
       .catch(() => undefined)
   }
   const card = (l: RemoteListing) => (
-    <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(shop.owner.id, l.id), 'contact')} />
+    <ImpressionScope key={l.id} placement="SHOP" promoted={promotedOf(all?.listings)}>
+      <ListingCard listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite?.(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={requireAuth(() => onContactSeller(shop.owner.id, l.id), 'contact')} />
+    </ImpressionScope>
   )
   const aisleChips = shop.aisles.filter(a => a.listingsCount > 0)
   const stats = [

@@ -56,6 +56,7 @@ export const ACTIVE_CAMPAIGN_QUERY = gql`
           attributes
           countryCode
           boostExpiresAt
+          promoBadge { kind label percent at }
           urgentUntil
         }
       }

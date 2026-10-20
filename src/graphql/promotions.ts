@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import { REPORT_FIELDS, type VisibilityReport } from './visibility'
 
 export type BoostPack = 'BUMP_FLASH' | 'BUMP_PACK_3' | 'BUMP_DAILY_7' | 'FEATURED_48H' | 'FEATURED_7D' | 'TURBO_7D' | 'URGENT_72H'
 
@@ -50,6 +51,7 @@ export const MY_BOOSTS_QUERY = gql`
       contactsGained
       impressions
       upcoming
+      ${REPORT_FIELDS}
       listing { id title coverImageUrl isAdult media { url } }
     }
   }
@@ -70,5 +72,7 @@ export type RemoteBoost = {
   impressions?: number | null
   // Not started yet (awaiting moderation, or chained after the current one).
   upcoming?: boolean | null
+  // Bilan (affichages, vues, contacts during the period vs before).
+  report?: VisibilityReport | null
   listing: { id: string; title: string; coverImageUrl: string | null; media: { url: string }[] } | null
 }
