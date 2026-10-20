@@ -72,11 +72,11 @@ export default function BoostPreview({ listing, packs, className = '' }: { listi
       <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start">
         <div className="flex gap-3">
           <div>
-            <div className="mb-1 text-label-sm text-on-surface-variant">Sans formule</div>
+            <div className="mb-1 w-[150px] truncate text-label-sm text-on-surface-variant">Sans formule</div>
             <MiniCard listing={listing} pill={null} dim />
           </div>
           <div>
-            <div className="mb-1 text-label-sm text-primary">Avec « {info?.label ?? '…'} »</div>
+            <div className="mb-1 w-[150px] truncate text-label-sm text-primary" title={info?.label}>Avec « {info?.label ?? '…'} »</div>
             <MiniCard listing={listing} pill={pill} />
           </div>
         </div>

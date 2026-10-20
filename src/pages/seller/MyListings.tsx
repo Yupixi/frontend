@@ -261,7 +261,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <section className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary-container p-3 text-white lg:mb-5 lg:gap-4 lg:p-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:h-12 lg:w-12"><Rocket size={22} /></span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Vendez plus vite</span><span className="hidden lg:inline">Besoin de vendre plus vite ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Flash 48h</span></div>
+            <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Plus de visibilité</span><span className="hidden lg:inline">Besoin de plus de visibilité ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Bilan de chaque boost</span></div>
             <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant{flashPrice ? ` dès ${creditsLabel(flashPrice)}` : ''}</p>
             <p className="m-0 hidden text-body-sm text-white/90 lg:block">En Vedette et Turbo : places réservées dans « Pépites à la Une » et en tête des recherches et catégories. Une remontée remet l’annonce en tête du tri « Plus récents ». Chaque boost a son bilan. {flashPrice ? <>Remontées dès <b className="underline">{creditsLabel(flashPrice)}</b>.</> : null}</p>
           </div>
