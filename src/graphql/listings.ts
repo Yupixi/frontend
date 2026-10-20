@@ -2,9 +2,10 @@ import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 
 export const LISTINGS_QUERY = gql`
-  query Listings($filter: ListingFilterInput, $sort: ListingSort, $page: Float, $pageSize: Float, $rotationSeed: String, $interestCategories: [String!]) {
-    listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize, rotationSeed: $rotationSeed, interestCategories: $interestCategories) {
+  query Listings($filter: ListingFilterInput, $sort: ListingSort, $page: Float, $pageSize: Float, $rotationSeed: String, $interestCategories: [String!], $searchAsTyped: Boolean) {
+    listings(filter: $filter, sort: $sort, page: $page, pageSize: $pageSize, rotationSeed: $rotationSeed, interestCategories: $interestCategories, searchAsTyped: $searchAsTyped) {
       totalCount
+      searchCorrection { original corrected applied learned }
       page
       pageSize
       totalPages
@@ -74,6 +75,10 @@ export const LISTINGS_QUERY = gql`
     }
   }
 `
+
+// « Vouliez-vous dire … ? » of a search (Backend listings/search-correction).
+// `applied`: the results are the correction's (the typed words found nothing).
+export type SearchCorrection = { original: string; corrected: string; applied: boolean; learned: boolean }
 
 export const RECOMMENDED_LISTINGS_QUERY = gql`
   query RecommendedListings($limit: Float, $countryCode: String, $city: String, $placement: FeedPlacement, $interestCategories: [String!], $excludeIds: [String!]) {
@@ -146,6 +151,74 @@ export const RECOMMENDED_LISTINGS_QUERY = gql`
 export const SIMILAR_LISTINGS_QUERY = gql`
   query SimilarListings($listingId: String!, $limit: Float, $countryCode: String) {
     similarListings(listingId: $listingId, limit: $limit, countryCode: $countryCode) {
+      id
+      title
+      description
+      price
+      currency
+      countryCode
+      city
+      locationLabel
+      condition
+      brand
+      modelName
+      size
+      originalPrice
+      meetupSpot
+      paymentMethods
+      minOfferPrice
+      urgentUntil
+      negotiable
+      quantity
+      aisleId
+      featuredAt
+      bundleOffer { name tiers { minQty percent } }
+      deliveryAvailable
+      tags
+      attributes
+      viewsCount
+      favoritesCount
+      publishedAt
+      bumpedAt
+      createdAt
+      coverImageUrl isAdult
+      activeCampaignDiscount {
+        campaignId
+        campaignName
+        campaignSlug
+        themeColor
+        discountPercent
+        salePrice
+      }
+      media {
+        url
+      }
+      category {
+        slug
+        name
+      }
+      subcategory {
+        slug
+        name
+      }
+      seller {
+        id
+        fullName
+        avatarUrl
+        badge
+        averageRating
+        reviewsCount
+        shop { id slug name logoUrl }
+      }
+    }
+  }
+`
+
+// « Ceux qui ont vu ceci ont aussi vu » (empty until enough members looked
+// at both listings: the rail is then hidden).
+export const ALSO_VIEWED_LISTINGS_QUERY = gql`
+  query AlsoViewedListings($listingId: String!, $limit: Int, $countryCode: String) {
+    alsoViewedListings(listingId: $listingId, limit: $limit, countryCode: $countryCode) {
       id
       title
       description

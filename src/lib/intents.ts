@@ -1,6 +1,7 @@
 import { useApolloClient } from '@apollo/client/react'
 import { TRACK_LISTING_INTENT_MUTATION } from '../graphql/deals'
 import { TRACK_LISTING_CLICK_MUTATION } from '../graphql/sellerTools'
+import { noteSearchContact } from './searchAttribution'
 
 // Purchase intents a tap alone reveals (« Appeler », « Partager ») and the
 // contact taps of a listing (« Contacter », « Discuter », « Faire une
@@ -14,8 +15,8 @@ export function useListingIntents() {
     void client.mutate({ mutation, variables }).catch(() => undefined)
   }
   return {
-    call: (listingId: string) => send(TRACK_LISTING_INTENT_MUTATION, { listingId, type: 'CALL' }),
+    call: (listingId: string) => { noteSearchContact(listingId); send(TRACK_LISTING_INTENT_MUTATION, { listingId, type: 'CALL' }) },
     share: (listingId: string) => send(TRACK_LISTING_INTENT_MUTATION, { listingId, type: 'SHARE' }),
-    contactTap: (listingId: string) => send(TRACK_LISTING_CLICK_MUTATION, { listingId }),
+    contactTap: (listingId: string) => { noteSearchContact(listingId); send(TRACK_LISTING_CLICK_MUTATION, { listingId }) },
   }
 }

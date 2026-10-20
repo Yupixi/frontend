@@ -10,7 +10,7 @@ import { ListingCard, ListingListCard } from '../components/ListingCard'
 import { CATEGORIES_QUERY, CATEGORY_LANDING_QUERY, type CategoryLanding, type RemoteCategory } from '../graphql/categories'
 import {
   LISTINGS_QUERY, LISTING_FACETS_QUERY, CREATE_SAVED_SEARCH_MUTATION,
-  type RemoteListing, type ListingSort, type ListingFacets, type ListingFilterInput, type FacetCount,
+  type RemoteListing, type ListingSort, type ListingFacets, type ListingFilterInput, type FacetCount, type SearchCorrection,
 } from '../graphql/listings'
 import { getStoredViewMode, setStoredViewMode } from '../lib/viewMode'
 import Select from '../components/Select'
@@ -32,6 +32,7 @@ import AdultGate from '../components/AdultGate'
 import { enterAdultSpace, spaceCategories, useAdultMode, useAdultSpace } from '../lib/adultMode'
 import { AdultSearchNotice } from '../components/AdultSearchNotice'
 import { matchesAll, recordFinalSearch, searchTokens } from '../lib/searchText'
+import { noteSearchOpen } from '../lib/searchAttribution'
 
 const PAGE_SIZE = 18
 
@@ -293,10 +294,13 @@ export default function SearchPage({
 
   // Results grow as the visitor scrolls (InfiniteLoader): each next page is
   // appended to the cached list — a new filter or sort starts it over.
-  const { data, previousData, loading, error: listingsError, refetch, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number } }>(LISTINGS_QUERY, {
+  // « Rechercher plutôt … »: the words as typed, without the automatic
+  // correction of a search that finds nothing (until the words change).
+  const [asTyped, setAsTyped] = useState('')
+  const { data, previousData, loading, error: listingsError, refetch, fetchMore } = useQuery<{ listings: { items: RemoteListing[]; totalCount: number; page: number; totalPages: number; searchCorrection: SearchCorrection | null } }>(LISTINGS_QUERY, {
     // rotationSeed: listings « en vedette » keep one order across the pages
     // of this visit.
-    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories() },
+    variables: { filter, sort, page: 1, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories(), searchAsTyped: !!search && asTyped === search },
     skip: rubricPending || gated || (rubricAdult && !access),
   })
   // The server refused the section's listings: the gate, with its reason.
@@ -319,6 +323,14 @@ export default function SearchPage({
   const routing = search.trim().length >= 2 ? routingData?.searchRouting ?? null : null
   const result = (data ?? previousData)?.listings
   const items = result?.items ?? []
+  const correction = data?.listings.searchCorrection ?? null
+  // The words the results answer (the correction's when it was applied):
+  // a result opened, then a contact, count as this search's success.
+  const effectiveSearch = correction?.applied ? correction.corrected : search
+  const openResult = (id: string) => {
+    if (effectiveSearch.trim()) noteSearchOpen(id, effectiveSearch, countryCode)
+    onSelectListing(id)
+  }
   const total = result?.totalCount ?? 0
   const listKey = JSON.stringify([filter, sort])
   const nextPage = useLoadMore({ fetchMore, page: data?.listings.page, totalPages: data?.listings.totalPages, key: listKey })
@@ -637,6 +649,23 @@ export default function SearchPage({
           )}
 
           {routing && <AdultSearchNotice routing={routing} onOpenSection={slug => onCategorySelect?.(slug)} className="mb-4" />}
+          {correction && !showGate && (
+            <p role="status" className="m-0 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-surface-container-low px-3.5 py-2.5 text-body-md text-on-surface">
+              <Icon name="spellcheck" size={18} className="text-primary" />
+              {correction.applied ? (
+                <>
+                  <span>Résultats pour <b>« {correction.corrected} »</b>.</span>
+                  <button type="button" onClick={() => setAsTyped(search)} className="cursor-pointer border-none bg-transparent p-0 text-body-md text-primary underline">Rechercher plutôt « {correction.original} »</button>
+                </>
+              ) : (
+                <>
+                  <span>Vouliez-vous dire</span>
+                  <button type="button" onClick={() => onSearchTermChange?.(correction.corrected)} className="cursor-pointer border-none bg-transparent p-0 text-body-md font-bold text-primary underline">« {correction.corrected} »</button>
+                  <span>?</span>
+                </>
+              )}
+            </p>
+          )}
 
           {showGate ? (
             <div className="py-6"><AdultGate reason={gateReason} onNavigate={onNavigate} onConfirmed={() => { void refetch() }} /></div>
@@ -648,13 +677,13 @@ export default function SearchPage({
             {!result && loading ? <GridSkeleton count={6} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4" /> : viewMode === 'grid' ? (
               <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4">
                 {items.map((l, i) => (
-                  <ListingCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={contact(l)} priority={i < 2} />
+                  <ListingCard key={l.id} listing={l} onSelect={() => openResult(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} onContact={contact(l)} priority={i < 2} />
                 ))}
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {items.map(l => (
-                  <ListingListCard key={l.id} listing={l} onSelect={() => onSelectListing(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} />
+                  <ListingListCard key={l.id} listing={l} onSelect={() => openResult(l.id)} onToggleFav={() => onToggleFavorite(l.id)} isFav={favorites.includes(l.id)} currentUserId={currentUserId} />
                 ))}
               </div>
             )}
