@@ -46,7 +46,7 @@ import { useSite } from '../lib/site'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
 import ManageCookies from './ManageCookies'
-import { rememberAdultSlugs, spaceCategories, useAdultModeOn, useAdultSpace } from '../lib/adultMode'
+import { spaceCategories, useAdultModeOn, useAdultSpace } from '../lib/adultMode'
 import AdultModeBar from './AdultModeBar'
 
 type Page =
@@ -55,7 +55,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-qr' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops' | 'help' | 'reels' | 'seller-reels'
+  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home' | 'reels' | 'seller-reels'
 
 
 type LayoutProps = {
@@ -75,6 +75,10 @@ type LayoutProps = {
   onClearCategoryFilter?: () => void
   location?: StoredLocation | null
   onLocationChange?: (location: StoredLocation) => void
+  // « Section Adultes »: its home page (« Adultes 18+ »), or its search
+  // for some words; and « Quitter ».
+  onOpenSection?: (term?: string) => void
+  onLeaveSection?: () => void
 }
 
 export default function Layout({
@@ -94,6 +98,8 @@ export default function Layout({
   onClearCategoryFilter,
   location,
   onLocationChange,
+  onOpenSection,
+  onLeaveSection,
 }: LayoutProps) {
   const displayName = currentUser?.fullName || 'Mon compte'
   const displayInitial = displayName.charAt(0).toUpperCase()
@@ -110,23 +116,17 @@ export default function Layout({
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: useMarketVars() })
   const adultMode = useAdultModeOn()
-  // In its space, the section's own subcategories only (lib/adultMode).
+  // In its space (/adultes…), the section's own rayons only (lib/adultMode).
   const adultSpace = useAdultSpace()
   // « Reels » of the market (Règles › Reels): a tab of their own.
   const reels = useReelSettings().enabled && !adultSpace
-  const sectionCategories = spaceCategories(categoriesData?.categories ?? [], true)
+  const sectionCategories = spaceCategories(categoriesData?.categories ?? [])
   const navCategories = adultSpace
     ? sectionCategories.flatMap(c => c.subcategories.map(s => ({ slug: s.slug, name: s.name })))
     : (categoriesData?.categories ?? []).filter(c => !c.adult).slice(0, 8)
   // Its own entry at the end of the menu wherever the section is open (the
   // server lists it only then): everyone sees it, the gate does the rest.
   const adultSection = categoriesData?.categories.find(c => c.adult)
-  // The section's slugs (its theme on a direct visit, its space).
-  useEffect(() => {
-    if (!categoriesData) return
-    const section = categoriesData.categories.find(c => c.adult)
-    rememberAdultSlugs(sectionCategories.flatMap(c => [...(c.adult ? [c.slug] : []), ...c.subcategories.map(s => s.slug)]), section?.slug)
-  }, [categoriesData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // BO-authored footer copy — falls back to the default copy below when
   // unconfigured, same convention as the Banner slots. The market's version
@@ -264,7 +264,7 @@ export default function Layout({
           the campaign's own color. No BO authoring beyond the campaign
           itself; see the Home campaign rail for the matching product grid. */}
       {/* « Section Adultes »: its strip instead (no campaign in there). */}
-      <AdultModeBar onLeave={() => onNavigate('home')} />
+      <AdultModeBar onLeave={() => (onLeaveSection ? onLeaveSection() : onNavigate('home'))} />
       {activeCampaign && !adultMode && (
         <button
           onClick={() => requestOpenCampaign(activeCampaign.slug)}
@@ -319,7 +319,7 @@ export default function Layout({
 
         {/* Main row */}
         <div className="flex h-16 items-center gap-3 px-4 lg:h-20 lg:gap-6 lg:px-12">
-          <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label="Accueil Dilchap">
+          <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label={adultSpace ? 'Accueil de la Section Adultes' : 'Accueil Dilchap'}>
             <Logo size={isMobile ? 'sm' : 'md'} />
           </button>
 
@@ -591,10 +591,11 @@ export default function Layout({
             them from the home rail and the search page). */}
         <nav data-tour="categories" className="hidden h-11 items-center gap-8 overflow-x-auto whitespace-nowrap px-4 [scrollbar-width:none] lg:flex lg:px-12">
           {(adultSpace ? [
-            { key: 'home', label: 'Toute la section', active: currentPage === 'search' && !navCategories.some(c => c.slug === activeCategory), onClick: () => onNavigate('home') },
+            { key: 'home', label: 'Accueil de la section', active: currentPage === 'adult-home', onClick: () => onNavigate('home') },
             ...navCategories.map(c => ({
               key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
             })),
+            { key: 'all', label: 'Toute la section', active: currentPage === 'search' && !navCategories.some(c => c.slug === activeCategory), onClick: () => { onClearCategoryFilter?.(); onNavigate('search') } },
           ] : [
             { key: 'home', label: 'Nouveautés', active: currentPage === 'home', onClick: () => onNavigate('home') },
             ...navCategories.map(c => ({
@@ -602,7 +603,7 @@ export default function Layout({
             })),
             { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => requestOpenCampaign('') },
             { key: 'shops', label: 'Boutiques officielles', icon: 'verified' as const, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
-            ...(adultSection ? [{ key: 'adult', label: 'Adultes 18+', icon: 'lock' as const, active: false, onClick: () => onNavigateCategory(adultSection.slug) }] : []),
+            ...(adultSection ? [{ key: 'adult', label: 'Adultes 18+', icon: 'lock' as const, active: false, onClick: () => (onOpenSection ? onOpenSection() : onNavigateCategory(adultSection.slug)) }] : []),
           ]).map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: 'verified' | 'lock' }) => (
             <button
               key={item.key}
@@ -765,6 +766,7 @@ export default function Layout({
           onSearch={handleSearchSubmit}
           onSelectListing={onSelectListing ?? (() => onNavigate('search'))}
           onSelectCategory={onNavigateCategory}
+          onOpenSection={onOpenSection}
           onClose={() => setSearchOverlayOpen(false)}
           onNavigate={onNavigate}
         />
@@ -792,7 +794,7 @@ export default function Layout({
             { label: 'Compte', anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page, tour: 'account' },
           ].map(item => {
             // In the section's space « Accueil » is its page.
-            const isActive = adultSpace && (item.page === 'home' || item.page === 'search') ? item.page === 'home' && currentPage === 'search' : currentPage === item.page
+            const isActive = adultSpace && item.page === 'home' ? currentPage === 'adult-home' : currentPage === item.page
 
             if (item.primary) {
               return (

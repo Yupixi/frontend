@@ -12,8 +12,8 @@ import { searchKey } from './searchText'
 // - the ranking group of a « Pertinence » page (SMART / LEGACY) measures
 //   the algorithm (Backoffice « Classement › Algorithme », A/B).
 const RECORD_SEARCH_OUTCOME = gql`
-  mutation RecordSearchOutcome($term: String!, $outcome: String!, $countryCode: String) {
-    recordSearchOutcome(term: $term, outcome: $outcome, countryCode: $countryCode)
+  mutation RecordSearchOutcome($term: String!, $outcome: String!, $countryCode: String, $space: ListingSpace) {
+    recordSearchOutcome(term: $term, outcome: $outcome, countryCode: $countryCode, space: $space)
   }
 `
 const RECORD_RANKING_OUTCOME = gql`
@@ -24,7 +24,7 @@ const RECORD_RANKING_OUTCOME = gql`
 const OPENED_KEY = 'dilchap_search_opened'
 const DONE_KEY = 'dilchap_search_outcomes'
 
-type Opened = Record<string, { term: string; cc: string | null; variant?: string | null; placement?: string | null }>
+type Opened = Record<string, { term: string; cc: string | null; variant?: string | null; placement?: string | null; adult?: boolean }>
 type Outcome = 'CLICK' | 'CONTACT'
 
 const read = <T,>(key: string, empty: T): T => {
@@ -41,10 +41,10 @@ const once = (tag: string) => {
   return true
 }
 
-function sendSearch(term: string, cc: string | null, outcome: Outcome) {
+function sendSearch(term: string, cc: string | null, outcome: Outcome, adult = false) {
   const key = searchKey(term)
-  if (key.length < 2 || key.length > 60 || !once(`${outcome}|${cc ?? ''}|${key}`)) return
-  void apolloClient.mutate({ mutation: RECORD_SEARCH_OUTCOME, variables: { term: term.trim(), outcome, countryCode: cc } }).catch(() => undefined)
+  if (key.length < 2 || key.length > 60 || !once(`${outcome}|${adult ? 'A' : ''}${cc ?? ''}|${key}`)) return
+  void apolloClient.mutate({ mutation: RECORD_SEARCH_OUTCOME, variables: { term: term.trim(), outcome, countryCode: cc, space: adult ? 'ADULT' : null } }).catch(() => undefined)
 }
 
 function sendRanking(listingId: string, o: Opened[string], outcome: Outcome) {
@@ -54,14 +54,15 @@ function sendRanking(listingId: string, o: Opened[string], outcome: Outcome) {
 
 // A result opened: of the search `term` (may be empty: a category page),
 // from a « Pertinence » page served with `variant`.
-export function noteResultOpen(listingId: string, o: { term: string; countryCode: string | null | undefined; variant?: string | null; placement?: 'SEARCH' | 'CATEGORY' }) {
-  const entry = { term: o.term.trim(), cc: o.countryCode ?? null, variant: o.variant ?? null, placement: o.placement ?? null }
+// `adult`: a search of the « Section Adultes » (its own statistics).
+export function noteResultOpen(listingId: string, o: { term: string; countryCode: string | null | undefined; variant?: string | null; placement?: 'SEARCH' | 'CATEGORY'; adult?: boolean }) {
+  const entry = { term: o.term.trim(), cc: o.countryCode ?? null, variant: o.variant ?? null, placement: o.placement ?? null, adult: !!o.adult }
   if (!entry.term && !entry.variant) return
   const opened = read<Opened>(OPENED_KEY, {})
   opened[listingId] = entry
   // The 50 latest only.
   write(OPENED_KEY, Object.fromEntries(Object.entries(opened).slice(-50)))
-  if (entry.term) sendSearch(entry.term, entry.cc, 'CLICK')
+  if (entry.term) sendSearch(entry.term, entry.cc, 'CLICK', entry.adult)
   sendRanking(listingId, entry, 'CLICK')
 }
 
@@ -70,6 +71,6 @@ export function noteResultOpen(listingId: string, o: { term: string; countryCode
 export function noteSearchContact(listingId: string) {
   const o = read<Opened>(OPENED_KEY, {})[listingId]
   if (!o) return
-  if (o.term) sendSearch(o.term, o.cc, 'CONTACT')
+  if (o.term) sendSearch(o.term, o.cc, 'CONTACT', !!o.adult)
   sendRanking(listingId, o, 'CONTACT')
 }

@@ -71,7 +71,8 @@ import ListingQrSheet from '../components/ListingQrSheet'
 import { useRules } from '../lib/rules'
 import { AdultSectionContext, adultGateReason } from '../lib/adult'
 import AdultGate from '../components/AdultGate'
-import { enterAdultSpace, rememberAdultListing, useAdultMode, useAdultSpace } from '../lib/adultMode'
+import { useAdultSpace } from '../lib/adultMode'
+import type { Space } from '../lib/routes'
 import { metaListingSeen } from '../lib/metaPixel'
 import { useListingIntents } from '../lib/intents'
 import { entryDiscountPercent } from '../lib/campaignDiscount'
@@ -89,6 +90,10 @@ const LISTING_SELLER_ID_FRAGMENT = gql`
 
 type ListingDetailProps = {
   listingId: string
+  // « Section Adultes »: the listing's marketplace, once known (the
+  // address moves to /adultes/annonce/… for an adult one, back for any
+  // other).
+  onSpaceKnown?: (space: Space) => void
   onNavigate: (page: any) => void
   onSelectListing: (id: string) => void
   onSelectSeller: (id: string) => void
@@ -119,7 +124,7 @@ function Avatar({ url, name, size = 48 }: { url?: string | null, name: string, s
   )
 }
 
-export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser, onContactSeller }: ListingDetailProps) {
+export default function ListingDetail({ listingId, onNavigate, onSelectListing, onSelectSeller, onAuthenticated, favorites, onToggleFavorite, currentUser, onContactSeller, onSpaceKnown }: ListingDetailProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const [brokenImgs, setBrokenImgs] = useState<number[]>([])
   // Photos whose responsive sizes failed to load (stored before the medium
@@ -144,25 +149,23 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // « Section Adultes »: the server answers with the gate (never the
   // listing) to anyone without the access.
   const gateReason = adultGateReason(error)
-  // Its dark theme (lib/adultMode): an adult listing or its gate; while it
-  // loads, the address's guess.
+  // Its marketplace (lib/adultMode): an adult listing (or its gate) is the
+  // section's page, any other the general marketplace's — the address and
+  // the theme follow.
   const adultPage = listing ? !!listing.isAdult : gateReason ? true : undefined
-  useAdultMode(loading ? undefined : adultPage ?? false)
+  useEffect(() => {
+    if (adultPage !== undefined) onSpaceKnown?.(adultPage ? 'adult' : 'general')
+  }, [adultPage]) // eslint-disable-line react-hooks/exhaustive-deps
   const adultSpace = useAdultSpace()
   const pill = listing ? cardPill(listing, adultSpace) : null
-  // Opening an adult listing (so with the access): the section's space.
-  useEffect(() => {
-    if (!adultPage) return
-    rememberAdultListing(listingId)
-    if (listing?.isAdult) enterAdultSpace()
-  }, [adultPage, listingId, listing?.isAdult])
   // Report reasons of the listing's country (the market until it loads).
   const reportReasons = useLists(listing?.countryCode || undefined).reportReasons.listing
   const qrEnabled = useRules(listing?.countryCode || undefined).QR_LISTING_ENABLED !== 0
   const reportReason = reportReasons.includes(pickedReason) ? pickedReason : reportReasons[0]
   // Same tab title as search engines get for a sold or expired listing.
   const archiveLabel = listing?.status === 'SOLD' ? 'Vendu' : listing?.status === 'EXPIRED' ? 'Annonce expirée' : null
-  usePageTitle(gateReason ? 'Contenu réservé aux adultes' : listing ? (archiveLabel ? `${archiveLabel} — ${listing.title}` : listing.title) : null)
+  // The section's listings: one discreet title (a shared screen, the tabs).
+  usePageTitle(gateReason || listing?.isAdult ? 'Section Adultes' : listing ? (archiveLabel ? `${archiveLabel} — ${listing.title}` : listing.title) : null)
   // Meta Pixel: this page's PageView waits to know it is not an adult
   // listing (lib/metaPixel); Google's ad signals too (lib/analytics).
   useEffect(() => {
@@ -175,9 +178,10 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   // /annonce/<id> (or old words) → /annonce/<words of the title>-<id>.
   useEffect(() => {
     if (!listing) return
-    const want = listingPath(listing.id, listing.title)
+    const base = listing.isAdult ? '/adultes' : ''
+    const want = `${base}${listingPath(listing.id, listing.title)}`
     const here = window.location.pathname
-    if (here.startsWith('/annonce/') && here !== want && samePlace(here, want))
+    if (here.startsWith(`${base}/annonce/`) && here !== want && samePlace(here, want))
       window.history.replaceState(window.history.state, '', want)
   }, [listing?.id, listing?.title])
   // « Mesure d'audience »: the listing id, its category and country only.
@@ -227,7 +231,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     return (
       <div className="mx-auto max-w-[720px] px-4 py-10">
         <AdultGate reason={gateReason} onNavigate={onNavigate} onConfirmed={() => { void refetch() }} />
-        <p className="m-0 mt-6 text-center"><button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent text-label-md text-primary">Retour à l’accueil</button></p>
+        <p className="m-0 mt-6 text-center"><button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent text-label-md text-primary">{adultSpace ? 'Accueil de la section' : 'Retour à l’accueil'}</button></p>
       </div>
     )
   if (!listing) {

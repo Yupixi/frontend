@@ -27,8 +27,10 @@ import {
 import SellerBadge from '../components/SellerBadge'
 import { ADULT_BLUR_CLASS, useAdultBlur } from '../lib/adult'
 
-// « Section Adultes »: the card's tag (search results of a confirmed member).
+// « Section Adultes »: the card's tag outside its space (favorites,
+// history…); inside it, every card is the section's.
 function AdultBadge() {
+  if (useAdultSpace()) return null
   return <span className="inline-flex items-center gap-1 rounded-md bg-inverse-surface px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"><Icon name="lock" size={11} /> Section Adultes</span>
 }
 

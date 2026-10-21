@@ -61,6 +61,8 @@ export function cleanForClarity(page: string, href: string): boolean {
   if (EXCLUDED_PAGES.has(page)) return false
   try {
     const u = new URL(href)
+    // « Section Adultes »: never recorded.
+    if (/^\/adultes(\/|$)/.test(u.pathname)) return false
     if (u.hash && u.hash !== '#') return false
     for (const [k, v] of u.searchParams) {
       if (!ALLOWED_PARAMS.has(k)) return false

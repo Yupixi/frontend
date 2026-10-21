@@ -37,6 +37,7 @@ import AccountVerifyPanel from '../../components/AccountVerifyPanel'
 import { isNotVerifiedError } from '../../lib/accountVerify'
 import { adultSellerError, needsSellerVerification } from '../../lib/adult'
 import AdultGate from '../../components/AdultGate'
+import { spaceCategories, useAdultMode } from '../../lib/adultMode'
 
 const TITLE_MAX = 80
 
@@ -149,7 +150,10 @@ const QUICK_PICKS = 6
 
 // "Déposer une annonce" mockup: one guided form (photos → infos → prix →
 // modalités d'échange) with a sticky earnings/preview column.
-export default function PostListing({ onNavigate, currentUser, onLogout, listingId }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string }) {
+// `inSection`: « Déposer une annonce » from the « Section Adultes »: the
+// listing goes in the section (its categories only, the first one chosen),
+// in the section's theme.
+export default function PostListing({ onNavigate, currentUser, onLogout, listingId, inSection = false }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string, inSection?: boolean }) {
   // Listing country: the seller's by default, any active one allowed.
   const home = useHomeCountry()
   const countries = useCountries()
@@ -222,10 +226,20 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   // Categories open in the listing's country (the BO can limit a category
   // to some countries); the previous list stays while another one loads.
   const { data: categoriesData, previousData: previousCategories } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: countryVars(form.countryCode) })
-  const categories = (categoriesData ?? previousCategories)?.categories ?? []
+  const allCategories = (categoriesData ?? previousCategories)?.categories ?? []
+  const section = inSection && !isEditing
+  useAdultMode(section || undefined)
+  const categories = section ? spaceCategories(allCategories) : allCategories
   const offers = usePriceOffers()
   const category = categories.find(c => c.id === form.categoryId)
   const subcategory = category?.subcategories.find(s => s.id === form.subcategoryId)
+  // From the section: its category chosen at once (the seller picks the
+  // rayon), whatever the draft held.
+  useEffect(() => {
+    if (!section || !categories.length || categories.some(c => c.id === form.categoryId)) return
+    const first = categories[0]
+    setForm(f => ({ ...f, categoryId: first.id, subcategoryId: first.adult ? '' : first.subcategories[0]?.id ?? '', attributes: {} }))
+  }, [section, categories, form.categoryId])
   const requiresPrice = category?.requiresPrice ?? true
   // Another country without the chosen category: the choice is dropped.
   useEffect(() => {
@@ -707,6 +721,12 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   <FieldError show={bad('title')}>Indiquez un titre.</FieldError>
                 </Field>
 
+                {section && (
+                  <p data-testid="post-in-section" className="m-0 flex items-start gap-2 rounded-xl bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">
+                    <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-4 text-white">18+</span>
+                    <span>Annonce de la <b className="text-on-surface">Section Adultes</b> : publiée dans la section seulement, après modération.</span>
+                  </p>
+                )}
                 <div data-field="category">
                 <Field label="Catégorie" required>
                   {/* Mobile: category cards, as in the mockup; desktop keeps the select. */}

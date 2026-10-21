@@ -761,6 +761,8 @@ export type ListingFilterInput = {
   aisleId?: string
   featuredOnly?: boolean
   promoOnly?: boolean
+  // « Section Adultes » (its own marketplace) or the general one.
+  space?: 'GENERAL' | 'ADULT'
 }
 
 export type ListingSort = 'RELEVANCE' | 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC' | 'POPULAR'

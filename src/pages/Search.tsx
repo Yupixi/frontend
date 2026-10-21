@@ -29,9 +29,10 @@ import InfiniteLoader from '../components/InfiniteLoader'
 import { useLoadMore } from '../lib/useLoadMore'
 import { formatNumber } from '../lib/format'
 import { metaTrack, noteAdultSlugs } from '../lib/metaPixel'
-import { AdultSectionContext, SEARCH_ROUTING_QUERY, adultGateReason, useAdultAccess, type SearchRouting } from '../lib/adult'
+import { AdultSectionContext, SEARCH_ROUTING_QUERY, adultGateReason, useAdultAccessState, type SearchRouting } from '../lib/adult'
 import AdultGate from '../components/AdultGate'
-import { enterAdultSpace, spaceCategories, useAdultMode, useAdultSpace } from '../lib/adultMode'
+import { spaceCategories, useAdultSpace } from '../lib/adultMode'
+import type { Space } from '../lib/routes'
 import { AdultSearchNotice } from '../components/AdultSearchNotice'
 import { matchesAll, recordFinalSearch, searchTokens } from '../lib/searchText'
 import { noteResultOpen } from '../lib/searchAttribution'
@@ -74,6 +75,11 @@ type SearchProps = {
   currentUserId?: string | null
   isLoggedIn?: boolean
   onContactSeller?: (sellerId: string, listingId?: string) => void
+  // « Section Adultes »: its search for these words (a search's card).
+  onOpenSection?: (term?: string) => void
+  // The page's rayon belongs to the section (an old link): the address
+  // moves into its space.
+  onSpaceKnown?: (space: Space) => void
 }
 
 const toggle = (list: string[], value: string) => list.includes(value) ? list.filter(v => v !== value) : [...list, value]
@@ -155,8 +161,11 @@ function DebouncedSearchInput({ value, onCommit, placeholder }: { value: string,
 
 export default function SearchPage({
   onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, categoryCity, onCategoryCityChange, onClearCategoryFilter, onCategorySelect,
-  searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, initialPromoOnly, currentUserId, isLoggedIn, onContactSeller,
+  searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, initialPromoOnly, currentUserId, isLoggedIn, onContactSeller, onOpenSection, onSpaceKnown,
 }: SearchProps) {
+  // « Section Adultes »: this page is its search / rayon (/adultes/…), a
+  // marketplace of its own — its listings, categories and filters only.
+  const adultSpace = useAdultSpace()
   const [viewMode, setViewModeState] = useState<'grid' | 'list'>(() => getStoredViewMode() ?? 'grid')
   const setViewMode = (mode: 'grid' | 'list') => { setViewModeState(mode); setStoredViewMode(mode) }
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -211,37 +220,40 @@ export default function SearchPage({
   const category = subOwner ?? categories.find(c => c.slug === categoryFilter)
   const subcategory = subOwner?.subcategories.find(s => s.slug === categoryFilter)
   // « Section Adultes »: its pages need the visitor's access (else the gate,
-  // and no listing query at all).
-  const access = useAdultAccess()
+  // and no listing query at all). While the access is being asked, a
+  // neutral loading state — never « Connectez-vous » for a member whose
+  // session is being restored.
+  const { access, loading: accessLoading } = useAdultAccessState()
   const adultOk = access?.status === 'OK'
   const rubricAdult = !!(category?.adult || subcategory?.adult) || (!!categoryFilter && categoryFilter === 'adultes')
-  const gated = rubricAdult && !!access && !adultOk
+  // A rayon of the section reached in the general marketplace (an old
+  // link): it is the section's page.
+  useEffect(() => { if (rubricAdult && !adultSpace) onSpaceKnown?.('adult') }, [rubricAdult, adultSpace]) // eslint-disable-line react-hooks/exhaustive-deps
+  const inSection = adultSpace || rubricAdult
+  const accessPending = inSection && accessLoading && !access
+  const gated = inSection && !!access && !adultOk
   useEffect(() => {
     const slugs = categories.flatMap(c => [...(c.adult ? [c.slug] : []), ...c.subcategories.filter(x => c.adult || x.adult).map(x => x.slug)])
     if (slugs.length) noteAdultSlugs(slugs)
   }, [categories])
-  // Its dark theme (lib/adultMode), the gate included; a rubric not known
-  // yet keeps the address's guess.
-  useAdultMode(!categoryFilter ? false : rubricAdult ? true : categoriesData ? false : undefined)
-  // A confirmed member inside the section: its own space until « Quitter ».
-  useEffect(() => { if (rubricAdult && adultOk) enterAdultSpace() }, [rubricAdult, adultOk])
-  const adultSpace = useAdultSpace()
-  // Filters: the section's category only for a member who may enter it.
-  // In the section's space: its own categories only.
-  const filterCategories = adultSpace ? spaceCategories(categories, true) : categories.filter(c => adultOk || !c.adult)
+  // Filters: each marketplace its own categories (the section's never in
+  // the general one).
+  const filterCategories = adultSpace ? spaceCategories(categories) : categories.filter(c => !c.adult)
   const closeCategories = useMemo(() => {
     if (!search.trim()) return []
     const out: { slug: string, name: string }[] = []
     for (const c of filterCategories) {
       if (matchesAll(c.name, search)) out.push({ slug: c.slug, name: c.name })
-      for (const sc of c.subcategories) if ((adultOk || !sc.adult) && matchesAll(sc.name, search)) out.push({ slug: sc.slug, name: sc.name })
+      for (const sc of c.subcategories) if ((adultSpace || !sc.adult) && matchesAll(sc.name, search)) out.push({ slug: sc.slug, name: sc.name })
     }
     return out.slice(0, 5)
-  }, [search, filterCategories, adultOk])
+  }, [search, filterCategories, adultSpace])
+  // A rayon's address in this marketplace.
+  const rubricHref = (slug: string, city?: string) => adultSpace ? `/adultes/${slug}` : `/categorie/${slug}${city ? `/${city}` : ''}`
   // Category page: the team's texts and the links to neighbouring pages.
   const { data: landingData } = useQuery<{ categoryLanding: CategoryLanding | null }>(CATEGORY_LANDING_QUERY, {
     variables: { slug: categoryFilter ?? '', city: categoryCity || null, country: countryCode ?? null },
-    skip: !categoryFilter || rubricAdult,
+    skip: !categoryFilter || inSection,
   })
   const landing = categoryFilter ? landingData?.categoryLanding ?? null : null
   // The city of a city page, from the country lists (at once), else the
@@ -290,7 +302,9 @@ export default function SearchPage({
     ...(categorySlugs.length ? { categorySlugs } : {}),
     ...(appliedPrice.min ? { minPrice: Number(appliedPrice.min) } : {}),
     ...(appliedPrice.max ? { maxPrice: Number(appliedPrice.max) } : {}),
-  }), [countryCode, pageCity, search, category, subcategory, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
+    // Each marketplace its own listings (Backend ListingSpace).
+    space: inSection ? 'ADULT' : 'GENERAL',
+  }), [inSection, countryCode, pageCity, search, category, subcategory, categoryFilter, subcategories, conditions, brands, sizes, cities, verifiedOnly, shopsOnly, handoverOnly, mobileMoneyOnly, promoOnly, categorySlugs, appliedPrice])
 
   useEffect(() => { setAlertState('idle') }, [filter, sort])
 
@@ -303,7 +317,7 @@ export default function SearchPage({
     // rotationSeed: listings « en vedette » keep one order across the pages
     // of this visit.
     variables: { filter, sort, page: 1, pageSize: PAGE_SIZE, rotationSeed: rotationSeed(), interestCategories: isLoggedIn ? undefined : interestCategories(), searchAsTyped: !!search && asTyped === search },
-    skip: rubricPending || gated || (rubricAdult && !access),
+    skip: rubricPending || gated || (inSection && !access),
   })
   // The server refused the section's listings: the gate, with its reason.
   const gateReason = adultGateReason(listingsError)
@@ -315,14 +329,15 @@ export default function SearchPage({
   useEffect(() => {
     const words = search.trim()
     if (!words || !data) return
-    const t = setTimeout(() => recordFinalSearch(words, countryCode), 1500)
+    const t = setTimeout(() => recordFinalSearch(words, countryCode, inSection), 1500)
     return () => clearTimeout(t)
-  }, [search, data, countryCode])
+  }, [search, data, countryCode, inSection])
   const { data: routingData } = useQuery<{ searchRouting: SearchRouting }>(SEARCH_ROUTING_QUERY, {
     variables: { term: search.trim(), countryCode: countryCode ?? null },
     skip: search.trim().length < 2,
   })
-  const routing = search.trim().length >= 2 ? routingData?.searchRouting ?? null : null
+  // Inside the section, only the « no pornographic content » note.
+  const routing = search.trim().length >= 2 && (!inSection || routingData?.searchRouting.intent === 'PORN') ? routingData?.searchRouting ?? null : null
   const result = (data ?? previousData)?.listings
   const items = result?.items ?? []
   // Where these cards are counted as seen: words typed = a search, else
@@ -335,7 +350,7 @@ export default function SearchPage({
   const openResult = (id: string) => {
     // The « Pertinence » group the page was served with (A/B measure).
     const variant = sort === 'RELEVANCE' ? data?.listings.rankingVariant ?? null : null
-    noteResultOpen(id, { term: effectiveSearch, countryCode, variant, placement: search.trim() ? 'SEARCH' : 'CATEGORY' })
+    noteResultOpen(id, { term: effectiveSearch, countryCode, variant, placement: search.trim() ? 'SEARCH' : 'CATEGORY', adult: inSection })
     onSelectListing(id)
   }
   const total = result?.totalCount ?? 0
@@ -352,19 +367,19 @@ export default function SearchPage({
     trackedSearch.current = key
     // Anonymous interests (this device only): the category searched in
     // (never the « Section Adultes »).
-    if (categoryFilter && !rubricAdult) noteInterest(category?.slug ?? categoryFilter, 0.5)
+    if (categoryFilter && !inSection) noteInterest(category?.slug ?? categoryFilter, 0.5)
     track('search', { search_category: categoryFilter || 'toutes', with_words: !!search.trim(), results_count: data.listings.totalCount, country: countryCode ?? undefined })
     // Meta Pixel: the first results' ids (the catalogue's ids); a category
     // page without words is a ViewCategory.
     const firstIds = data.listings.items.slice(0, 10).map((l) => l.id)
     // Nothing about the « Section Adultes » (its listings' ids are left out
     // by lib/metaPixel; its pages send nothing).
-    if (rubricAdult) return
+    if (inSection) return
     if (search.trim()) metaTrack('Search', { search_string: search, content_ids: firstIds, content_category: categoryFilter || undefined })
     else metaTrack('ViewCategory', { content_ids: firstIds, content_category: categoryFilter })
-  }, [data, search, categoryFilter, countryCode, rubricAdult])
+  }, [data, search, categoryFilter, countryCode, inSection])
 
-  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter }, skip: rubricPending || showGate || (rubricAdult && !access) })
+  const { data: facetsData } = useQuery<{ listingFacets: ListingFacets }>(LISTING_FACETS_QUERY, { variables: { filter }, skip: rubricPending || showGate || (inSection && !access) })
   const facets = facetsData?.listingFacets
   const noCommission = useNoCommissionClaims()
 
@@ -456,7 +471,7 @@ export default function SearchPage({
               // A subcategory's own page: its neighbours are pages too.
               <div className="flex flex-col">
                 {category.subcategories.map(sub => (
-                  <a key={sub.id} href={`/categorie/${sub.slug}${categoryCity ? `/${categoryCity}` : ''}`} onClick={goCategory(sub.slug, categoryCity || undefined)} aria-current={sub.slug === subcategory.slug ? 'page' : undefined}
+                  <a key={sub.id} href={rubricHref(sub.slug, categoryCity || undefined)} onClick={goCategory(sub.slug, categoryCity || undefined)} aria-current={sub.slug === subcategory.slug ? 'page' : undefined}
                     className={`py-1 text-body-sm no-underline hover:text-primary ${sub.slug === subcategory.slug ? 'font-bold text-primary' : 'text-on-surface'}`}>{sub.name}</a>
                 ))}
               </div>
@@ -557,13 +572,13 @@ export default function SearchPage({
   // Category pages: « Mode à Abidjan » (city page), « Mode à Abidjan et en
   // Côte d’Ivoire » (the visitor's country), as search engines get them.
   const rubricTitle = rubricName ? (pageCity ? `${rubricName} à ${pagePlace}` : market ? `${rubricName} à ${market.mainCity} et ${market.inName}` : rubricName) : ''
-  const title = search ? `Résultats pour « ${search} »` : rubricPending ? ' ' : rubricName ? rubricTitle : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
+  const title = search ? `Résultats pour « ${search} »` : rubricPending ? ' ' : adultSpace && rubricName ? rubricName : rubricName ? rubricTitle : adultSpace ? 'Toute la section' : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
   // Category pages: same tab title as the one search engines get.
   const countText = `${formatNumber(total, 0)} annonce${total > 1 ? 's' : ''}`
   // With its count while the whole title stays within ~60 characters.
   const brandName = useSite().brand.name
   const counted = `${title} : ${countText}`
-  usePageTitle(categoryFilter && !search && rubricName && (data || previousData) ? (total > 0 && counted.length + brandName.length + 3 <= 60 ? counted : title) : null)
+  usePageTitle(!inSection && categoryFilter && !search && rubricName && (data || previousData) ? (total > 0 && counted.length + brandName.length + 3 <= 60 ? counted : title) : null)
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-5 md:px-8 lg:px-12">
@@ -589,25 +604,25 @@ export default function SearchPage({
 
       {/* Category pages: the same trail as their structured data (Backend seo). */}
       <nav aria-label="Fil d'ariane" className={`mb-2 flex-wrap items-center gap-1 text-label-md text-on-surface-variant ${category ? 'flex' : 'hidden lg:flex'}`}>
-        <a href="/" onClick={e => { e.preventDefault(); onNavigate('home') }} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{adultSpace ? 'Section Adultes' : 'Accueil'}</a>
+        <a href={adultSpace ? '/adultes' : '/'} onClick={e => { e.preventDefault(); onNavigate('home') }} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{adultSpace ? 'Section Adultes' : 'Accueil'}</a>
         <ChevronRight size={14} className="text-outline-variant" />
         {category ? (
           <>
             {(subcategory || pageCity) && (
               <>
-                <a href={`/categorie/${category.slug}`} onClick={goCategory(category.slug)} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{category.name}</a>
+                <a href={rubricHref(category.slug)} onClick={goCategory(category.slug)} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{category.name}</a>
                 <ChevronRight size={14} className="text-outline-variant" />
               </>
             )}
             {subcategory && pageCity && (
               <>
-                <a href={`/categorie/${subcategory.slug}`} onClick={goCategory(subcategory.slug)} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{subcategory.name}</a>
+                <a href={rubricHref(subcategory.slug)} onClick={goCategory(subcategory.slug)} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{subcategory.name}</a>
                 <ChevronRight size={14} className="text-outline-variant" />
               </>
             )}
             <span className="font-semibold text-on-surface">{pageCity ? pageCity.name : rubricName}</span>
           </>
-        ) : <span className="font-semibold text-on-surface">Catalogue</span>}
+        ) : <span className="font-semibold text-on-surface">{adultSpace ? 'Recherche' : 'Catalogue'}</span>}
       </nav>
 
       {/* Heading + sort + view */}
@@ -660,7 +675,7 @@ export default function SearchPage({
             </div>
           )}
 
-          {routing && <AdultSearchNotice routing={routing} onOpenSection={slug => onCategorySelect?.(slug)} className="mb-4" />}
+          {routing && <AdultSearchNotice routing={routing} onOpenSection={() => onOpenSection?.(search)} className="mb-4" />}
           {correction && !showGate && (
             <p role="status" className="m-0 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-surface-container-low px-3.5 py-2.5 text-body-md text-on-surface">
               <Icon name="spellcheck" size={18} className="text-primary" />
@@ -679,10 +694,12 @@ export default function SearchPage({
             </p>
           )}
 
-          {showGate ? (
+          {accessPending ? (
+            <GridSkeleton count={6} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4" />
+          ) : showGate ? (
             <div className="py-6"><AdultGate reason={gateReason} onNavigate={onNavigate} onConfirmed={() => { void refetch() }} /></div>
           ) : (
-          <AdultSectionContext.Provider value={rubricAdult && adultOk}>
+          <AdultSectionContext.Provider value={inSection && adultOk}>
           <ImpressionScope placement={placement} promoted={result?.promoted}>
           <div className={loading && !data ? 'opacity-60' : ''}>
             {/* First load: the results' room is kept (the alert box below
@@ -710,7 +727,7 @@ export default function SearchPage({
                   <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                     <span className="text-body-sm text-on-surface-variant">Voir aussi :</span>
                     {closeCategories.map(c => (
-                      <a key={c.slug} href={`/categorie/${c.slug}`} onClick={goCategory(c.slug)} className="rounded-full bg-surface-lowest px-3.5 py-1.5 text-label-md text-on-surface no-underline hover:text-primary">{c.name}</a>
+                      <a key={c.slug} href={rubricHref(c.slug)} onClick={goCategory(c.slug)} className="rounded-full bg-surface-lowest px-3.5 py-1.5 text-label-md text-on-surface no-underline hover:text-primary">{c.name}</a>
                     ))}
                   </div>
                 )}
@@ -722,7 +739,7 @@ export default function SearchPage({
           )}
 
           {/* Saved-search alert */}
-          {!showGate && <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-2xl bg-surface-container-low p-5 sm:flex-row sm:items-center">
+          {!showGate && !accessPending && <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-2xl bg-surface-container-low p-5 sm:flex-row sm:items-center">
             <div className="flex items-center gap-4">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><BellRing size={22} /></span>
               <div>

@@ -1,9 +1,10 @@
 import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
+import type { ApolloClient } from '@apollo/client'
 import { createContext, useContext } from 'react'
 import { useMarketCode } from './countries'
 import { noteAdultListing } from './metaPixel'
-import { rememberAdultListing } from './adultMode'
+import { useAdultSpace } from './adultMode'
 
 // « Section Adultes (18+) » (Backend modules/adult): open per country in the
 // Backoffice, shown only to logged-in members who ticked « J'ai 18 ans ou
@@ -55,6 +56,13 @@ export const SEARCH_ROUTING_QUERY = gql`
 // The visitor's standing in their market (one shared query), or in
 // `country` (a listing published in another country).
 export function useAdultAccess(skip = false, country?: string | null): AdultAccess | null {
+  return useAdultAccessState(skip, country).access
+}
+
+// The same, with whether it is still being asked (the section's pages show
+// a neutral loading state meanwhile, never « Connectez-vous » before the
+// server answered for a signed-in member).
+export function useAdultAccessState(skip = false, country?: string | null): { access: AdultAccess | null; loading: boolean } {
   const market = useMarketCode()
   const countryCode = country || market
   const { data, previousData } = useQuery<{ adultAccess: AdultAccess }>(ADULT_ACCESS_QUERY, {
@@ -62,7 +70,19 @@ export function useAdultAccess(skip = false, country?: string | null): AdultAcce
     skip,
     fetchPolicy: 'cache-first',
   })
-  return (data ?? previousData)?.adultAccess ?? null
+  const access = (data ?? previousData)?.adultAccess ?? null
+  return { access, loading: !skip && !data }
+}
+
+// Who the visitor is changed (signed in, signed out, another account): the
+// cached answers about the section are dropped and the ones on screen asked
+// again. The cache used to keep a « LOGIN » answered while the member's
+// session was being restored.
+export function refreshAdultAccess(client: ApolloClient) {
+  client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'adultAccess' })
+  client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'adultHome' })
+  client.cache.gc()
+  void client.refetchQueries({ include: [ADULT_ACCESS_QUERY] }).catch(() => undefined)
 }
 
 // The server's « gate instead of the data » answer, with its reason.
@@ -104,13 +124,13 @@ export const useInAdultSection = () => useContext(AdultSectionContext)
 
 // Whether a listing's photo is blurred where it is shown.
 export function useAdultBlur(): (listing: { id: string; isAdult?: boolean | null } | null | undefined) => boolean {
-  const inSection = useInAdultSection()
+  const inContext = useInAdultSection()
+  const inSpace = useAdultSpace()
+  const inSection = inContext || inSpace
   const access = useAdultAccess()
   return (listing) => {
     if (!listing?.isAdult) return false
     noteAdultListing(listing.id)
-    // Its page then opens in the section's theme at once (lib/adultMode).
-    rememberAdultListing(listing.id)
     if (access?.status !== 'OK') return true
     return inSection ? false : access.blurPhotos
   }
