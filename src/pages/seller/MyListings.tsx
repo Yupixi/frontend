@@ -1,5 +1,5 @@
 import EmptyState from '../../components/EmptyState'
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import {
   Search, Download, PlusCircle, Rocket, CheckCircle2, Edit3, ChevronLeft, ChevronRight, ShieldCheck, ArrowRight,
@@ -28,6 +28,9 @@ import { BOOST_PACKS_QUERY, MY_BOOSTS_QUERY, type RemoteBoost } from '../../grap
 import { ReportLine } from '../../components/VisibilityReport'
 import { creditsLabel } from '../../components/Credits'
 import { BADGE_LABEL } from '../../graphql/badges'
+import { useReelSettings } from '../../lib/reels'
+
+const ReelComposer = lazy(() => import('../../components/reels/ReelComposer'))
 import { useNoCommissionClaims } from '../../lib/site'
 import { useMemberCountryCode, usePriceVars } from '../../lib/countries'
 import { BumpLine, useBumpProof } from '../../components/BumpProof'
@@ -109,6 +112,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const [offersFor, setOffersFor] = useState<string | null>(null)
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const [qrFor, setQrFor] = useState<{ id: string; title: string } | null>(null)
+  // « Ajouter un Reel » to a listing online.
+  const [reelFor, setReelFor] = useState<MyListingRow | null>(null)
+  const reelsOn = useReelSettings(useMemberCountryCode()).enabled
   const qrScans = useQuery<{ myListingQrCodes: MyListingQr[] }>(MY_LISTING_QR_CODES_QUERY, { fetchPolicy: 'cache-and-network' }).data?.myListingQrCodes ?? []
   const qrEnabled = useRules(useMemberCountryCode()).QR_LISTING_ENABLED !== 0
   const [flash, setFlash] = useState<string | null>(null)
@@ -355,6 +361,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                           const scans = qrScans.find(q => q.listingId === l.id)?.scanCount
                           return <button onClick={() => { setMenuFor(null); setQrFor({ id: l.id, title: l.title }) }} className={`${item} text-on-surface`}><Icon name="qr_code_2" size={16} /> QR code de l’annonce{scans ? ` · ${scans} scan${scans > 1 ? 's' : ''}` : ''}</button>
                         })()}
+                        {reelsOn && l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); setReelFor(l) }} className={`${item} text-on-surface`}><Icon name="video_call" size={16} /> Ajouter un Reel (vidéo)</button>}
                         {['APPROVED', 'PAUSED', 'EXPIRED'].includes(l.status) && <button onClick={() => { setMenuFor(null); setSoldFor(l) }} className={`${item} text-on-surface`}><Icon name="handshake" size={16} /> Marquer comme vendu</button>}
                         {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'pause', l }) }} className={`${item} text-on-surface`}><Icon name="pause" size={16} /> Mettre en pause</button>}
                         {l.status === 'PAUSED' && <button onClick={() => { setMenuFor(null); resume(l) }} className={`${item} text-on-surface`}><Icon name="play_arrow" size={16} /> Remettre en ligne</button>}
@@ -376,6 +383,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         </div>
 
         <ListingQrSheet listing={qrFor} onClose={() => setQrFor(null)} />
+        {reelFor && <Suspense fallback={null}><ReelComposer listing={{ id: reelFor.id, title: reelFor.title, coverImageUrl: reelFor.coverImageUrl }} open onClose={() => setReelFor(null)} onOpenReels={() => { setReelFor(null); onNavigate('seller-reels') }} /></Suspense>}
         {proof.sheet}
 
         <ExitReasonSheet

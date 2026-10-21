@@ -1,4 +1,5 @@
 import EmptyState from '../components/EmptyState'
+import { SellerReelsGrid, useSellerReels } from '../components/reels/ReelEmbeds'
 import Icon from '../components/Icon'
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
@@ -72,7 +73,9 @@ export default function SellerProfile(props: SellerProfileProps) {
 }
 
 function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId }: SellerProfileProps) {
-  const [tab, setTab] = useState<'listings' | 'reviews' | 'terms'>('listings')
+  const [tab, setTab] = useState<'listings' | 'reels' | 'reviews' | 'terms'>('listings')
+  // « Reels »: a tab when the seller has some.
+  const sellerReels = useSellerReels(sellerId)
   const noCommission = useNoCommissionClaims()
   const [q, setQ] = useState('')
   const [cat, setCat] = useState<string | null>(null)
@@ -282,7 +285,7 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
       {/* Tabs — the fade hints that the row scrolls on phones */}
       <div className="relative mt-6">
       <div className="flex gap-2 overflow-x-auto pb-1 pr-8 [scrollbar-width:none] md:pr-0">
-        {([['listings', 'En vente', all.length], ['reviews', 'Avis & Évaluations', seller.reviewsCount], ['terms', 'Conditions d’échange & RDV', null]] as const).map(([key, label, count]) => (
+        {([['listings', 'En vente', all.length], ...(sellerReels.items.length ? [['reels', 'Reels', sellerReels.items.length + (sellerReels.nextCursor ? '+' : '')] as const] : []), ['reviews', 'Avis & Évaluations', seller.reviewsCount], ['terms', 'Conditions d’échange & RDV', null]] as const).map(([key, label, count]) => (
           <button key={key} onClick={() => setTab(key)} className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-full border-none px-4 py-2 text-label-md ${tab === key ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface hover:bg-surface-container-low'}`}>
             {label}{count != null && <span className={`rounded-full px-1.5 text-label-sm ${tab === key ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'}`}>{count}</span>}
           </button>
@@ -290,6 +293,12 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
       </div>
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-surface to-transparent md:hidden" />
       </div>
+
+      {tab === 'reels' && (
+        <section className="mt-4">
+          <SellerReelsGrid sellerId={sellerId} onOpenListing={onSelectListing} onOpenSeller={() => undefined} onContactSeller={(id, listingId) => onContactSeller(id, listingId)} onToggleFavorite={id => onToggleFavorite?.(id)} favorites={favorites} currentUserId={currentUserId} isLoggedIn={isLoggedIn} onRequireAuth={() => onNavigate('auth')} />
+        </section>
+      )}
 
       {tab === 'listings' && (
         <section className="mt-4">
