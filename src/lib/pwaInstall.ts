@@ -95,18 +95,27 @@ function appBrowser(): string {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-// Daily events already sent today (one small localStorage entry). Without
-// storage, once per tab.
-const sentToday = new Set<string>()
-function firstToday(kind: PwaEvent): boolean {
+// Daily events already sent today (one small localStorage entry, written
+// once the API took them: an event lost on the way is sent again at the
+// next visit). Without storage, once per tab.
+const inTab = new Set<string>()
+function readDays(): Record<string, string> {
+  try { return JSON.parse(storage.get(DAY_KEY) ?? '{}') as Record<string, string> } catch { return {} }
+}
+function due(kind: PwaEvent): boolean {
   const day = today()
-  let seen: Record<string, string> = {}
-  try { seen = JSON.parse(storage.get(DAY_KEY) ?? '{}') as Record<string, string> } catch { /* reset */ }
-  if (seen[kind] === day || sentToday.has(`${day}|${kind}`)) return false
-  sentToday.add(`${day}|${kind}`)
-  seen[kind] = day
-  storage.set(DAY_KEY, JSON.stringify(seen))
+  if (readDays()[kind] === day || inTab.has(`${day}|${kind}`)) return false
+  inTab.add(`${day}|${kind}`)
   return true
+}
+function settle(events: PwaEvent[], ok: boolean) {
+  const day = today()
+  const daily = events.filter((k) => DAILY.has(k))
+  if (!daily.length) return
+  if (!ok) { for (const k of daily) inTab.delete(`${day}|${k}`); return }
+  const seen = readDays()
+  for (const k of daily) seen[k] = day
+  storage.set(DAY_KEY, JSON.stringify(seen))
 }
 
 function send(events: PwaEvent[], leaving: boolean) {
@@ -121,8 +130,8 @@ function send(events: PwaEvent[], leaving: boolean) {
       body: JSON.stringify({ query: MUTATION, variables: { input } }),
       credentials: 'omit',
       keepalive: leaving,
-    }).catch(() => undefined)
-  } catch { /* best-effort */ }
+    }).then((r) => settle(events, r.ok), () => settle(events, false))
+  } catch { settle(events, false) }
 }
 
 export function flushAppEvents(leaving = false) {
@@ -149,7 +158,7 @@ const GA: Partial<Record<PwaEvent, Parameters<typeof track>[0]>> = {
 /** Something happened to the app on this device (queued, sent in a batch). */
 export function pwaEvent(kind: PwaEvent) {
   if (!enabled) return
-  if (DAILY.has(kind) && !firstToday(kind)) return
+  if (DAILY.has(kind) && !due(kind)) return
   const ga = GA[kind]
   if (ga) track(ga, { platform: appPlatform().toLowerCase() }, { defer: true })
   queue.push(kind)
