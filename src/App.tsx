@@ -3,6 +3,7 @@ import { useApolloClient, useLazyQuery, useMutation, useQuery } from '@apollo/cl
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import Layout from './components/Layout'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
+import { isAppMode, pwaEvent } from './lib/pwaInstall'
 import ConsentBanner, { useConsentOpen } from './components/ConsentBanner'
 import { pageTitle, track, trackPageView } from './lib/analytics'
 import { useAccountConsent } from './lib/consentAccount'
@@ -470,8 +471,7 @@ export default function App() {
     window.addEventListener('beforeinstallprompt', handler)
     const installed = () => { setDeferredPrompt(null); setShowInstallBanner(false); setShowInstallGuide(false) }
     window.addEventListener('appinstalled', installed)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    if (isMobile && !isStandalone && !isSnoozed('install')) {
+    if (isMobile && !isAppMode() && !isSnoozed('install')) {
       const timer = setTimeout(() => setShowInstallBanner(true), 5000)
       return () => {
         clearTimeout(timer)
@@ -486,15 +486,21 @@ export default function App() {
   }, [isMobile])
 
   const handleInstall = () => {
+    pwaEvent('BANNER_INSTALL')
     if (deferredPrompt) {
       deferredPrompt.prompt()
-      deferredPrompt.userChoice.then(() => { setDeferredPrompt(null); setShowInstallBanner(false) })
+      deferredPrompt.userChoice.then((choice: { outcome?: string } | undefined) => {
+        pwaEvent(choice?.outcome === 'accepted' ? 'PROMPT_ACCEPTED' : 'PROMPT_DISMISSED')
+        setDeferredPrompt(null)
+        setShowInstallBanner(false)
+      }, () => undefined)
     } else {
       setShowInstallGuide(true)
     }
   }
 
   const handleDismiss = () => {
+    pwaEvent('BANNER_LATER')
     snooze('install')
     setShowInstallBanner(false)
     setShowInstallGuide(false)

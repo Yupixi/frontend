@@ -10,6 +10,7 @@ import EmailLinkPage, { isEmailLinkPath } from './components/EmailLinkPage'
 import './index.css'
 import { captureCampaignParams } from './lib/campaignParams'
 import { captureFacebookReturn } from './lib/facebookReturn'
+import { startPwaTracking } from './lib/pwaInstall'
 
 // /q/<code> (printed QR codes of the shops): a page of its own, outside the
 // app and the launch gate (it shows the launch page itself).
@@ -33,6 +34,10 @@ captureCampaignParams()
 // Back from Facebook's sign-in dialog: the code is kept aside, the address
 // cleaned before anything (Clarity, analytics) can see it.
 captureFacebookReturn()
+
+// Installed app: opened from its icon or in the browser (once a day per
+// device), and the browser's install event — sent in one batch later.
+startPwaTracking()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
