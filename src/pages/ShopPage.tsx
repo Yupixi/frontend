@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { SellerReelsGrid, useSellerReels } from '../components/reels/ReelEmbeds'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../components/Icon'
 import EmptyState from '../components/EmptyState'
@@ -34,7 +35,7 @@ type Props = {
   preloaded?: Shop
 }
 
-type Tab = 'home' | 'all' | 'news' | 'reviews' | 'infos'
+type Tab = 'home' | 'all' | 'reels' | 'news' | 'reviews' | 'infos'
 const since = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : null)
 const socialUrl = (kind: 'facebook' | 'instagram' | 'tiktok', v: string) => {
   if (/^https?:\/\//.test(v)) return v
@@ -154,6 +155,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   // Limits of the shop's country (those the server applies).
   const maxFeatured = useRules(shop?.countryCode || undefined).SHOP_MAX_FEATURED
   const ownerId = shop?.owner.id
+  const shopReels = useSellerReels(ownerId, shop?.countryCode)
   const { data: all } = useQuery<{ listings: { items: RemoteListing[], totalCount: number } }>(LISTINGS_QUERY, {
     variables: { filter: { sellerId: ownerId }, sort, pageSize: 100 }, skip: !ownerId,
   })
@@ -238,6 +240,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   ]
   const tabs: [Tab, string, number | null][] = [
     ['home', 'Accueil', null], ['all', 'Tous les articles', shop.listingsCount],
+    ...(shopReels.items.length ? [['reels', 'Reels', shopReels.items.length] as [Tab, string, number]] : []),
     ...(posts.length ? [['news', 'Actualités', posts.length] as [Tab, string, number]] : []),
     ['reviews', 'Avis', shop.reviewsCount], ['infos', 'Infos & horaires', null],
   ]
@@ -404,6 +407,12 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
               </Select>
             </div>
             {grid(filtered, true)}
+          </section>
+        )}
+
+        {tab === 'reels' && ownerId && (
+          <section className="mt-5">
+            <SellerReelsGrid sellerId={ownerId} onOpenListing={onSelectListing} onOpenSeller={() => undefined} onContactSeller={(id, listingId) => onContactSeller(id, listingId)} onToggleFavorite={id => onToggleFavorite?.(id)} favorites={favorites} currentUserId={currentUserId} isLoggedIn={isLoggedIn} onRequireAuth={() => onNavigate('auth')} />
           </section>
         )}
 

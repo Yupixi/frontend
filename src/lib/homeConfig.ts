@@ -10,7 +10,7 @@ export const HOME_CONFIG_QUERY = gql`
   query HomeConfig($country: String) { homeConfig(country: $country) }
 `
 
-export type HomeSectionKey = 'reassurance' | 'categories' | 'campaign' | 'pepites' | 'shops' | 'certified' | 'sellCta' | 'latest' | 'howItWorks'
+export type HomeSectionKey = 'reassurance' | 'categories' | 'campaign' | 'pepites' | 'reels' | 'shops' | 'certified' | 'sellCta' | 'latest' | 'howItWorks'
 export type HomeSlide = { image: string, badge: string, badgeIcon: string, tone: 'red' | 'blue' | 'green' | 'amber' | 'dark', title: string, text: string, tags: string[] }
 export type HomeConfig = {
   sections: { key: HomeSectionKey, visible: boolean }[]
@@ -32,7 +32,7 @@ export const SLIDE_TONE: Record<HomeSlide['tone'], { badge: string, icon: string
 }
 
 export const DEFAULT_HOME: HomeConfig = {
-  sections: (['reassurance', 'categories', 'campaign', 'pepites', 'shops', 'certified', 'sellCta', 'latest', 'howItWorks'] as const).map(key => ({ key, visible: true })),
+  sections: (['reassurance', 'categories', 'campaign', 'pepites', 'reels', 'shops', 'certified', 'sellCta', 'latest', 'howItWorks'] as const).map(key => ({ key, visible: true })),
   hero: {
     intervalSec: 6,
     slides: [

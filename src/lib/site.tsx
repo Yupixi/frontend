@@ -80,7 +80,7 @@ function setMeta(attr: 'name' | 'property', key: string, value: string) {
 // Default tab title of each app page, « … | Dilchap » (the server's SEO
 // titles for the pages it renders: Backend src/modules/seo).
 const PAGE_TITLES: Record<string, string> = {
-  search: 'Recherche', 'flash-offers': 'Bonnes affaires et promotions', 'listing-detail': 'Annonce', 'seller-profile': 'Vendeur',
+  search: 'Recherche', reels: 'Reels : les articles en vidéo', 'seller-reels': 'Mes Reels', 'flash-offers': 'Bonnes affaires et promotions', 'listing-detail': 'Annonce', 'seller-profile': 'Vendeur',
   categories: 'Toutes les catégories', auth: 'Connexion', legal: 'Informations légales', shop: 'Boutique officielle', shops: 'Boutiques officielles', help: 'Centre d’aide',
   'buyer-dashboard': 'Mon compte', 'buyer-favorites': 'Mes favoris', 'buyer-messages': 'Messages', 'buyer-notifications': 'Notifications',
   'buyer-history': 'Historique', 'buyer-settings': 'Paramètres', 'buyer-purchases': 'Mes achats', 'buyer-receipts': 'Mes reçus', 'buyer-receipt': 'Reçu',

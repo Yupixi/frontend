@@ -1,7 +1,7 @@
 import { noteInterest } from '../lib/interests'
 import AnimatedIcon from '../components/AnimatedIcon'
 import SupportAboutButton from '../components/SupportAboutButton'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { gql } from '@apollo/client'
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
 import {
@@ -75,6 +75,11 @@ import { enterAdultSpace, rememberAdultListing, useAdultMode, useAdultSpace } fr
 import { metaListingSeen } from '../lib/metaPixel'
 import { useListingIntents } from '../lib/intents'
 import { entryDiscountPercent } from '../lib/campaignDiscount'
+import { ListingReelsButton } from '../components/reels/ReelEmbeds'
+import { requestOpenShop } from '../lib/navigation'
+import { useReelSettings } from '../lib/reels'
+
+const ReelComposer = lazy(() => import('../components/reels/ReelComposer'))
 
 const LISTING_SELLER_ID_FRAGMENT = gql`
   fragment ListingSellerId on Listing {
@@ -211,6 +216,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const intents = useListingIntents()
   const [boostOpen, setBoostOpen] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
+  // « Ajouter un Reel » (the seller's own listing online).
+  const [reelOpen, setReelOpen] = useState(false)
+  const reelsOn = useReelSettings(listing?.countryCode).enabled
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
 
@@ -365,6 +373,13 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     </button>
   ) : null
 
+  // A video of the article (« Reels »), for its seller, the listing online.
+  const reelButton = isOwner && reelsOn && listing.status === 'APPROVED' ? (
+    <button onClick={() => setReelOpen(true)} className="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-low py-3 text-label-lg text-on-surface hover:bg-surface-container max-lg:mt-0">
+      <Icon name="video_call" size={18} /> Ajouter un Reel (vidéo)
+    </button>
+  ) : null
+
   // Seller-side / archived states replace the buying CTAs.
   const ownerPanel = isOwner ? (<>{
     isExpired ? (
@@ -387,7 +402,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         </button>
       </>
     )
-  }{qrButton}</>) : !canContact ? (
+  }{qrButton}{reelButton}</>) : !canContact ? (
     <p className="m-0 flex items-start gap-2 rounded-lg bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
       <Archive size={17} className="mt-0.5 shrink-0" /> {isSold ? 'Cet article a déjà été vendu.' : isExpired ? "Cette annonce a expiré : le vendeur ne peut plus être contacté à son sujet." : "Cette annonce n’est pas en ligne : le vendeur ne peut pas être contacté à son sujet."}
     </p>
@@ -398,6 +413,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
       {viewer !== null && images.length > 0 && <ImageLightbox images={images} start={viewer} alt={listing.title} onClose={() => setViewer(null)} onIndexChange={i => showImage(i, false)} />}
       {isOwner && <BoostSheet open={boostOpen} onClose={() => setBoostOpen(false)} listing={listing} />}
       {isOwner && <ListingQrSheet listing={qrOpen ? { id: listing.id, title: listing.title } : null} onClose={() => setQrOpen(false)} />}
+      {isOwner && reelOpen && <Suspense fallback={null}><ReelComposer listing={{ id: listing.id, title: listing.title, coverImageUrl: listing.coverImageUrl, countryCode: listing.countryCode }} open onClose={() => setReelOpen(false)} onOpenReels={() => { setReelOpen(false); onNavigate('seller-reels') }} /></Suspense>}
       {/* Mobile app bar (Stitch "Détails Article") — replaces the site header here */}
       <div className="safe-top sticky z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface px-2 lg:hidden">
         <button onClick={() => (window.history.length > 1 ? window.history.back() : onNavigate('home'))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Retour">
@@ -485,6 +501,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 {/* The listing's one pill, as on its card (« Badges des annonces »). */}
                 {pill && <PromoPill badge={pill} size="page" />}
               </div>
+              {/* The listing's videos (« Reels »). */}
+              <ListingReelsButton listingId={listing.id} countryCode={listing.countryCode} className="absolute bottom-9 left-3 lg:bottom-3" onOpenListing={onSelectListing} onOpenSeller={(id, shop) => (shop ? requestOpenShop(shop) : onSelectSeller(id))} onContactSeller={(sellerId, id) => onContactSeller?.(sellerId, id)} onToggleFavorite={id => void onToggleFavorite(id)} favorites={favorites} currentUserId={currentUser?.id} isLoggedIn={!!currentUser && !currentUser.isGuest} onRequireAuth={() => onNavigate('auth')} />
               {/* Mobile: the favourite sits on the photo (mockup); desktop has it in the meta bar. */}
               <button onClick={toggleFav} className="absolute right-3 top-3 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 shadow-sm backdrop-blur-sm lg:hidden" aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
                 <AnimatedIcon name="heart" fallback="favorite" size={20} fill={isFav} trigger={isFav} className={isFav ? 'text-primary' : 'text-on-surface'} />

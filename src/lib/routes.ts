@@ -5,7 +5,7 @@
 
 export type RoutePage =
   | 'home' | 'listing-detail' | 'seller-profile' | 'shop' | 'shops' | 'categories'
-  | 'search' | 'flash-offers' | 'legal' | 'auth' | 'help'
+  | 'search' | 'flash-offers' | 'legal' | 'auth' | 'help' | 'reels'
 
 export type Route = {
   page: RoutePage | 'account'
@@ -20,6 +20,8 @@ export type Route = {
   categoryCity?: string
   // Centre d’aide: an article's key ('' = the help centre's home).
   helpSlug?: string
+  // « Reels » opened on one Reel (/reel/<id>).
+  reelId?: string
 }
 
 // URL-safe words from a title: "Télé Samsung 55\"" → "tele-samsung-55"
@@ -71,6 +73,7 @@ export function pathFor(page: string, s: Omit<Route, 'page'> & { searchTerm?: st
     case 'legal': return s.legalSlug ? `/legal/${enc(s.legalSlug)}` : '/'
     case 'auth': return '/connexion'
     case 'help': return s.helpSlug ? `/aide/${enc(s.helpSlug)}` : '/aide'
+    case 'reels': return s.reelId ? `/reel/${enc(s.reelId)}` : '/reels'
     default: return '/compte'
   }
 }
@@ -97,6 +100,8 @@ export function parsePath(pathname: string): Route | null {
   if (head === 'connexion') return { page: 'auth' }
   if (head === 'aide') return { page: 'help', helpSlug: key ?? '' }
   if (head === 'compte') return { page: 'account' }
+  if (head === 'reels' && !key) return { page: 'reels' }
+  if (head === 'reel' && key && UUID.test(key)) return { page: 'reels', reelId: UUID.exec(key)![1] }
   return null
 }
 

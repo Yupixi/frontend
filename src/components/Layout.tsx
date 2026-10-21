@@ -39,7 +39,8 @@ import { MY_CONVERSATIONS_QUERY, byLatestMessage, messagePreview, type RemoteCon
 import { formatRelativeDate, plainText } from '../lib/format'
 import type { StoredLocation } from '../lib/location'
 import { syncAppBadge } from '../lib/pushNotifications'
-import { requestOpenCampaign, requestOpenHelp } from '../lib/navigation'
+import { requestOpenCampaign, requestOpenHelp, requestOpenReels } from '../lib/navigation'
+import { useReelSettings } from '../lib/reels'
 import { replayTours } from '../lib/tourControl'
 import { useSite } from '../lib/site'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
@@ -54,7 +55,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-qr' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops' | 'help'
+  | 'legal' | 'shop' | 'shops' | 'help' | 'reels' | 'seller-reels'
 
 
 type LayoutProps = {
@@ -111,6 +112,8 @@ export default function Layout({
   const adultMode = useAdultModeOn()
   // In its space, the section's own subcategories only (lib/adultMode).
   const adultSpace = useAdultSpace()
+  // « Reels » of the market (Règles › Reels): a tab of their own.
+  const reels = useReelSettings().enabled && !adultSpace
   const sectionCategories = spaceCategories(categoriesData?.categories ?? [], true)
   const navCategories = adultSpace
     ? sectionCategories.flatMap(c => c.subcategories.map(s => ({ slug: s.slug, name: s.name })))
@@ -300,6 +303,10 @@ export default function Layout({
             <span className="hidden items-center gap-1 xl:flex"><Handshake size={15} /> Remise en mains propres</span>
           </div>
           <div className="flex items-center gap-4">
+            {reels && <>
+            <button onClick={() => requestOpenReels()} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm font-semibold text-primary hover:underline"><Icon name="smart_display" size={15} /> Reels</button>
+            <span className="text-outline-variant">•</span>
+            </>}
             <button onClick={() => onNavigate('categories')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Toutes les catégories</button>
             {!adultSpace && <>
             <span className="text-outline-variant">•</span>
@@ -348,6 +355,12 @@ export default function Layout({
               <Search size={21} />
             </button>
 
+            {reels && (
+              <button onClick={() => requestOpenReels()} title="Reels : les articles en vidéo" className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-container-low px-3 py-2.5 text-label-lg text-on-surface transition-colors hover:bg-surface-container lg:flex">
+                <Icon name="smart_display" size={19} className="text-primary" />
+                <span>Reels</span>
+              </button>
+            )}
             {!currentUser?.isGuest && (
               <button
                 onClick={() => { onNavigate('seller-post'); triggerToast('Création d\'une nouvelle annonce') }}
@@ -762,7 +775,7 @@ export default function Layout({
       {isMobile && currentPage !== 'listing-detail' && (
         <nav
           aria-label="Navigation principale"
-          className="fixed inset-x-0 bottom-0 z-[300] grid grid-cols-5 border-0 border-t border-solid border-outline-variant bg-surface-lowest"
+          className={`fixed inset-x-0 bottom-0 z-[300] grid grid-cols-5 border-0 border-t border-solid ${currentPage === 'reels' ? 'reels-nav border-white/10 bg-black' : 'border-outline-variant bg-surface-lowest'}`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           {[
@@ -770,7 +783,10 @@ export default function Layout({
             // becomes active and on press; ms: Material fallback.
             // tour: data-tour anchor of the guided tours (lib/tours).
             { label: 'Accueil', anim: 'nav-home', ms: 'home', page: 'home' as Page },
-            { label: 'Recherche', anim: 'empty-search', ms: 'search', page: 'search' as Page },
+            // « Reels » when the market has them (search stays in the header).
+            reels
+              ? { label: 'Reels', anim: 'nav-reels', ms: 'smart_display', page: 'reels' as Page, tour: 'reels' }
+              : { label: 'Recherche', anim: 'empty-search', ms: 'search', page: 'search' as Page },
             { label: 'Vendre', anim: 'nav-add', ms: 'add', page: 'seller-post' as Page, primary: true, tour: 'sell' },
             { label: 'Messages', anim: 'empty-messages', ms: 'chat', page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount, tour: 'messages' },
             { label: 'Compte', anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page, tour: 'account' },
@@ -781,7 +797,7 @@ export default function Layout({
             if (item.primary) {
               return (
                 <button key={item.label} onClick={() => onNavigate(item.page)} data-tour={item.tour} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
-                  <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]">
+                  <span className={`-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid ${currentPage === 'reels' ? 'border-black' : 'border-surface-lowest'} bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]`}>
                     <AnimatedIcon name={item.anim} fallback={item.ms} size={28} className="text-white" playOnInteract preload />
                   </span>
                   {item.label}
@@ -792,9 +808,9 @@ export default function Layout({
             return (
               <button
                 key={item.label}
-                onClick={() => onNavigate(item.page)}
+                onClick={() => (item.page === 'reels' ? requestOpenReels() : onNavigate(item.page))}
                 data-tour={item.tour}
-                className={`relative flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}
+                className={`relative flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : currentPage === 'reels' ? 'font-medium text-white/75' : 'font-medium text-on-surface-variant'}`}
               >
                 <span className="relative">
                   <AnimatedIcon name={item.anim} fallback={item.ms} size={24} fill={isActive} trigger={isActive} playOnInteract preload />
