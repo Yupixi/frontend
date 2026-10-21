@@ -149,7 +149,7 @@ export function useSeo(page: string, ctx: { searchTerm?: string; category?: stri
   const seo = { ...siteSeo, ...marketSeo(market, siteSeo, brand.name) }
   const firstPage = useRef(page)
   const moved = useRef(false)
-  if (page !== firstPage.current) moved.current = true
+  if (page !== firstPage.current || ctx.adult) moved.current = true
   const own = routeTitle(page, ctx)
   useLayoutEffect(() => {
     if (!moved.current) return

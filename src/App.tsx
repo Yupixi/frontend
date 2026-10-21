@@ -643,6 +643,9 @@ export default function App() {
   // Where to land after signing in: the page the visitor was on (or tried to
   // open) when they were sent to the auth screen, instead of always home.
   const [authReturn, setAuthReturn] = useState<Page | null>(null)
+  // …in the marketplace it was in (a page of the « Section Adultes »
+  // comes back in it once signed in).
+  const authReturnSpace = useRef<Space>('general')
 
   const isAccountPage = (p: Page) => (p.startsWith('seller-') && p !== 'seller-profile') || p.startsWith('buyer-') || p === 'support'
 
@@ -657,13 +660,15 @@ export default function App() {
       p = 'auth'
     } else if (p === 'auth' && page !== 'auth') {
       setAuthReturn(page)
+      authReturnSpace.current = space
     }
     // « Section Adultes »: its home page is in it; its search, rayons and
     // listings stay in the marketplace the visitor is in (unless asked);
     // every other page is the general marketplace's (or the account's).
     const nextSpace: Space = p === 'adult-home' ? 'adult' : sel?.space ?? (SPACE_PAGES.includes(p) ? space : 'general')
     // Leaving a marketplace for the other one: none of its filters follow.
-    const reset: Selection = nextSpace !== space && p !== 'search' ? { category: '', categoryCity: '', searchTerm: '' } : {}
+    // (Signing in comes back to the page as it was.)
+    const reset: Selection = nextSpace !== space && p !== 'search' && p !== 'auth' ? { category: '', categoryCity: '', searchTerm: '' } : {}
     // Remember where the visitor was, for when they come back to it.
     window.history.replaceState({ ...window.history.state, scrollY: window.scrollY }, '')
     // A transition keeps the current page on screen while the next page's
@@ -726,10 +731,11 @@ export default function App() {
     }
   }, [])
 
-  const replacePage = (p: Page) => {
+  const replacePage = (p: Page, sp?: Space) => {
+    const next: Space = p === 'adult-home' ? 'adult' : SPACE_PAGES.includes(p) ? sp ?? space : 'general'
     setPage(p)
-    if (!SPACE_PAGES.includes(p) && space !== 'general') setSpace('general')
-    window.history.replaceState(historyEntry(p, SPACE_PAGES.includes(p) ? {} : { space: 'general' }), '')
+    if (next !== space) setSpace(next)
+    window.history.replaceState(historyEntry(p, { space: next }), '')
   }
 
   // « Section Adultes »: the page's own content says which marketplace it
@@ -1034,7 +1040,7 @@ export default function App() {
             onLogin={() => {
               handleAuthenticated()
               // Replace the auth entry so "back" doesn't reopen the login form.
-              replacePage(authReturn && authReturn !== 'auth' ? authReturn : 'home')
+              replacePage(authReturn && authReturn !== 'auth' ? authReturn : 'home', authReturnSpace.current)
               setAuthReturn(null)
             }}
           />
