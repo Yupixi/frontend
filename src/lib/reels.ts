@@ -139,3 +139,11 @@ export const formatDuration = (sec: number) => {
 
 /** Poster of a card: the 480 px thumbnail next to the WebP. */
 export const reelThumb = (url: string | null) => (url && url.endsWith('.webp') ? url.replace(/\.webp$/, '-w480.webp') : url)
+
+// « Publier un Reel » from the Reels tab: Mes Reels opens on the listing
+// picker (read once).
+const NEW_REEL_KEY = 'dilchap_new_reel'
+export function requestNewReel() { try { sessionStorage.setItem(NEW_REEL_KEY, '1') } catch { /* no storage */ } }
+export function takeNewReelRequest() {
+  try { const v = sessionStorage.getItem(NEW_REEL_KEY); sessionStorage.removeItem(NEW_REEL_KEY); return v === '1' } catch { return false }
+}
