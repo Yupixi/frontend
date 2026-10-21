@@ -6,6 +6,8 @@
 export type RoutePage =
   | 'home' | 'listing-detail' | 'seller-profile' | 'shop' | 'shops' | 'categories'
   | 'search' | 'flash-offers' | 'legal' | 'auth' | 'help'
+  // « Section Adultes »: its own home page (/adultes).
+  | 'adult-home'
 
 export type Route = {
   page: RoutePage | 'account'
@@ -20,7 +22,13 @@ export type Route = {
   categoryCity?: string
   // Centre d’aide: an article's key ('' = the help centre's home).
   helpSlug?: string
+  // « Section Adultes »: the page belongs to the section's own space
+  // (/adultes, /adultes/<rayon>, /adultes/recherche, /adultes/annonce/…).
+  space?: Space
 }
+
+// Which marketplace a page belongs to (lib/adultMode).
+export type Space = 'general' | 'adult'
 
 // URL-safe words from a title: "Télé Samsung 55\"" → "tele-samsung-55"
 // (same as Backend src/common/slug.ts).
@@ -51,7 +59,17 @@ const handles = new Map<string, string>()
 export const rememberHandle = (sellerId: string, handle: string) => { handles.set(sellerId, handle) }
 
 export function pathFor(page: string, s: Omit<Route, 'page'> & { searchTerm?: string } = {}): string {
+  if (s.space === 'adult') {
+    // The section's own addresses (never indexed, Backend seo).
+    if (page === 'adult-home') return '/adultes'
+    if (page === 'listing-detail' && s.listingId) return `/adultes${listingPath(s.listingId)}`
+    if (page === 'search')
+      return s.category && !s.searchTerm
+        ? `/adultes/${enc(s.category)}`
+        : s.searchTerm ? `/adultes/recherche?q=${enc(s.searchTerm)}` : '/adultes/recherche'
+  }
   switch (page) {
+    case 'adult-home': return '/adultes'
     case 'home': return '/'
     case 'listing-detail': return s.listingId ? listingPath(s.listingId) : '/'
     case 'seller-profile': {
@@ -80,6 +98,12 @@ export function parsePath(pathname: string): Route | null {
   const seg = pathname.split('/').filter(Boolean).map(s => { try { return decodeURIComponent(s) } catch { return s } })
   const [head, key] = seg
   if (!head) return null
+  if (head === 'adultes') {
+    if (!key) return { page: 'adult-home', space: 'adult' }
+    if (key === 'recherche') return { page: 'search', space: 'adult' }
+    if (key === 'annonce' && seg[2]) return { page: 'listing-detail', listingId: UUID.exec(seg[2])?.[1] ?? seg[2], space: 'adult' }
+    return { page: 'search', category: key, space: 'adult' }
+  }
   if (head === 'annonce' && key) {
     const id = UUID.exec(key)?.[1] ?? key
     return { page: 'listing-detail', listingId: id }

@@ -133,8 +133,25 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
     refreshPromise = refreshPromise ?? refreshAccessToken()
     refreshPromise.then((newToken) => {
       refreshPromise = null
+      if (!newToken && getAccessToken()) {
+        observer.error(new RefreshUnavailableError())
+        return
+      }
       if (!newToken) {
-        observer.error(getAccessToken() ? new RefreshUnavailableError() : error)
+        // The session is over (refresh refused, tokens cleared): asked
+        // again as a visitor — a public page (that answered
+        // UNAUTHENTICATED for a lapsed token, Backend OptionalJwtAuthGuard)
+        // shows its public content; a member-only one gets its error.
+        operation.setContext(({ headers }: { headers?: Record<string, string> }) => {
+          const rest = { ...(headers ?? {}) }
+          delete rest.authorization
+          return { headers: rest }
+        })
+        forward(operation).subscribe({
+          next: (result) => observer.next(result),
+          error: (err) => observer.error(err),
+          complete: () => observer.complete(),
+        })
         return
       }
       operation.setContext(({ headers }: { headers?: Record<string, string> }) => ({

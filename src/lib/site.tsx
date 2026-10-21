@@ -99,8 +99,11 @@ const fromSlug = (slug: string) => {
 }
 
 /** Default tab title of an app page (null: the site's own title, the home page). */
-export function routeTitle(page: string, ctx: { searchTerm?: string; category?: string } = {}): string | null {
+export function routeTitle(page: string, ctx: { searchTerm?: string; category?: string; adult?: boolean } = {}): string | null {
   if (page === 'home') return null
+  // « Section Adultes »: one discreet title for all its pages (a shared
+  // screen, the tab list), never a product or a search.
+  if (ctx.adult || page === 'adult-home') return 'Section Adultes'
   if (page === 'search') {
     if (ctx.category) return fromSlug(ctx.category)
     const q = ctx.searchTerm?.trim()
@@ -137,7 +140,7 @@ export function marketSeo(
 // runs after this one). The first page's tags come from the storefront's
 // server (Backend src/modules/seo), already right for that URL: left as
 // they are.
-export function useSeo(page: string, ctx: { searchTerm?: string; category?: string } = {}) {
+export function useSeo(page: string, ctx: { searchTerm?: string; category?: string; adult?: boolean } = {}) {
   const { seo: siteSeo, brand } = useSite()
   // The visitor's country: its own texts (« Pays » in the BO), else « Dilchap :
   // petites annonces à Abidjan et en Côte d’Ivoire » — what search engines

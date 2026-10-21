@@ -16,7 +16,7 @@ import AccountVerifySheet from './components/AccountVerifySheet'
 import { ACCOUNT_VERIFIED_EVENT } from './lib/accountVerify'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
-import { parsePath, pathFor, samePlace } from './lib/routes'
+import { parsePath, pathFor, samePlace, type Space } from './lib/routes'
 import { conversationFromUrl, remiseFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
@@ -28,8 +28,8 @@ import { useSeo } from './lib/site'
 import { ACCOUNT_COUNTRY_KEY, rememberedAccountCountry, setMarketState, useCountries } from './lib/countries'
 import Onboarding from './components/Onboarding'
 import { noteTourPage } from './lib/tourControl'
-import { adultSectionSlug, isKnownAdultListing, isKnownAdultSlug, leaveAdultSpace, setAdultRouteGuess, useAdultSpace } from './lib/adultMode'
-import { useAdultAccess } from './lib/adult'
+import { AdultSpaceContext, setAdultSpaceTheme } from './lib/adultMode'
+import { refreshAdultAccess } from './lib/adult'
 import { newImpressionPageView } from './lib/impressions'
 
 // Home is the landing page and ships in the entry chunk; every other page is
@@ -73,6 +73,7 @@ const SellerListings = lazyPage(() => import('./pages/seller/MyListings'))
 const SellerPremium = lazyPage(() => import('./pages/seller/Booster'))
 const Legal = lazyPage(() => import('./pages/Legal'))
 const Help = lazyPage(() => import('./pages/Help'))
+const AdultHome = lazyPage(() => import('./pages/AdultHome'))
 
 // Admin BO control lives in the dedicated Backoffice app (real, GraphQL-wired)
 // — this Frontend app never had a real admin surface, just a mock
@@ -85,7 +86,14 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-qr' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops' | 'help'
+  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home'
+
+// Pages of the « Section Adultes » space (/adultes…): every other page is
+// the general marketplace's (or the account's).
+const SPACE_PAGES: Page[] = ['adult-home', 'search', 'listing-detail']
+// In the space, the general marketplace's directories are the section's
+// home page.
+const SECTION_HOME_PAGES: Page[] = ['home', 'categories', 'flash-offers', 'shops']
 
 // The app never changes the URL (pushState is only used to make the browser
 // back/forward buttons work), so a hard reload always re-mounts at the
@@ -106,6 +114,9 @@ type NavState = {
   shopKey?: string
   campaignSlug?: string
   helpSlug?: string
+  // « Section Adultes »: its filters are never restored in the general
+  // marketplace (and the other way round).
+  space?: Space
 }
 const LOCATION_WAIT_MS = 700
 
@@ -186,6 +197,11 @@ const routePage = (): Page | null =>
     : initialRoute.page === 'account' ? (savedNav.page && pathFor(savedNav.page) === '/compte' ? savedNav.page : 'buyer-dashboard')
       : initialRoute.page
 const initialSearch = initialRoute?.page === 'search'
+// The marketplace the address opens: the section's for /adultes…, else
+// the general one.
+const initialSpace: Space = initialRoute?.space ?? 'general'
+// The session's remembered filters, only within the same marketplace.
+const savedFilters = (savedNav.space ?? 'general') === initialSpace ? savedNav : {}
 
 // Every navigation is a transition: the current page stays up while the
 // next one's chunk and data load. Meanwhile a thin bar runs along the top
@@ -211,14 +227,12 @@ function startTransition(update: () => void) {
 }
 
 export default function App() {
-  // « Section Adultes » space (lib/adultMode): the site's home is the
-  // section's page and any category its own, until « Quitter ».
-  const adultSpace = useAdultSpace()
-  const [rawPage, setPage] = useState<Page>(() => conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
-  // The site-wide directories (home, categories, campaign deals) are the
-  // section's page there.
-  const toSection = adultSpace && (rawPage === 'home' || rawPage === 'categories' || rawPage === 'flash-offers')
-  const page: Page = toSection ? 'search' : rawPage
+  const [page, setPage] = useState<Page>(() => conversationFromUrl() ? 'buyer-messages' : sharedLegalSlug() ? 'legal' : sharedCampaignSlug() ? 'flash-offers' : sharedListingId() ? 'listing-detail' : sharedShopKey() ? 'shop' : sharedSellerId() ? 'seller-profile' : (shortcutPage() ?? routePage() ?? 'home'))
+  // « Section Adultes » (lib/adultMode): the marketplace the page belongs
+  // to, from the address and each history entry — never kept elsewhere.
+  const [space, setSpace] = useState<Space>(() => (SPACE_PAGES.includes(page) ? initialSpace : 'general'))
+  const adultSpace = space === 'adult'
+  useLayoutEffect(() => { setAdultSpaceTheme(adultSpace) }, [adultSpace])
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration
   // would fight it (it runs before the restored page has rendered).
@@ -239,9 +253,7 @@ export default function App() {
   // The cookie choice follows the member's account (other devices).
   useAccountConsent(currentUser?.id, isLoggedIn)
   const [selectedListingId, setSelectedListingId] = useState(() => sharedListingId() ?? initialRoute?.listingId ?? savedNav.selectedListingId ?? 'l1')
-  const [rawSearchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedNav.searchTerm ?? ''))
-  // The section's own page (its home in the space) shows no earlier words.
-  const searchTerm = toSection ? '' : rawSearchTerm
+  const [searchTerm, setSearchTerm] = useState(initialSearch ? (new URLSearchParams(window.location.search).get('q') ?? '') : (savedFilters.searchTerm ?? ''))
   const [searchCity, setSearchCity] = useState(savedNav.searchCity ?? '')
   const [selectedSellerId, setSelectedSellerId] = useState(() => sharedSellerId() ?? initialRoute?.sellerId ?? savedNav.selectedSellerId ?? 's1')
   // Transient — consumed once by BuyerMessages on mount to start/open the
@@ -251,13 +263,12 @@ export default function App() {
   const [openConversationId, setOpenConversationId] = useState<string | null>(() => conversationFromUrl())
   // …on its « Remise » card (hand-over links: `&remise=1`, orders, purchases).
   const [focusRemise, setFocusRemise] = useState(() => !!conversationFromUrl() && remiseFromUrl())
-  const [rawCategoryFilter, setCategoryFilterState] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedNav.categoryFilter ?? ''))
-  const categoryFilter = adultSpace && (toSection || !isKnownAdultSlug(rawCategoryFilter)) ? adultSectionSlug() : rawCategoryFilter
-  const [categoryCity, setCategoryCity] = useState(initialSearch ? (initialRoute?.categoryCity ?? '') : (savedNav.categoryCity ?? ''))
+  const [categoryFilter, setCategoryFilterState] = useState(initialSearch ? (initialRoute?.category ?? '') : (savedFilters.categoryFilter ?? ''))
+  const [categoryCity, setCategoryCity] = useState(initialSearch ? (initialRoute?.categoryCity ?? '') : (savedFilters.categoryCity ?? ''))
   // A category page's city belongs to that category page.
   const setCategoryFilter = (cat: string) => { setCategoryFilterState(cat); setCategoryCity('') }
   // Tab title, description and share tags of each page, on every move.
-  useSeo(page, { searchTerm, category: page === 'search' ? categoryFilter : '' })
+  useSeo(page, { searchTerm, category: page === 'search' ? categoryFilter : '', adult: adultSpace })
   const [selectedOrderId, setSelectedOrderId] = useState(savedNav.selectedOrderId ?? '')
   const [selectedDisputeId, setSelectedDisputeId] = useState(() => linkParam('dispute') ?? savedNav.selectedDisputeId ?? '')
   // Support ticket to open (notification of a reply).
@@ -328,17 +339,6 @@ export default function App() {
     if (prev && accountCountry && prev !== accountCountry && location?.countryCode !== accountCountry) changeLocation({ countryCode: accountCountry, city: null, source: 'manual' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountCountry])
-  // « Section Adultes » dark theme while a page loads: what the address
-  // suggests (lib/adultMode; the page itself then knows).
-  useLayoutEffect(() => {
-    setAdultRouteGuess(page === 'search' ? isKnownAdultSlug(categoryFilter) : page === 'listing-detail' ? isKnownAdultListing(selectedListingId) : false)
-  }, [page, categoryFilter, selectedListingId])
-  // The space is for confirmed members only: left as soon as the access
-  // isn't OK any more (logged out, confirmation withdrawn, section closed).
-  const adultAccess = useAdultAccess()
-  useEffect(() => {
-    if (adultSpace && adultAccess && adultAccess.status !== 'OK') leaveAdultSpace()
-  }, [adultSpace, adultAccess])
   useLayoutEffect(() => {
     setMarketState({ market: marketLocation?.countryCode ?? null, account: accountCountry, signedIn: isLoggedIn })
   }, [marketLocation?.countryCode, accountCountry, isLoggedIn])
@@ -366,6 +366,10 @@ export default function App() {
   const cacheOwner = useRef<string | null>(null)
   const acceptUser = (me: AuthUser) => {
     if (cacheOwner.current && cacheOwner.current !== me.id) void client.resetStore().catch(() => undefined)
+    // The member is known (session restored, signed in): the section's
+    // access is asked again for them — an answer cached before (« LOGIN »)
+    // never sticks (lib/adult).
+    else if (cacheOwner.current !== me.id) refreshAdultAccess(client)
     cacheOwner.current = me.id
     setCurrentUser(me)
   }
@@ -390,7 +394,7 @@ export default function App() {
       // Nothing of that account stays on screen or on this device: its
       // cached data (identity, balance, favorites…) and its notifications.
       cacheOwner.current = null
-      void client.clearStore().catch(() => undefined)
+      void client.clearStore().then(() => refreshAdultAccess(client)).catch(() => undefined)
       void unsubscribeFromPush(null)
     }
     window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
@@ -501,15 +505,17 @@ export default function App() {
     setCategoryFilter('')
     setSearchTerm(term)
     setSearchPreset(preset ?? null)
-    navigate('search')
+    navigate('search', { category: '', categoryCity: '', searchTerm: term })
   }
 
-  // A category page, optionally in one city (/categorie/velos/abidjan).
+  // A category page, optionally in one city (/categorie/velos/abidjan), in
+  // the current marketplace (a rayon of the section inside it).
   const navigateToCategory = (cat: string, city = '') => {
+    const c = typeof city === 'string' ? city : ''
     setCategoryFilterState(cat)
-    setCategoryCity(typeof city === 'string' ? city : '')
+    setCategoryCity(c)
     setSearchTerm('')
-    navigate('search')
+    navigate('search', { category: cat, categoryCity: c, searchTerm: '' })
   }
 
   // Apply dark mode to document, and remember the choice
@@ -542,8 +548,15 @@ export default function App() {
           if (st.shopKey) setShopKey(st.shopKey)
           if (typeof st.campaignSlug === 'string') setCampaignSlug(st.campaignSlug)
           if (typeof st.helpSlug === 'string') setHelpSlug(st.helpSlug)
+          // The entry's marketplace and filters (a page of the section
+          // comes back in it, the general home with none of its filters).
+          if (typeof st.category === 'string') setCategoryFilterState(st.category)
+          if (typeof st.categoryCity === 'string') setCategoryCity(st.categoryCity)
+          if (typeof st.searchTerm === 'string') setSearchTerm(st.searchTerm)
+          setSpace(st.space === 'adult' ? 'adult' : 'general')
           setPage(st.__yupixiPage)
         } else {
+          setSpace('general')
           setPage('home')
         }
       })
@@ -552,7 +565,7 @@ export default function App() {
     // carry no state, or a stale one: tag it with the page actually shown,
     // so coming back to it restores that page rather than home.
     if (window.history.state?.__yupixiPage !== page) {
-      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, shopKey, campaignSlug, helpSlug }, '')
+      window.history.replaceState({ __yupixiPage: page, listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, shopKey, campaignSlug, helpSlug, space, category: categoryFilter, categoryCity, searchTerm }, '')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -580,26 +593,33 @@ export default function App() {
   // The address bar follows the page: public pages have their own URL
   // (shareable, indexed), account pages sit under /compte.
   useEffect(() => {
-    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, categoryCity, searchTerm, helpSlug })
+    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, categoryCity, searchTerm, helpSlug, space })
     const here = window.location.pathname + window.location.search
-    if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(window.history.state, '', path)
-  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug])
+    // The entry keeps the marketplace and the filters it shows now (Back
+    // brings them back as they were left).
+    const st = window.history.state as Record<string, unknown> | null
+    const keep = st?.__yupixiPage === page && (st.space !== space || st.category !== categoryFilter || st.categoryCity !== categoryCity || st.searchTerm !== searchTerm)
+    const state = keep ? { ...st, space, category: categoryFilter, categoryCity, searchTerm } : window.history.state
+    if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(state, '', path)
+    else if (keep) window.history.replaceState(state, '')
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug, space])
 
   // « Mesure d'audience »: one page_view per page or item (after the
   // address bar above; not when only the search words change). Sent only
   // with the visitor's consent, address cleaned (lib/analytics).
   useEffect(() => {
-    trackPageView(window.location.href, pageTitle(page, categoryFilter), page)
-    // Meta Pixel (same consent, same exclusions as Clarity): one PageView.
+    trackPageView(window.location.href, adultSpace ? 'Section Adultes' : pageTitle(page, categoryFilter), page)
+    // Meta Pixel (same consent, same exclusions as Clarity): one PageView
+    // (never in the « Section Adultes », lib/metaPixel).
     metaPageView(page)
-  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, helpSlug])
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, helpSlug, adultSpace])
 
   // Microsoft Clarity (same consent): stopped on excluded pages (KYC) and
   // on addresses carrying anything but harmless parameters (lib/clarity).
   useEffect(() => {
     setClarityPage(page, window.location.href)
     setMetaPixelPage(page)
-  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug])
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug, space])
 
   // Tours tied to a page know where the member is.
   useEffect(() => { noteTourPage(page) }, [page])
@@ -607,15 +627,16 @@ export default function App() {
   // Persist navigation state so a hard reload lands back where the user was.
   useEffect(() => {
     const state: NavState = {
-      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
+      page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug, space,
     }
     try { sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state)) } catch { /* storage blocked: no restore after a reload */ }
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug, space])
 
-  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string; helpSlug?: string }
+  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string; helpSlug?: string; space?: Space; category?: string; categoryCity?: string; searchTerm?: string }
   const historyEntry = (p: Page, sel: Selection = {}) => ({
     __yupixiPage: p,
     listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
+    space, category: categoryFilter, categoryCity, searchTerm,
     ...sel,
   })
 
@@ -637,12 +658,23 @@ export default function App() {
     } else if (p === 'auth' && page !== 'auth') {
       setAuthReturn(page)
     }
+    // « Section Adultes »: its home page is in it; its search, rayons and
+    // listings stay in the marketplace the visitor is in (unless asked);
+    // every other page is the general marketplace's (or the account's).
+    const nextSpace: Space = p === 'adult-home' ? 'adult' : sel?.space ?? (SPACE_PAGES.includes(p) ? space : 'general')
+    // Leaving a marketplace for the other one: none of its filters follow.
+    const reset: Selection = nextSpace !== space && p !== 'search' ? { category: '', categoryCity: '', searchTerm: '' } : {}
     // Remember where the visitor was, for when they come back to it.
     window.history.replaceState({ ...window.history.state, scrollY: window.scrollY }, '')
     // A transition keeps the current page on screen while the next page's
     // chunk loads, instead of flashing the Suspense fallback.
-    startTransition(() => { setPage(p); setNavSeq((n) => n + 1) })
-    window.history.pushState(historyEntry(p, sel), '')
+    startTransition(() => {
+      setPage(p)
+      setSpace(nextSpace)
+      if (reset.category !== undefined) { setCategoryFilterState(''); setCategoryCity(''); setSearchTerm('') }
+      setNavSeq((n) => n + 1)
+    })
+    window.history.pushState(historyEntry(p, { ...sel, ...reset, space: nextSpace }), '')
     // A new page view: listing cards count as seen again (lib/impressions).
     newImpressionPageView()
   }
@@ -696,7 +728,44 @@ export default function App() {
 
   const replacePage = (p: Page) => {
     setPage(p)
-    window.history.replaceState(historyEntry(p), '')
+    if (!SPACE_PAGES.includes(p) && space !== 'general') setSpace('general')
+    window.history.replaceState(historyEntry(p, SPACE_PAGES.includes(p) ? {} : { space: 'general' }), '')
+  }
+
+  // « Section Adultes »: the page's own content says which marketplace it
+  // is in (an adult listing opened from the favorites, an adult rayon from
+  // an old link): the address follows, without a new history entry.
+  const settleSpace = (next: Space) => {
+    if (next === space) return
+    setSpace(next)
+    window.history.replaceState({ ...window.history.state, space: next }, '')
+  }
+  // In the space, the general marketplace's directories (home, categories,
+  // campaigns, shops) are the section's home page, its search stays its
+  // own, and « Vendre » publishes in it.
+  const [postInSection, setPostInSection] = useState(false)
+  const navigateInSpace = (p: Page, sel?: Selection) => {
+    if (SECTION_HOME_PAGES.includes(p)) return navigate('adult-home')
+    if (p === 'search') return navigate('search', { ...sel, space: 'adult' })
+    if (p === 'seller-post') setPostInSection(true)
+    navigate(p, sel)
+  }
+  const go = (p: Page, sel?: Selection) => (adultSpace ? navigateInSpace(p, sel) : (p === 'seller-post' && setPostInSection(false), navigate(p, sel)))
+  // « Quitter » (the section's strip) or the general marketplace's logo.
+  const leaveSection = () => navigate('home', { space: 'general', category: '', categoryCity: '', searchTerm: '' })
+  // « Adultes 18+ », « Ouvrir la section » (a search's card): the section's
+  // home page, or its search for the words.
+  const openSection = (term?: string) => {
+    if (term?.trim()) {
+      setCategoryFilterState(''); setCategoryCity(''); setSearchTerm(term.trim())
+      return navigate('search', { space: 'adult', category: '', categoryCity: '', searchTerm: term.trim() })
+    }
+    navigate('adult-home')
+  }
+  // A rayon of the section, from anywhere.
+  const openSectionRubric = (slug: string) => {
+    setCategoryFilterState(slug); setCategoryCity(''); setSearchTerm('')
+    navigate('search', { space: 'adult', category: slug, categoryCity: '', searchTerm: '' })
   }
 
   // Same guard for pages reached without navigate(): session restore after a
@@ -723,6 +792,11 @@ export default function App() {
     if (route?.page === 'legal' && route.legalSlug) return openLegal(route.legalSlug)
     if (route?.page === 'flash-offers') return openCampaignRef.current(route.campaignSlug ?? '')
     if (route?.page === 'help') return openHelpRef.current(route.helpSlug ?? '')
+    if (route?.space === 'adult') {
+      if (route.page === 'listing-detail' && route.listingId) { setSelectedListingId(route.listingId); return navigate('listing-detail', { listingId: route.listingId, space: 'adult' }) }
+      if (route.page === 'search') return route.category ? openSectionRubric(route.category) : openSection(q.get('q') ?? '')
+      return openSection()
+    }
     if (route?.page === 'search' && route.category) return navigateToCategory(route.category, route.categoryCity)
     if (route && route.page !== 'account') return navigate(route.page)
     const conversation = q.get('conversation')
@@ -837,6 +911,8 @@ export default function App() {
   // to catch up after tokens are already stored.
   const handleAuthenticated = () => {
     setIsLoggedIn(true)
+    // Signed in: the section's access is the member's now (lib/adult).
+    refreshAdultAccess(client)
     void fetchMe().then(({ data }) => { if (data?.me) acceptUser(data.me) }, () => undefined)
     // Permission must be requested by a direct click, not after the async login.
     setPushDismissed(false)
@@ -884,10 +960,12 @@ export default function App() {
     // cookie. Local state is cleared regardless of the result.
     const revoked = logoutMutation({ variables: { refreshToken: getLegacyRefreshToken() } }).catch(() => undefined)
     clearTokens()
-    leaveAdultSpace()
     setIsLoggedIn(false)
     setCurrentUser(null)
     cacheOwner.current = null
+    // Signed out: back to the general marketplace, none of the section's
+    // filters kept.
+    setCategoryFilterState(''); setCategoryCity(''); setSearchTerm('')
     replacePage('home')
     // Empty the Apollo cache (identity, balance, favorites, conversations…)
     // so the next account never sees them — once the logout request is on
@@ -895,17 +973,20 @@ export default function App() {
     const settled = Promise.allSettled([revoked, pushDone])
     void Promise.race([settled, new Promise(r => setTimeout(r, 3000))])
       .then(() => client.clearStore())
+      .then(() => refreshAdultAccess(client))
       .catch(() => undefined)
   }
 
   const renderPage = () => {
     switch (page) {
+      case 'adult-home':
+        return <AdultHome onNavigate={go} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onOpenRubric={openSectionRubric} onSearch={openSection} onLeave={leaveSection} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
       case 'home':
         return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerFrom} onSearch={searchFromHome} />
       case 'search':
-        return <SearchPage onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} categoryCity={categoryCity} onCategoryCityChange={setCategoryCity} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
+        return <SearchPage key={space} onNavigate={go} onOpenSection={openSection} onSpaceKnown={settleSpace} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} categoryCity={categoryCity} onCategoryCityChange={setCategoryCity} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
       case 'listing-detail':
-        return <ListingDetail listingId={selectedListingId} onNavigate={navigate} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} onContactSeller={contactSellerFrom} />
+        return <ListingDetail listingId={selectedListingId} onNavigate={go} onSpaceKnown={settleSpace} onSelectListing={selectListing} onSelectSeller={selectSeller} favorites={favorites} onToggleFavorite={toggleFavorite} onAuthenticated={handleAuthenticated} currentUser={currentUser} onContactSeller={contactSellerFrom} />
       case 'seller-profile':
         return <SellerProfile sellerId={selectedSellerId} onNavigate={navigate} onSelectListing={selectListing} onContactSeller={contactSellerFrom} isLoggedIn={isLoggedIn && !currentUser?.isGuest} favorites={favorites} onToggleFavorite={toggleFavorite} currentUserId={currentUser?.id} />
       case 'shop':
@@ -936,7 +1017,7 @@ export default function App() {
   // without the storefront header, bottom nav and footer around it.
   // What the page shows: a page that failed to render gets another chance
   // as soon as the visitor goes elsewhere (page or item), see ErrorBoundary.
-  const pageKey = [page, selectedListingId, selectedSellerId, shopKey, campaignSlug, legalSlug, helpSlug, categoryFilter, categoryCity, searchTerm, selectedOrderId, selectedDisputeId].join('|')
+  const pageKey = [page, space, selectedListingId, selectedSellerId, shopKey, campaignSlug, legalSlug, helpSlug, categoryFilter, categoryCity, searchTerm, selectedOrderId, selectedDisputeId].join('|')
 
   if (page === 'auth') {
     const close = () => (window.history.length > 1 ? window.history.back() : navigate('home'))
@@ -991,7 +1072,7 @@ export default function App() {
         case 'buyer-dashboard':
           return <Dashboard onNavigate={navigate} onSelectListing={selectListing} onOpenPurchase={id => openPurchase(id, 'buyer-handover')} onOpenConversation={contactSellerAbout} onOpenHandover={openHandover} currentUser={currentUser} onLogout={logout} />
         case 'seller-post':
-          return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} />
+          return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} inSection={postInSection} />
         case 'seller-edit':
           return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} listingId={selectedListingId} />
         case 'seller-listings':
@@ -1074,9 +1155,12 @@ export default function App() {
 
   return (
     <div className={dark ? 'dark' : ''}>
+      <AdultSpaceContext.Provider value={adultSpace}>
       <Layout
         currentPage={page}
-        onNavigate={navigate}
+        onNavigate={go}
+        onOpenSection={openSection}
+        onLeaveSection={leaveSection}
         onNavigateCategory={navigateToCategory}
         activeCategory={page === 'search' ? categoryFilter : ''}
         dark={dark}
@@ -1095,6 +1179,7 @@ export default function App() {
           <Suspense fallback={<PageFallback />}>{renderPage()}</Suspense>
         </ErrorBoundary>
       </Layout>
+      </AdultSpaceContext.Provider>
       <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}
       {verifyPrompt}

@@ -62,20 +62,21 @@ export function highlightParts(text: string, query: string): { text: string; hit
 export const searchKey = (term: string) => fold(term).replace(/[^a-z0-9+ ]+/g, ' ').replace(/\s+/g, ' ').trim()
 
 const RECORD_SEARCH = gql`
-  mutation RecordSearch($term: String!, $countryCode: String) { recordSearch(term: $term, countryCode: $countryCode) }
+  mutation RecordSearch($term: String!, $countryCode: String, $space: ListingSpace) { recordSearch(term: $term, countryCode: $countryCode, space: $space) }
 `
 const SESSION_KEY = 'dilchap_searches_counted'
 
 // A real search (Enter, « Voir les résultats », a recent or popular term,
 // the results page once settled): counted once per term and session for
-// « Recherches populaires ». Typing is never counted.
-export function recordFinalSearch(term: string, countryCode: string | null | undefined) {
+// « Recherches populaires ». Typing is never counted. `adult`: made inside
+// the « Section Adultes » (its own statistics, apart from the general ones).
+export function recordFinalSearch(term: string, countryCode: string | null | undefined, adult = false) {
   const key = searchKey(term)
   if (key.length < 2 || key.length > 60) return
   let done: string[] = []
   try { done = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? '[]') as string[] } catch { /* private mode */ }
-  const tag = `${countryCode ?? ''}|${key}`
+  const tag = `${adult ? 'A' : ''}${countryCode ?? ''}|${key}`
   if (done.includes(tag)) return
   try { sessionStorage.setItem(SESSION_KEY, JSON.stringify([...done, tag].slice(-100))) } catch { /* private mode */ }
-  void apolloClient.mutate({ mutation: RECORD_SEARCH, variables: { term: term.trim(), countryCode: countryCode ?? null } }).catch(() => undefined)
+  void apolloClient.mutate({ mutation: RECORD_SEARCH, variables: { term: term.trim(), countryCode: countryCode ?? null, space: adult ? 'ADULT' : null } }).catch(() => undefined)
 }
