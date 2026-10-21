@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import Icon from './Icon'
 import type { PushSubscriptionResult } from '../lib/pushNotifications'
+import { pwaEvent } from '../lib/pwaInstall'
 
 // Transversal banners (service-worker update, PWA install, push opt-in).
 // "Plus tard" is remembered for a week on this device so they don't come
@@ -39,6 +41,9 @@ export function UpdateBanner({ show, onUpdate, onDismiss }: { show: boolean; onU
 }
 
 export function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boolean; guide: boolean; onInstall: () => void; onDismiss: () => void }) {
+  // Counted once a day per device (lib/pwaInstall).
+  useEffect(() => { if (show) pwaEvent('BANNER_SHOWN') }, [show])
+  useEffect(() => { if (show && guide) pwaEvent('GUIDE_SHOWN') }, [show, guide])
   if (!show) return null
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
   const isChrome = /chrome|crios/i.test(navigator.userAgent)

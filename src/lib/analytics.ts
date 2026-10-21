@@ -667,6 +667,7 @@ function sendPageView(page: { location: string; title: string }) {
   // Later events (view_item, search…) carry this address too.
   gtag('set', { page_location: page.location, page_title: page.title, page_referrer: cleanReferrer() })
   gtag('event', 'page_view', { send_to: configuredId, page_location: page.location, page_title: page.title })
+  if (deferred.length) sendDeferred()
 }
 
 type Value = string | number | boolean | undefined | null
@@ -683,11 +684,27 @@ let lastEvent = { key: '', at: 0 }
 // Steps of the sign-in / sign-up funnel (lib/authFunnel), counted like the
 // others: method, country, reason — never who.
 export type FunnelEvent = 'login_start' | 'login_failure' | 'login_code_sent' | 'sign_up_start' | 'sign_up_code_sent' | 'sign_up_failure' | 'sign_up_password_set' | 'sign_up_password_later' | 'social_start'
-export function track(name: 'view_item' | 'search' | 'sign_up' | 'login' | 'publish_listing' | 'contact_seller' | 'purchase' | FunnelEvent, params: Params = {}) {
+// The installed app (lib/pwaInstall): banner shown, install accepted,
+// installed, opened from the app — with the platform only.
+export type PwaGaEvent = 'pwa_install_prompt' | 'pwa_install_accepted' | 'pwa_installed' | 'pwa_open'
+type EventName = 'view_item' | 'search' | 'sign_up' | 'login' | 'publish_listing' | 'contact_seller' | 'purchase' | FunnelEvent | PwaGaEvent
+// Events that happen before GA4 runs (the opening of the app, at load):
+// kept for this visit and sent after the first page_view once the audience
+// consent is given — dropped otherwise.
+let deferred: { name: EventName; params: Params }[] = []
+function sendDeferred() {
+  const list = deferred
+  deferred = []
+  for (const e of list) track(e.name, e.params)
+}
+export function track(name: EventName, params: Params = {}, opts: { defer?: boolean } = {}) {
   const toGa = active() && !!configuredId && !stopped
   // The Google Ads tag only gets listing views, on pages open to retargeting.
   const toAds = name === 'view_item' && !!awConfigured && adsHere()
-  if (!toGa && !toAds) return
+  if (!toGa && !toAds) {
+    if (opts.defer && deferred.length < 10) deferred.push({ name, params })
+    return
+  }
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(params)) {
     if (Array.isArray(v)) out[k] = v.map((i) => Object.fromEntries(Object.entries(i).map(([a, b]) => [a, safe(b as Value)]).filter(([, b]) => b !== undefined)))
