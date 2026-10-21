@@ -128,6 +128,8 @@ export default function InboxList({ conversations, activeId, currentUserId, onOp
           {c.listing && (
             <span className="flex min-w-0 items-center gap-1.5 text-body-sm">
               <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${c.canManageDeal ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.canManageDeal ? 'Vente' : 'Achat'}</span>
+              {/* « Section Adultes »: the conversation belongs to its space. */}
+              {c.listing.isAdult && <span data-testid="conversation-adult" title="Section Adultes" className="shrink-0 rounded bg-primary px-1 text-[10px] font-bold text-white">18+</span>}
               <span className="min-w-0 truncate text-on-surface-variant">{c.listing.title}</span>
               <span className="shrink-0 font-semibold text-on-surface"><Price amount={c.listing.price} currency={c.listing.currency} /></span>
             </span>

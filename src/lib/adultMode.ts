@@ -1,83 +1,46 @@
-import { useLayoutEffect, useSyncExternalStore } from 'react'
+import { createContext, useContext, useLayoutEffect, useSyncExternalStore } from 'react'
 
-// « Section Adultes (18+) » space: once a confirmed member is inside the
-// section (its pages, an adult listing), the site becomes a space of its
-// own until « Quitter » — a dedicated dark theme, navigation, categories and
-// search limited to the section. Kept for the session (a reload stays in
-// it); left on « Quitter », on logout, or as soon as the member's access is
-// no longer OK (App).
+// « Section Adultes (18+) » — a marketplace of its own, under /adultes:
+// its home page (/adultes), its rayons (/adultes/<rayon>), its search
+// (/adultes/recherche) and its listings (/adultes/annonce/…), with its own
+// header, filters and dark theme, until « Quitter » or a link to the
+// general marketplace.
+//
+// The space is carried by the address only (App's `space`, read from the
+// URL and kept in each history entry) — never by a flag stored on the
+// device: nothing of the section survives in the general marketplace, and
+// nothing of the general marketplace leaks into the section. (A session
+// flag used to keep the space « on » after leaving it: the home page then
+// opened the section's page and every category its root — the « filters
+// that no longer work » after a visit.)
 //
 // The theme is one switch for the whole site: <html data-mode="adult">,
 // which redefines the colour tokens (index.css) — the components keep their
-// usual classes. It is on in the space, and also on the section's own pages
-// before entering it (the age gate) or a conversation about an adult
-// listing:
-// - index.html applies it before the first paint for a direct visit (the
-//   space of this session, the storefront server's title for the section's
-//   pages, else what this device already knows: the section's slugs, adult
-//   listings seen in this session) — no light flash;
-// - App sets a guess per route (same knowledge) while a page loads;
-// - the pages that know (Search, ListingDetail, Messages) claim it with
-//   useAdultMode(): a defined claim wins over the guess.
+// usual classes. It is on in the space, and also where a page claims it
+// (a conversation about an adult listing, useAdultMode). index.html applies
+// it before the first paint for an /adultes address: no light flash.
 
 const root = document.documentElement
-const SLUGS_KEY = 'dilchap_adult_slugs'
-const ROOT_KEY = 'dilchap_adult_root'
-const IDS_KEY = 'dilchap_adult_ids'
-const SPACE_KEY = 'dilchap_adult_space'
-// The section's category (Backend seed); its subcategories are learnt from
-// the categories query.
-const DEFAULT_SLUGS = ['adultes']
 // Browser bar colour in the mode: the theme's --bg (index.css).
 export const ADULT_THEME_COLOR = '#141116'
 
-function readList(storage: () => Storage, key: string): string[] {
-  try {
-    const v = JSON.parse(storage().getItem(key) ?? '[]') as unknown
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
-  } catch {
-    return []
-  }
-}
-function writeList(storage: () => Storage, key: string, list: string[]) {
-  try { storage().setItem(key, JSON.stringify(list)) } catch { /* private mode: this visit only */ }
-}
-const local = () => window.localStorage
-// Adult listings seen: this session only (nothing kept on a shared device).
-const session = () => window.sessionStorage
+/** Whether an address is the section's (/adultes, /adultes/…). */
+export const isAdultPath = (pathname: string) => /^\/adultes(\/|$)/.test(pathname)
 
-const slugs = new Set([...DEFAULT_SLUGS, ...readList(local, SLUGS_KEY)])
-const listingIds = new Set(readList(session, IDS_KEY))
+// Storage of the former, device-kept space (before /adultes): emptied so
+// an old session can't put a visitor back in it.
+try {
+  window.sessionStorage.removeItem('dilchap_adult_space')
+  window.sessionStorage.removeItem('dilchap_adult_ids')
+  window.localStorage.removeItem('dilchap_adult_slugs')
+  window.localStorage.removeItem('dilchap_adult_root')
+} catch { /* storage blocked */ }
 
-let rootSlug = (() => { try { return window.localStorage.getItem(ROOT_KEY) || DEFAULT_SLUGS[0] } catch { return DEFAULT_SLUGS[0] } })()
-/** The section's own category (its home page in the space). */
-export const adultSectionSlug = () => rootSlug
+/** Whether the page is inside the section's space (App, from the address). */
+export const AdultSpaceContext = createContext(false)
+export const useAdultSpace = () => useContext(AdultSpaceContext)
 
-/** The section's category and subcategory slugs of the market (replaces the known ones), and its category. */
-export function rememberAdultSlugs(list: string[], root?: string) {
-  if (root && root !== rootSlug) {
-    rootSlug = root
-    try { window.localStorage.setItem(ROOT_KEY, root) } catch { /* private mode */ }
-  }
-  const next = [...new Set(list.map(s => s.toLowerCase()))].sort()
-  if (next.join() === readList(local, SLUGS_KEY).join()) return
-  slugs.clear()
-  for (const s of [...DEFAULT_SLUGS, rootSlug, ...next]) slugs.add(s)
-  writeList(local, SLUGS_KEY, next)
-  notify()
-}
-export const isKnownAdultSlug = (slug: string | null | undefined) => !!slug && slugs.has(slug.toLowerCase())
-
-/** An adult listing met in this session (card, detail page). */
-export function rememberAdultListing(id: string) {
-  const key = id.toLowerCase()
-  if (listingIds.has(key)) return
-  listingIds.add(key)
-  writeList(session, IDS_KEY, [...listingIds].slice(-300))
-}
-export const isKnownAdultListing = (id: string | null | undefined) => !!id && listingIds.has(id.toLowerCase())
-
-// ---- The switch ---------------------------------------------------------
+// ---- The theme switch ---------------------------------------------------
 
 const themeMeta = () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
 // The site's own colour (index.html keeps it in data-normal when it starts
@@ -90,57 +53,31 @@ const normalThemeColor = (() => {
   return c
 })()
 
-let space = (() => { try { return window.sessionStorage.getItem(SPACE_KEY) === '1' } catch { return false } })()
-let guess = root.dataset.mode === 'adult'
-let current = guess
+let space = isAdultPath(window.location.pathname)
+let current = root.dataset.mode === 'adult'
 const claims = new Map<number, boolean>()
 let seq = 0
 const listeners = new Set<() => void>()
-// Bumped on every change (space, theme, known slugs): what the hooks watch.
-let version = 0
-function notify() {
-  version++
-  listeners.forEach(l => l())
-}
 
-// Puts the theme where it belongs; true when it changed (watchers told).
-function apply(): boolean {
-  const values = [...claims.values()]
-  const on = space || (values.length ? values.some(Boolean) : guess)
-  if (on === current && (root.dataset.mode === 'adult') === on) return false
+function apply() {
+  const on = space || [...claims.values()].some(Boolean)
+  if (on === current && (root.dataset.mode === 'adult') === on) return
   current = on
   if (on) root.dataset.mode = 'adult'
   else delete root.dataset.mode
   const m = themeMeta()
   if (m && normalThemeColor) m.content = on ? ADULT_THEME_COLOR : normalThemeColor
-  notify()
-  return true
+  listeners.forEach(l => l())
 }
-
-function setSpace(on: boolean) {
-  if (space === on) return
-  space = on
-  try {
-    if (on) window.sessionStorage.setItem(SPACE_KEY, '1')
-    else window.sessionStorage.removeItem(SPACE_KEY)
-  } catch { /* private mode: this page only */ }
-  if (!apply()) notify()
-}
-/** A confirmed member is inside the section (only then). */
-export const enterAdultSpace = () => setSpace(true)
-/** « Quitter », logout, access lost. */
-export const leaveAdultSpace = () => setSpace(false)
-export const isInAdultSpace = () => space
-// A session already in the space whose first paint didn't apply it.
 apply()
 
-/** App: what the current address suggests while its page loads. */
-export function setAdultRouteGuess(on: boolean) {
-  guess = on
+/** App: the address is (or isn't) the section's. */
+export function setAdultSpaceTheme(on: boolean) {
+  space = on
   apply()
 }
 
-/** A page that knows: true / false while mounted; undefined = not known yet (the route's guess). */
+/** A page outside the space that shows the section's content (a conversation about an adult listing): its theme while mounted. */
 export function useAdultMode(on: boolean | undefined) {
   useLayoutEffect(() => {
     if (on === undefined) return
@@ -160,18 +97,23 @@ const subscribe = (l: () => void) => {
 }
 /** Whether the site shows the section's theme now. */
 export const useAdultModeOn = () => useSyncExternalStore(subscribe, () => current)
-/** Whether the visitor is in the section's space (navigation limited to it). */
-export function useAdultSpace() {
-  useSyncExternalStore(subscribe, () => version)
-  return space
-}
 
-/** In the space: only the section's categories (and, elsewhere, its adult subcategories). */
-export function spaceCategories<C extends { adult?: boolean; subcategories: S[] }, S extends { adult?: boolean }>(categories: C[], inSpace: boolean): C[] {
+/** The section's categories: its own (adult) categories, and the adult subcategories of the others. */
+export function spaceCategories<C extends { adult?: boolean; subcategories: S[] }, S extends { adult?: boolean }>(categories: C[], inSpace = true): C[] {
   if (!inSpace) return categories
   return categories.flatMap(c => {
     if (c.adult) return [c]
     const subs = c.subcategories.filter(s => s.adult)
     return subs.length ? [{ ...c, subcategories: subs }] : []
   })
+}
+
+/** Slugs of the section's rayons (categories and subcategories). */
+export function sectionSlugs(categories: { slug: string; adult?: boolean; subcategories: { slug: string; adult?: boolean }[] }[]): Set<string> {
+  const out = new Set<string>()
+  for (const c of spaceCategories(categories)) {
+    if (c.adult) out.add(c.slug)
+    for (const s of c.subcategories) out.add(s.slug)
+  }
+  return out
 }

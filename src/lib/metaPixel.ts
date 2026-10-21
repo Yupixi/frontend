@@ -227,6 +227,8 @@ export function noteAdultListing(id: string) { adultIds.add(id) }
 export function noteAdultSlugs(slugs: string[]) { slugs.forEach((s) => adultSlugs.add(s)) }
 export const onAdultCategory = () => {
   if (!w) return false
+  // The section's own space (/adultes…): nothing of it, ever.
+  if (/^\/adultes(\/|$)/.test(w.location.pathname)) return true
   const m = /^\/categorie\/([^/?#]+)/.exec(w.location.pathname)
   return !!m && adultSlugs.has(decodeURIComponent(m[1]).toLowerCase())
 }

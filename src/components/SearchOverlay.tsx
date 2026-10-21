@@ -9,7 +9,7 @@ import { spaceCategories, useAdultSpace } from '../lib/adultMode'
 import { thumbnailUrl } from '../lib/media'
 import { useMarketCode, useMarketVars } from '../lib/countries'
 import { fold, highlightParts, matchesAll, recordFinalSearch, searchKey } from '../lib/searchText'
-import { ADULT_BLUR_CLASS, SEARCH_ROUTING_QUERY, useAdultAccess, useAdultBlur, type SearchRouting } from '../lib/adult'
+import { ADULT_BLUR_CLASS, SEARCH_ROUTING_QUERY, useAdultBlur, type SearchRouting } from '../lib/adult'
 import { AdultSearchNotice } from './AdultSearchNotice'
 
 type Props = {
@@ -18,6 +18,8 @@ type Props = {
   onSearch: () => void
   onSelectListing: (id: string) => void
   onSelectCategory: (slug: string) => void
+  // « Section Adultes »: its search for the words (a search's card).
+  onOpenSection?: (term: string) => void
   onClose: () => void
   onNavigate: (page: any) => void
 }
@@ -50,19 +52,21 @@ type Suggestions = {
   terms?: string[]
 }
 
-const RECENT_KEY = 'dilchap_recent_searches'
-const readRecent = (): string[] => {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') as string[] } catch { return [] }
+// Each marketplace its own recent searches: the section's are never shown
+// in the general one (and the other way round).
+const recentKey = (adult: boolean) => (adult ? 'dilchap_recent_searches_section' : 'dilchap_recent_searches')
+const readRecent = (adult = false): string[] => {
+  try { return JSON.parse(localStorage.getItem(recentKey(adult)) ?? '[]') as string[] } catch { return [] }
 }
-const writeRecent = (list: string[]) => {
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)) } catch { /* private mode */ }
+const writeRecent = (list: string[], adult = false) => {
+  try { localStorage.setItem(recentKey(adult), JSON.stringify(list)) } catch { /* private mode */ }
 }
 // Recent searches: one per wording (accents, capitals and spaces ignored).
-export const rememberSearch = (term: string) => {
+export const rememberSearch = (term: string, adult = false) => {
   const t = term.trim().replace(/\s+/g, ' ')
   if (!t) return
   const key = searchKey(t)
-  writeRecent([t, ...readRecent().filter(x => searchKey(x) !== key)].slice(0, 6))
+  writeRecent([t, ...readRecent(adult).filter(x => searchKey(x) !== key)].slice(0, 6), adult)
 }
 
 function Highlight({ text, query }: { text: string; query: string }) {
@@ -77,7 +81,10 @@ type Option =
 
 // Full-screen search panel: live suggestions (listings and categories),
 // recent and popular searches, categories.
-export default function SearchOverlay({ query, onQueryChange, onSearch, onSelectListing, onSelectCategory, onClose }: Props) {
+export default function SearchOverlay({ query, onQueryChange, onSearch, onSelectListing, onSelectCategory, onOpenSection, onClose }: Props) {
+  // « Section Adultes » space: suggestions, popular and recent searches,
+  // categories of the section only (lib/adultMode).
+  const adultSpace = useAdultSpace()
   const inputRef = useRef<HTMLInputElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const [selectedIdx, setSelectedIdx] = useState(-1)
@@ -85,14 +92,10 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const [recent, setRecent] = useState<string[]>(() => {
     // Older lists could hold the same search twice.
     const seen = new Set<string>()
-    return readRecent().filter(t => { const k = searchKey(t); if (!k || seen.has(k)) return false; seen.add(k); return true })
+    return readRecent(adultSpace).filter(t => { const k = searchKey(t); if (!k || seen.has(k)) return false; seen.add(k); return true })
   })
   const countryCode = useMarketCode()
   const marketVars = useMarketVars()
-  const adultOk = useAdultAccess()?.status === 'OK'
-  // « Section Adultes » space: suggestions, popular searches and
-  // categories of the section only.
-  const adultSpace = useAdultSpace()
   const blurOf = useAdultBlur()
 
   useEffect(() => {
@@ -124,8 +127,9 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const q = query.trim()
   const { data: categoriesData } = useQuery<{ categories: RemoteCategory[] }>(CATEGORIES_QUERY, { variables: marketVars })
   // Empty categories would lead to a blank results page; the « Section
-  // Adultes » only for a member who may enter it.
-  const allCategories = adultSpace ? spaceCategories(categoriesData?.categories ?? [], true) : (categoriesData?.categories ?? []).filter(c => adultOk || !c.adult)
+  // Adultes » never in the general marketplace (its own entry, « Adultes
+  // 18+ »).
+  const allCategories = adultSpace ? spaceCategories(categoriesData?.categories ?? []) : (categoriesData?.categories ?? []).filter(c => !c.adult)
   const categories = allCategories.filter(c => c.listingsCount !== 0)
   // The tiles: the categories, or the section's subcategories in its space.
   const tiles: { id: string; slug: string; name: string; icon: string; listingsCount?: number }[] = adultSpace
@@ -155,14 +159,14 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
     const add = (x: { slug: string; label: string; parent?: string; icon?: string }) => { if (!seen.has(x.slug)) { seen.add(x.slug); out.push(x) } }
     for (const c of allCategories) {
       if (matchesAll(c.name, debouncedQuery)) add({ slug: c.slug, label: c.name, icon: c.icon })
-      for (const s of c.subcategories) if (matchesAll(s.name, debouncedQuery) && (adultOk || !s.adult)) add({ slug: s.slug, label: s.name, parent: c.name, icon: c.icon })
+      for (const s of c.subcategories) if (matchesAll(s.name, debouncedQuery) && (adultSpace || !s.adult)) add({ slug: s.slug, label: s.name, parent: c.name, icon: c.icon })
     }
     for (const s of suggest?.categories ?? []) {
       const c = allCategories.find(x => x.slug === s.categorySlug)
       if (c) add({ slug: s.subcategorySlug, label: s.subcategoryName, parent: s.categoryName, icon: c.icon })
     }
     return out.slice(0, 4)
-  }, [debouncedQuery, allCategories, suggest, adultOk])
+  }, [debouncedQuery, allCategories, suggest, adultSpace])
 
   // Keyboard order: searches, listings, categories, « Voir tous les résultats ».
   const options: Option[] = q ? [
@@ -176,8 +180,8 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const runSearch = (term?: string) => {
     const words = (term ?? query).trim()
     if (term != null) onQueryChange(term)
-    rememberSearch(words)
-    recordFinalSearch(words, countryCode)
+    rememberSearch(words, adultSpace)
+    recordFinalSearch(words, countryCode, adultSpace)
     onSearch()
     onClose()
   }
@@ -248,7 +252,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
 
       <div className="flex-1 overflow-auto overscroll-contain">
         <div className="mx-auto max-w-[760px] px-4 pb-8 pt-2">
-          {routing && <AdultSearchNotice routing={routing} onOpenSection={slug => { onSelectCategory(slug); onClose() }} className="mt-3" />}
+          {routing && <AdultSearchNotice routing={routing} onOpenSection={slug => { if (onOpenSection) onOpenSection(q); else onSelectCategory(slug); onClose() }} className="mt-3" />}
 
           {q && suggestLoading && !suggest && <p className="py-8 text-center text-body-md text-on-surface-variant">Recherche…</p>}
 

@@ -7,7 +7,8 @@ import type { SearchRouting } from '../lib/adult'
 //   happens to the member;
 // - adult products found or asked for, without the access: a card to the
 //   section's gate (the results never hold them);
-// - a confirmed member: a note that the section's results are included.
+// - a confirmed member: a link to the same search inside the section (the
+//   general results never hold its listings).
 export function AdultSearchNotice({ routing, onOpenSection, className = '' }: {
   routing: SearchRouting
   onOpenSection: (slug: string) => void
@@ -33,8 +34,8 @@ export function AdultSearchNotice({ routing, onOpenSection, className = '' }: {
   if (routing.access === 'OK')
     return (
       <p role="note" className={`m-0 flex items-center gap-2 text-body-sm text-on-surface-variant ${className}`}>
-        <Icon name="lock" size={15} /> Les résultats de la section Adultes sont inclus.
-        <button type="button" onClick={() => onOpenSection(slug)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">Ouvrir la section</button>
+        <Icon name="lock" size={15} /> D’autres résultats sont dans la Section Adultes.
+        <button type="button" onClick={() => onOpenSection(slug)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">Voir dans la section</button>
       </p>
     )
   return (
