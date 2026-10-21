@@ -66,3 +66,9 @@ export const requestOpenLink = (url: string) =>
 export const OPEN_LOCATION_EVENT = 'yupixi:open-location'
 
 export const requestOpenLocation = () => window.dispatchEvent(new Event(OPEN_LOCATION_EVENT))
+
+// « Reels » tab, optionally on one Reel (rail of the home page, a shared
+// link): handled by App.
+export const OPEN_REELS_EVENT = 'yupixi:open-reels'
+export const requestOpenReels = (startId?: string | null) =>
+  window.dispatchEvent(new CustomEvent(OPEN_REELS_EVENT, { detail: startId ?? null }))

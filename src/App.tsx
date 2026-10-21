@@ -17,7 +17,7 @@ import { ACCOUNT_VERIFIED_EVENT } from './lib/accountVerify'
 import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { parsePath, pathFor, samePlace, type Space } from './lib/routes'
-import { conversationFromUrl, remiseFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT } from './lib/navigation'
+import { conversationFromUrl, remiseFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT, OPEN_REELS_EVENT } from './lib/navigation'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -56,6 +56,8 @@ const MyBadgePage = lazyPage(() => import('./pages/account/MyBadgePage'))
 const MyQrPage = lazyPage(() => import('./pages/account/MyQrPage'))
 const SellerCampaigns = lazyPage(() => import('./pages/account/SellerCampaigns'))
 const Support = lazyPage(() => import('./pages/account/Support'))
+const ReelsPage = lazyPage(() => import('./pages/Reels'))
+const MyReels = lazyPage(() => import('./pages/seller/MyReels'))
 const ShopPage = lazyPage(() => import('./pages/ShopPage'))
 const ShopsDirectory = lazyPage(() => import('./pages/ShopsDirectory'))
 const Purchases = lazyPage(() => import('./pages/buyer/Purchases'))
@@ -86,7 +88,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-qr' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home'
+  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home' | 'reels' | 'seller-reels'
 
 // Pages of the « Section Adultes » space (/adultes…): every other page is
 // the general marketplace's (or the account's).
@@ -117,6 +119,7 @@ type NavState = {
   // « Section Adultes »: its filters are never restored in the general
   // marketplace (and the other way round).
   space?: Space
+  reelId?: string
 }
 const LOCATION_WAIT_MS = 700
 
@@ -152,7 +155,7 @@ const savedNav = loadNavState()
 const SHORTCUT_PAGES: Page[] = [
   'seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'seller-badge', 'seller-qr', 'seller-campaigns', 'support', 'shops',
   // Notification targets.
-  'seller-disputes', 'buyer-disputes', 'buyer-notifications', 'seller-listings', 'seller-orders', 'buyer-purchases', 'seller-wallet', 'seller-premium', 'seller-dashboard', 'buyer-dashboard',
+  'seller-disputes', 'buyer-disputes', 'buyer-notifications', 'seller-listings', 'seller-reels', 'seller-orders', 'buyer-purchases', 'seller-wallet', 'seller-premium', 'seller-dashboard', 'buyer-dashboard',
 ]
 function shortcutPage(search: string = window.location.search): Page | null {
   const requested = new URLSearchParams(search).get('shortcut')
@@ -245,6 +248,8 @@ export default function App() {
   const [campaignSlug, setCampaignSlug] = useState(() => sharedCampaignSlug() ?? initialRoute?.campaignSlug ?? savedNav.campaignSlug ?? '')
   // Centre d'aide article shown ('' = the help centre's home).
   const [helpSlug, setHelpSlug] = useState(initialRoute?.page === 'help' ? (initialRoute.helpSlug ?? '') : (savedNav.helpSlug ?? ''))
+  // « Reels » opened on one Reel (/reel/<id>, a tap in a rail).
+  const [reelId, setReelId] = useState(initialRoute?.page === 'reels' ? (initialRoute.reelId ?? '') : (savedNav.reelId ?? ''))
   const [dark, setDark] = useState(savedDark)
   // The consent banner of the « Mesure d'audience » is up: other bottom banners wait.
   const consentOpen = useConsentOpen()
@@ -548,6 +553,7 @@ export default function App() {
           if (st.shopKey) setShopKey(st.shopKey)
           if (typeof st.campaignSlug === 'string') setCampaignSlug(st.campaignSlug)
           if (typeof st.helpSlug === 'string') setHelpSlug(st.helpSlug)
+          if (typeof st.reelId === 'string') setReelId(st.reelId)
           // The entry's marketplace and filters (a page of the section
           // comes back in it, the general home with none of its filters).
           if (typeof st.category === 'string') setCategoryFilterState(st.category)
@@ -593,7 +599,7 @@ export default function App() {
   // The address bar follows the page: public pages have their own URL
   // (shareable, indexed), account pages sit under /compte.
   useEffect(() => {
-    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, categoryCity, searchTerm, helpSlug, space })
+    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, categoryCity, searchTerm, helpSlug, space, reelId })
     const here = window.location.pathname + window.location.search
     // The entry keeps the marketplace and the filters it shows now (Back
     // brings them back as they were left).
@@ -602,7 +608,7 @@ export default function App() {
     const state = keep ? { ...st, space, category: categoryFilter, categoryCity, searchTerm } : window.history.state
     if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(state, '', path)
     else if (keep) window.history.replaceState(state, '')
-  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug, space])
+  }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug, space, reelId])
 
   // « Mesure d'audience »: one page_view per page or item (after the
   // address bar above; not when only the search words change). Sent only
@@ -630,12 +636,12 @@ export default function App() {
       page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug, space,
     }
     try { sessionStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(state)) } catch { /* storage blocked: no restore after a reload */ }
-  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug, space])
+  }, [page, selectedListingId, selectedSellerId, searchTerm, searchCity, categoryFilter, categoryCity, selectedOrderId, selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug, space, reelId])
 
-  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string; helpSlug?: string; space?: Space; category?: string; categoryCity?: string; searchTerm?: string }
+  type Selection = { listingId?: string; sellerId?: string; orderId?: string; disputeId?: string; legalSlug?: string; shopKey?: string; campaignSlug?: string; helpSlug?: string; space?: Space; category?: string; categoryCity?: string; searchTerm?: string; reelId?: string }
   const historyEntry = (p: Page, sel: Selection = {}) => ({
     __yupixiPage: p,
-    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug,
+    listingId: selectedListingId, sellerId: selectedSellerId, orderId: selectedOrderId, disputeId: selectedDisputeId, legalSlug, shopKey, campaignSlug, helpSlug, reelId,
     space, category: categoryFilter, categoryCity, searchTerm,
     ...sel,
   })
@@ -798,6 +804,7 @@ export default function App() {
     if (route?.page === 'legal' && route.legalSlug) return openLegal(route.legalSlug)
     if (route?.page === 'flash-offers') return openCampaignRef.current(route.campaignSlug ?? '')
     if (route?.page === 'help') return openHelpRef.current(route.helpSlug ?? '')
+    if (route?.page === 'reels') return openReelsRef.current(route.reelId ?? null)
     if (route?.space === 'adult') {
       if (route.page === 'listing-detail' && route.listingId) { setSelectedListingId(route.listingId); return navigate('listing-detail', { listingId: route.listingId, space: 'adult' }) }
       if (route.page === 'search') return route.category ? openSectionRubric(route.category) : openSection(q.get('q') ?? '')
@@ -843,6 +850,19 @@ export default function App() {
   }
   const openCampaignRef = useRef(openCampaign)
   openCampaignRef.current = openCampaign
+
+  // The « Reels » tab, on one Reel or the feed ('').
+  const openReels = (id: string | null = null) => {
+    setReelId(id ?? '')
+    navigate('reels', { reelId: id ?? '' })
+  }
+  const openReelsRef = useRef(openReels)
+  openReelsRef.current = openReels
+  useEffect(() => {
+    const onRequest = (e: Event) => openReelsRef.current((e as CustomEvent<string | null>).detail)
+    window.addEventListener(OPEN_REELS_EVENT, onRequest)
+    return () => window.removeEventListener(OPEN_REELS_EVENT, onRequest)
+  }, [])
   useEffect(() => {
     const onRequest = (e: Event) => openCampaignRef.current((e as CustomEvent<string>).detail)
     window.addEventListener(OPEN_CAMPAIGN_EVENT, onRequest)
@@ -1005,6 +1025,8 @@ export default function App() {
         return <Legal slug={legalSlug} onOpenLegal={openLegal} onNavigate={navigate} />
       case 'help':
         return <Help slug={helpSlug} onOpenArticle={openHelp} onNavigate={navigate} />
+      case 'reels':
+        return <ReelsPage key={reelId} startId={reelId || null} city={marketLocation?.city} onClose={() => (navSeq > 0 && window.history.length > 1 ? window.history.back() : navigate('home'))} onOpenListing={selectListing} onOpenSeller={(id, shop) => (shop ? openShop(shop) : selectSeller(id))} onContactSeller={contactSellerFrom} onToggleFavorite={id => void toggleFavorite(id)} favorites={favorites} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onRequireAuth={() => navigate('auth')} />
       case 'flash-offers':
         return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerFrom} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:
@@ -1023,7 +1045,7 @@ export default function App() {
   // without the storefront header, bottom nav and footer around it.
   // What the page shows: a page that failed to render gets another chance
   // as soon as the visitor goes elsewhere (page or item), see ErrorBoundary.
-  const pageKey = [page, space, selectedListingId, selectedSellerId, shopKey, campaignSlug, legalSlug, helpSlug, categoryFilter, categoryCity, searchTerm, selectedOrderId, selectedDisputeId].join('|')
+  const pageKey = [page, space, selectedListingId, selectedSellerId, shopKey, campaignSlug, legalSlug, helpSlug, categoryFilter, categoryCity, searchTerm, selectedOrderId, selectedDisputeId, reelId].join('|')
 
   if (page === 'auth') {
     const close = () => (window.history.length > 1 ? window.history.back() : navigate('home'))
@@ -1081,6 +1103,8 @@ export default function App() {
           return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} inSection={postInSection} />
         case 'seller-edit':
           return <PostListing onNavigate={navigate} currentUser={currentUser} onLogout={logout} listingId={selectedListingId} />
+        case 'seller-reels':
+          return <MyReels onNavigate={navigate} onSelectListing={selectListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-listings':
           return <SellerListings onNavigate={navigate} onSelectListing={selectListing} onEditListing={editListing} currentUser={currentUser} onLogout={logout} />
         case 'seller-stats':
@@ -1153,7 +1177,7 @@ export default function App() {
         <ConsentBanner onOpenLegal={openLegal} />
         {verifyPrompt}
         {verifySheet}
-        <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+        <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit' && page !== 'reels'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
         {onboarding}
       </div>
     )
@@ -1186,7 +1210,7 @@ export default function App() {
         </ErrorBoundary>
       </Layout>
       </AdultSpaceContext.Provider>
-      <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit' && page !== 'reels'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}
       {verifyPrompt}
       {verifySheet}

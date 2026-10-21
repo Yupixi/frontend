@@ -12,7 +12,7 @@ import ErrorBoundary, { ErrorScreen } from './ErrorBoundary'
 const SupportCenter = lazyPage(() => import('./SupportCenter'))
 
 // Pages where the tab would sit on a form's own bottom bar, or is the page.
-const HIDDEN = new Set(['support', 'auth', 'seller-post', 'seller-edit'])
+const HIDDEN = new Set(['reels', 'support', 'auth', 'seller-post', 'seller-edit'])
 
 type Props = {
   page: string

@@ -290,3 +290,11 @@ brand_instagram Instagram
 brand_tiktok MusicSquare
 brand_whatsapp Whatsapp
 brand_youtube Youtube
+smart_display VideoPlay*
+play_circle PlayCircle*
+volume_off VolumeSlash
+volume_up VolumeHigh
+video_call VideoAdd
+videocam Video*
+content_cut Scissor
+data_saver_on Flash

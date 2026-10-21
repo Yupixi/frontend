@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import {
   LayoutDashboard, PlusCircle, Package, BarChart2, Rocket, Heart, MessageSquare, Truck, Wallet, Star,
-  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, QrCode, Store, Gavel, Handshake, Tag, Megaphone, Headset,
+  Bell, History, Settings, ChevronDown, Menu, X, LogOut, Home, ShieldCheck, BadgeCheck, QrCode, Store, Gavel, Handshake, Tag, Megaphone, Headset, Video,
 } from '../../components/icons'
 import Icon from '../../components/Icon'
 import { MY_DISPUTE_STATS_QUERY } from '../../graphql/sellerTools'
@@ -36,6 +36,7 @@ const SECTIONS: { title: string; items: NavEntry[] }[] = [
       {
         label: 'Annonces', icon: Package, items: [
           { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
+          { key: 'seller-reels', icon: Video, label: 'Mes Reels' },
           { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
           { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
         ],
@@ -130,7 +131,7 @@ const MEMBER_TABS: MobileTab[] = [
 
 const SELLER_TABS: MobileTab[] = [
   { key: 'home', icon: 'storefront', label: 'Accueil', match: [] },
-  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-premium', 'seller-shop', 'seller-shop-stats', 'seller-shop-promos', 'seller-campaigns'] },
+  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-reels', 'seller-premium', 'seller-shop', 'seller-shop-stats', 'seller-shop-promos', 'seller-campaigns'] },
   { key: 'buyer-messages', icon: 'chat_bubble', label: 'Messages', match: [] },
   { key: 'seller-orders', icon: 'account_balance_wallet', label: 'Ventes', match: ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-disputes'] },
   { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: [] },

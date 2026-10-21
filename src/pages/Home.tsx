@@ -16,6 +16,7 @@ import { formatNumber } from '../lib/format'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, RECOMMENDED_RAIL_QUERY, type ListingFacets, type ListingSort, type PromotedPlace, type RemoteListing } from '../graphql/listings'
 import { ImpressionScope } from '../lib/impressions'
 import { DEFAULT_HOME, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
+import ReelRail from '../components/reels/ReelRail'
 import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
 import type { StoredLocation } from '../lib/location'
 import type { AuthUser } from '../graphql/auth'
@@ -269,6 +270,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     reassurance: true,
     sellCta: true,
     howItWorks: true,
+    // Its own placeholder while loading, nothing when there is no Reel.
+    reels: true,
     categories: !!categoriesData || !!categoriesQuery.error,
     campaign: campaignSettled,
     pepites: (!!recommendedList || !!recommendedError) && (!personalized || !recommendedList || !!forYouList || !!forYouError),
@@ -317,6 +320,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // Only the layout on screen is built (each render used to create both,
   // every card twice).
   const desktopSections: Partial<Record<HomeSectionKey, React.ReactNode>> = !isDesktop ? {} : {
+    reels: <ReelRail desktop countryCode={location?.countryCode} city={location?.city} signedIn={!!currentUser && !currentUser.isGuest} />,
     campaign: <ImpressionScope placement="HOME_OTHER"><HomePromotions desktop heroIds={heroIds} renderCard={l => card(l)} /></ImpressionScope>,
     categories: <>
           {topCategories.length > 0 && (
@@ -475,6 +479,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     </>,
   }
   const mobileSections: Partial<Record<HomeSectionKey, React.ReactNode>> = isDesktop ? {} : {
+    reels: <ReelRail countryCode={location?.countryCode} city={location?.city} signedIn={!!currentUser && !currentUser.isGuest} />,
     reassurance: <>
         {/* Looks like a button: it opens « Comment ça marche ». */}
         <button type="button" onClick={() => trust.open(trustTopicOf('verified_user', home.mobileStrip.title))} aria-haspopup="dialog" className="mb-6 flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border-none bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-high p-3 text-left shadow-sm">
