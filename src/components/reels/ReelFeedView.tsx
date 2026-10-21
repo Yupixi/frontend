@@ -43,9 +43,11 @@ type Props = ReelActions & {
   // Over the whole screen, bottom navigation included (a listing's or a
   // seller's Reels); otherwise the « Reels » tab keeps the bottom bar.
   overlay?: boolean
+  // A seller: « Publier un Reel » in the top bar.
+  onPublish?: () => void
 }
 
-export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onClose, startIndex = 0, onIndexChange, title = 'Reels', emptyText, overlay, ...actions }: Props) {
+export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onClose, startIndex = 0, onIndexChange, title = 'Reels', emptyText, overlay, onPublish, ...actions }: Props) {
   const scroller = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(startIndex)
   const activeRef = useRef(startIndex)
@@ -139,6 +141,11 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
           <Icon name="arrow_back" size={22} />
         </button>
         <h1 className="m-0 flex-1 text-headline-sm text-white">{title}</h1>
+        {onPublish && (
+          <button onClick={onPublish} className="pointer-events-auto flex h-10 cursor-pointer items-center gap-1.5 rounded-full border-none bg-primary px-3.5 text-label-md text-white">
+            <Icon name="video_call" size={19} /> <span>Publier</span>
+          </button>
+        )}
         <button onClick={() => setReelsMuted(!muted)} aria-label={muted ? 'Activer le son' : 'Couper le son'} aria-pressed={!muted} className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white">
           <Icon name={muted ? 'volume_off' : 'volume_up'} size={21} />
         </button>

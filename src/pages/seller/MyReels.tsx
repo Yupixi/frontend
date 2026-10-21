@@ -12,7 +12,7 @@ import {
   BOOST_REEL_MUTATION, DELETE_REEL_MUTATION, MY_REELS_QUERY, MY_REEL_STATS_QUERY, REEL_STATUS_LABEL, type MyReel, type ReelStatus,
 } from '../../graphql/reels'
 import { formatNumber } from '../../lib/format'
-import { formatDuration, reelThumb, useReelSettings } from '../../lib/reels'
+import { formatDuration, reelThumb, takeNewReelRequest, useReelSettings } from '../../lib/reels'
 
 const ReelComposer = lazy(() => import('../../components/reels/ReelComposer'))
 
@@ -43,7 +43,8 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
   useQuery<{ myReels: MyReel[] }>(MY_REELS_QUERY, { skip: !waiting, pollInterval: 15_000, fetchPolicy: 'network-only' })
   const { data: listingsData } = useQuery<{ myListings: { items: Row[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 100 } })
   const live = (listingsData?.myListings.items ?? []).filter(l => l.status === 'APPROVED')
-  const [pick, setPick] = useState(false)
+  // « Publier un Reel » from the Reels tab: straight to the listing picker.
+  const [pick, setPick] = useState(takeNewReelRequest)
   const [composeFor, setComposeFor] = useState<Row | null>(null)
   const [statsFor, setStatsFor] = useState<MyReel | null>(null)
   const [watch, setWatch] = useState<MyReel | null>(null)

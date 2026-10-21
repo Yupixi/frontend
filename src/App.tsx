@@ -19,6 +19,7 @@ import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { parsePath, pathFor, samePlace, type Space } from './lib/routes'
 import { conversationFromUrl, remiseFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT, OPEN_REELS_EVENT } from './lib/navigation'
+import { requestNewReel } from './lib/reels'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -1032,7 +1033,7 @@ export default function App() {
       case 'help':
         return <Help slug={helpSlug} onOpenArticle={openHelp} onNavigate={navigate} />
       case 'reels':
-        return <ReelsPage key={reelId} startId={reelId || null} city={marketLocation?.city} onClose={() => (navSeq > 0 && window.history.length > 1 ? window.history.back() : navigate('home'))} onOpenListing={selectListing} onOpenSeller={(id, shop) => (shop ? openShop(shop) : selectSeller(id))} onContactSeller={contactSellerFrom} onToggleFavorite={id => void toggleFavorite(id)} favorites={favorites} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onRequireAuth={() => navigate('auth')} />
+        return <ReelsPage key={reelId} startId={reelId || null} city={marketLocation?.city} onClose={() => (navSeq > 0 && window.history.length > 1 ? window.history.back() : navigate('home'))} onOpenListing={selectListing} onOpenSeller={(id, shop) => (shop ? openShop(shop) : selectSeller(id))} onContactSeller={contactSellerFrom} onToggleFavorite={id => void toggleFavorite(id)} favorites={favorites} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onRequireAuth={() => navigate('auth')} onPublish={() => { requestNewReel(); navigate('seller-reels') }} />
       case 'flash-offers':
         return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerFrom} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:
