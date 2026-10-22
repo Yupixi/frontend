@@ -19,7 +19,7 @@ import { LOGOUT_MUTATION, ME_QUERY, type AuthUser } from './graphql/auth'
 import { MY_FAVORITE_IDS_QUERY, TOGGLE_FAVORITE_MUTATION } from './graphql/favorites'
 import { parsePath, pathFor, samePlace, type Space } from './lib/routes'
 import { conversationFromUrl, remiseFromUrl, NAVIGATE_EVENT, OPEN_CONVERSATION_EVENT, OPEN_LINK_EVENT, OPEN_SHOP_EVENT, OPEN_CAMPAIGN_EVENT, OPEN_HELP_EVENT, OPEN_REELS_EVENT } from './lib/navigation'
-import { requestNewReel } from './lib/reels'
+import { requestManageReel, requestNewReel } from './lib/reels'
 import { clearTokens, getAccessToken, getLegacyRefreshToken, SESSION_EXPIRED_EVENT } from './lib/auth'
 import { detectLocationFromIP, earlyLocationLookup, getStoredLocation, setStoredLocation, type StoredLocation } from './lib/location'
 import { applyServiceWorkerUpdate, SW_UPDATE_EVENT } from './lib/serviceWorker'
@@ -282,6 +282,9 @@ export default function App() {
   const [focusTicketId, setFocusTicketId] = useState<string | null>(() => linkParam('ticket'))
   // « Prolonger » in the end-of-boost notification: Booster opens on that listing.
   const [boostListingId, setBoostListingId] = useState<string | null>(() => linkParam('boost'))
+  // « Mes Reels » opened on one Reel (`reel`, e.g. refused: « Publier une
+  // autre vidéo »), read once by the page.
+  useState(() => { const r = linkParam('reel'); if (r) requestManageReel(r); return null })
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState(false)
@@ -735,7 +738,7 @@ export default function App() {
     window.addEventListener(OPEN_CONVERSATION_EVENT, onOpen)
     navigator.serviceWorker?.addEventListener('message', onSwMessage)
     // The push link is consumed once: a reload shouldn't reopen it.
-    if (['conversation', 'shortcut', 'dispute', 'ticket', 'boost'].some(linkParam)) window.history.replaceState(window.history.state, '', window.location.pathname)
+    if (['conversation', 'shortcut', 'dispute', 'ticket', 'boost', 'reel'].some(linkParam)) window.history.replaceState(window.history.state, '', window.location.pathname)
     return () => {
       window.removeEventListener(OPEN_CONVERSATION_EVENT, onOpen)
       window.removeEventListener(OPEN_SHOP_EVENT, onOpenShop)
@@ -832,6 +835,7 @@ export default function App() {
     if (dispute) setSelectedDisputeId(dispute)
     setFocusTicketId(q.get('ticket'))
     setBoostListingId(q.get('boost'))
+    if (q.get('reel')) requestManageReel(q.get('reel')!)
     navigate(target, dispute ? { disputeId: dispute } : undefined)
   }
   const openLinkRef = useRef(openLink)
