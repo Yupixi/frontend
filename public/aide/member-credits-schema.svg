@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" font-family="Inter, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Les crédits Dilchap</title>
+  <desc id="d">Vous payez par Mobile Money, vous recevez des crédits (1 crédit = 100 F par défaut), et les crédits paient boosts, badges, boutique et campagnes.</desc>
+  <rect width="720" height="220" rx="20" fill="#FFFFFF"/>
+  <rect x="20" y="24" width="200" height="120" rx="16" fill="#F6F3F2"/>
+  <text x="120" y="66" text-anchor="middle" font-size="15" font-weight="700" fill="#1C1B1B">Mobile Money</text>
+  <text x="120" y="90" text-anchor="middle" font-size="13" fill="#5E5E5E">Wave, Orange Money,</text>
+  <text x="120" y="110" text-anchor="middle" font-size="13" fill="#5E5E5E">MTN MoMo, Moov</text>
+  <path d="M230 84 h34 m-8 -8 l8 8 l-8 8" stroke="#9E9E9E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <rect x="274" y="24" width="172" height="120" rx="16" fill="#FFE3E3"/>
+  <circle cx="360" cy="62" r="20" fill="#FE0000"/><text x="360" y="68" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">C</text>
+  <text x="360" y="104" text-anchor="middle" font-size="15" font-weight="700" fill="#1C1B1B">Crédits</text>
+  <text x="360" y="126" text-anchor="middle" font-size="13" fill="#1C1B1B">1 crédit = 100 F*</text>
+  <path d="M456 84 h34 m-8 -8 l8 8 l-8 8" stroke="#9E9E9E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <rect x="500" y="24" width="200" height="120" rx="16" fill="#E3F5EC"/>
+  <text x="600" y="58" text-anchor="middle" font-size="15" font-weight="700" fill="#1C1B1B">Ils paient</text>
+  <text x="600" y="82" text-anchor="middle" font-size="13" fill="#1C1B1B">Boosts · Badges</text>
+  <text x="600" y="102" text-anchor="middle" font-size="13" fill="#1C1B1B">Boutique · Campagnes</text>
+  <text x="600" y="122" text-anchor="middle" font-size="13" fill="#1C1B1B">Assistant IA</text>
+  <text x="360" y="178" text-anchor="middle" font-size="13" fill="#5E5E5E">Pas assez de crédits ? Le montant manquant s’affiche et s’achète sur place.</text>
+  <text x="360" y="204" text-anchor="middle" font-size="11" fill="#5E5E5E">* Valeur par défaut : le prix de votre pays s’affiche partout. Les crédits n’expirent pas.</text>
+</svg>

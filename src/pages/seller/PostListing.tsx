@@ -8,7 +8,7 @@ import Price from '../../components/Price'
 import RichTextEditor from '../../components/RichTextEditor'
 import { AssistButton, ListingAdvicePanel } from '../../components/ListingAssist'
 import type { ListingDraftSuggestion } from '../../graphql/listingAssist'
-import BoostMenu from '../../components/BoostMenu'
+import BoostPicker from '../../components/boost/BoostPicker'
 import CampaignOptIn, { campaignCost, type CampaignChoice } from '../../components/CampaignOptIn'
 import { applyOffer, usePriceOffers } from '../../lib/priceOffers'
 import { JOIN_CAMPAIGN_WITH_LISTING_MUTATION } from '../../graphql/shops'
@@ -219,6 +219,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   // published either way).
   const [result, setResult] = useState<{ id: string, submitted: boolean, live?: boolean, fromDraft?: boolean, campaign?: { name: string, credits: number } | { name: string, error: string }, reel?: { draft: ReelDraft, listing: { id: string, title: string, coverImageUrl?: string | null, countryCode: string } } } | null>(null)
   const [boosted, setBoosted] = useState(false)
+  const [boostOpen, setBoostOpen] = useState(false)
   const [campaignChoice, setCampaignChoice] = useState<CampaignChoice | null>(null)
   // « Reel (facultatif) »: the video chosen here, sent once the listing is
   // published (kept for the session: a server draft finished later in
@@ -634,8 +635,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               ) : (
                 <>
                   <div className="mb-1 flex items-center gap-2 text-headline-sm text-on-surface"><Rocket size={20} className="text-primary" /> Boostez votre annonce</div>
-                  <p className="m-0 mb-3 text-body-sm text-on-surface-variant">Remontées, mise en vedette ou badge Urgent : choisissez une formule.</p>
-                  <BoostMenu variant="inline" listingId={result.id} onDone={() => setBoosted(true)} />
+                  <p className="m-0 mb-3 text-body-sm text-on-surface-variant">Remontée, En vedette, Turbo ou Urgent, payé en crédits.</p>
+                  <button type="button" onClick={() => setBoostOpen(true)} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Rocket size={17} /> Choisir un boost</button>
+                  {boostOpen && <BoostPicker open listing={{ id: result.id, title: form.title, status: result.live ? 'APPROVED' : 'PENDING_REVIEW' }} onClose={() => setBoostOpen(false)} onDone={() => setBoosted(true)} />}
                 </>
               )}
             </div>

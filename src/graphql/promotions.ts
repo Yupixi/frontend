@@ -6,7 +6,17 @@ export type BoostPack = 'BUMP_FLASH' | 'BUMP_PACK_3' | 'BUMP_DAILY_7' | 'FEATURE
 export type BoostPackInfo = {
   pack: BoostPack
   family: 'BUMP' | 'FEATURED' | 'TURBO' | 'URGENT'
+  // One name per formula everywhere: name + duration (« En vedette 48 h »).
   label: string
+  name: string
+  durationLabel: string | null
+  // What it does, in one short line (the card); the detail is `promises`.
+  summary: string
+  // A reserved place in « Pépites à la Une » on the home page.
+  onHome: boolean
+  bumpNow: boolean
+  // Bought most in the country lately (BO › Règles › Boosts), never invented.
+  mostChosen: boolean
   description: string
   price: number
   durationHours: number
@@ -17,9 +27,9 @@ export type BoostPackInfo = {
   // What the formula guarantees, one line each, worded by the server from
   // the back-office settings of the payer's country.
   promises: string[]
-  // Card badge while it runs (« En vedette », « Prix Choc », « Vente Urgente »).
+  // Card badge while it runs (« En vedette », « Turbo », « Urgent »).
   badgeLabel: string | null
-  // Local hour of the daily automatic bump (Quotidienne, Turbo).
+  // Local hour of the daily automatic bump (Remontée quotidienne, Turbo).
   autoBumpHour: number | null
 }
 
@@ -27,7 +37,7 @@ export type BoostPackInfo = {
 // country: `country` is the payer's (lib/countries usePriceVars).
 export const BOOST_PACKS_QUERY = gql`
   query BoostPacks($country: String) {
-    boostPacks(country: $country) { pack family label description price durationHours bumpCredits pinned autoBump urgentBadge promises badgeLabel autoBumpHour }
+    boostPacks(country: $country) { pack family label name durationLabel summary onHome bumpNow mostChosen description price durationHours bumpCredits pinned autoBump urgentBadge promises badgeLabel autoBumpHour }
   }
 `
 

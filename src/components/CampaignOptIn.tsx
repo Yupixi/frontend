@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import BuyCreditsSheet from './BuyCreditsSheet'
 import Credits from './Credits'
+import { CreditsF } from './boost/BoostKit'
 import Icon from './Icon'
 import Price from './Price'
 import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
@@ -162,8 +163,8 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
           <span className="flex items-center gap-2">
             <Icon name={missing ? 'error' : 'account_balance_wallet'} size={18} />
             {missing
-              ? <span>Crédits insuffisants : il vous manque <b><Credits n={missing} /></b> (solde <Credits n={balance} />).</span>
-              : <span><Credits n={cost} /> seront débités de votre solde (<Credits n={balance} />) à la publication.</span>}
+              ? <span>Il vous manque <b><CreditsF n={missing} /></b> (solde <Credits n={balance} />).</span>
+              : <span>Coût : <b><CreditsF n={cost} /></b>, débité à la publication (solde <Credits n={balance} />).</span>}
           </span>
           {missing > 0 && <button type="button" onClick={() => setTopUp(true)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white">Acheter des crédits</button>}
         </div>

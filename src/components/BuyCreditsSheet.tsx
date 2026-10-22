@@ -20,7 +20,8 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   suggested?: number
   pack?: string
 }) {
-  const settings = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), skip: !open }).data?.walletSettings
+  const balanceData = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), skip: !open }).data
+  const settings = balanceData?.walletSettings
   const packs = useQuery<{ creditPacks: CreditPack[] }>(CREDIT_PACKS_QUERY, { variables: usePriceVars(), skip: !open }).data?.creditPacks ?? []
   const paymentsOff = useQuery<PaymentSettings>(PAYMENT_SETTINGS_QUERY, { skip: !open }).data?.paymentSettings.environment === 'disabled'
   const value = settings?.creditValue ?? 0
@@ -64,7 +65,11 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
   return (
     <BottomSheet open={open} onClose={onClose} title="Acheter des crédits" maxWidth="480px"
       footer={<div className="border-0 border-t border-solid border-outline-variant px-4 pb-3 pt-3"><button type="button" disabled={!ok} onClick={() => setPay(true)} className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-45"><Icon name="lock" size={18} /> {paymentsOff ? 'Bientôt disponible' : ok ? <>Payer <Price amount={amount} /></> : 'Choisissez vos crédits'}</button></div>}>
-      <p className="m-0 text-body-sm text-on-surface-variant">Les crédits paient boosts, badges, abonnement boutique et campagnes. Paiement par Wave, Orange Money, MTN ou Moov.</p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl bg-surface-container-low px-3 py-2.5 text-body-sm text-on-surface-variant">
+        <span>Solde : <b className="text-on-surface">{balanceData ? <Credits n={balanceData.myWallet.credits} /> : '…'}</b></span>
+        {value > 0 && <span>1 crédit = <b className="text-on-surface"><Price amount={value} /></b> · Mobile Money</span>}
+      </div>
+      {!!suggested && <p className="m-0 mt-2 flex items-center gap-2 text-body-sm text-on-surface"><Icon name="info" size={17} className="shrink-0 text-primary" /> <span>Il vous manque <b><Credits n={suggested} /></b>.</span></p>}
       {paymentsOff && <p className="m-0 mt-3 flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface"><Icon name="schedule" size={18} className="shrink-0 text-primary" /> L’achat de crédits par Mobile Money arrive bientôt. En attendant, vous pouvez utiliser les crédits déjà sur votre compte.</p>}
       <div className="mt-3 flex flex-col gap-2">
         {packs.map((p) => {
@@ -75,6 +80,7 @@ export default function BuyCreditsSheet({ open, onClose, onDone, suggested, pack
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-label-lg text-on-surface">{p.label}</span>
                 <span className="block truncate text-body-sm text-on-surface-variant"><Credits n={total} />{p.bonusCredits > 0 && <> dont <b className="font-semibold text-tertiary">{p.bonusCredits} offerts</b></>}</span>
+                {suggested ? (total < suggested && <span className="block text-label-sm text-primary">Pas assez pour cet achat</span>) : null}
               </span>
               <span className="shrink-0 whitespace-nowrap text-label-lg font-extrabold text-on-surface"><Price amount={p.price} /></span>
             </button>

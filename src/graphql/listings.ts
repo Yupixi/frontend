@@ -552,6 +552,7 @@ export const MY_LISTINGS_QUERY = gql`
         lastBumpedAt
         nextAutoBumpAt
         autoBumpsLeft
+        promoBadge { kind label percent at }
       }
     }
   }
@@ -600,6 +601,8 @@ export type MyListingRow = {
   lastBumpedAt?: string | null
   nextAutoBumpAt?: string | null
   autoBumpsLeft?: number | null
+  // The card's pill buyers see now (« En vedette », « Remontée il y a … »).
+  promoBadge?: PromoBadge | null
 }
 
 export type MyListingDetail = {
@@ -703,7 +706,7 @@ export type RemoteListing = {
   coverImageUrl: string | null
   boostExpiresAt?: string | null
   // Badges of the boosts running now, the first one is shown on the card
-  // (FEATURED « En vedette », TURBO « Prix Choc », URGENT « Vente Urgente »).
+  // (FEATURED « En vedette », TURBO « Turbo », URGENT « Urgent »).
   boostBadges?: BoostBadge[]
   // The card's one pill (« Badges des annonces », BO › Classement): why it
   // is placed where it is, only while it really is.

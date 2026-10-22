@@ -917,3 +917,30 @@ input, textarea, [contenteditable='true'], .ProseMirror {
 @keyframes nav-progress-sweep { from { background-position: -70% 0; } to { background-position: 170% 0; } }
 .nav-progress[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .nav-progress { animation: nav-progress-in 0.15s 0.12s forwards; background-size: 100% 100%; } }
+
+/* « Comment ça marche ? » boost animations (components/boost/BoostKit
+   BoostDemo): mounted on demand, paused off screen, still when the
+   visitor asks for less motion. The layout is the final state. */
+.boostdemo-moves .boostdemo-yours { animation: boostdemo-rise 4.2s ease-in-out infinite; }
+.boostdemo-moves .boostdemo-other { animation: boostdemo-push 4.2s ease-in-out infinite; }
+.boostdemo .boostdemo-pill { animation: boostdemo-pill 4.2s ease-in-out infinite; }
+.boostdemo[data-paused] * { animation-play-state: paused !important; }
+.boostdemo-still * { animation: none !important; }
+@keyframes boostdemo-rise {
+  0%, 15% { transform: translateY(108px); }
+  45%, 88% { transform: translateY(0); }
+  100% { transform: translateY(108px); }
+}
+@keyframes boostdemo-push {
+  0%, 15% { transform: translateY(-36px); }
+  45%, 88% { transform: translateY(0); }
+  100% { transform: translateY(-36px); }
+}
+@keyframes boostdemo-pill {
+  0%, 40% { opacity: 0; transform: scale(.6); }
+  55%, 88% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boostdemo * { animation: none !important; }
+}

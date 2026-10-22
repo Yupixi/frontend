@@ -7,7 +7,10 @@ import { BOOST_REEL_MUTATION, MY_REELS_QUERY, MY_REEL_STATS_QUERY, OWN_REEL_QUER
 import { WALLET_BALANCE_QUERY, type WalletBalance } from '../../graphql/payments'
 import { formatNumber } from '../../lib/format'
 import { useReelSettings } from '../../lib/reels'
-import { requestNavigate } from '../../lib/navigation'
+import { usePriceVars } from '../../lib/countries'
+import BuyCreditsSheet from '../BuyCreditsSheet'
+import Icon from '../Icon'
+import { CreditsF } from '../boost/BoostKit'
 
 // The seller's tools on one of their own Reels, shared by « Mes Reels » and
 // the Reels feed / players (their own Reels: Statistiques, Booster).
@@ -61,30 +64,37 @@ export function ReelStatsSheet({ reelId, onClose }: { reelId: string; onClose: (
   )
 }
 
-// « Booster ce Reel »: price, balance, confirmation (or « Acheter des
-// crédits » when the balance is short). `reel` may be partial (a Reel of
-// the feed): its owner state (boost running, online) is read first.
+// « Booster ce Reel »: the same short card as a listing boost — what it
+// does in one line, duration, price in credits and F CFA, the balance —
+// and the missing credits bought in the same sheet. `reel` may be partial
+// (a Reel of the feed): its owner state (boost running, online) is read
+// first.
 export function ReelBoostSheet({ reelId, countryCode, onClose, onBoosted }: { reelId: string; countryCode?: string | null; onClose: () => void; onBoosted?: () => void }) {
   const settings = useReelSettings(countryCode)
   const { data: own } = useQuery<{ reel: MyReel | null }>(OWN_REEL_QUERY, { variables: { id: reelId }, fetchPolicy: 'network-only' })
-  const { data: wallet } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { fetchPolicy: 'cache-and-network' })
+  const { data: wallet, refetch: refetchWallet } = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
   const [boost, { loading }] = useMutation(BOOST_REEL_MUTATION, { refetchQueries: [{ query: MY_REELS_QUERY }] })
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [topUp, setTopUp] = useState(false)
   const credits = wallet?.myWallet.credits ?? 0
   const r = own?.reel
   const running = !!r?.boost?.active
   const blocked = !!r && !r.canBoost
   const enough = credits >= settings.boostPrice
+  const missing = Math.max(0, settings.boostPrice - credits)
   const until = r?.boost?.expiresAt ? new Date(r.boost.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null
+
+  if (topUp) return <BuyCreditsSheet open suggested={missing} onClose={() => { setTopUp(false); void refetchWallet() }} onDone={() => { setTopUp(false); void refetchWallet() }} />
 
   if (done || running || blocked) {
     return (
-      <BottomSheet open onClose={onClose} title="Booster ce Reel">
-        <p className="m-0 text-body-md text-on-surface">
-          {done ? `Boost lancé : votre Reel passe dans les places réservées pendant ${settings.boostHours} h. Vous recevrez le bilan à la fin.`
-            : running ? `Ce Reel est déjà boosté${until ? ` jusqu’au ${until}` : ''} : ${formatNumber(r?.boost?.views ?? 0)} / ${formatNumber(r?.boost?.viewsGoal ?? 0)} vues.`
-            : 'Seul un Reel en ligne, dont l’annonce est en ligne, peut être boosté.'}
+      <BottomSheet open onClose={onClose} title={done ? 'Boost activé' : 'Booster ce Reel'}>
+        <p className={`m-0 flex items-start gap-2 text-body-md text-on-surface ${done ? 'rounded-2xl bg-tertiary-soft p-4' : ''}`}>
+          {done && <Icon name="check_circle" size={22} fill className="shrink-0 text-tertiary" />}
+          <span>{done ? `Boost Reel ${settings.boostHours} h lancé. Bilan à la fin, dans Statistiques.`
+            : running ? `Déjà boosté${until ? ` jusqu’au ${until}` : ''} : ${formatNumber(r?.boost?.views ?? 0)} / ${formatNumber(r?.boost?.viewsGoal ?? 0)} vues.`
+            : 'Seul un Reel en ligne, avec son annonce en ligne, peut être boosté.'}</span>
         </p>
         <button onClick={onClose} className="mt-4 h-12 w-full cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Fermer</button>
       </BottomSheet>
@@ -99,13 +109,18 @@ export function ReelBoostSheet({ reelId, countryCode, onClose, onBoosted }: { re
       onClose={onClose}
       onConfirm={() => {
         if (!r) return
-        if (!enough) { onClose(); requestNavigate('seller-wallet'); return }
+        if (!enough) { setTopUp(true); return }
         setError(null)
-        void boost({ variables: { id: reelId } }).then(() => { setDone(true); onBoosted?.() }).catch((e: Error) => setError(e.message))
+        void boost({ variables: { id: reelId } }).then(() => { setDone(true); void refetchWallet(); onBoosted?.() }).catch((e: Error) => setError(e.message))
       }}
     >
-      <p className="m-0 text-body-md text-on-surface">Pendant {settings.boostHours} h, votre Reel passe dans les places réservées du fil Reels et de l’accueil, avec un objectif de {formatNumber(settings.boostViewsGoal)} vues. Vous recevez le bilan à la fin.</p>
-      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Prix : {creditsLabel(settings.boostPrice)} · votre solde : {creditsLabel(credits)}</p>
+      <div className="rounded-2xl border border-solid border-outline-variant p-3.5">
+        <p className="m-0 text-label-lg text-on-surface">Boost Reel <span className="font-normal text-on-surface-variant">· {settings.boostHours} h</span></p>
+        <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Places réservées dans le fil Reels et sur l’accueil.</p>
+        <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Objectif : {formatNumber(settings.boostViewsGoal)} vues · bilan à la fin.</p>
+        <p className="m-0 mt-2 text-label-lg"><CreditsF n={settings.boostPrice} /></p>
+      </div>
+      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Solde : <b className="text-on-surface">{creditsLabel(credits)}</b>{!enough && r ? <> · il vous manque <b className="text-on-surface">{creditsLabel(missing)}</b></> : null}</p>
       {error && <p className="m-0 mt-2 text-body-sm text-primary">{error}</p>}
     </ConfirmSheet>
   )
