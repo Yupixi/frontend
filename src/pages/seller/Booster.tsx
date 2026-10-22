@@ -206,12 +206,14 @@ export default function Booster({ onNavigate, currentUser, onLogout, initialList
                 <li key={r.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-solid border-outline-variant bg-surface-lowest">
                   <div className="relative aspect-[4/5] bg-neutral-900">
                     {r.posterUrl ? <img src={reelThumb(r.posterUrl) ?? undefined} alt="" loading="lazy" className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-white/60"><Icon name="smart_display" size={26} /></span>}
-                    {r.boost?.active && <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-bold text-white"><Icon name="rocket_launch" size={12} /> Boosté</span>}
+                    {r.boost?.active ? <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-bold text-white"><Icon name="rocket_launch" size={12} /> Boosté</span>
+                      : r.listingBoost?.active && <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-tertiary px-1.5 py-0.5 text-[11px] font-bold text-white" title={`Grâce au boost « ${r.listingBoost.formula} » de l’annonce`}><Icon name="star" size={12} fill /> Mis en avant</span>}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col p-2.5">
                     <span className="truncate text-label-md text-on-surface">{r.listing?.title ?? 'Annonce supprimée'}</span>
                     <span className="text-label-sm text-on-surface-variant">{r.status === 'APPROVED' ? `${formatNumber(r.viewsCount)} vue${r.viewsCount > 1 ? 's' : ''}` : REEL_STATUS_LABEL[r.status]}</span>
                     {r.boost?.active && <span className="text-label-sm text-tertiary">{formatNumber(r.boost.views)} / {formatNumber(r.boost.viewsGoal)} vues · {left(r.boost.expiresAt)}</span>}
+                    {!r.boost?.active && r.listingBoost?.active && <span className="text-label-sm text-tertiary">Boost de l’annonce · {formatNumber(r.listingBoost.views)} / {formatNumber(r.listingBoost.viewsGoal)} vues · {left(r.listingBoost.expiresAt)}</span>}
                     <div className="mt-auto flex gap-1.5 pt-2.5">
                       {r.canBoost && reelSettings.boostEnabled && <button type="button" onClick={() => setReelBoost(r)} className="flex h-9 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl border-none bg-primary text-label-md text-white"><Icon name="rocket_launch" size={16} /> Booster</button>}
                       {r.status === 'APPROVED' && <button type="button" onClick={() => setReelStats(r)} aria-label="Statistiques du Reel" title="Statistiques" className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-high text-on-surface"><Icon name="bar_chart" size={17} /></button>}

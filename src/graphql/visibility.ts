@@ -31,10 +31,13 @@ export type VisibilityReport = {
   contactsBefore: number | null
   favorites: number
   credits: number
+  // Views of the listing's Reels put forward by the boost (En vedette /
+  // Turbo); null for the other formulas.
+  reelViews: number | null
   summary: string
 }
 
-export const REPORT_FIELDS = `report { from to days ongoing impressions boostedImpressions boostedPlace impressionsBefore categoryAverage baseline liftPercent views viewsBefore contacts contactsBefore favorites credits summary }`
+export const REPORT_FIELDS = `report { from to days ongoing impressions boostedImpressions boostedPlace impressionsBefore categoryAverage baseline liftPercent views viewsBefore contacts contactsBefore favorites credits reelViews summary }`
 
 export type SellerVisibility = {
   days: number

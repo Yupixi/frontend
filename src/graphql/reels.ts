@@ -41,6 +41,10 @@ export type Reel = {
 
 export type ReelBoost = { id: string; credits: number; viewsGoal: number; views: number; startsAt: string; expiresAt: string; active: boolean }
 
+// The listing's « En vedette » / « Turbo » boost already putting the Reel
+// forward (views of the listing's Reels against the formula's goal).
+export type ReelListingBoost = { boostId: string; formula: string; expiresAt: string; views: number; viewsGoal: number; active: boolean }
+
 export type MyReel = Reel & {
   statusReason: string | null
   uploadSize: number | null
@@ -54,6 +58,7 @@ export type MyReel = Reel & {
   videoLowBytes: number | null
   boost: ReelBoost | null
   canBoost: boolean | null
+  listingBoost?: ReelListingBoost | null
 }
 
 export type ReelSettings = {
@@ -64,6 +69,8 @@ export type ReelSettings = {
   boostPrice: number
   boostHours: number
   boostViewsGoal: number
+  // A listing's En vedette / Turbo boost also puts its Reels forward.
+  listingBoost?: boolean
   verifiedSellersOnly: boolean
   maxDurationSec: number
   maxSizeMb: number
@@ -87,12 +94,13 @@ const MY_REEL_FIELDS = `
   ${REEL_FIELDS}
   statusReason uploadSize uploadedBytes completesCount clicksCount contactsCount sharesCount paidCredits videoBytes videoLowBytes canBoost
   boost { id credits viewsGoal views startsAt expiresAt active }
+  listingBoost { boostId formula expiresAt views viewsGoal active }
 `
 
 export const REEL_SETTINGS_QUERY = gql`
   query ReelSettings($countryCode: String) {
     reelSettings(countryCode: $countryCode) {
-      enabled mode publishPrice boostEnabled boostPrice boostHours boostViewsGoal verifiedSellersOnly
+      enabled mode publishPrice boostEnabled boostPrice boostHours boostViewsGoal listingBoost verifiedSellersOnly
       maxDurationSec maxSizeMb perListing perSeller perDay adultAllowed viewSeconds chunkBytes
     }
   }
@@ -121,6 +129,12 @@ export const SELLER_REELS_QUERY = gql`
   }
 `
 
+// « Booster l’annonce »: does the listing have a Reel (online or on its
+// way) to put forward with En vedette / Turbo.
+export const LISTING_OWN_REELS_QUERY = gql`
+  query ListingOwnReels($listingId: ID) { myReels(listingId: $listingId) { id status } }
+`
+
 export const MY_REELS_QUERY = gql`
   query MyReels($listingId: ID) { myReels(listingId: $listingId) { ${MY_REEL_FIELDS} } }
 `
@@ -142,8 +156,8 @@ export const REEL_DRAFT_ELIGIBILITY_QUERY = gql`
 export const MY_REEL_STATS_QUERY = gql`
   query MyReelStats($id: ID!, $days: Int) {
     myReelStats(id: $id, days: $days) {
-      views completes clicks contacts shares completionRate
-      days { day views completes clicks contacts shares boostedViews }
+      views completes clicks contacts shares completionRate boostedViews listingBoostViews
+      days { day views completes clicks contacts shares boostedViews listingBoostViews }
       boosts { id credits viewsGoal views startsAt expiresAt active }
     }
   }

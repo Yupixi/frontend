@@ -31,13 +31,16 @@ export type BoostPackInfo = {
   badgeLabel: string | null
   // Local hour of the daily automatic bump (Remontée quotidienne, Turbo).
   autoBumpHour: number | null
+  // Views of the listing's Reels the formula also brings in the Reels feed,
+  // at no extra cost (En vedette / Turbo, BO › Règles › Reels); 0: none.
+  reelViewsGoal: number
 }
 
 // Pricing lives in the backend (BoostsService / boost-packs.ts), per
 // country: `country` is the payer's (lib/countries usePriceVars).
 export const BOOST_PACKS_QUERY = gql`
   query BoostPacks($country: String) {
-    boostPacks(country: $country) { pack family label name durationLabel summary onHome bumpNow mostChosen description price durationHours bumpCredits pinned autoBump urgentBadge promises badgeLabel autoBumpHour }
+    boostPacks(country: $country) { pack family label name durationLabel summary onHome bumpNow mostChosen description price durationHours bumpCredits pinned autoBump urgentBadge promises badgeLabel autoBumpHour reelViewsGoal }
   }
 `
 

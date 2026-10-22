@@ -79,6 +79,7 @@ export function ReportCard({ report: r }: { report: VisibilityReport }) {
       {r.boostedImpressions != null && r.boostedPlace && <p className="m-0 text-on-surface-variant">Dont <b className="text-on-surface">{n(r.boostedImpressions)}</b> affichage{r.boostedImpressions > 1 ? 's' : ''} {r.boostedPlace}.</p>}
       {r.boostedImpressions == null && <p className="m-0 text-on-surface-variant">Cette formule ajoute un badge : la place de l’annonce dans les résultats ne change pas.</p>}
       {r.favorites > 0 && <p className="m-0 text-on-surface-variant">{n(r.favorites)} ajout{r.favorites > 1 ? 's' : ''} en favori.</p>}
+      {r.reelViews != null && r.reelViews > 0 && <p className="m-0 flex items-center gap-1.5 text-on-surface-variant"><Icon name="smart_display" size={15} className="shrink-0 text-tertiary" /> <span>En plus : <b className="text-on-surface">{n(r.reelViews)}</b> vue{r.reelViews > 1 ? 's' : ''} de vos Reels, mis en avant dans le fil Reels grâce au boost.</span></p>}
       <p className="m-0 text-label-sm text-on-surface-variant">Un affichage = la carte de l’annonce vue au moins à moitié pendant une seconde par un visiteur (pas par vous, ni par un robot), une fois par page. Les compteurs sont journaliers, mis à jour toutes les quelques minutes.</p>
       <HelpLink article="statistiques-de-vente" label="Comment c’est mesuré" />
     </div>
