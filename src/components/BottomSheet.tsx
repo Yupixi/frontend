@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Icon from './Icon'
 
 type BottomSheetProps = {
@@ -76,7 +77,9 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
 
   if (!open) return null
 
-  return (
+  // In <body>: a sheet opened inside a fixed layer (the Reels feed) is not
+  // trapped under that layer's stacking context, nor under the bottom bar.
+  return createPortal(
     <div className="fixed inset-0 z-[9990] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/45 animate-[fadeIn_0.2s_ease-out]" onClick={() => onCloseRef.current()} />
       <div
@@ -95,6 +98,7 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-5 pt-1">{children}</div>
         {footer}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
