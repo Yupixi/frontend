@@ -17,7 +17,10 @@ import { CreditsF } from '../boost/BoostKit'
 
 type Stats = {
   views: number; completes: number; clicks: number; contacts: number; shares: number; completionRate: number
-  days: { day: string; views: number; boostedViews: number }[]
+  // Of the views of the days shown: during a « Boost Reel » / thanks to the
+  // listing's En vedette / Turbo boost.
+  boostedViews: number; listingBoostViews: number
+  days: { day: string; views: number; boostedViews: number; listingBoostViews: number }[]
   boosts: { id: string; credits: number; viewsGoal: number; views: number; startsAt: string; expiresAt: string; active: boolean }[]
 }
 
@@ -45,6 +48,11 @@ export function ReelStatsSheet({ reelId, onClose }: { reelId: string; onClose: (
               ))}
             </div>
           ) : <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Pas encore de vue.</p>}
+          {(s.boostedViews > 0 || s.listingBoostViews > 0) && (
+            <p className="m-0 mt-2 text-body-sm text-on-surface-variant">
+              Dont {[s.boostedViews > 0 && <><b className="text-on-surface">{formatNumber(s.boostedViews)}</b> pendant un Boost Reel</>, s.listingBoostViews > 0 && <><b className="text-on-surface">{formatNumber(s.listingBoostViews)}</b> grâce au boost de l’annonce</>].filter(Boolean).map((x, i) => <span key={i}>{i > 0 && ' et '}{x}</span>)}.
+            </p>
+          )}
           {s.boosts.length > 0 && (
             <>
               <p className="m-0 mt-4 text-label-md text-on-surface">Boosts</p>
@@ -84,6 +92,10 @@ export function ReelBoostSheet({ reelId, countryCode, onClose, onBoosted }: { re
   const enough = credits >= settings.boostPrice
   const missing = Math.max(0, settings.boostPrice - credits)
   const until = r?.boost?.expiresAt ? new Date(r.boost.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null
+  // Already in the reserved places thanks to the listing's En vedette /
+  // Turbo boost: said first, so that nobody pays twice for nothing.
+  const viaListing = r?.listingBoost?.active ? r.listingBoost : null
+  const listingUntil = viaListing ? new Date(viaListing.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null
 
   if (topUp) return <BuyCreditsSheet open suggested={missing} onClose={() => { setTopUp(false); void refetchWallet() }} onDone={() => { setTopUp(false); void refetchWallet() }} />
 
@@ -104,7 +116,7 @@ export function ReelBoostSheet({ reelId, countryCode, onClose, onBoosted }: { re
     <ConfirmSheet
       open
       title="Booster ce Reel"
-      confirmLabel={!r ? 'Un instant…' : enough ? `Booster · ${creditsLabel(settings.boostPrice)}` : 'Acheter des crédits'}
+      confirmLabel={!r ? 'Un instant…' : enough ? `${viaListing ? 'Booster quand même' : 'Booster'} · ${creditsLabel(settings.boostPrice)}` : 'Acheter des crédits'}
       loading={loading || !r}
       onClose={onClose}
       onConfirm={() => {
@@ -114,6 +126,15 @@ export function ReelBoostSheet({ reelId, countryCode, onClose, onBoosted }: { re
         void boost({ variables: { id: reelId } }).then(() => { setDone(true); void refetchWallet(); onBoosted?.() }).catch((e: Error) => setError(e.message))
       }}
     >
+      {viaListing && (
+        <p role="status" className="m-0 mb-3 flex items-start gap-2 rounded-2xl bg-tertiary-soft p-3.5 text-body-sm text-on-surface">
+          <Icon name="check_circle" size={20} fill className="shrink-0 text-tertiary" />
+          <span>
+            <b className="block text-label-lg text-tertiary">Déjà mis en avant jusqu’au {listingUntil}</b>
+            Grâce au boost « {viaListing.formula} » de l’annonce, sans supplément : {formatNumber(viaListing.views)} / {formatNumber(viaListing.viewsGoal)} vues des Reels de l’annonce. Un Boost Reel n’est utile que pour viser plus de vues.
+          </span>
+        </p>
+      )}
       <div className="rounded-2xl border border-solid border-outline-variant p-3.5">
         <p className="m-0 text-label-lg text-on-surface">Boost Reel <span className="font-normal text-on-surface-variant">· {settings.boostHours} h</span></p>
         <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Places réservées dans le fil Reels et sur l’accueil.</p>

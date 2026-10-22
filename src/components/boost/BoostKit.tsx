@@ -12,6 +12,7 @@ import { packOperation, useOfferPrice } from '../../lib/priceOffers'
 import type { BoostPackInfo } from '../../graphql/promotions'
 import type { PromoBadge } from '../../graphql/listings'
 import { LISTING_BADGE_SETTINGS_QUERY, type BadgeSetting } from '../../graphql/visibility'
+import { formatNumber } from '../../lib/format'
 
 // The pieces every boost / credits screen shares, so that a formula reads
 // the same everywhere: its name (server `label`), one line of what it does
@@ -134,6 +135,21 @@ export function BoostDemo({ info, pill, coverUrl, className = '' }: { info: Boos
   )
 }
 
+// « + vos Reels mis en avant »: En vedette / Turbo also put the listing's
+// online Reels in the reserved places of the Reels feed, at no extra cost,
+// up to `reelViewsGoal` views (BO › Règles › Reels). `hasReel`: the listing
+// has a Reel (online or on its way); unknown when no listing is in view.
+export function ReelsPerk({ info, hasReel, className = '' }: { info: BoostPackInfo; hasReel?: boolean; className?: string }) {
+  if (!info.reelViewsGoal) return null
+  const detail = `Jusqu’à ${formatNumber(info.reelViewsGoal)} vues dans le fil Reels, sans supplément`
+  return (
+    <p className={`m-0 flex items-center gap-1 text-body-sm ${hasReel === false ? 'text-on-surface-variant' : 'text-tertiary'} ${className}`} title={detail}>
+      <Icon name="smart_display" size={15} className="shrink-0" />
+      <span className="min-w-0">{hasReel === false ? 'Ajoutez un Reel pour en profiter' : '+ vos Reels mis en avant'}<span className="sr-only"> : {detail}</span></span>
+    </p>
+  )
+}
+
 // One line of the comparison: label, its (i) detail, the value per formula.
 type Row = { key: string; label: string; info: string; value: (p: BoostPackInfo, pill: PromoBadge | null) => ReactNode | boolean }
 const ROWS: Row[] = [
@@ -157,6 +173,11 @@ const ROWS: Row[] = [
     info: 'Visible partout où l’annonce apparaît, pendant la durée de la formule. Son nom est réglé par Dilchap pour votre pays.',
     value: (_, pill) => pill ? <PromoPill badge={pill} /> : false,
   },
+  {
+    key: 'reels', label: 'Vos Reels mis en avant',
+    info: 'Les Reels en ligne de l’annonce passent aussi dans les places réservées du fil Reels et de la rangée Reels de l’accueil, sans supplément, jusqu’au nombre de vues indiqué (après les « Boost Reel »). Le bilan indique leurs vues.',
+    value: p => p.reelViewsGoal > 0 ? `${formatNumber(p.reelViewsGoal)} vues` : false,
+  },
 ]
 
 function Cell({ v }: { v: ReactNode | boolean }) {
@@ -175,16 +196,19 @@ function InfoButton({ row, open, onToggle }: { row: Row; open: boolean; onToggle
 
 // « Les formules » side by side: a ✓ / ✗ table on wide screens, one short
 // card per formula on phones. `onPick` adds a « Choisir » button.
-export function BoostCompare({ packs, listing, onPick, className = '' }: {
+export function BoostCompare({ packs, listing, hasReel, onPick, className = '' }: {
   packs: BoostPackInfo[]
   listing?: { id: string; coverImageUrl: string | null } | null
+  hasReel?: boolean
   onPick?: (p: BoostPackInfo) => void
   className?: string
 }) {
   const badges = useBadgeSettings()
   const [info, setInfo] = useState<string | null>(null)
   const [demo, setDemo] = useState<string | null>(null)
-  const row = ROWS.find(r => r.key === info)
+  // The Reels line only where a formula brings them (Reels on in the country).
+  const rows = ROWS.filter(r => r.key !== 'reels' || packs.some(p => p.reelViewsGoal > 0))
+  const row = rows.find(r => r.key === info)
   const demoPack = packs.find(p => p.pack === demo)
   if (!packs.length) return null
   return (
@@ -210,7 +234,7 @@ export function BoostCompare({ packs, listing, onPick, className = '' }: {
               <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">Ce que ça fait</th>
               {packs.map(p => <td key={p.pack} className="p-3 text-body-sm text-on-surface">{p.summary}</td>)}
             </tr>
-            {ROWS.map(r => (
+            {rows.map(r => (
               <tr key={r.key} className="border-0 border-t border-solid border-outline-variant">
                 <th scope="row" className="p-3 text-left font-normal">
                   <span className="flex items-center gap-1 text-label-md text-on-surface">{r.label} <InfoButton row={r} open={info === r.key} onToggle={() => setInfo(info === r.key ? null : r.key)} /></span>
@@ -249,7 +273,7 @@ export function BoostCompare({ packs, listing, onPick, className = '' }: {
       {/* Below 1280 px: one short card per formula. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:hidden">
         {packs.map(p => (
-          <BoostCard key={p.pack} info={p} pill={pillFor(p, badges)} listing={listing} onPick={onPick ? () => onPick(p) : undefined} />
+          <BoostCard key={p.pack} info={p} pill={pillFor(p, badges)} listing={listing} hasReel={hasReel} onPick={onPick ? () => onPick(p) : undefined} />
         ))}
       </div>
       {row && <p className="sr-only" aria-live="polite">{row.info}</p>}
@@ -259,10 +283,11 @@ export function BoostCompare({ packs, listing, onPick, className = '' }: {
 
 // One formula, short: name, duration, one line, its pill, price in credits
 // and F CFA, « Voir » (the animation) and « Choisir ».
-export function BoostCard({ info: p, pill, listing, onPick, busy }: {
+export function BoostCard({ info: p, pill, listing, hasReel, onPick, busy }: {
   info: BoostPackInfo
   pill: PromoBadge | null
   listing?: { id: string; coverImageUrl: string | null } | null
+  hasReel?: boolean
   onPick?: () => void
   busy?: boolean
 }) {
@@ -275,6 +300,7 @@ export function BoostCard({ info: p, pill, listing, onPick, busy }: {
         {pill && <span className="flex min-w-0 max-w-[45%] shrink-0"><PromoPill badge={pill} /></span>}
       </div>
       <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{p.summary}</p>
+      <ReelsPerk info={p} hasReel={hasReel} className="mt-1" />
       {demo && <BoostDemo info={p} pill={pill} coverUrl={listing?.coverImageUrl} className="mt-3" />}
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
         <PackPrice info={p} listingId={listing?.id} className="text-label-lg" />

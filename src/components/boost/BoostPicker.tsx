@@ -6,6 +6,7 @@ import WalletPaySheet from '../WalletPaySheet'
 import { useBumpProof } from '../BumpProof'
 import { BoostCard, CreditsF, pillFor, useBadgeSettings } from './BoostKit'
 import { BOOST_PACKS_QUERY, type BoostPackInfo } from '../../graphql/promotions'
+import { LISTING_OWN_REELS_QUERY, type ReelStatus } from '../../graphql/reels'
 import { WALLET_BALANCE_QUERY, type WalletBalance } from '../../graphql/payments'
 import { usePriceVars } from '../../lib/countries'
 import { requestOpenHelp, requestOpenLink } from '../../lib/navigation'
@@ -30,6 +31,13 @@ export default function BoostPicker({ open, onClose, listing, onDone, onSeeBilan
   const packs = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY, { variables: vars, skip: !open }).data?.boostPacks ?? []
   const wallet = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: vars, skip: !open, fetchPolicy: 'cache-and-network' }).data
   const badges = useBadgeSettings()
+  // En vedette / Turbo also put the listing's Reels forward: does it have one?
+  const ownReels = useQuery<{ myReels: { id: string; status: ReelStatus }[] }>(LISTING_OWN_REELS_QUERY, {
+    variables: { listingId: listing.id },
+    skip: !open || !packs.some(p => p.reelViewsGoal > 0),
+    fetchPolicy: 'cache-and-network',
+  }).data?.myReels
+  const hasReel = ownReels ? ownReels.some(r => ['UPLOADING', 'PROCESSING', 'PENDING_REVIEW', 'APPROVED'].includes(r.status)) : undefined
   const [picked, setPicked] = useState<BoostPackInfo | null>(null)
   const [done, setDone] = useState<BoostPackInfo | null>(null)
   const proof = useBumpProof(onClose)
@@ -89,7 +97,7 @@ export default function BoostPicker({ open, onClose, listing, onDone, onSeeBilan
         <div className="flex justify-center py-8"><Icon name="progress_activity" size={30} className="animate-spin text-primary" /></div>
       ) : (
         <div className="mt-3 flex flex-col gap-3">
-          {packs.map(p => <BoostCard key={p.pack} info={p} pill={pillFor(p, badges)} listing={card} onPick={() => setPicked(p)} />)}
+          {packs.map(p => <BoostCard key={p.pack} info={p} pill={pillFor(p, badges)} listing={card} hasReel={hasReel} onPick={() => setPicked(p)} />)}
         </div>
       )}
       <button type="button" onClick={() => { onClose(); requestOpenHelp('booster-une-annonce') }} className="mt-3 flex h-10 cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary">
