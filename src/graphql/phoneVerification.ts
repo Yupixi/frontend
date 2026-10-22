@@ -28,3 +28,10 @@ export type PhoneChannelData = {
   phoneVerificationAvailable: boolean
   me: { id: string; phone: string | null; phoneVerifiedAt: string | null; email: string | null; emailVerifiedAt: string | null; isGuest?: boolean }
 }
+
+// How a verification code left (SMS, or WhatsApp for a number the team
+// routes there) and how many minutes it lasts, from requestPhoneVerification.
+export function codeVia(d?: { expiresAt?: string | null; channel?: 'SMS' | 'WHATSAPP' } | null) {
+  const left = d?.expiresAt ? Math.round((Date.parse(d.expiresAt) - Date.now()) / 60_000) : 5
+  return { by: d?.channel === 'WHATSAPP' ? 'WhatsApp' : 'SMS', ttl: Math.max(1, left) }
+}

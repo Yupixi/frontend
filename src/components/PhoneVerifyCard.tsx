@@ -5,7 +5,7 @@ import Icon from './Icon'
 import { announceAccountVerified } from '../lib/accountVerify'
 import HelpLink from './HelpLink'
 import {
-  PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, type PhoneChannelData,
+  PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, codeVia, type PhoneChannelData,
 } from '../graphql/phoneVerification'
 
 // « WhatsApp / SMS » alerts: the member proves they hold the number of their
@@ -15,9 +15,10 @@ import {
 // `unsavedPhone`: the profile form holds another number not saved yet.
 export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: { wantsSms: boolean; unsavedPhone: boolean; onVerified?: () => void }) {
   const { data, refetch } = useQuery<PhoneChannelData>(PHONE_CHANNEL_QUERY, { fetchPolicy: 'cache-and-network' })
-  const [request, { loading: sending }] = useMutation<{ requestPhoneVerification: { alreadyVerified: boolean; phoneHint: string } }>(REQUEST_PHONE_CODE_MUTATION)
+  const [request, { loading: sending }] = useMutation<{ requestPhoneVerification: { alreadyVerified: boolean; phoneHint: string; expiresAt?: string | null; channel?: 'SMS' | 'WHATSAPP' } }>(REQUEST_PHONE_CODE_MUTATION)
   const [verify, { loading: checking }] = useMutation(VERIFY_PHONE_MUTATION)
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [via, setVia] = useState(codeVia(null))
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [resendAt, setResendAt] = useState(0)
@@ -36,6 +37,7 @@ export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: 
       .then(({ data: d }) => {
         if (d?.requestPhoneVerification.alreadyVerified) { void refetch(); return }
         setSentTo(d?.requestPhoneVerification.phoneHint ?? '')
+        setVia(codeVia(d?.requestPhoneVerification))
         setCode('')
         setResendAt(Date.now() + 60_000)
       })
@@ -71,7 +73,7 @@ export default function PhoneVerifyCard({ wantsSms, unsavedPhone, onVerified }: 
         <Icon name="password" size={20} className={`shrink-0 ${wantsSms || forAccount ? 'text-primary' : 'text-on-surface-variant'}`} />
         <span className="min-w-0 flex-1 basis-56 text-body-sm text-on-surface">
           {sentTo != null
-            ? `Code envoyé par SMS au …${sentTo.replace(/^…/, '')}. Il expire dans 5 minutes.`
+            ? `Code envoyé par ${via.by} au …${sentTo.replace(/^…/, '')}. Il expire dans ${via.ttl} minutes.`
             : forAccount
               ? 'Confirmez votre compte : recevez un code par SMS sur votre numéro. Il faut un compte confirmé pour publier, contacter les vendeurs et payer.'
               : wantsSms
