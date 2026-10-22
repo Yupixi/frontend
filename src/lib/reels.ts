@@ -147,3 +147,11 @@ export function requestNewReel() { try { sessionStorage.setItem(NEW_REEL_KEY, '1
 export function takeNewReelRequest() {
   try { const v = sessionStorage.getItem(NEW_REEL_KEY); sessionStorage.removeItem(NEW_REEL_KEY); return v === '1' } catch { return false }
 }
+
+// « Gérer » on one's own Reel (feed, players): Mes Reels opens on it (read
+// once).
+const MANAGE_REEL_KEY = 'dilchap_manage_reel'
+export function requestManageReel(id: string) { try { sessionStorage.setItem(MANAGE_REEL_KEY, id) } catch { /* no storage */ } }
+export function takeManagedReel() {
+  try { const v = sessionStorage.getItem(MANAGE_REEL_KEY); sessionStorage.removeItem(MANAGE_REEL_KEY); return v } catch { return null }
+}

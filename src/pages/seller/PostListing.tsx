@@ -38,6 +38,9 @@ import { isNotVerifiedError } from '../../lib/accountVerify'
 import { adultSellerError, needsSellerVerification } from '../../lib/adult'
 import AdultGate from '../../components/AdultGate'
 import { spaceCategories, useAdultMode } from '../../lib/adultMode'
+import { ReelEditLink, ReelPostCard, ReelPostUpload, useReelsOffered } from '../../components/reels/ReelPostCard'
+import { keepNewListingReel, keepPendingReel, newListingReel, pendingReel, type ReelDraft } from '../../lib/reelDrafts'
+import { formatDuration } from '../../lib/reels'
 
 const TITLE_MAX = 80
 
@@ -214,9 +217,14 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const lastSubmit = useRef(false)
   // campaign: joined on publishing, or why it failed (the listing is
   // published either way).
-  const [result, setResult] = useState<{ id: string, submitted: boolean, live?: boolean, fromDraft?: boolean, campaign?: { name: string, credits: number } | { name: string, error: string } } | null>(null)
+  const [result, setResult] = useState<{ id: string, submitted: boolean, live?: boolean, fromDraft?: boolean, campaign?: { name: string, credits: number } | { name: string, error: string }, reel?: { draft: ReelDraft, listing: { id: string, title: string, coverImageUrl?: string | null, countryCode: string } } } | null>(null)
   const [boosted, setBoosted] = useState(false)
   const [campaignChoice, setCampaignChoice] = useState<CampaignChoice | null>(null)
+  // « Reel (facultatif) »: the video chosen here, sent once the listing is
+  // published (kept for the session: a server draft finished later in
+  // this session gets it back).
+  const [reelDraft, setReelDraftState] = useState<ReelDraft | null>(() => (listingId ? pendingReel(listingId)?.draft ?? null : newListingReel()))
+  const setReelDraft = (d: ReelDraft | null) => { setReelDraftState(d); if (!listingId) keepNewListingReel(d) }
   const [uploading, setUploading] = useState(false)
   // Listing created by an earlier try of this form, and the photos already
   // attached to the listing (see save).
@@ -241,6 +249,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     setForm(f => ({ ...f, categoryId: first.id, subcategoryId: first.adult ? '' : first.subcategories[0]?.id ?? '', attributes: {} }))
   }, [section, categories, form.categoryId])
   const requiresPrice = category?.requiresPrice ?? true
+  const listingAdult = section || !!category?.adult
+  const { offered: reelsOffered } = useReelsOffered(form.countryCode, listingAdult)
   // Another country without the chosen category: the choice is dropped.
   useEffect(() => {
     const list = categoriesData?.categories
@@ -531,7 +541,16 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         track('publish_listing', { item_id: id, item_category: category.slug, country: form.countryCode, status: live ? 'en_ligne' : 'en_validation' })
         metaTrack('PublishListing', { content_ids: [id], content_category: category.slug, status: live ? 'en_ligne' : 'en_validation' })
       }
-      setResult({ id, submitted: submit, live, fromDraft: editingDraft, campaign })
+      // The Reel goes once the listing exists and is submitted (sent from
+      // the confirmation screen); a saved draft keeps it for the session.
+      let reel: NonNullable<typeof result>['reel']
+      if (reelDraft && publishes && reelsOffered) {
+        const target = { id, title: input.title, coverImageUrl: cover && !cover.startsWith('blob:') ? cover : null, countryCode: form.countryCode }
+        if (submit) reel = { draft: reelDraft, listing: target }
+        else keepPendingReel({ listing: target, draft: reelDraft })
+        if (!listingId) keepNewListingReel(null)
+      }
+      setResult({ id, submitted: submit, live, fromDraft: editingDraft, campaign, reel })
     } catch (err) {
       setUploading(false)
       if (isNotVerifiedError(err)) { setNeedsVerify(true); return }
@@ -568,7 +587,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const reset = () => {
     created.current = {}
     void clearDraftPhotos()
-    setForm({ ...EMPTY, ...placeDefaults(home) }); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false); setCampaignChoice(null)
+    setForm({ ...EMPTY, ...placeDefaults(home) }); setImageFiles([]); setImagePreviews([]); setExistingMedia([]); setResult(null); setBoosted(false); setCampaignChoice(null); setReelDraft(null)
   }
 
   const cover = allPhotos[0]?.url
@@ -606,6 +625,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <span>Inscrite à « {result.campaign.name} »{result.campaign.credits > 0 ? ` — ${result.campaign.credits} crédit${result.campaign.credits > 1 ? 's' : ''} débité${result.campaign.credits > 1 ? 's' : ''}` : ''}. {result.live ? 'Elle apparaît dans la campagne.' : 'Elle apparaîtra dans la campagne dès son approbation (remboursé si elle est refusée).'}</span>
             </div>
           ))}
+          {result.reel && <ReelPostUpload listing={result.reel.listing} draft={result.reel.draft} live={!!result.live} onNavigate={onNavigate} />}
+          {!result.submitted && reelDraft && publishes && <p className="m-0 mt-6 flex items-start gap-2 rounded-2xl bg-surface-container-low p-4 text-left text-body-sm text-on-surface"><Icon name="smart_display" size={20} className="shrink-0 text-primary" /> La vidéo choisie sera envoyée quand vous publierez l’annonce (gardée jusqu’à la fermeture de Dilchap).</p>}
           {result.submitted && (!isEditing || result.fromDraft) && (
             <div className="mt-6 rounded-2xl border border-outline-variant bg-surface-lowest p-5 text-left">
               {boosted ? (
@@ -705,6 +726,21 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               </div>
               <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={e => { addFiles(e.target.files); e.target.value = '' }} />
             </Card>
+
+            {/* Reel: chosen here, sent after the publication */}
+            {publishes ? (
+              <div className={`empty:hidden ${only(0)}`}>
+                <ReelPostCard countryCode={form.countryCode} adult={listingAdult} title={form.title} value={reelDraft} onChange={setReelDraft}
+                  extraCredits={campaignChoice ? applyOffer(offers, 'CAMPAIGN', campaignCost(campaignChoice.campaign), form.categoryId).price : 0}
+                  onNavigate={isEditing ? undefined : onNavigate}
+                  render={body => <Card icon="smart_display" title="Reel (facultatif)" subtitle="Ajoutez une courte vidéo de l’article : elle passe dans les Reels de Dilchap, sur l’annonce et sur votre profil.">{body}</Card>} />
+              </div>
+            ) : listingId && existingData?.myListing && (
+              <div className={`empty:hidden ${only(0)}`}>
+                <ReelEditLink listing={{ id: listingId, title: existingData.myListing.title, coverImageUrl: existingMedia[0]?.url ?? null, countryCode: existingData.myListing.countryCode, status: existingData.myListing.status }} adult={listingAdult} onNavigate={onNavigate}
+                  render={body => <Card icon="smart_display" title="Reel de l’annonce" subtitle="Une courte vidéo de l’article, vérifiée avant sa mise en ligne.">{body}</Card>} />
+              </div>
+            )}
 
             {/* Infos */}
             <Card className={only(1)} icon="edit_note" title="Informations sur l'article" subtitle="Donnez un maximum de précisions pour remonter dans les résultats de recherche.">
@@ -1008,6 +1044,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <div className="relative aspect-[4/3] overflow-hidden bg-surface-container-low">
                   {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Icon name="image" size={40} /></div>}
                   {form.condition && <span className="absolute left-2 top-2 rounded-md bg-tertiary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{form.condition}</span>}
+                  {reelDraft && publishes && reelsOffered && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white"><Icon name="smart_display" size={12} /> Reel{reelDraft.duration ? ` · ${formatDuration(Math.max(0, reelDraft.range[1] - reelDraft.range[0]))}` : ''}</span>}
                   {form.city && <span className="absolute right-2 top-2 flex items-center gap-0.5 rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-semibold text-on-surface"><MapPin size={11} /> {form.city}</span>}
                 </div>
                 <div className="p-3">
