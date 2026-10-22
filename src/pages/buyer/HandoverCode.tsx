@@ -66,7 +66,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
         <BuyerTabs active="buyer-handover" onNavigate={onNavigate} />
         {o && <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Commande #${o.reference}` }, { label: 'Remise en main propre' }]} />}
         {loading && !o && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
-        {!loading && !o && <p className="text-body-md text-on-surface-variant">Commande introuvable.</p>}
+        {!loading && !o && <p className="text-body-md text-on-surface-variant">Remise introuvable.</p>}
 
         {o && (
           // Mobile follows the mockup order — meet-up place, article, seller,

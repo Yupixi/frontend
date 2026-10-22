@@ -147,7 +147,7 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
               {tabs.map(([m, label, icon]) => (
                 <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => { setMode(m); if (m === 'here' && point?.source !== 'CURRENT') locate() }}
                   className={`flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-full border-none px-2 py-2 text-label-sm font-semibold ${mode === m ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
-                  <Icon name={icon} size={16} className="shrink-0" /> <span className="truncate">{label}</span>
+                  <span className="flex shrink-0 max-[420px]:hidden"><Icon name={icon} size={16} /></span> <span className="min-w-0 text-center leading-tight">{label}</span>
                 </button>
               ))}
             </div>

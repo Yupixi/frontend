@@ -180,7 +180,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                   ) : (
                     <div className="mt-3 rounded-xl bg-surface-container-low p-3">
                       <div className="mb-2 flex items-center justify-between text-body-sm"><span className="flex items-center gap-1 text-primary"><MessageSquare size={15} /> Répondre à {r.author.fullName.split(' ')[0]}</span><span className="text-on-surface-variant">Répondre renforce votre image de sérieux</span></div>
-                      <textarea className="input" rows={2} value={drafts[r.id] ?? ''} onChange={e => setDrafts(d => ({ ...d, [r.id]: e.target.value }))} placeholder="Remerciez l'acheteur et renforcez votre image de sérieux…" />
+                      <textarea className="input" rows={2} aria-label="Votre réponse à cet avis" value={drafts[r.id] ?? ''} onChange={e => setDrafts(d => ({ ...d, [r.id]: e.target.value }))} placeholder="Remerciez l'acheteur et renforcez votre image de sérieux…" />
                       <div className="mt-2 flex justify-end gap-2">
                         {editing === r.id && <button onClick={() => setEditing(null)} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface">Annuler</button>}
                         <button disabled={replying || !(drafts[r.id] ?? '').trim()} onClick={() => publish(r.id)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50"><Send size={15} /> Publier ma réponse</button>

@@ -17,7 +17,7 @@ export default function MyQrPage({ onNavigate, currentUser, onLogout }: Props) {
         </div>
         <QrStudio
           target={{ kind: 'MEMBER' }}
-          intro={<p className="m-0 text-body-sm text-on-surface-variant lg:hidden">Un QR code qui mène à {address}, à ajouter à vos affiches, flyers, cartes ou autocollants.</p>}
+          intro={<p className="mt-0 text-body-sm text-on-surface-variant lg:hidden">Un QR code qui mène à {address}, à ajouter à vos affiches, flyers, cartes ou autocollants.</p>}
         />
       </div>
     </AccountLayout>

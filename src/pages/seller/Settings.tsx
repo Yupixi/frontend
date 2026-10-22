@@ -378,7 +378,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
           <div className="grid grid-cols-[minmax(0,1fr)] gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-w-0 flex-col gap-5">
               {/* Profil */}
-              <Card id="profil" icon="store" title="Profil Public du Vendeur" sub={`Visible par les acheteurs sur vos ${rep?.activeListings ?? 0} annonce${(rep?.activeListings ?? 0) > 1 ? 's' : ''} en ligne.`}
+              <Card id="profil" icon="store" title="Profil public du vendeur" sub={`Visible par les acheteurs sur vos ${rep?.activeListings ?? 0} annonce${(rep?.activeListings ?? 0) > 1 ? 's' : ''} en ligne.`}
                 aside={me.badge ? <SellerBadge tier={me.badge} variant="pill" size={16} /> : undefined}>
                 <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-surface-container-low p-4">
                   <div className="relative">
@@ -390,7 +390,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 text-headline-sm text-on-surface">{form.fullName}<SellerBadge tier={me.badge} size={18} /></div>
-                    <div className="text-body-sm text-on-surface-variant">Membre depuis {sinceLabel(me.createdAt)}{rep?.reviewsCount ? ` • ${Math.round(rep.satisfactionRate ?? 0)}% d'avis positifs` : ''} ({rep?.salesCount ?? 0} vente{(rep?.salesCount ?? 0) > 1 ? 's' : ''})</div>
+                    <div className="text-body-sm text-on-surface-variant">Membre depuis {sinceLabel(me.createdAt)}{rep?.reviewsCount ? ` • ${Math.round(rep.satisfactionRate ?? 0)} % d'avis positifs` : ''}{rep?.salesCount ? ` (${rep.salesCount} vente${rep.salesCount > 1 ? 's' : ''})` : ''}</div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {me.isVerified && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="check_circle" size={13} className="text-tertiary" /> Identité validée</span>}
                       {me.phone && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="phone_android" size={13} /> Numéro renseigné</span>}
@@ -522,8 +522,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     </div>
                   </div>
                   <span className="flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-label-sm">
-                    <input type="time" value={form.quiet.start} onChange={e => set('quiet', { ...form.quiet, start: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" /> –
-                    <input type="time" value={form.quiet.end} onChange={e => set('quiet', { ...form.quiet, end: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" />
+                    <input type="time" aria-label="Début de la plage silencieuse" value={form.quiet.start} onChange={e => set('quiet', { ...form.quiet, start: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" /> –
+                    <input type="time" aria-label="Fin de la plage silencieuse" value={form.quiet.end} onChange={e => set('quiet', { ...form.quiet, end: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" />
                   </span>
                   <Toggle label="Plage silencieuse" on={form.quiet.enabled} onChange={v => set('quiet', { ...form.quiet, enabled: v })} />
                 </div>
@@ -545,7 +545,7 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     )
                   })}
                   <div className="flex items-center gap-2 rounded-xl border border-dashed border-outline-variant p-2">
-                    <input value={newSpot} onChange={e => setNewSpot(e.target.value)} placeholder="Ajouter un autre repère sécurisé" className="min-w-0 flex-1 border-none bg-transparent px-1 text-body-sm text-on-surface outline-none" />
+                    <input value={newSpot} onChange={e => setNewSpot(e.target.value)} placeholder="Ajouter un autre repère sécurisé" aria-label="Ajouter un autre repère sécurisé" className="min-w-0 flex-1 border-none bg-transparent px-1 text-body-sm text-on-surface outline-none" />
                     <button disabled={!newSpot.trim()} onClick={() => { set('meetupSpots', [...new Set([...form.meetupSpots, newSpot.trim()])]); setNewSpot('') }} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-2.5 py-1.5 text-label-sm text-on-surface disabled:opacity-50">+ Ajouter</button>
                   </div>
                 </div>

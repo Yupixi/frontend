@@ -48,6 +48,9 @@ export default function RichTextEditor({ content, onChange, placeholder, minHeig
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // Configured below (StarterKit 3 bundles both: twice = tiptap warning).
+        link: false,
+        underline: false,
       }),
       Underline,
       LinkExtension.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } }),

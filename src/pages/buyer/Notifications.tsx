@@ -139,7 +139,7 @@ export default function Notifications({ onNavigate, onOpenPurchase, currentUser,
             <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Suivez vos négociations, vos rendez-vous de remise et l'état de vos offres.</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button onClick={() => void markAll().then(() => refetch())} disabled={!unread} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap border-none bg-transparent p-0 text-label-md text-primary disabled:opacity-50 md:rounded-xl md:bg-surface-container-high md:px-3 md:py-2 md:text-on-surface"><Icon name="done_all" size={18} className="max-md:hidden" /> Tout marquer comme lu</button>
+            <button onClick={() => void markAll().then(() => refetch())} disabled={!unread} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap border-none bg-transparent p-0 text-label-md text-primary disabled:opacity-50 md:rounded-xl md:bg-surface-container-high md:px-3 md:py-2 md:text-on-surface"><span className="flex max-md:hidden"><Icon name="done_all" size={18} /></span> Tout marquer comme lu</button>
             <button onClick={() => onNavigate('buyer-settings')} className="hidden h-10 w-10 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-high text-on-surface md:flex" aria-label="Préférences"><Icon name="tune" size={19} /></button>
           </div>
         </div>

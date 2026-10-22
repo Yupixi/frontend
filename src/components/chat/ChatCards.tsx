@@ -46,7 +46,7 @@ export function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action, li
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-x-1.5 text-label-lg text-on-surface"><span className="break-words">{meetup.place}</span>{meetup.pointSource === 'SUGGESTED' && <span className="rounded bg-tertiary-soft px-1.5 text-[10px] font-bold text-tertiary">Lieu conseillé</span>}</div>
             {meetup.address && <div className="break-words text-body-sm text-on-surface-variant">{meetup.address}</div>}
-            <div className="text-body-sm capitalize text-on-surface">{when(meetup.scheduledAt)}</div>
+            <div className="text-body-sm text-on-surface first-letter:uppercase">{when(meetup.scheduledAt)}</div>
           </div>
         </div>
         {meetup.status === 'PROPOSED' ? (
@@ -104,7 +104,7 @@ export function SystemCard({ card, currency, onAction, children }: {
             <div>
               <div className="text-label-lg text-on-surface">{card.place}</div>
               {card.address && <div className="text-body-sm text-on-surface-variant">{card.address}</div>}
-              {card.scheduledAt && <div className="text-body-sm capitalize text-on-surface">{when(card.scheduledAt)}</div>}
+              {card.scheduledAt && <div className="text-body-sm text-on-surface first-letter:uppercase">{when(card.scheduledAt)}</div>}
             </div>
             <MapsActions point={point} label={card.place ?? ''} address={card.address} />
             <Checklist items={card.checklist?.length ? card.checklist : MEETUP_CHECKLIST} />

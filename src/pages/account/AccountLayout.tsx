@@ -124,7 +124,7 @@ type MobileTab = { key: string; icon: string; label: string; match: string[]; pr
 const MEMBER_TABS: MobileTab[] = [
   { key: 'home', icon: 'home', label: 'Accueil', match: [] },
   { key: 'buyer-favorites', icon: 'favorite', label: 'Favoris', match: ['buyer-favorites'] },
-  { key: 'seller-post', icon: 'add', label: 'Déposer', match: [], primary: true },
+  { key: 'seller-post', icon: 'add', label: 'Vendre', match: [], primary: true },
   { key: 'buyer-messages', icon: 'chat', label: 'Messages', match: ['buyer-messages'] },
   { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews', 'seller-badge', 'seller-qr', 'support'] },
 ]
@@ -346,7 +346,7 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
       )}
       {/* Sub-pages on a phone: back + title + bell only, so titles fit */}
       <div className={`relative ${isHome ? '' : 'max-lg:hidden'}`}>
-        <button onClick={() => setMenuOpen(o => !o)} className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent p-1 hover:bg-surface-container-low">
+        <button onClick={() => setMenuOpen(o => !o)} aria-label="Menu du compte" aria-expanded={menuOpen} className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent p-1 hover:bg-surface-container-low">
           <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">
             {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : displayName.charAt(0).toUpperCase()}
           </span>

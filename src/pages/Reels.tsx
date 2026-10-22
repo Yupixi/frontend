@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApolloClient, useQuery } from '@apollo/client/react'
+import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import ReelFeedView, { type ReelActions } from '../components/reels/ReelFeedView'
 import Icon from '../components/Icon'
 import { REELS_FEED_QUERY, type Reel } from '../graphql/reels'
@@ -92,7 +93,10 @@ export default function ReelsPage({ startId, city, onClose, onPublish, ...action
       setCursor(page?.nextCursor ?? null)
       setDone(!page?.nextCursor)
     } catch (e) {
-      setError((e as Error).message || 'Les Reels n’ont pas pu être chargés.')
+      // The server's own words for a refusal it explains; never a raw
+      // technical message (network, database) on the screen.
+      const explained = CombinedGraphQLErrors.is(e) && e.errors.every(x => x.extensions?.code && x.extensions.code !== 'INTERNAL_SERVER_ERROR')
+      setError(explained ? (e as Error).message : 'Les Reels n’ont pas pu être chargés. Vérifiez votre connexion puis réessayez.')
     } finally {
       busy.current = false
       setLoading(false)

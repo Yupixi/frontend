@@ -38,7 +38,7 @@ export default function CheckinCard({ c, otherName, concluded, onAnswered, onRes
   const seller = c.role === 'SELLER'
   const meta = (
     <p className="m-0 -mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant">
-      <Icon name="schedule" size={15} className="shrink-0" /> <span className="truncate">{c.place} · <span className="capitalize">{when(c.scheduledAt)}</span></span>
+      <Icon name="schedule" size={15} className="shrink-0" /> <span className="truncate">{c.place} · {when(c.scheduledAt)}</span>
     </p>
   )
   const err = error && <p role="alert" className="m-0 text-body-sm text-primary">{error}</p>

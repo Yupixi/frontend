@@ -708,7 +708,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 {allPhotos.map((p, i) => (
                   <div key={p.key} className="relative aspect-square overflow-hidden rounded-xl bg-surface-container-low">
                     <img src={p.url} alt="" className="h-full w-full object-cover" />
-                    {i === 0 && <span className="absolute left-1.5 top-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white">Photo de couverture</span>}
+                    {i === 0 && <span className="absolute bottom-1.5 left-1.5 mr-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white">Photo de couverture</span>}
                     <button onClick={p.remove} className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-black/55 text-white" aria-label="Retirer"><X size={15} /></button>
                   </div>
                 ))}
@@ -755,7 +755,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   </p>
                 )}
                 <Field label="Titre de l'annonce" required right={<span className="text-body-sm text-on-surface-variant">{form.title.length} / {TITLE_MAX} car.</span>} hint={bad('title') ? undefined : 'Mentionnez la marque, le modèle précis et la particularité majeure.'}>
-                  <input data-field="title" aria-invalid={bad('title')} className={bad('title') ? inputBad : inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ex : Appareil photo argentique Olympus OM-1 + Zuiko 50mm" />
+                  <input data-field="title" aria-invalid={bad('title')} className={bad('title') ? inputBad : inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ex : iPhone 13 128 Go, bleu, très bon état" />
                   <FieldError show={bad('title')}>Indiquez un titre.</FieldError>
                 </Field>
 
@@ -775,7 +775,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                         <button key={c.id} type="button" role="radio" aria-checked={on} onClick={() => setForm(f => (f.categoryId === c.id ? f : { ...f, categoryId: c.id, subcategoryId: '', attributes: {} }))}
                           className={`flex min-h-14 cursor-pointer items-center gap-2 rounded-xl border-[1.5px] border-solid p-2.5 text-left ${on ? 'border-on-surface bg-on-surface text-surface-lowest' : bad('category') ? 'border-primary bg-surface-lowest text-on-surface' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
                           <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-white/15' : 'bg-surface-container-low text-primary'}`}><CategoryIcon icon={c.icon} size={20} /></span>
-                          <span className="min-w-0 truncate text-label-md" title={c.name}>{c.name}</span>
+                          <span className="line-clamp-2 min-w-0 text-label-md leading-tight [overflow-wrap:anywhere]" title={c.name}>{c.name}</span>
                         </button>
                       )
                     })}

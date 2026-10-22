@@ -389,7 +389,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
                   <Icon name="schedule" size={20} className="text-primary" />
                   <div className="flex-1">
                     <div className="text-label-md text-on-surface">Prochain créneau optimal</div>
-                    <div className="text-body-sm capitalize text-on-surface-variant">{new Date(s.advice.nextSlot).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                    <div className="text-body-sm text-on-surface-variant first-letter:uppercase">{new Date(s.advice.nextSlot).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
                   </div>
                   <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Programmer <Icon name="arrow_forward" size={16} /></button>
                 </div>

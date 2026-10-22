@@ -236,7 +236,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                 const boosted = !!l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()
                 return (
                   <article key={l.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm">
-                    <button onClick={() => onSelectListing(l.id)} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0"><ListingThumb listing={l} src={l.coverImageUrl} /></button>
+                    <button onClick={() => onSelectListing(l.id)} aria-label={`Voir « ${l.title} »`} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0"><ListingThumb listing={l} src={l.coverImageUrl} /></button>
                     {/* min width: on narrow phones the Booster button wraps under instead of covering the price */}
                     <div className="min-w-[8.5rem] flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-label-sm text-on-surface-variant">{l.condition && l.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 text-tertiary">{l.condition}</span>}<span>{l.city}</span></div>

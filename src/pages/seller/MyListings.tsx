@@ -12,6 +12,7 @@ import { thumbnailUrl } from '../../lib/media'
 import { AccountLayout } from '../account/AccountLayout'
 import ListingOffersPanel from '../../components/ListingOffersPanel'
 import { MY_LISTINGS_QUERY, BUMP_LISTING_MUTATION, type MyListingRow } from '../../graphql/listings'
+import PromoPill from '../../components/PromoPill'
 import { DELETE_LISTING_WITH_REASON_MUTATION, PAUSE_LISTING_MUTATION, RESUME_LISTING_MUTATION, type ListingExitReason } from '../../graphql/deals'
 import MarkSoldSheet from '../../components/MarkSoldSheet'
 import ExitReasonSheet from '../../components/ExitReasonSheet'
@@ -335,7 +336,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                   {l.coverImageUrl && <img src={thumbnailUrl(l.coverImageUrl)} alt="" loading="lazy" decoding="async" onError={e => { const img = e.currentTarget; if (l.coverImageUrl && !img.src.endsWith(l.coverImageUrl)) img.src = l.coverImageUrl; else img.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />}
                   <span className="absolute bottom-2 right-2 rounded-md bg-black/80 px-1.5 py-0.5 text-label-sm font-bold text-white"><Price amount={l.price} currency={l.currency} /></span>
                   {photos > 1 && <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] text-white"><Icon name="photo_library" size={12} /> {photos}</span>}
-                  {boosted && <span className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-bold text-white"><Rocket size={12} /> Boost</span>}
+                  {/* The buyers' pill (En vedette, Turbo, Urgent, Remontée… in the BO's words); « Boost » until the API has one. */}
+                  {l.promoBadge ? <PromoPill badge={l.promoBadge} className="absolute right-2 top-2" />
+                    : boosted && <span className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-bold text-white"><Rocket size={12} /> Boost</span>}
                 </button>
 
                 {/* Text underneath */}

@@ -99,7 +99,7 @@ export default function ReviewsMobile({ rep, reviews, currentUser, replying, onR
               <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-fixed text-label-md text-primary">{r.author.avatarUrl ? <img src={r.author.avatarUrl} alt="" className="h-full w-full object-cover" /> : r.author.fullName.charAt(0)}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2"><span className="truncate text-label-lg text-on-surface">{r.author.fullName}</span><span className="flex shrink-0">{[1, 2, 3, 4, 5].map(n => <Icon key={n} name="star" size={14} fill={n <= r.rating} className="text-amber-500" />)}</span></div>
-                <div className="flex items-center gap-1 text-label-sm text-on-surface-variant">{r.author.city && <><Icon name="location_on" size={13} /> {r.author.city} •</>} {formatRelativeDate(r.createdAt)}</div>
+                <div className="flex items-center gap-1 text-label-sm text-on-surface-variant">{r.author.city && <><Icon name="location_on" size={13} /> {r.author.city} •</>} {r.author.city ? formatRelativeDate(r.createdAt).toLowerCase() : formatRelativeDate(r.createdAt)}</div>
               </div>
             </div>
             {r.comment && <p className="m-0 mt-2 text-body-md text-on-surface">« {r.comment} »</p>}
