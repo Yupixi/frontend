@@ -155,3 +155,19 @@ export function requestManageReel(id: string) { try { sessionStorage.setItem(MAN
 export function takeManagedReel() {
   try { const v = sessionStorage.getItem(MANAGE_REEL_KEY); sessionStorage.removeItem(MANAGE_REEL_KEY); return v } catch { return null }
 }
+
+// ── Défilement automatique ─────────────────────────────────────────────
+// At the end of a Reel, the next one comes up (on by default; the visitor
+// can turn it off in the Reels menu, kept on this device).
+const AUTO_KEY = 'dilchap_reels_autonext'
+function storedAuto(): boolean {
+  try { return localStorage.getItem(AUTO_KEY) !== '0' } catch { return true }
+}
+let autoNext = storedAuto()
+const autoListeners = new Set<() => void>()
+export const useReelsAutoNext = () => useSyncExternalStore(f => { autoListeners.add(f); return () => { autoListeners.delete(f) } }, () => autoNext)
+export function setReelsAutoNext(on: boolean) {
+  autoNext = on
+  try { localStorage.setItem(AUTO_KEY, on ? '1' : '0') } catch { /* private mode */ }
+  autoListeners.forEach(f => f())
+}

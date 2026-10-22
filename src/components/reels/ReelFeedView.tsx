@@ -9,7 +9,7 @@ import { REPORT_REEL_MUTATION, type Reel } from '../../graphql/reels'
 import { ReelBoostSheet, ReelStatsSheet } from './ReelOwnerSheets'
 import { requestNavigate } from '../../lib/navigation'
 import {
-  requestManageReel, reelEvent, reelPath, reelSource, reelThumb, setDataSaver, setReelsMuted, useDataSaver, useReelSettings, useReelsMuted,
+  requestManageReel, reelEvent, reelPath, reelSource, reelThumb, setDataSaver, setReelsAutoNext, setReelsMuted, useDataSaver, useReelsAutoNext, useReelSettings, useReelsMuted,
 } from '../../lib/reels'
 
 // The vertical Reels pager (feed, a listing's or a seller's Reels): one Reel
@@ -55,6 +55,7 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
   const activeRef = useRef(startIndex)
   const muted = useReelsMuted()
   const saver = useDataSaver()
+  const autoNext = useReelsAutoNext()
   const [menu, setMenu] = useState(false)
   const settings = useReelSettings()
 
@@ -97,6 +98,13 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
     const i = Math.max(0, Math.min(items.length - 1, activeRef.current + delta))
     root.scrollTo({ top: i * root.clientHeight, behavior: 'smooth' })
   }, [items.length])
+  // End of a Reel with « Défilement automatique »: the next one; false on the
+  // last (it plays again).
+  const onEnded = useCallback(() => {
+    if (activeRef.current >= items.length - 1) return false
+    go(1)
+    return true
+  }, [go, items.length])
 
   // Keyboard (desktop): ↑ ↓ / j k, espace (lecture), m (son), Échap.
   useEffect(() => {
@@ -162,7 +170,7 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
       >
         {items.map((r, i) => (
           <div key={r.id} data-reel-slide data-index={i} className="relative h-full w-full snap-start snap-always">
-            <ReelSlide reel={r} state={i === active ? 'active' : i === active + 1 ? 'next' : 'idle'} muted={muted} saver={saver} viewSeconds={settings.viewSeconds} boostEnabled={settings.boostEnabled} {...actions} />
+            <ReelSlide reel={r} state={i === active ? 'active' : i === active + 1 ? 'next' : 'idle'} muted={muted} saver={saver} viewSeconds={settings.viewSeconds} boostEnabled={settings.boostEnabled} autoNext={autoNext} onEnded={onEnded} {...actions} />
           </div>
         ))}
         {!items.length && (
@@ -193,15 +201,22 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
             <span className="block text-body-sm text-on-surface-variant">Vidéos en qualité réduite (environ 2 fois plus légères), et le Reel suivant n’est pas préchargé. Activée d’office quand votre téléphone économise les données ou que le réseau est lent.</span>
           </span>
         </label>
+        <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3 text-on-surface">
+          <input type="checkbox" checked={autoNext} onChange={e => setReelsAutoNext(e.target.checked)} className="mt-1 h-5 w-5 accent-[var(--primary)]" />
+          <span>
+            <span className="block text-label-lg">Défilement automatique</span>
+            <span className="block text-body-sm text-on-surface-variant">À la fin d’un Reel, le suivant s’affiche tout seul.</span>
+          </span>
+        </label>
         <p className="mb-0 mt-3 text-body-sm text-on-surface-variant">Sur ordinateur : flèches ↑ ↓ pour changer de Reel, espace pour la pause, M pour le son.</p>
       </BottomSheet>
     </div>
   )
 }
 
-type SlideProps = ReelActions & { reel: Reel; state: 'active' | 'next' | 'idle'; muted: boolean; saver: boolean; viewSeconds: number; boostEnabled: boolean }
+type SlideProps = ReelActions & { reel: Reel; state: 'active' | 'next' | 'idle'; muted: boolean; saver: boolean; viewSeconds: number; boostEnabled: boolean; autoNext: boolean; onEnded: () => boolean }
 
-const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSeconds, boostEnabled, ...a }: SlideProps) {
+const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSeconds, boostEnabled, autoNext, onEnded, ...a }: SlideProps) {
   const video = useRef<HTMLVideoElement>(null)
   const bar = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
@@ -242,6 +257,17 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
     else if (delta > 0 && delta < 1.5 && !v.paused) played.current += delta
     last.current = v.currentTime
     if (!own && played.current >= viewSeconds) reelEvent(reel.id, 'VIEW')
+  }
+
+  // Played to the end without looping (« Défilement automatique »): counted
+  // as complete, then the next Reel — unless a sheet is open or it is the
+  // last one, which plays again.
+  const ended = () => {
+    const v = video.current
+    if (!v) return
+    reelEvent(reel.id, 'COMPLETE')
+    last.current = 0
+    if (sheet || expanded || !onEnded()) { v.currentTime = 0; void v.play().catch(() => undefined) }
   }
 
   const toggle = () => {
@@ -286,7 +312,8 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
               poster={reel.posterUrl ?? undefined}
               muted={muted}
               playsInline
-              loop
+              loop={!autoNext}
+              onEnded={state === 'active' && autoNext ? ended : undefined}
               preload={state === 'active' ? 'auto' : 'metadata'}
               onTimeUpdate={state === 'active' ? onTime : undefined}
               onClick={toggle}
