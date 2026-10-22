@@ -164,24 +164,39 @@ export const UNSUBSCRIBE_EMAILS_MUTATION = gql`
 // PhoneAuthService): what the country offers, then a 6-digit code by SMS.
 // requestPasswordResetCode answers the same whether or not the number has
 // an account.
-export type PhoneAuthOptions = { signup: boolean; passwordReset: boolean; smsLogin: boolean }
-export type PhoneCodeSent = { expiresAt: string; resendAfterSeconds: number; phoneHint: string }
+// `emailSignup`: « S'inscrire avec mon e-mail » next to the phone sign-up
+// (BO › Règles); `whatsappCodes`: « Recevoir le code par WhatsApp » (BO ›
+// SMS & WhatsApp); `codeTtlMinutes`: lifetime of a code.
+export type PhoneAuthOptions = { signup: boolean; passwordReset: boolean; smsLogin: boolean; emailSignup: boolean; whatsappCodes: boolean; codeTtlMinutes: number }
+export type CodeChannel = 'SMS' | 'WHATSAPP'
+// `deliveryRef` follows the delivery (null for a password reset);
+// `previousFailed`: the last code to this number was not delivered;
+// `unreliable`: SMS arrive badly on this number's network right now.
+export type PhoneCodeSent = { expiresAt: string; resendAfterSeconds: number; phoneHint: string; channel: CodeChannel; deliveryRef: string | null; previousFailed: boolean; unreliable: boolean; whatsappAvailable: boolean }
+export type CodeDeliveryStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED'
 
 export const PHONE_AUTH_OPTIONS_QUERY = gql`
   query PhoneAuthOptions($countryCode: String) {
-    phoneAuthOptions(countryCode: $countryCode) { signup passwordReset smsLogin }
+    phoneAuthOptions(countryCode: $countryCode) { signup passwordReset smsLogin emailSignup whatsappCodes codeTtlMinutes }
   }
 `
 
 export const REQUEST_SIGNUP_CODE_MUTATION = gql`
-  mutation RequestSignupCode($phone: String!, $countryCode: String!) {
-    requestSignupCode(phone: $phone, countryCode: $countryCode) { expiresAt resendAfterSeconds phoneHint }
+  mutation RequestSignupCode($phone: String!, $countryCode: String!, $channel: String) {
+    requestSignupCode(phone: $phone, countryCode: $countryCode, channel: $channel) { expiresAt resendAfterSeconds phoneHint channel deliveryRef previousFailed unreliable whatsappAvailable }
+  }
+`
+
+// Delivery of a code just asked (PhoneCodeSent.deliveryRef).
+export const PHONE_CODE_DELIVERY_QUERY = gql`
+  query PhoneCodeDelivery($ref: String!) {
+    phoneCodeDelivery(ref: $ref) { status channel }
   }
 `
 
 export const REQUEST_PASSWORD_RESET_CODE_MUTATION = gql`
-  mutation RequestPasswordResetCode($phone: String!, $countryCode: String!) {
-    requestPasswordResetCode(phone: $phone, countryCode: $countryCode) { expiresAt resendAfterSeconds phoneHint }
+  mutation RequestPasswordResetCode($phone: String!, $countryCode: String!, $channel: String) {
+    requestPasswordResetCode(phone: $phone, countryCode: $countryCode, channel: $channel) { expiresAt resendAfterSeconds phoneHint channel deliveryRef previousFailed unreliable whatsappAvailable }
   }
 `
 
@@ -194,8 +209,8 @@ export const RESET_PASSWORD_WITH_CODE_MUTATION = gql`
 // « Se connecter par code SMS »: a code to the confirmed number of an
 // account, then the code typed.
 export const REQUEST_LOGIN_CODE_MUTATION = gql`
-  mutation RequestLoginCode($phone: String!, $countryCode: String!) {
-    requestLoginCode(phone: $phone, countryCode: $countryCode) { expiresAt resendAfterSeconds phoneHint }
+  mutation RequestLoginCode($phone: String!, $countryCode: String!, $channel: String) {
+    requestLoginCode(phone: $phone, countryCode: $countryCode, channel: $channel) { expiresAt resendAfterSeconds phoneHint channel deliveryRef previousFailed unreliable whatsappAvailable }
   }
 `
 

@@ -7,7 +7,7 @@ import { formatIntl } from '../lib/dialing'
 import { announceAccountVerified } from '../lib/accountVerify'
 import { RESEND_VERIFICATION_MUTATION } from '../graphql/auth'
 import {
-  PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, type PhoneChannelData,
+  PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, codeVia, type PhoneChannelData,
 } from '../graphql/phoneVerification'
 
 // « Confirmez votre compte », SMS first: a 6-digit code to the member's
@@ -25,10 +25,11 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
   heading?: boolean
 }) {
   const { data, refetch } = useQuery<PhoneChannelData>(PHONE_CHANNEL_QUERY, { fetchPolicy: 'cache-and-network' })
-  const [request, { loading: sending }] = useMutation<{ requestPhoneVerification: { alreadyVerified: boolean; phoneHint: string } }>(REQUEST_PHONE_CODE_MUTATION)
+  const [request, { loading: sending }] = useMutation<{ requestPhoneVerification: { alreadyVerified: boolean; phoneHint: string; expiresAt?: string | null; channel?: 'SMS' | 'WHATSAPP' } }>(REQUEST_PHONE_CODE_MUTATION)
   const [verify, { loading: checking }] = useMutation(VERIFY_PHONE_MUTATION)
   const [resendEmail, { loading: mailing }] = useMutation<{ resendVerificationEmail: boolean }>(RESEND_VERIFICATION_MUTATION)
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [via, setVia] = useState(codeVia(null))
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [mailSent, setMailSent] = useState(false)
@@ -68,6 +69,7 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
       .then(({ data: d }) => {
         if (d?.requestPhoneVerification.alreadyVerified) { finish(); return }
         setSentTo(d?.requestPhoneVerification.phoneHint ?? '')
+        setVia(codeVia(d?.requestPhoneVerification))
         setCode('')
         setResendAt(Date.now() + 60_000)
       })
@@ -109,7 +111,7 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
       )}
       {sms && sentTo != null && (
         <form onSubmit={e => { e.preventDefault(); if (code.length === 6) submit() }} className="mt-3">
-          <p className="m-0 text-body-sm text-on-surface">Code envoyé par SMS au <b className="whitespace-nowrap">{formatIntl(me.phone)}</b>. Il expire dans 5 minutes.</p>
+          <p className="m-0 text-body-sm text-on-surface">Code envoyé par {via.by} au <b className="whitespace-nowrap">{formatIntl(me.phone)}</b>. Il expire dans {via.ttl} minutes.</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" aria-label="Code reçu par SMS" autoFocus
               className="h-12 w-36 rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-center font-mono text-body-lg tracking-[0.3em] text-on-surface outline-none focus:border-primary" />
