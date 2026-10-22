@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../components/Icon'
 import Logo from '../components/DilchapLogo'
-import { FACEBOOK_LOGIN_MUTATION, GOOGLE_LOGIN_MUTATION, LOGIN_MUTATION, LOGIN_WITH_CODE_MUTATION, PHONE_AUTH_OPTIONS_QUERY, REGISTER_MUTATION, REQUEST_LOGIN_CODE_MUTATION, REQUEST_PASSWORD_RESET_CODE_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, REQUEST_SIGNUP_CODE_MUTATION, RESET_PASSWORD_WITH_CODE_MUTATION, SET_PASSWORD_MUTATION, SOCIAL_LOGIN_CONFIG_QUERY, authReasonOf, type AuthPayload, type PhoneAuthOptions, type PhoneCodeSent, type SocialLoginConfig } from '../graphql/auth'
+import { FACEBOOK_LOGIN_MUTATION, GOOGLE_LOGIN_MUTATION, LOGIN_MUTATION, LOGIN_WITH_CODE_MUTATION, PHONE_AUTH_OPTIONS_QUERY, REGISTER_MUTATION, REQUEST_LOGIN_CODE_MUTATION, REQUEST_PASSWORD_RESET_CODE_MUTATION, REQUEST_PASSWORD_RESET_MUTATION, REQUEST_SIGNUP_CODE_MUTATION, RESET_PASSWORD_WITH_CODE_MUTATION, SET_PASSWORD_MUTATION, SOCIAL_LOGIN_CONFIG_QUERY, authReasonOf, type AuthPayload, type CodeChannel, type PhoneAuthOptions, type PhoneCodeSent, type SocialLoginConfig } from '../graphql/auth'
+import CodeHelp, { useCodeDelivery } from '../components/CodeHelp'
 import { UPDATE_PROFILE_MUTATION } from '../graphql/account'
 import { funnel } from '../lib/authFunnel'
 import { facebookRedirectUri, inAppBrowser, loadGoogle, startFacebook, takeFacebookReturn } from '../lib/social'
@@ -96,7 +97,7 @@ function IdentifierField({ value, onChange, country, asEmail, onAsEmail, invalid
   )
 }
 
-function LoginForm({ onSuccess, onForgot, onRegister, smsLogin }: { onSuccess: (p: AuthPayload) => void; onForgot: () => void; onRegister: () => void; smsLogin: boolean }) {
+function LoginForm({ onSuccess, onForgot, onRegister, smsLogin, codeTtl }: { onSuccess: (p: AuthPayload) => void; onForgot: () => void; onRegister: () => void; smsLogin: boolean; codeTtl: number }) {
   const home = useHomeCountry()
   const country = useMarket() ?? home
   const [asEmail, setAsEmail] = useState(false)
@@ -129,7 +130,7 @@ function LoginForm({ onSuccess, onForgot, onRegister, smsLogin }: { onSuccess: (
       funnel('login_failure', { method: 'password', country: country.code, reason })
     }).finally(() => { busy.current = false })
   }
-  if (bySms) return <SmsLoginForm initialPhone={asEmail ? '' : identifier} onSuccess={onSuccess} onBack={() => setBySms(false)} />
+  if (bySms) return <SmsLoginForm initialPhone={asEmail ? '' : identifier} codeTtl={codeTtl} onSuccess={onSuccess} onBack={() => setBySms(false)} onUseEmail={() => { setBySms(false); setAsEmail(true); setIdentifier(''); setFailure(null) }} />
   const r = failure?.reason
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
@@ -159,18 +160,26 @@ function LoginForm({ onSuccess, onForgot, onRegister, smsLogin }: { onSuccess: (
   )
 }
 
+// A code just sent: where it went (number end, channel), how long it
+// lasts, and what the code screen tells about its delivery.
+type SentCode = PhoneCodeSent & { phone: string; country: string; ttl: number }
+const sentCode = (d: PhoneCodeSent, phone: string, country: string): SentCode => ({
+  ...d, phone, country, ttl: Math.max(1, Math.round((Date.parse(d.expiresAt) - Date.now()) / 60_000)),
+})
+
 const Spinner = () => <span aria-hidden className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
 
 // « Se connecter par code SMS »: the number, then the 6-digit code (sent
 // only to the confirmed number of an account). The code submits itself.
-function SmsLoginForm({ initialPhone, onSuccess, onBack }: { initialPhone: string; onSuccess: (p: AuthPayload) => void; onBack: () => void }) {
+function SmsLoginForm({ initialPhone, codeTtl, onSuccess, onBack, onUseEmail }: { initialPhone: string; codeTtl: number; onSuccess: (p: AuthPayload) => void; onBack: () => void; onUseEmail: () => void }) {
   const home = useHomeCountry()
   const market = useMarket() ?? home
   const [phone, setPhone] = useState(initialPhone)
   const [code, setCode] = useState('')
-  const [sent, setSent] = useState<{ phone: string; country: string; hint: string } | null>(null)
+  const [sent, setSent] = useState<SentCode | null>(null)
   const [resendAt, setResendAt] = useState(0)
   const wait = useCooldown(resendAt)
+  const delivery = useCodeDelivery(sent?.deliveryRef)
   const [failure, setFailure] = useState<{ message: string; reason: string | null } | null>(null)
   const [request, { loading: sending }] = useMutation<{ requestLoginCode: PhoneCodeSent }>(REQUEST_LOGIN_CODE_MUTATION)
   const [verify, { loading: checking }] = useMutation<{ loginWithCode: AuthPayload }>(LOGIN_WITH_CODE_MUTATION)
@@ -178,17 +187,17 @@ function SmsLoginForm({ initialPhone, onSuccess, onBack }: { initialPhone: strin
   const intl = toIntl(phone, market)
   const countryCode = countryOfIntl(intl) ?? market.code
   const phoneError = phone ? localNumberError(phone, market) : null
-  const ask = () => {
+  const ask = (channel?: CodeChannel) => {
     if (!intl || phoneError || busy.current) return
     busy.current = true
     setFailure(null)
-    void request({ variables: { phone: intl, countryCode } }).then(r => {
+    void request({ variables: { phone: intl, countryCode, channel: channel ?? null } }).then(r => {
       const d = r.data?.requestLoginCode
       if (!d) return
-      setSent({ phone: intl, country: countryCode, hint: d.phoneHint })
+      setSent(sentCode(d, intl, countryCode))
       setCode('')
       setResendAt(Date.now() + d.resendAfterSeconds * 1000)
-      funnel('login_code_sent', { method: 'sms', country: countryCode })
+      funnel('login_code_sent', { method: d.channel === 'WHATSAPP' ? 'whatsapp' : 'sms', country: countryCode })
     }).catch((err: unknown) => {
       const reason = authReasonOf(err)
       setFailure({ message: (err as Error).message, reason })
@@ -222,17 +231,18 @@ function SmsLoginForm({ initialPhone, onSuccess, onBack }: { initialPhone: strin
           {phoneError && <span className="text-body-sm text-primary">{phoneError}</span>}
           {failure && <FormError message={failure.message} />}
           <button type="submit" disabled={!intl || !!phoneError || sending} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60">{sending ? <><Spinner /> Envoi…</> : <><Icon name="sms" size={19} /> Recevoir le code</>}</button>
-          <p className="m-0 text-body-sm text-on-surface-variant">Le code part seulement vers un numéro déjà confirmé sur un compte Dilchap. Il expire après 5 minutes.</p>
+          <p className="m-0 text-body-sm text-on-surface-variant">Le code part seulement vers un numéro déjà confirmé sur un compte Dilchap. Il expire après {codeTtl} minutes.</p>
         </form>
       ) : (
         <div className="flex flex-col gap-3">
-          <SmsCodeField value={code} onChange={v => { setCode(v); setFailure(null); if (v.length === 6) check(v) }} sentTo={sent.hint} wait={wait} resending={sending} onResend={ask} autoFocus />
+          <SmsCodeField value={code} onChange={v => { setCode(v); setFailure(null); if (v.length === 6) check(v) }} sent={sent} wait={wait} resending={sending} onResend={() => ask(sent.channel)} autoFocus />
           {checking && <p role="status" className="m-0 text-body-sm text-on-surface-variant">Vérification du code…</p>}
           {failure && (
             <FormError message={failure.message}>
-              {(failure.reason === 'CODE_EXPIRED' || failure.reason === 'LOCKED') && wait === 0 && <button type="button" onClick={ask} className={linkBtn}>Recevoir un nouveau code</button>}
+              {(failure.reason === 'CODE_EXPIRED' || failure.reason === 'LOCKED') && wait === 0 && <button type="button" onClick={() => ask(sent.channel)} className={linkBtn}>Recevoir un nouveau code</button>}
             </FormError>
           )}
+          <CodeHelp sent={sent} status={delivery} wait={wait} sending={sending} onOtherChannel={ask} email={{ label: 'Me connecter avec mon e-mail', onClick: onUseEmail }} />
           <button type="button" onClick={() => { setSent(null); setCode(''); setFailure(null) }} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant">Changer de numéro</button>
         </div>
       )}
@@ -242,14 +252,15 @@ function SmsLoginForm({ initialPhone, onSuccess, onBack }: { initialPhone: strin
 
 // Code field of an SMS code (6 digits, filled by the phone's keyboard
 // suggestion), with the resend countdown.
-function SmsCodeField({ value, onChange, sentTo, wait, resending, onResend, maybe = false, autoFocus = false }: { value: string; onChange: (v: string) => void; sentTo: string; wait: number; resending: boolean; onResend: () => void; maybe?: boolean; autoFocus?: boolean }) {
-  const to = <b className="font-semibold">…{sentTo.replace(/^…/, '')}</b>
+function SmsCodeField({ value, onChange, sent, wait, resending, onResend, maybe = false, autoFocus = false }: { value: string; onChange: (v: string) => void; sent: SentCode; wait: number; resending: boolean; onResend: () => void; maybe?: boolean; autoFocus?: boolean }) {
+  const to = <b className="font-semibold">…{sent.phoneHint.replace(/^…/, '')}</b>
+  const by = sent.channel === 'WHATSAPP' ? 'WhatsApp' : 'SMS'
   return (
     <div className="rounded-xl bg-tertiary-soft/60 p-3">
-      <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface"><Icon name="sms" size={18} className="mt-0.5 shrink-0 text-tertiary" /><span className="min-w-0">{maybe ? <>Si ce numéro est vérifié sur un compte Dilchap, un code arrive par SMS au {to}. Il expire dans 5 minutes.</> : <>Code envoyé par SMS au {to}. Il expire dans 5 minutes.</>}</span></p>
-      <label className="mt-2 block text-label-md text-on-surface">Code reçu par SMS
+      <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface"><Icon name={sent.channel === 'WHATSAPP' ? 'chat' : 'sms'} size={18} className="mt-0.5 shrink-0 text-tertiary" /><span className="min-w-0">{maybe ? <>Si ce numéro est vérifié sur un compte Dilchap, un code arrive par {by} au {to}. Il expire dans {sent.ttl} minutes.</> : <>Code envoyé par {by} au {to}. Il expire dans {sent.ttl} minutes.</>}</span></p>
+      <label className="mt-2 block text-label-md text-on-surface">Code reçu par {by}
         <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <input value={value} autoFocus={autoFocus} onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))} type="text" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} placeholder="000000" aria-label="Code à 6 chiffres reçu par SMS"
+          <input value={value} autoFocus={autoFocus} onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))} type="text" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} placeholder="000000" aria-label={`Code à 6 chiffres reçu par ${by}`}
             className="h-12 w-36 rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-center font-mono text-body-lg tracking-[0.3em] text-on-surface outline-none focus:border-primary" />
           <button type="button" disabled={resending || wait > 0} onClick={onResend} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary disabled:cursor-default disabled:text-on-surface-variant">
             {resending ? 'Envoi…' : wait > 0 ? `Renvoyer le code (${wait} s)` : 'Renvoyer le code'}
@@ -281,15 +292,24 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', city: '', password: '', countryCode: market.code })
   const country = countries.find(c => c.code === form.countryCode) ?? market
   const lists = useLists(country.code)
-  const phoneError = form.phone ? localNumberError(form.phone, country) : null
   const [accepted, setAccepted] = useState(false)
   const [register, { loading }] = useMutation<{ register: AuthPayload }>(REGISTER_MUTATION)
   const { data: options, refetch: refetchOptions } = useQuery<{ phoneAuthOptions: PhoneAuthOptions }>(PHONE_AUTH_OPTIONS_QUERY, { variables: { countryCode: country.code } })
   const byPhone = !!options?.phoneAuthOptions.signup
+  // « S'inscrire avec mon e-mail » next to the phone sign-up (BO › Règles,
+  // on by default): the way in when SMS don't reach a network.
+  const emailOffered = byPhone && options?.phoneAuthOptions.emailSignup !== false
+  const [useEmail, setUseEmail] = useState(false)
+  const emailMode = !byPhone || (emailOffered && useEmail)
+  const method = emailMode ? 'email' : 'phone'
   // The password can wait (SMS login): asked after the account exists.
-  const passwordLater = byPhone && !!options?.phoneAuthOptions.smsLogin
+  const passwordLater = !emailMode && !!options?.phoneAuthOptions.smsLogin
+  // The optional number of the e-mail form, only where phone sign-up is off
+  // (where it is on, a number is proven by its code).
+  const withPhone = !byPhone || !emailMode
+  const phoneError = withPhone && form.phone ? localNumberError(form.phone, country) : null
   const [requestCode, { loading: sending }] = useMutation<{ requestSignupCode: PhoneCodeSent }>(REQUEST_SIGNUP_CODE_MUTATION)
-  const [sent, setSent] = useState<{ phone: string; hint: string } | null>(null)
+  const [sent, setSent] = useState<SentCode | null>(null)
   const [code, setCode] = useState('')
   const [failure, setFailure] = useState<{ message: string; reason: string | null } | null>(null)
   const [resendAt, setResendAt] = useState(0)
@@ -299,37 +319,44 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
   const started = useRef(false)
   const intl = toIntl(form.phone, country)
   const codeFor = sent && sent.phone === intl ? sent : null
+  const delivery = useCodeDelivery(codeFor?.deliveryRef)
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [k]: e.target.value }))
     setFailure(null)
-    if (!started.current) { started.current = true; funnel('sign_up_start', { method: byPhone ? 'phone' : 'email', country: country.code }) }
+    if (!started.current) { started.current = true; funnel('sign_up_start', { method, country: country.code }) }
+  }
+  const switchTo = (email: boolean) => {
+    setUseEmail(email)
+    setFailure(null)
+    setSent(null)
+    setCode('')
   }
   const fail = (err: unknown) => {
     const reason = authReasonOf(err)
     setFailure({ message: readable((err as Error).message) ?? 'L’inscription a échoué. Réessayez.', reason })
-    funnel('sign_up_failure', { method: byPhone ? 'phone' : 'email', country: country.code, reason })
+    funnel('sign_up_failure', { method, country: country.code, reason })
     void refetchOptions()
   }
   const nameOk = form.fullName.trim().length >= 2
   const missing: string[] = []
   if (!nameOk) missing.push('votre nom (2 caractères minimum)')
-  if (!form.phone.trim() && byPhone) missing.push('votre numéro')
+  if (!form.phone.trim() && !emailMode) missing.push('votre numéro')
   if (phoneError) missing.push('un numéro complet')
   if (!passwordLater && form.password.length < 8) missing.push('un mot de passe de 8 caractères minimum')
-  if (!byPhone && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) missing.push('votre adresse e-mail')
-  if (!byPhone && !accepted) missing.push('l’acceptation des conditions')
+  if (emailMode && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) missing.push('votre adresse e-mail')
+  if (emailMode && !accepted) missing.push('l’acceptation des conditions')
 
-  const sendCode = () => {
+  const sendCode = (channel?: CodeChannel) => {
     if (!intl || phoneError || busy.current) return
     busy.current = true
     setFailure(null)
-    void requestCode({ variables: { phone: intl, countryCode: country.code } }).then(r => {
+    void requestCode({ variables: { phone: intl, countryCode: country.code, channel: channel ?? null } }).then(r => {
       const d = r.data?.requestSignupCode
       if (!d) return
-      setSent({ phone: intl, hint: d.phoneHint })
+      setSent(sentCode(d, intl, country.code))
       setCode('')
       setResendAt(Date.now() + d.resendAfterSeconds * 1000)
-      funnel('sign_up_code_sent', { method: 'phone', country: country.code })
+      funnel('sign_up_code_sent', { method: d.channel === 'WHATSAPP' ? 'whatsapp' : 'phone', country: country.code })
     }).catch(fail).finally(() => { busy.current = false })
   }
   const create = (phoneCode?: string) => {
@@ -338,21 +365,21 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
     setFailure(null)
     const email = form.email.trim().toLowerCase()
     void register({
-      variables: { input: { fullName: form.fullName.trim(), email: email || undefined, phone: intl, phoneCode, city: form.city || undefined, password: form.password || undefined, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
+      variables: { input: { fullName: form.fullName.trim(), email: emailMode ? email || undefined : undefined, phone: withPhone ? intl : undefined, phoneCode, city: form.city || undefined, password: form.password || undefined, countryCode: country.code, guestSecret: getGuestSecret() ?? undefined } },
     }).then(r => {
       if (!r.data) return
-      funnel('sign_up', { method: byPhone ? 'phone' : 'email', country: country.code })
-      metaTrack('CompleteRegistration', { status: byPhone ? 'phone' : 'email' })
+      funnel('sign_up', { method, country: country.code })
+      metaTrack('CompleteRegistration', { status: method })
       // Signed in now; the next step (password, e-mail) is optional.
       storeAccessToken(r.data.register.accessToken)
-      if (byPhone && !r.data.register.user.hasPassword) setCreated(r.data.register)
+      if (!emailMode && !r.data.register.user.hasPassword) setCreated(r.data.register)
       else onSuccess(r.data.register)
     }).catch(fail).finally(() => { busy.current = false })
   }
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (missing.length) { setFailure({ message: `Il manque ${missing.join(', ')}.`, reason: 'MISSING' }); return }
-    if (byPhone) sendCode()
+    if (!emailMode) sendCode()
     else create()
   }
   if (created) return <FinishSignup payload={created} country={country} cities={placeOptions(lists)} onDone={() => onSuccess(created)} />
@@ -361,7 +388,7 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
   const alert = failure && (
     <FormError message={failure.message}>
       {taken && <button type="button" onClick={onLogin} className={linkBtn}>Se connecter</button>}
-      {failure.reason === 'CODE_EXPIRED' && wait === 0 && <button type="button" onClick={sendCode} className={linkBtn}>Recevoir un nouveau code</button>}
+      {failure.reason === 'CODE_EXPIRED' && wait === 0 && <button type="button" onClick={() => sendCode(codeFor?.channel)} className={linkBtn}>Recevoir un nouveau code</button>}
     </FormError>
   )
   const nameField = <label className="text-label-md text-on-surface">Nom complet ou nom de boutique<input value={form.fullName} onChange={set('fullName')} autoFocus autoComplete="name" autoCapitalize="words" placeholder="Ex : Aya Koné" className={`${field} mt-1.5`} /></label>
@@ -379,15 +406,22 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
       {form.password && form.password.length < 8 && <span className="mt-1 block text-body-sm font-normal text-on-surface-variant">Encore {8 - form.password.length} caractère{8 - form.password.length > 1 ? 's' : ''}.</span>}
     </label>
   )
+  const toEmail = emailOffered && (
+    <button type="button" onClick={() => switchTo(true)} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-solid border-outline-variant bg-surface-lowest py-3 text-label-lg text-on-surface hover:bg-surface-container-low">
+      <Icon name="mail" size={19} /> S’inscrire avec mon e-mail
+    </button>
+  )
 
-  if (byPhone) {
+  if (!emailMode) {
     // 2. The code: the account is created as soon as it is complete.
     if (codeFor)
       return (
         <div className="flex flex-col gap-3.5">
-          <SmsCodeField value={code} autoFocus onChange={v => { setCode(v); setFailure(null); if (v.length === 6) create(v) }} sentTo={codeFor.hint} wait={wait} resending={sending} onResend={sendCode} />
+          <SmsCodeField value={code} autoFocus onChange={v => { setCode(v); setFailure(null); if (v.length === 6) create(v) }} sent={codeFor} wait={wait} resending={sending} onResend={() => sendCode(codeFor.channel)} />
           {loading && <p role="status" className="m-0 flex items-center gap-2 text-body-sm text-on-surface-variant"><Icon name="hourglass_top" size={17} /> Création de votre compte…</p>}
           {alert}
+          <CodeHelp sent={codeFor} status={delivery} wait={wait} sending={sending} onOtherChannel={sendCode}
+            email={emailOffered ? { label: 'S’inscrire avec mon e-mail', onClick: () => switchTo(true) } : undefined} />
           <button type="button" onClick={() => { setSent(null); setCode(''); setFailure(null) }} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant">Changer de numéro</button>
         </div>
       )
@@ -409,20 +443,30 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
           {sending ? <><Spinner /> Envoi du code…</> : <><Icon name="sms" size={19} /> Recevoir le code par SMS</>}
         </button>
         <Consent action="Recevoir le code par SMS" />
+        {toEmail && <span className="flex items-center gap-3 text-label-sm text-on-surface-variant"><span className="h-px flex-1 bg-outline-variant" />Pas de SMS ?<span className="h-px flex-1 bg-outline-variant" /></span>}
+        {toEmail}
       </form>
     )
   }
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-3.5">
+      {byPhone && (
+        <p className="m-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl bg-surface-container-low px-3 py-2.5 text-body-sm text-on-surface-variant">
+          <span className="flex min-w-0 items-center gap-1.5"><Icon name="mail" size={17} className="shrink-0" /> Inscription avec votre e-mail, sans SMS.</span>
+          <button type="button" onClick={() => switchTo(false)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">Utiliser mon numéro</button>
+        </p>
+      )}
       {nameField}
       {countryField}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5 sm:grid-cols-2">
+      <div className={`grid grid-cols-[minmax(0,1fr)] gap-3.5 ${withPhone ? 'sm:grid-cols-2' : ''}`}>
         <label className="text-label-md text-on-surface">E-mail<input type="email" value={form.email} onChange={set('email')} autoComplete="email" inputMode="email" autoCapitalize="none" placeholder="nom@exemple.com" className={`${field} mt-1.5`} /></label>
-        <label className="text-label-md text-on-surface">Téléphone WhatsApp <span className="font-normal text-on-surface-variant">(facultatif)</span>
-          <span className="mt-1.5 flex">{phoneInput}</span>
-          {phoneError && <span className="mt-1 block text-body-sm text-primary">{phoneError}</span>}
-        </label>
+        {withPhone && (
+          <label className="text-label-md text-on-surface">Téléphone WhatsApp <span className="font-normal text-on-surface-variant">(facultatif)</span>
+            <span className="mt-1.5 flex">{phoneInput}</span>
+            {phoneError && <span className="mt-1 block text-body-sm text-primary">{phoneError}</span>}
+          </label>
+        )}
       </div>
       <label className="text-label-md text-on-surface">Ville / commune
         <Select value={form.city} onChange={set('city')} className={`${field} mt-1.5 cursor-pointer`}>
@@ -439,6 +483,7 @@ function RegisterForm({ onSuccess, onLogin }: { onSuccess: (p: AuthPayload) => v
       <button type="submit" disabled={loading} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
         {loading ? <><Spinner /> Création…</> : <>Créer mon compte <Icon name="arrow_forward" size={19} /></>}
       </button>
+      {byPhone && <p className="m-0 text-body-sm text-on-surface-variant">Un e-mail vous est envoyé pour confirmer votre compte. Vous pourrez ajouter votre numéro plus tard dans Paramètres.</p>}
     </form>
   )
 }
@@ -603,7 +648,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
             ))}
           </div>
         )}
-        {method === 'email' ? <ResetByEmail /> : <ResetBySms onDone={onBack} />}
+        {method === 'email' ? <ResetByEmail /> : <ResetBySms onDone={onBack} onUseEmail={() => setBy('email')} />}
         <button onClick={() => setSupport(true)} className="mx-auto mt-4 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-center text-label-md text-primary"><Icon name="support_agent" size={18} className="shrink-0" /> {method === 'email' ? 'Plus accès à cet e-mail ? Contacter l’équipe' : 'Plus accès à ce numéro ? Contacter l’équipe'}</button>
       </div>
     </div>
@@ -627,13 +672,13 @@ function ResetByEmail() {
 
 // Number, then the code and the new password. The server answers the same
 // whether or not the number has an account (and only texts a verified one).
-function ResetBySms({ onDone }: { onDone: () => void }) {
+function ResetBySms({ onDone, onUseEmail }: { onDone: () => void; onUseEmail: () => void }) {
   const home = useHomeCountry()
   const market = useMarket() ?? home
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
-  const [sent, setSent] = useState<{ phone: string; country: string; hint: string } | null>(null)
+  const [sent, setSent] = useState<SentCode | null>(null)
   const [resendAt, setResendAt] = useState(0)
   const wait = useCooldown(resendAt)
   const [request, { loading: sending, error: sendError }] = useMutation<{ requestPasswordResetCode: PhoneCodeSent }>(REQUEST_PASSWORD_RESET_CODE_MUTATION)
@@ -642,12 +687,15 @@ function ResetBySms({ onDone }: { onDone: () => void }) {
   // A number typed with its dial code may be of another open country.
   const countryCode = countryOfIntl(intl) ?? market.code
   const phoneError = phone ? localNumberError(phone, market) : null
-  const ask = () => {
+  // The answer never tells whether the number has an account, nor the
+  // delivery of the code (no `deliveryRef`): only what depends on the
+  // network (SMS unreliable there, WhatsApp offered).
+  const ask = (channel?: CodeChannel) => {
     if (!intl) return
-    void request({ variables: { phone: intl, countryCode } }).then(r => {
+    void request({ variables: { phone: intl, countryCode, channel: channel ?? null } }).then(r => {
       const d = r.data?.requestPasswordResetCode
       if (!d) return
-      setSent({ phone: intl, country: countryCode, hint: d.phoneHint })
+      setSent(sentCode(d, intl, countryCode))
       setResendAt(Date.now() + d.resendAfterSeconds * 1000)
     }).catch(() => undefined)
   }
@@ -672,12 +720,13 @@ function ResetBySms({ onDone }: { onDone: () => void }) {
     )
   return (
     <form onSubmit={e => { e.preventDefault(); void reset({ variables: { input: { phone: sent.phone, countryCode: sent.country, code, newPassword: password } } }).catch(() => undefined) }} className="mt-4 flex flex-col gap-3">
-      <SmsCodeField maybe value={code} onChange={setCode} sentTo={sent.hint} wait={wait} resending={sending} onResend={ask} />
+      <SmsCodeField maybe value={code} onChange={setCode} sent={sent} wait={wait} resending={sending} onResend={() => ask(sent.channel)} />
       <label className="text-label-md text-on-surface">Nouveau mot de passe
         <span className="mt-1.5 block"><PasswordInput value={password} onChange={setPassword} placeholder="8 caractères minimum" autoComplete="new-password" /></span>
       </label>
       {(resetError || sendError) && <p role="alert" className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{(resetError ?? sendError)!.message}</p>}
       <button type="submit" disabled={code.length !== 6 || password.length < 8 || saving} className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60"><Icon name="lock_reset" size={19} /> {saving ? 'Enregistrement…' : 'Changer le mot de passe'}</button>
+      <CodeHelp sent={sent} status={null} wait={wait} sending={sending} onOtherChannel={ask} email={{ label: 'Réinitialiser par e-mail', onClick: onUseEmail }} />
       <button type="button" onClick={() => { setSent(null); setCode('') }} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-on-surface-variant">Changer de numéro</button>
     </form>
   )
@@ -742,6 +791,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
   const country = useMarket() ?? home
   const { data: phoneOptions } = useQuery<{ phoneAuthOptions: PhoneAuthOptions }>(PHONE_AUTH_OPTIONS_QUERY, { variables: { countryCode: country.code } })
   const smsLogin = !!phoneOptions?.phoneAuthOptions.smsLogin
+  const codeTtl = phoneOptions?.phoneAuthOptions.codeTtlMinutes ?? 5
   const noCommission = useNoCommissionClaims()
   // Methods of the visitor's country (every one for « Tous les pays »).
   const methods = useMethods()
@@ -776,7 +826,7 @@ export default function Auth({ onNavigate, onLogin, onClose }: AuthProps) {
           {mode !== 'forgot' && <h1 className="m-0 mt-6 text-headline-md text-on-surface">{mode === 'login' ? 'Connexion' : 'Créer un compte'}</h1>}
 
           <div className="mt-6">
-            {mode === 'login' && <LoginForm onSuccess={success} onForgot={() => setMode('forgot')} onRegister={() => setMode('register')} smsLogin={smsLogin} />}
+            {mode === 'login' && <LoginForm onSuccess={success} onForgot={() => setMode('forgot')} onRegister={() => setMode('register')} smsLogin={smsLogin} codeTtl={codeTtl} />}
             {mode === 'register' && <RegisterForm onSuccess={success} onLogin={() => setMode('login')} />}
             {mode === 'forgot' && <ForgotPassword onBack={() => setMode('login')} />}
           </div>
