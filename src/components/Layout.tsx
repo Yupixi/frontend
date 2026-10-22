@@ -492,6 +492,7 @@ export default function Layout({
                 <div ref={userMenuRef} className="relative">
                   <button
                     onClick={() => { setUserMenuOpen(o => !o); setNotifMenuOpen(false); setMsgMenuOpen(false) }}
+                    aria-label="Mon compte" aria-haspopup="menu" aria-expanded={userMenuOpen}
                     // Phones: the tour points at the « Compte » tab instead.
                     data-tour={isMobile ? undefined : 'account'}
                     className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent py-1 pl-1 pr-1 transition-colors hover:bg-surface-container-low lg:pr-2"

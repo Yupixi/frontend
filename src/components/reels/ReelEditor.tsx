@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from '../Icon'
 import { formatDuration } from '../../lib/reels'
 import { blockedBySize, keptSeconds, willShrink, type ReelDraft } from '../../lib/reelDrafts'
@@ -21,7 +21,7 @@ export function ReelPickButtons({ onPick, onError, compact }: { onPick: (d: Reel
   return (
     <div className="grid grid-cols-2 gap-2">
       <button type="button" onClick={() => filmInput.current?.click()} className={`flex ${h} min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-2 text-label-lg text-white`}><Icon name="videocam" size={20} className="shrink-0" /> <span className="truncate">Filmer</span></button>
-      <button type="button" onClick={() => pickInput.current?.click()} className={`flex ${h} min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container-high px-2 text-label-lg text-on-surface`}><Icon name="video_call" size={20} className="shrink-0" /> <span className="truncate">Choisir une vidéo</span></button>
+      <button type="button" onClick={() => pickInput.current?.click()} className={`flex ${h} min-w-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container-high px-2 text-label-lg text-on-surface`}><Icon name="video_call" size={20} className="shrink-0" /> <span className="min-w-0 text-center leading-tight">Choisir une vidéo</span></button>
       <input ref={filmInput} type="file" accept="video/*" capture="environment" className="hidden" onChange={ev => { choose(ev.target.files?.[0]); ev.target.value = '' }} />
       <input ref={pickInput} type="file" accept="video/mp4,video/quicktime,video/webm,video/*" className="hidden" onChange={ev => { choose(ev.target.files?.[0]); ev.target.value = '' }} />
     </div>
@@ -39,8 +39,14 @@ export default function ReelEditor({ draft, onChange, maxDurationSec, maxSizeMb,
   defaultCaption?: string
   previewClassName?: string
 }) {
-  const url = useMemo(() => URL.createObjectURL(draft.file), [draft.file])
-  useEffect(() => () => URL.revokeObjectURL(url), [url])
+  // Created and revoked by the same effect: a memo + cleanup pair revoked
+  // the URL still in use when React re-runs effects (StrictMode, dev).
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const u = URL.createObjectURL(draft.file)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [draft.file])
   const preview = useRef<HTMLVideoElement>(null)
   const max = maxDurationSec
   const { duration, range } = draft
@@ -49,6 +55,20 @@ export default function ReelEditor({ draft, onChange, maxDurationSec, maxSizeMb,
   const onMeta = () => {
     const v = preview.current
     if (!v) return
+    // A WebM recorded in a browser (MediaRecorder) has no duration in its
+    // header: Chrome says Infinity until the end is reached. Seeking far
+    // makes it read the real one (else the upload fails: « Vidéo trop courte »).
+    if (v.duration === Infinity) {
+      const known = () => {
+        if (!Number.isFinite(v.duration)) return
+        v.removeEventListener('durationchange', known)
+        v.currentTime = 0
+        onMeta()
+      }
+      v.addEventListener('durationchange', known)
+      v.currentTime = 1e101
+      return
+    }
     const d = Number.isFinite(v.duration) ? v.duration : 0
     // Already read (back to this step): keep the seller's choice.
     if (draft.duration && Math.abs(draft.duration - d) < 0.2) { v.currentTime = draft.range[0]; return }
@@ -78,7 +98,7 @@ export default function ReelEditor({ draft, onChange, maxDurationSec, maxSizeMb,
   return (
     <div>
       <div className={`mx-auto aspect-[9/16] overflow-hidden rounded-2xl bg-black ${previewClassName}`}>
-        <video ref={preview} src={url} playsInline muted controls preload="metadata" onLoadedMetadata={onMeta} onTimeUpdate={onTime} className="h-full w-full object-contain" aria-label="Aperçu du Reel" />
+        <video ref={preview} src={url ?? undefined} playsInline muted controls preload="metadata" onLoadedMetadata={onMeta} onTimeUpdate={onTime} className="h-full w-full object-contain" aria-label="Aperçu du Reel" />
       </div>
       {duration > max && (
         <div className="mt-3 rounded-xl bg-surface-container-low p-3">

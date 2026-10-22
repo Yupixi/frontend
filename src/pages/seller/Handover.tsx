@@ -103,8 +103,8 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
         {loading && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
         {!loading && !o && (
           <div className="rounded-2xl bg-surface-container-low p-6 text-center">
-            <p className="m-0 text-body-md text-on-surface-variant">Commande introuvable.</p>
-            <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour aux commandes</button>
+            <p className="m-0 text-body-md text-on-surface-variant">Remise introuvable.</p>
+            <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour aux remises</button>
           </div>
         )}
 
@@ -147,7 +147,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
                 <Icon name="task_alt" size={44} className="text-tertiary" />
                 <h2 className="m-0 mt-2 text-headline-sm text-on-surface">Remise validée, vente clôturée</h2>
                 <p className="m-0 mt-1 text-body-md text-on-surface-variant">Commande #{o.reference} • <Price amount={amount} currency={o.listing.currency} /> encaissés en direct. L'annonce est marquée comme vendue.</p>
-                <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white">Retour aux commandes</button>
+                <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white">Retour aux remises</button>
               </section>
             ) : !o.meetup || o.meetup.status !== 'CONFIRMED' ? (
               <section className="rounded-2xl bg-surface-container-low p-5">

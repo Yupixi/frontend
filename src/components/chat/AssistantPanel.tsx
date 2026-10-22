@@ -131,7 +131,7 @@ export default function AssistantPanel({ conversationId, isBuyer, canOffer, onUs
               <div className="mt-2.5 rounded-xl bg-surface-container-low p-3">
                 <div className="text-label-md text-on-surface">{a.meetup.place}</div>
                 {a.meetup.address && <div className="text-body-sm text-on-surface-variant">{a.meetup.address}</div>}
-                {a.meetup.scheduledAt && <div className="text-body-sm capitalize text-on-surface">{new Date(a.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</div>}
+                {a.meetup.scheduledAt && <div className="text-body-sm text-on-surface first-letter:uppercase">{new Date(a.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</div>}
                 <button type="button" onClick={() => onUse({ kind: 'meetup', meetup: a.meetup! })} className="mt-2 w-full cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">Préparer la proposition de rendez-vous</button>
               </div>
             )}

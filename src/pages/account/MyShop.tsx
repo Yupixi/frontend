@@ -394,7 +394,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
         </label>
       </>}
       {error && <p className="m-0 mt-4 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {error}</p>}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:static lg:mt-6 lg:border-none lg:bg-transparent lg:p-0">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 lg:static lg:mt-6 lg:border-none lg:bg-transparent lg:p-0">
         <div className="mx-auto flex max-w-[760px] gap-3">
           <button onClick={back} className="flex h-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">{step === 0 ? 'Annuler' : 'Retour'}</button>
           {step < 2 ? (
@@ -616,7 +616,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
             </div>
             <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Aucun renouvellement automatique : prolongez de {plan.days} jours quand vous le souhaitez.</p>
           </div>
-          <button onClick={onRenew} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="autorenew" size={18} /> Renouveler (<OfferCredits op="SHOP" n={plan.price} />)</button>
+          <button onClick={onRenew} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="autorenew" size={18} /> <span>Renouveler (<OfferCredits op="SHOP" n={plan.price} />)</span></button>
         </section>
         <section className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-container text-primary">{shop.logoUrl ? <img src={shop.logoUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="storefront" size={26} />}</span>

@@ -328,7 +328,7 @@ export default function Kyc({ onNavigate, currentUser, onLogout, onViewShop }: P
   )
 
   const footer = (label: string, disabled: boolean, onClick: () => void, icon = 'arrow_forward') => (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:static lg:mt-6 lg:border-none lg:bg-transparent lg:p-0">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 lg:static lg:mt-6 lg:border-none lg:bg-transparent lg:p-0">
       <div className="mx-auto flex max-w-[1080px] items-center gap-3">
         {desktop && <button onClick={back} className="flex h-12 cursor-pointer items-center gap-2 rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface"><Icon name="arrow_back" size={18} /> {index === 0 ? 'Annuler' : 'Étape précédente'}</button>}
         <button onClick={onClick} disabled={disabled} className="flex h-13 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white shadow-md disabled:cursor-not-allowed disabled:opacity-45 lg:ml-auto lg:max-w-sm">

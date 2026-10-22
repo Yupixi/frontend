@@ -242,7 +242,7 @@ export default function HandoverCard({ h, conversationId, otherName, onConfirmed
   return (
     <Shell title="Remise" onHide={onHide}>
       {h.place && h.scheduledAt && (
-        <p className="m-0 -mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="schedule" size={15} className="shrink-0" /> <span className="truncate">{h.place} · <span className="capitalize">{when(h.scheduledAt)}</span></span></p>
+        <p className="m-0 -mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="schedule" size={15} className="shrink-0" /> <span className="truncate">{h.place} · {when(h.scheduledAt)}</span></p>
       )}
       {h.role === 'BUYER'
         ? <BuyerView h={h} onOpenDispute={onOpenDispute} />

@@ -173,7 +173,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><MapPin size={17} /></span>
                         <div className="text-body-sm">
                           <div className="text-label-sm uppercase text-on-surface-variant">Lieu de remise convenu</div>
-                          {m ? <><div className="font-semibold text-on-surface">{m.place}</div><div className="capitalize text-primary">{when(m.scheduledAt)}</div></>
+                          {m ? <><div className="font-semibold text-on-surface">{m.place}</div><div className="text-primary first-letter:uppercase">{when(m.scheduledAt)}</div></>
                             : <div className="text-on-surface-variant">{o.listing.meetupSpot ? `Suggéré : ${o.listing.meetupSpot}` : 'À convenir dans le chat'}</div>}
                         </div>
                       </div>

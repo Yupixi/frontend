@@ -174,7 +174,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
           </div>
           <form onSubmit={e => { e.preventDefault(); if (q.trim()) onSearch(q.trim()) }} className="mt-3 flex items-center gap-2 rounded-xl bg-surface-lowest p-1.5 shadow-sm">
             <Icon name="search" size={20} className="ml-2 text-on-surface-variant" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Ex : MacBook Air, meuble…" className="min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Ex : MacBook Air, meuble…" aria-label="Rechercher une annonce" className="min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none" />
             <button type="submit" className="shrink-0 cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2 text-label-md text-white">Chercher</button>
           </form>
           {(popularData?.popularSearches.length ?? 0) > 0 && (

@@ -10,7 +10,7 @@ export default function ListingQrSheet({ listing, onClose }: { listing: { id: st
         <div className="pb-4">
           <QrStudio
             target={{ kind: 'LISTING', listingId: listing.id }}
-            intro={<p className="m-0 text-body-sm text-on-surface-variant">Un scan ouvre directement « <b className="text-on-surface">{listing.title}</b> ». Vendue ou expirée, l’annonce l’indique et propose des annonces similaires.</p>}
+            intro={<p className="mt-0 text-body-sm text-on-surface-variant">Un scan ouvre directement « <b className="text-on-surface">{listing.title}</b> ». Vendue ou expirée, l’annonce l’indique et propose des annonces similaires.</p>}
           />
         </div>
       )}
