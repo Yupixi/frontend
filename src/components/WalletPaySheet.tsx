@@ -4,6 +4,7 @@ import BottomSheet from './BottomSheet'
 import BuyCreditsSheet from './BuyCreditsSheet'
 import Credits from './Credits'
 import Icon from './Icon'
+import Price from './Price'
 import AccountVerifyPanel from './AccountVerifyPanel'
 import { isNotVerifiedError } from '../lib/accountVerify'
 import {
@@ -46,6 +47,7 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
   // button disabled, and each purchase call is charged.
   const paying = useRef(false)
   const balance = data?.myWallet.credits ?? 0
+  const value = data?.walletSettings.creditValue ?? 0
   const missing = Math.max(0, amount - balance)
 
   const close = () => { setError(''); setNeedsVerify(false); onClose() }
@@ -62,7 +64,7 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
       .finally(() => { paying.current = false })
   }
 
-  if (topUp) return <BuyCreditsSheet open={open} suggested={missing} onClose={() => setTopUp(false)} onDone={() => { setTopUp(false); void refetch() }} />
+  if (topUp) return <BuyCreditsSheet open={open} suggested={missing} onClose={() => { setTopUp(false); void refetch() }} onDone={() => { setTopUp(false); void refetch() }} />
 
   const footer = !data ? undefined : (<div className="border-0 border-t border-solid border-outline-variant px-4 pb-3 pt-3">{missing > 0 ? (
     <button type="button" onClick={() => setTopUp(true)} className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="add_card" size={19} /> Acheter des crédits</button>
@@ -77,6 +79,7 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
           <div className="text-label-sm uppercase text-on-surface-variant">Total</div>
           {op && offer?.percent ? <div className="whitespace-nowrap text-body-sm text-on-surface-variant line-through"><Credits n={base} /></div> : null}
           <div className="whitespace-nowrap text-headline-sm text-primary">{amount === 0 && base > 0 ? 'Gratuit' : <Credits n={amount} />}</div>
+          {value > 0 && amount > 0 && <div className="whitespace-nowrap text-body-sm text-on-surface-variant">≈ <Price amount={amount * value} /></div>}
         </div>
       </div>
       {op && offer?.percent ? (
@@ -87,7 +90,7 @@ export default function WalletPaySheet({ open, onClose, title, amount: base, cat
         {data && missing === 0 && <div className="flex justify-between gap-3 border-0 border-t border-solid border-outline-variant pt-2"><dt className="text-on-surface-variant">Après l’achat</dt><dd className="m-0 whitespace-nowrap font-semibold text-on-surface"><Credits n={balance - amount} /></dd></div>}
       </dl>
       {data && missing > 0 && (
-        <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-primary-fixed/50 px-3 py-2.5 text-body-sm text-on-surface"><Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" /> <span>Il vous manque <b><Credits n={missing} /></b>. Achetez des crédits par Mobile Money, puis confirmez l’achat.</span></p>
+        <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-primary-fixed/50 px-3 py-2.5 text-body-sm text-on-surface"><Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" /> <span>Il vous manque <b><Credits n={missing} /></b>{value > 0 && <> (≈ <Price amount={missing * value} />)</>}. Achetez-les ici par Mobile Money, puis confirmez.</span></p>
       )}
       {error && <p className="m-0 mt-3 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
       {needsVerify && <div className="mt-3"><AccountVerifyPanel intro="Pour acheter, confirmez votre compte : par SMS, c’est immédiat, et l’achat reprend aussitôt." onVerified={() => { setNeedsVerify(false); pay() }} /></div>}

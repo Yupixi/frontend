@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 400" font-family="Inter, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Les crédits Dilchap</title>
+  <desc id="d">Vous payez par Mobile Money, vous recevez des crédits (1 crédit = 100 F par défaut), et les crédits paient boosts, badges, boutique et campagnes.</desc>
+  <rect width="360" height="400" rx="18" fill="#FFFFFF"/>
+  <rect x="16" y="16" width="328" height="70" rx="14" fill="#F6F3F2"/>
+  <text x="180" y="45" text-anchor="middle" font-size="16" font-weight="700" fill="#1C1B1B">Mobile Money</text>
+  <text x="180" y="68" text-anchor="middle" font-size="14" fill="#5E5E5E">Wave, Orange Money, MTN MoMo, Moov</text>
+  <path d="M180 94 v14 m-6 -6 l6 6 l6 -6" stroke="#9E9E9E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <rect x="16" y="116" width="328" height="70" rx="14" fill="#FFE3E3"/>
+  <text x="180" y="145" text-anchor="middle" font-size="16" font-weight="700" fill="#1C1B1B">Crédits</text>
+  <text x="180" y="168" text-anchor="middle" font-size="14" fill="#1C1B1B">1 crédit = 100 F*</text>
+  <path d="M180 194 v14 m-6 -6 l6 6 l6 -6" stroke="#9E9E9E" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <rect x="16" y="216" width="328" height="90" rx="14" fill="#E3F5EC"/>
+  <text x="180" y="244" text-anchor="middle" font-size="16" font-weight="700" fill="#1C1B1B">Ils paient</text>
+  <text x="180" y="267" text-anchor="middle" font-size="14" fill="#1C1B1B">Boosts · Badges · Boutique</text>
+  <text x="180" y="288" text-anchor="middle" font-size="14" fill="#1C1B1B">Campagnes · Assistant IA</text>
+  <text x="16" y="336" font-size="13" fill="#5E5E5E">Pas assez de crédits ? Le montant manquant</text>
+  <text x="16" y="354" font-size="13" fill="#5E5E5E">s’affiche et s’achète sur place.</text>
+  <text x="16" y="384" font-size="12" fill="#5E5E5E">* Par défaut. Les crédits n’expirent pas.</text>
+</svg>

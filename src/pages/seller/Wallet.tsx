@@ -1,11 +1,12 @@
 import EmptyState from '../../components/EmptyState'
 import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
-import { CheckCircle2, ArrowRight, ShieldCheck, Star, Flame, ChevronLeft, ChevronRight } from '../../components/icons'
+import { CheckCircle2, ArrowRight, ShieldCheck, Star, ChevronLeft, ChevronRight } from '../../components/icons'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import BuyCreditsSheet from '../../components/BuyCreditsSheet'
 import Credits from '../../components/Credits'
+import { BoostSteps } from '../../components/boost/BoostKit'
 import PaymentLogo, { PAYMENT_BRANDS, PaymentLogos } from '../../components/PaymentLogo'
 import HelpLink from '../../components/HelpLink'
 import { AccountLayout } from '../account/AccountLayout'
@@ -70,7 +71,6 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
   const [buying, setBuying] = useState<string | null>(null)
   const creditValue = walletData?.walletSettings.creditValue ?? 0
   const [done, setDone] = useState<string | null>(null)
-  const recommended = packs[1]?.pack
   const credits = wallet?.credits ?? 0
   const salesCount = wallet?.salesCount ?? 0
 
@@ -82,7 +82,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
         <div className="mb-6 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
             <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Porte-monnaie &amp; crédits</h1>
-            <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">Achetez des crédits par Mobile Money : ils paient tous vos achats Dilchap (boosts, badges, boutique, campagnes). Suivez aussi vos ventes directes.</p>
+            <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">Les crédits paient boosts, badges, boutique et campagnes.</p>
           </div>
           <div className="flex gap-2">
             <Claim><span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-tertiary-soft px-3 py-2.5 text-label-md text-tertiary"><CheckCircle2 size={16} /> Commission 0% active</span></Claim>
@@ -122,7 +122,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
             <div className="p-5">
               <div className="flex items-center justify-between text-label-md text-on-surface">Vos crédits <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="toll" size={17} /></span></div>
               <div className="mt-2 truncate text-[30px] font-extrabold leading-none text-primary xl:text-[40px]"><Credits n={credits} /></div>
-              <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Paient vos boosts, badges, abonnement boutique et campagnes.</p>
+              <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{creditValue ? <>≈ <Price amount={credits * creditValue} /></> : null}</p>
             </div>
             <div className="flex items-center justify-between gap-2 bg-surface-container-low px-5 py-3 text-body-sm text-on-surface-variant">
               <span className="truncate">{creditValue ? <>1 crédit = <Price amount={creditValue} /></> : '—'}</span>
@@ -147,6 +147,8 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           </div>
         </section>
 
+        <BoostSteps className="mt-4 md:mt-6" />
+
         {/* Transparency */}
         <section className="mt-4 flex items-start gap-3 rounded-2xl bg-tertiary-soft/50 p-4 md:mt-6 md:flex-row md:items-center md:gap-4 md:bg-surface-container-low md:p-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary text-white md:h-12 md:w-12"><ShieldCheck size={22} /></span>
@@ -156,8 +158,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
               <span className="hidden md:inline">Engagement Transparence Dilchap</span>
               <Claim><span className="hidden rounded bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary md:inline">Garanti sans frais cachés</span></Claim>
             </div>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant md:hidden">Vos acheteurs vous payent directement (main à la main, {mobile}). Dilchap ne retient pas vos fonds.</p>
-            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant md:block">Dilchap ne retient pas vos fonds. Vos acheteurs vous payent directement de la main à la main ou via votre portefeuille mobile habituel ({mobile}).<Claim> Vos gains restent intégralement vôtres.</Claim></p>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant md:text-body-md">Vos acheteurs vous paient en direct (main à la main, {mobile}). Dilchap ne garde pas vos fonds.</p>
           </div>
           <Claim><span className="hidden shrink-0 items-center gap-1.5 rounded-lg bg-surface-lowest px-3 py-2.5 text-label-md text-on-surface md:flex"><CheckCircle2 size={16} className="text-tertiary" /> 0% commission sur chaque vente</span></Claim>
         </section>
@@ -167,7 +168,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2 md:mb-4 md:gap-3">
             <div>
               <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Acheter des crédits</h2>
-              <p className="m-0 text-body-sm text-on-surface-variant">Packs avec crédits offerts, ou <button onClick={() => setBuying('')} className="cursor-pointer border-none bg-transparent p-0 text-body-sm font-semibold text-primary underline">la quantité de votre choix</button>. <HelpLink article="acheter-des-credits" className="ml-1 align-middle" /></p>
+              <p className="m-0 text-body-sm text-on-surface-variant">{creditValue ? <>1 crédit = <Price amount={creditValue} /> · </> : null}Sans date d’expiration. <HelpLink article="acheter-des-credits" className="ml-1 align-middle" /></p>
             </div>
             {country?.payments !== false && <div className="hidden items-center gap-2 text-label-sm text-on-surface-variant md:flex">
               Paiement mobile : <PaymentLogos size={26} />
@@ -177,51 +178,64 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           {/* Mobile: compact pack rows, as in the mockup */}
           <div className="flex flex-col gap-2 md:hidden">
             {packs.map(p => {
-              const top = p.pack === recommended
               const total = p.credits + p.bonusCredits
               return (
-                <button key={p.pack} onClick={() => setBuying(p.pack)} className={`relative flex w-full cursor-pointer items-center gap-3 rounded-2xl bg-surface-lowest p-3 text-left ${top ? 'border-2 border-solid border-primary' : 'border border-solid border-outline-variant'}`}>
-                  {top && <span className="absolute -top-2.5 right-3 flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-white"><Flame size={11} /> Le plus populaire</span>}
-                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${top ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface'}`}><Icon name={top ? 'rocket_launch' : 'bolt'} size={20} /></span>
+                <button key={p.pack} onClick={() => setBuying(p.pack)} className="relative flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-solid border-outline-variant bg-surface-lowest p-3 text-left">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-container text-on-surface"><Icon name="toll" size={20} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-label-lg text-on-surface"><Credits n={total} /></span>
                     <span className="block truncate text-body-sm text-on-surface-variant">{p.label}{p.bonusCredits > 0 && <> • <b className="font-semibold text-tertiary">{p.bonusCredits} offerts</b></>}</span>
                   </span>
                   <span className="shrink-0 text-right">
-                    <span className={`block whitespace-nowrap text-label-lg font-extrabold ${top ? 'text-primary' : 'text-on-surface'}`}><Price amount={p.price} /></span>
+                    <span className="block whitespace-nowrap text-label-lg font-extrabold text-on-surface"><Price amount={p.price} /></span>
                     <span className="block whitespace-nowrap text-[11px] text-on-surface-variant"><Price amount={Math.round(p.price / Math.max(1, total))} /> / crédit</span>
                   </span>
                 </button>
               )
             })}
           </div>
-          <div className="hidden gap-4 md:grid md:grid-cols-3">
-            {packs.map(p => {
-              const top = p.pack === recommended
-              return (
-                <div key={p.pack} className={`relative flex flex-col rounded-2xl bg-surface-lowest p-5 ${top ? 'border-2 border-solid border-primary' : 'border border-outline-variant'}`}>
-                  {top && <span className="absolute -top-3 right-4 flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-label-sm uppercase text-white"><Flame size={13} /> Le plus populaire</span>}
-                  <div className="flex items-center justify-between">
-                    <span className={`text-label-sm uppercase ${top ? 'text-primary' : 'text-on-surface-variant'}`}>{p.tagline}</span>
-                    {p.bonusCredits > 0 && !top && <span className="rounded bg-tertiary px-1.5 text-label-sm text-white">Meilleur ratio</span>}
-                  </div>
-                  <div className="mt-1 text-headline-sm text-on-surface">{p.label}</div>
-                  <div className={`mt-3 whitespace-nowrap text-[40px] font-extrabold leading-none ${top ? 'text-primary' : 'text-on-surface'}`}><Credits n={p.credits + p.bonusCredits} /></div>
-                  <div className="mt-2 flex items-center gap-2 text-label-md">
-                    <span className="whitespace-nowrap text-on-surface"><Price amount={p.price} /></span>
-                    {p.bonusCredits > 0 && <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 text-label-sm text-tertiary">dont {p.bonusCredits} offerts</span>}
-                  </div>
-                  <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface">
-                    {p.perks.map(t => <li key={t} className="flex items-start gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-tertiary" /> {t}</li>)}
-                  </ul>
-                  <button onClick={() => setBuying(p.pack)} className={`mt-5 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none py-2.5 text-label-md ${top ? 'bg-primary text-white hover:bg-primary-dark' : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'}`}>
-                    {/* Single text run: the flex gap would otherwise pad the amount and its unit. */}
-                    {top ? <><Icon name="lock" size={16} /> <span>Payer <Price amount={p.price} /></span></> : <>Choisir ce pack <ArrowRight size={15} /></>}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
+          {/* Tablet / desktop: the packs side by side, figures only. */}
+          {packs.length > 0 && (
+            <div className="hidden overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest md:block">
+              <table className="w-full table-fixed border-collapse text-center text-body-md">
+                <caption className="sr-only">Packs de crédits</caption>
+                <thead>
+                  <tr className="bg-surface-container-low">
+                    <th scope="col" className="w-[22%] p-3 text-left text-label-md text-on-surface-variant">Pack</th>
+                    {packs.map(p => <th key={p.pack} scope="col" className="p-3 text-label-lg text-on-surface">{p.label}</th>)}
+                    <th scope="col" className="p-3 text-label-lg text-on-surface">Autre quantité</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-0 border-t border-solid border-outline-variant">
+                    <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">Crédits reçus</th>
+                    {packs.map(p => <td key={p.pack} className="p-3 text-headline-sm text-on-surface"><Credits n={p.credits + p.bonusCredits} /></td>)}
+                    <td className="p-3 text-on-surface-variant">Au choix</td>
+                  </tr>
+                  <tr className="border-0 border-t border-solid border-outline-variant">
+                    <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">Dont offerts</th>
+                    {packs.map(p => <td key={p.pack} className="p-3">{p.bonusCredits > 0 ? <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-md text-tertiary">+{p.bonusCredits}</span> : <Icon name="remove" size={18} className="text-outline" />}</td>)}
+                    <td className="p-3"><Icon name="remove" size={18} className="text-outline" /></td>
+                  </tr>
+                  <tr className="border-0 border-t border-solid border-outline-variant">
+                    <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">Prix du crédit</th>
+                    {packs.map(p => <td key={p.pack} className="p-3 text-on-surface"><Price amount={Math.round(p.price / Math.max(1, p.credits + p.bonusCredits))} /></td>)}
+                    <td className="p-3 text-on-surface">{creditValue ? <Price amount={creditValue} /> : '—'}</td>
+                  </tr>
+                  <tr className="border-0 border-t border-solid border-outline-variant bg-surface-container-low/60">
+                    <th scope="row" className="p-3 text-left text-label-md text-on-surface">Prix</th>
+                    {packs.map(p => <td key={p.pack} className="p-3 text-headline-sm font-extrabold text-on-surface"><Price amount={p.price} /></td>)}
+                    <td className="p-3 text-on-surface-variant">Selon la quantité</td>
+                  </tr>
+                  <tr className="border-0 border-t border-solid border-outline-variant">
+                    <td />
+                    {packs.map(p => <td key={p.pack} className="p-3"><button onClick={() => setBuying(p.pack)} className="h-10 w-full cursor-pointer rounded-lg border-none bg-primary text-label-md text-white">Choisir</button></td>)}
+                    <td className="p-3"><button onClick={() => setBuying('')} className="h-10 w-full cursor-pointer rounded-lg border-none bg-surface-container-high text-label-md text-on-surface">Choisir</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         {/* History */}

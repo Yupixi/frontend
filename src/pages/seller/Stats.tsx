@@ -174,7 +174,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="m-0 text-headline-sm text-on-surface">Évolution du trafic d'annonces</h2>
-                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vues de vos annonces chaque jour : pendant une formule en cours (Quotidienne, En Vedette, Turbo, Urgent) et le reste du temps</p>
+                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vues de vos annonces chaque jour : pendant une formule en cours (Remontée quotidienne, En vedette, Turbo, Urgent) et le reste du temps</p>
               </div>
               <div className="flex gap-3 text-label-sm text-on-surface">
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" /> Pendant un boost ({boostedShare}%)</span>

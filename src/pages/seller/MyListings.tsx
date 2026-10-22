@@ -36,6 +36,8 @@ import { useMemberCountryCode, usePriceVars } from '../../lib/countries'
 import { BumpLine, useBumpProof } from '../../components/BumpProof'
 import type { BumpStatus } from '../../graphql/bumps'
 import { requestOpenLink } from '../../lib/navigation'
+import { useCreditValue } from '../../lib/creditValue'
+import BoostPicker from '../../components/boost/BoostPicker'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -92,6 +94,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const rep = repData?.myReputation
   const { data: walletData, refetch: refetchWallet } = useQuery<{ myWallet: WalletSummary }>(MY_WALLET_QUERY, { variables: usePriceVars() })
   const credits = walletData?.myWallet.credits ?? 0
+  const creditValue = useCreditValue()
+  const [boostFor, setBoostFor] = useState<MyListingRow | null>(null)
   const [deleteListing] = useMutation(DELETE_LISTING_WITH_REASON_MUTATION)
   const [pauseListing] = useMutation(PAUSE_LISTING_MUTATION)
   const [resumeListing] = useMutation(RESUME_LISTING_MUTATION)
@@ -267,9 +271,8 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <section className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary-container p-3 text-white lg:mb-5 lg:gap-4 lg:p-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:h-12 lg:w-12"><Rocket size={22} /></span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-label-lg lg:text-headline-sm"><span className="lg:hidden">Plus de visibilité</span><span className="hidden lg:inline">Besoin de plus de visibilité ?</span> <span className="hidden rounded bg-white/20 px-1.5 text-label-sm lg:inline">Bilan de chaque boost</span></div>
-            <p className="m-0 text-body-sm text-white/90 lg:hidden">Mise en avant{flashPrice ? ` dès ${creditsLabel(flashPrice)}` : ''}</p>
-            <p className="m-0 hidden text-body-sm text-white/90 lg:block">En Vedette et Turbo : places réservées dans « Pépites à la Une » et en tête des recherches et catégories. Une remontée remet l’annonce en tête du tri « Plus récents ». Chaque boost a son bilan. {flashPrice ? <>Remontées dès <b className="underline">{creditsLabel(flashPrice)}</b>.</> : null}</p>
+            <div className="text-label-lg lg:text-headline-sm">Plus de visibilité</div>
+            <p className="m-0 text-body-sm text-white/90">Remontée, En vedette, Turbo, Urgent{flashPrice ? <> · dès {creditsLabel(flashPrice)}{creditValue > 0 && <> (≈ <Price amount={flashPrice * creditValue} />)</>}</> : null}</p>
           </div>
           <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-white px-3 py-2 text-label-md text-primary lg:px-4 lg:py-2.5"><Rocket size={16} /> <span className="lg:hidden">Booster</span><span className="hidden lg:inline">Booster une annonce</span></button>
         </section>
@@ -313,7 +316,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             const primary = l.status === 'APPROVED' ? (offers > 0 ? (
               <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className={`${chip} bg-tertiary text-white`}><MessageSquare size={15} /> Voir l'offre</button>
             ) : boosted ? (
-              <button onClick={() => onNavigate('seller-premium')} className={`${chip} bg-primary-fixed text-primary`}><Rocket size={15} /> Prolonger le boost</button>
+              <button onClick={() => setBoostFor(l)} className={`${chip} bg-primary-fixed text-primary`}><Rocket size={15} /> Prolonger le boost</button>
             ) : (
               // Enough credits: spend them at once; otherwise the pay sheet offers to buy some.
               <button disabled={flashPrice === undefined} onClick={() => setConfirm({ kind: credits >= (flashPrice ?? 0) ? 'bump' : 'boost', l })} className={`${chip} bg-primary text-white disabled:opacity-60`}><Rocket size={15} /> Remonter{flashPrice ? ` · ${creditsLabel(flashPrice)}` : ''}</button>
@@ -403,16 +406,17 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         />
         <WalletPaySheet
           open={confirm?.kind === 'boost'}
-          title="Remontée flash"
+          title="Remontée"
           amount={flashPrice ?? 0}
           request={confirm?.kind === 'boost' ? { kind: 'BOOST_PACK', product: 'BUMP_FLASH', listingId: confirm.l.id } : null}
           onClose={() => setConfirm(null)}
           onPaid={() => { if (confirm) proof.showFor(confirm.l.id); void refetch(); void refetchWallet() }}
         >
-          <b className="block text-label-lg text-on-surface">Remontée en tête</b>
+          <b className="block text-label-lg text-on-surface">Remontée</b>
           <span className="line-clamp-1">« {confirm?.l.title} »</span>
         </WalletPaySheet>
 
+        {boostFor && <BoostPicker open listing={boostFor} onClose={() => setBoostFor(null)} onDone={() => { void refetch(); void refetchWallet() }} />}
         <ConfirmSheet
           open={confirm?.kind === 'bump'}
           title="Remonter l'annonce"
@@ -421,7 +425,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           onConfirm={() => { if (confirm) { spendCredit(confirm.l); setConfirm(null) } }}
           onClose={() => setConfirm(null)}
         >
-          « {confirm?.l.title} » : {flashPack?.description ?? 'remontée en tête.'} <b className="text-on-surface">{creditsLabel(flashPrice ?? 0)}</b> {(flashPrice ?? 0) > 1 ? 'seront utilisés' : 'sera utilisé'}.
+          « {confirm?.l.title} » revient en tête des annonces récentes. <b className="text-on-surface">{creditsLabel(flashPrice ?? 0)}</b>{creditValue > 0 && flashPrice ? <> (≈ <Price amount={flashPrice * creditValue} />)</> : null}.
         </ConfirmSheet>
 
         {rows.length > 0 && (

@@ -126,8 +126,8 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   )
 }
 
-// The card's one pill (API `promoBadge`: « En vedette » > « Prix Choc » >
-// « Vente Urgente » > campaign discount > recent bump, as set in the
+// The card's one pill (API `promoBadge`: « En vedette » > « Turbo » >
+// « Urgent » > campaign discount > recent bump, as set in the
 // Backoffice). A query without it falls back on the fields it has. An adult
 // listing outside the section's space shows none: its paid places only
 // exist inside the section.

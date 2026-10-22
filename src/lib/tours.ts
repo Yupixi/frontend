@@ -61,8 +61,8 @@ export const TOURS: Record<string, Tour> = {
     page: 'seller-premium',
     steps: [
       { target: 'boost-credits', title: 'Vos crédits', text: 'Les boosts se paient en crédits, achetés par Mobile Money dans votre porte-monnaie.' },
-      { target: 'boost-listing', title: 'Choisissez l’annonce', text: 'Sélectionnez l’annonce à mettre en avant et suivez ses vues, favoris et contacts.' },
-      { target: 'boost-packs', title: 'Choisissez la formule', text: 'Remontée immédiate en tête de liste ou mise en avant sur plusieurs jours : l’effet est immédiat.' },
+      { target: 'boost-listing', title: 'Choisissez l’annonce', text: 'Chaque carte montre sa visibilité et ses boutons : Booster, Remonter, Statistiques.' },
+      { target: 'boost-packs', title: 'Choisissez la formule', text: 'Les formules côte à côte : ce qu’elles font, leur durée, leur prix en crédits et en F.' },
     ],
   },
 }

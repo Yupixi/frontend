@@ -141,7 +141,7 @@ export function BumpStatusPanel({ listingId, take = 10, className = '' }: { list
 // The proof in a sheet, wherever the bump was made (Mes annonces, Booster):
 // seen at once, whatever the scroll. `show(status)` with the mutation's
 // answer, or `showFor(listingId)` after a formula paid in WalletPaySheet.
-export function useBumpProof() {
+export function useBumpProof(onClosed?: () => void) {
   const client = useApolloClient()
   const [proof, setProof] = useState<BumpStatus | null>(null)
   const show = (status: BumpStatus) => {
@@ -154,10 +154,10 @@ export function useBumpProof() {
       .catch(() => {})
   }
   const sheet = (
-    <BottomSheet open={!!proof} onClose={() => setProof(null)} title="Remontée effectuée"
-      footer={<div className="border-0 border-t border-solid border-outline-variant px-4 py-3"><button type="button" onClick={() => setProof(null)} className="h-12 w-full cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Terminer</button></div>}>
+    <BottomSheet open={!!proof} onClose={() => { setProof(null); onClosed?.() }} title="Remontée effectuée"
+      footer={<div className="border-0 border-t border-solid border-outline-variant px-4 py-3"><button type="button" onClick={() => { setProof(null); onClosed?.() }} className="h-12 w-full cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Terminer</button></div>}>
       {proof && <BumpDone status={proof} />}
     </BottomSheet>
   )
-  return { show, showFor, sheet }
+  return { show, showFor, sheet, visible: !!proof }
 }
