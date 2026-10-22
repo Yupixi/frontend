@@ -125,6 +125,20 @@ export const MY_REELS_QUERY = gql`
   query MyReels($listingId: ID) { myReels(listingId: $listingId) { ${MY_REEL_FIELDS} } }
 `
 
+// One of the seller's own Reels as « Mes Reels » shows it (the `reel`
+// query answers the owner with the owner fields): boost from the feed.
+export const OWN_REEL_QUERY = gql`
+  query OwnReel($id: ID!) { reel(id: $id) { ${MY_REEL_FIELDS} } }
+`
+
+// « Déposer une annonce »: can a Reel be joined to the listing being
+// written (no listing yet), its price and the balance.
+export const REEL_DRAFT_ELIGIBILITY_QUERY = gql`
+  query ReelDraftEligibility($countryCode: String, $adult: Boolean) {
+    reelDraftEligibility(countryCode: $countryCode, adult: $adult) { allowed reason price balance sellerReels todayReels }
+  }
+`
+
 export const MY_REEL_STATS_QUERY = gql`
   query MyReelStats($id: ID!, $days: Int) {
     myReelStats(id: $id, days: $days) {

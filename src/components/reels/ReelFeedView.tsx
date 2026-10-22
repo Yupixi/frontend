@@ -6,8 +6,10 @@ import BottomSheet from '../BottomSheet'
 import QuickNegotiation from '../QuickNegotiation'
 import { useLists } from '../../lib/lists'
 import { REPORT_REEL_MUTATION, type Reel } from '../../graphql/reels'
+import { ReelBoostSheet, ReelStatsSheet } from './ReelOwnerSheets'
+import { requestNavigate } from '../../lib/navigation'
 import {
-  reelEvent, reelPath, reelSource, reelThumb, setDataSaver, setReelsMuted, useDataSaver, useReelSettings, useReelsMuted,
+  requestManageReel, reelEvent, reelPath, reelSource, reelThumb, setDataSaver, setReelsMuted, useDataSaver, useReelSettings, useReelsMuted,
 } from '../../lib/reels'
 
 // The vertical Reels pager (feed, a listing's or a seller's Reels): one Reel
@@ -160,7 +162,7 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
       >
         {items.map((r, i) => (
           <div key={r.id} data-reel-slide data-index={i} className="relative h-full w-full snap-start snap-always">
-            <ReelSlide reel={r} state={i === active ? 'active' : i === active + 1 ? 'next' : 'idle'} muted={muted} saver={saver} viewSeconds={settings.viewSeconds} {...actions} />
+            <ReelSlide reel={r} state={i === active ? 'active' : i === active + 1 ? 'next' : 'idle'} muted={muted} saver={saver} viewSeconds={settings.viewSeconds} boostEnabled={settings.boostEnabled} {...actions} />
           </div>
         ))}
         {!items.length && (
@@ -197,14 +199,14 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
   )
 }
 
-type SlideProps = ReelActions & { reel: Reel; state: 'active' | 'next' | 'idle'; muted: boolean; saver: boolean; viewSeconds: number }
+type SlideProps = ReelActions & { reel: Reel; state: 'active' | 'next' | 'idle'; muted: boolean; saver: boolean; viewSeconds: number; boostEnabled: boolean }
 
-const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSeconds, ...a }: SlideProps) {
+const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSeconds, boostEnabled, ...a }: SlideProps) {
   const video = useRef<HTMLVideoElement>(null)
   const bar = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
   const [expanded, setExpanded] = useState(false)
-  const [sheet, setSheet] = useState<'offer' | 'report' | null>(null)
+  const [sheet, setSheet] = useState<'offer' | 'report' | 'stats' | 'boost' | null>(null)
   const [shared, setShared] = useState(false)
   const l = reel.listing
   const own = !!a.currentUserId && a.currentUserId === reel.sellerId
@@ -335,7 +337,11 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
 
           {/* Actions */}
           <div className="absolute bottom-24 right-2 z-10 flex flex-col items-center gap-4">
-            {l && (
+            {/* The seller's own Reel: their tools instead of a buyer's. */}
+            {own && <ActionButton label="Statistiques" icon="bar_chart" onClick={() => setSheet('stats')} aria="Statistiques de ce Reel" />}
+            {own && boostEnabled && reel.status === 'APPROVED' && <ActionButton label="Booster" icon="rocket_launch" onClick={() => setSheet('boost')} aria="Booster ce Reel" />}
+            {own && <ActionButton label="Gérer" icon="tune" onClick={() => { requestManageReel(reel.id); requestNavigate('seller-reels') }} aria="Gérer ce Reel dans Mes Reels" />}
+            {l && !own && (
               <ActionButton label="Favori" icon="favorite" filled={fav} onClick={() => a.onToggleFavorite(l.id)} pressed={fav} aria={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'} />
             )}
             {canBuy && <ActionButton label="Contacter" icon="chat" onClick={contact} aria="Contacter le vendeur" />}
@@ -355,13 +361,15 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
         </BottomSheet>
       )}
       {sheet === 'report' && <ReportSheet reelId={reel.id} onClose={() => setSheet(null)} />}
+      {sheet === 'stats' && own && <ReelStatsSheet reelId={reel.id} onClose={() => setSheet(null)} />}
+      {sheet === 'boost' && own && <ReelBoostSheet reelId={reel.id} onClose={() => setSheet(null)} />}
     </div>
   )
 })
 
 function ActionButton({ label, icon, onClick, filled, pressed, aria }: { label: string; icon: string; onClick: () => void; filled?: boolean; pressed?: boolean; aria: string }) {
   return (
-    <button onClick={onClick} aria-label={aria} aria-pressed={pressed} className="flex w-14 cursor-pointer flex-col items-center gap-1 border-none bg-transparent p-0 text-[11px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
+    <button onClick={onClick} aria-label={aria} aria-pressed={pressed} className="flex w-16 cursor-pointer flex-col items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-[11px] font-semibold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
       <span className={`flex h-11 w-11 items-center justify-center rounded-full bg-black/35 ${filled ? 'text-primary' : 'text-white'}`}>
         <Icon name={icon} size={23} fill={filled} />
       </span>

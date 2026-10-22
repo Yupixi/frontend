@@ -361,7 +361,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                           const scans = qrScans.find(q => q.listingId === l.id)?.scanCount
                           return <button onClick={() => { setMenuFor(null); setQrFor({ id: l.id, title: l.title }) }} className={`${item} text-on-surface`}><Icon name="qr_code_2" size={16} /> QR code de l’annonce{scans ? ` · ${scans} scan${scans > 1 ? 's' : ''}` : ''}</button>
                         })()}
-                        {reelsOn && l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); setReelFor(l) }} className={`${item} text-on-surface`}><Icon name="video_call" size={16} /> Ajouter un Reel (vidéo)</button>}
+                        {reelsOn && (l.status === 'APPROVED' || l.status === 'PENDING_REVIEW') && <button onClick={() => { setMenuFor(null); setReelFor(l) }} className={`${item} text-on-surface`}><Icon name="video_call" size={16} /> Ajouter un Reel (vidéo)</button>}
                         {['APPROVED', 'PAUSED', 'EXPIRED'].includes(l.status) && <button onClick={() => { setMenuFor(null); setSoldFor(l) }} className={`${item} text-on-surface`}><Icon name="handshake" size={16} /> Marquer comme vendu</button>}
                         {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'pause', l }) }} className={`${item} text-on-surface`}><Icon name="pause" size={16} /> Mettre en pause</button>}
                         {l.status === 'PAUSED' && <button onClick={() => { setMenuFor(null); resume(l) }} className={`${item} text-on-surface`}><Icon name="play_arrow" size={16} /> Remettre en ligne</button>}

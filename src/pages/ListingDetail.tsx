@@ -222,6 +222,8 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const [qrOpen, setQrOpen] = useState(false)
   // « Ajouter un Reel » (the seller's own listing online).
   const [reelOpen, setReelOpen] = useState(false)
+  // Phone: every seller action of the listing in one sheet (« Plus »).
+  const [ownerMenu, setOwnerMenu] = useState(false)
   const reelsOn = useReelSettings(listing?.countryCode).enabled
   const [follow] = useMutation(FOLLOW_SELLER_MUTATION)
   const [unfollow] = useMutation(UNFOLLOW_SELLER_MUTATION)
@@ -378,7 +380,10 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   ) : null
 
   // A video of the article (« Reels »), for its seller, the listing online.
-  const reelButton = isOwner && reelsOn && listing.status === 'APPROVED' ? (
+  // Online or awaiting its moderation (shown once both are approved).
+  const canReel = isOwner && reelsOn && (listing.status === 'APPROVED' || listing.status === 'PENDING_REVIEW')
+  const canQr = isOwner && qrEnabled && listing.status !== 'DRAFT' && listing.status !== 'REJECTED'
+  const reelButton = canReel ? (
     <button onClick={() => setReelOpen(true)} className="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none bg-surface-container-low py-3 text-label-lg text-on-surface hover:bg-surface-container max-lg:mt-0">
       <Icon name="video_call" size={18} /> Ajouter un Reel (vidéo)
     </button>
@@ -850,7 +855,28 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
       {/* Mobile sticky action bar */}
       <div className="fixed inset-x-0 bottom-0 z-[300] flex gap-2 border-0 border-t border-solid border-outline-variant bg-surface-lowest p-3 lg:hidden" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
-        {ownerPanel ?? (
+        {isOwner ? (
+          // The seller: one main action (Booster, or Remettre en ligne), a
+          // shortcut or two, the rest under « Plus ».
+          <div data-testid="owner-bar" className="flex w-full min-w-0 items-stretch gap-2">
+            {isExpired ? (
+              renewed ? (
+                <p className="m-0 flex h-12 min-w-0 flex-1 items-center gap-2 rounded-lg bg-tertiary-soft px-3 text-label-md text-tertiary"><CheckCircle2 size={16} className="shrink-0" /> <span className="truncate">Remise en ligne</span></p>
+              ) : (
+                <button disabled={renewing} onClick={() => void bumpListing({ variables: { id: listing.id } }).then(() => setRenewed(true))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-lg text-white">
+                  <Archive size={18} className="shrink-0" /> <span className="truncate">{renewing ? 'Un instant…' : 'Remettre en ligne'}</span>
+                </button>
+              )
+            ) : (
+              <button onClick={() => setBoostOpen(true)} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-lg text-white">
+                <Rocket size={18} className="shrink-0" /> <span className="truncate">Booster</span>
+              </button>
+            )}
+            {canReel && <OwnerBarButton icon="video_call" label="Reel" onClick={() => setReelOpen(true)} />}
+            {!canReel && canQr && <OwnerBarButton icon="qr_code_2" label="QR code" onClick={() => setQrOpen(true)} />}
+            <OwnerBarButton icon="more_vert" label="Plus" onClick={() => setOwnerMenu(true)} aria="Toutes les actions de l’annonce" />
+          </div>
+        ) : ownerPanel ?? (
           <>
             {listing.negotiable && (
               <button onClick={requireAuth(() => { intents.contactTap(listing.id); setOfferOpen(true) }, 'offer')} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-4 py-3 text-label-lg text-on-surface">
@@ -866,6 +892,25 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
       {/* Mobile sheets (desktop shows the same content inline) */}
       <div>
+        {isOwner && (
+          <BottomSheet open={isMobile && ownerMenu} onClose={() => setOwnerMenu(false)} title="Gérer l’annonce">
+            <BumpLine s={listing} />
+            <div data-testid="owner-menu" className="mt-2 flex flex-col gap-1">
+              {[
+                !isExpired && { icon: 'rocket_launch', label: 'Booster l’annonce', run: () => setBoostOpen(true) },
+                !isExpired && { icon: 'history', label: 'Remontées & boosts', run: () => requestOpenLink(`/?shortcut=seller-premium&boost=${listing.id}`) },
+                canReel && { icon: 'video_call', label: 'Ajouter un Reel', run: () => setReelOpen(true) },
+                canQr && { icon: 'qr_code_2', label: 'QR code de l’annonce', run: () => setQrOpen(true) },
+                { icon: 'edit', label: 'Modifier l’annonce', run: () => onNavigate('seller-edit') },
+                { icon: 'bar_chart', label: 'Statistiques', run: () => onNavigate('seller-stats') },
+              ].filter((a): a is { icon: string; label: string; run: () => void } => !!a).map(a => (
+                <button key={a.label} onClick={() => { setOwnerMenu(false); a.run() }} className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-xl border-none bg-surface-container-low px-3 text-left text-label-lg text-on-surface hover:bg-surface-container">
+                  <Icon name={a.icon} size={20} className="shrink-0 text-primary" /> <span className="min-w-0 flex-1 truncate">{a.label}</span> <Icon name="chevron_right" size={18} className="shrink-0 text-on-surface-variant" />
+                </button>
+              ))}
+            </div>
+          </BottomSheet>
+        )}
         <BottomSheet open={isMobile && chatOpen && canContact} onClose={() => setChatOpen(false)} title={`Discuter avec ${listing.seller.fullName}`}>
           <InlineConversation sellerId={listing.seller.id} listingId={listing.id} sellerName={listing.seller.fullName} onAuthenticated={onAuthenticated} onClose={() => setChatOpen(false)} />
         </BottomSheet>
@@ -874,5 +919,15 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
         </BottomSheet>
       </div>
     </div>
+  )
+}
+
+// Seller's shortcut in the phone action bar: icon over a one-line label.
+function OwnerBarButton({ icon, label, onClick, aria }: { icon: string; label: string; onClick: () => void; aria?: string }) {
+  return (
+    <button onClick={onClick} aria-label={aria ?? label} className="flex h-12 w-16 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-lg border-none bg-surface-container-low px-1 text-[11px] font-semibold leading-none text-on-surface hover:bg-surface-container">
+      <Icon name={icon} size={20} className="shrink-0" />
+      <span className="max-w-full truncate">{label}</span>
+    </button>
   )
 }
