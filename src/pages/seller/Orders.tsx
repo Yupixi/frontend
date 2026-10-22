@@ -34,7 +34,7 @@ const compact = (n: number) => n >= 1e6 ? `${(n / 1e6).toLocaleString('fr-FR', {
 
 const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 
-// "Commandes & Envois" mockup: every direct deal from agreement in chat to
+// « Mes ventes » (was the "Commandes & Envois" mockup): every direct deal from agreement in chat to
 // hand-over. Stages come from real offers, meet-ups and deal status.
 export default function Orders({ onNavigate, onSelectListing, onOpenConversation, onOpenHandover, onOpenDispute, currentUser, onLogout }: Props) {
   const noCommission = useNoCommissionClaims()
@@ -64,7 +64,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
         <div className="mb-1 hidden items-center gap-1 text-label-sm uppercase text-primary lg:flex"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Espace vendeur direct<Claim> • Zéro commission</Claim></div>
         <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
-            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Commandes &amp; Envois</h1>
+            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Mes ventes</h1>
             <p className="m-0 mt-1 text-body-md text-on-surface-variant">Suivi de vos transactions directes, remises en main propre et livraisons convenues.</p>
           </div>
           <span className="flex items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface"><CheckCircle2 size={16} className="text-tertiary" /> Transactions 100% P2P</span>
@@ -117,7 +117,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
         {/* Orders */}
         <div className="mt-4 flex flex-col gap-4">
           {shown.length === 0 && (
-            <EmptyState icon="empty-box" fallback="inventory_2" title="Aucune commande ici" text="Une vente apparaît dès qu'une offre est acceptée ou qu'un rendez-vous est proposé dans le chat." />
+            <EmptyState icon="empty-box" fallback="inventory_2" title="Aucune vente ici" text="Une vente apparaît dès qu'une offre est acceptée ou qu'un rendez-vous est proposé dans le chat." />
           )}
           {shown.map(o => {
             const m = o.meetup

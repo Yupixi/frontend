@@ -117,9 +117,11 @@ const LEVEL = {
 
 // Live advice while writing: the same rules the moderation applies
 // (instant, no AI call), refreshed a moment after the seller stops typing.
-export function ListingAdvicePanel({ title, description, price, currency, categoryId, subcategoryId, photoCount, listingId }: {
+export function ListingAdvicePanel({ title, description, price, currency, categoryId, subcategoryId, photoCount, listingId, countryCode, brand, modelName, city }: {
   title: string; description: string; price: number | null; currency: string
   categoryId: string; subcategoryId: string; photoCount: number; listingId?: string
+  // What the item is and where: its price is compared with the same kind.
+  countryCode?: string; brand?: string; modelName?: string; city?: string
 }) {
   const [fetchAdvice, { data }] = useLazyQuery<{ listingAdvice: ListingAdvice[] }>(LISTING_ADVICE_QUERY, { fetchPolicy: 'network-only' })
   const text = plain(description)
@@ -129,10 +131,12 @@ export function ListingAdvicePanel({ title, description, price, currency, catego
       void fetchAdvice({ variables: { input: {
         title: title.slice(0, 200), description: text.slice(0, 10000), price: price || undefined, currency,
         categoryId: categoryId || undefined, subcategoryId: subcategoryId || undefined, photoCount, listingId,
+        countryCode: countryCode || undefined, brand: brand?.trim().slice(0, 120) || undefined,
+        modelName: modelName?.trim().slice(0, 120) || undefined, city: city?.trim().slice(0, 120) || undefined,
       } } }).catch(() => undefined)
     }, 700)
     return () => clearTimeout(t)
-  }, [title, text, price, currency, categoryId, subcategoryId, photoCount, listingId, fetchAdvice])
+  }, [title, text, price, currency, categoryId, subcategoryId, photoCount, listingId, countryCode, brand, modelName, city, fetchAdvice])
 
   const items = (title.trim() || text) ? data?.listingAdvice ?? [] : []
   if (!items.length) return null

@@ -754,6 +754,15 @@ input, textarea, [contenteditable='true'], .ProseMirror {
   user-select: text;
   -webkit-touch-callout: default;
 }
+/* Phones and touch screens: fields at 16 px at least, else iOS zooms in on
+   the focused field (pinch zoom stays allowed: no maximum-scale). Above the
+   utilities (text-body-sm…) on purpose. */
+@media (max-width: 1023px), (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='button']):not([type='submit']):not([type='file']):not([type='color']),
+  textarea, select, [contenteditable='true'], .ProseMirror {
+    font-size: max(16px, 1em) !important;
+  }
+}
 
 /* ─── Campaign hero (campaign page, home promotions) ─────────────────────
    Tinted by the campaign's colour (--camp): a slowly drifting gradient,

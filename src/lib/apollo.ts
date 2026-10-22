@@ -187,6 +187,14 @@ const splitLink = split(
 // request. A listing already shown (new ones shift the pages) isn't
 // repeated.
 type PagedList = { page?: number, items: { __ref?: string }[], promoted?: unknown[] | null }
+// Merges two answers for the same category / subcategory (same name or
+// slug); another one replaces it.
+const sameThing = (existing: Record<string, unknown> | null | undefined, incoming: Record<string, unknown> | null | undefined, { mergeObjects }: { mergeObjects: (a: any, b: any) => any }) => {
+  if (!existing || !incoming) return incoming
+  const same = (k: string) => existing[k] == null || incoming[k] == null || existing[k] === incoming[k]
+  return same('name') && same('slug') && same('id') ? mergeObjects(existing, incoming) : incoming
+}
+
 const pagedList: FieldPolicy<PagedList> = {
   keyArgs: args => (args ? Object.keys(args).filter(k => k !== 'page').sort() : false),
   merge(existing, incoming, { args, readField }) {
@@ -204,7 +212,13 @@ const pagedList: FieldPolicy<PagedList> = {
 export const apolloClient = new ApolloClient({
   link: splitLink,
   cache: new InMemoryCache({
-    typePolicies: { Query: { fields: { listings: pagedList, shops: pagedList } } },
+    typePolicies: {
+      Query: { fields: { listings: pagedList, shops: pagedList } },
+      // A listing's subcategory / category are asked with different fields
+      // by different pages (no id each time): merged, never replaced
+      // (« Cache data may be lost » warning, extra requests).
+      Listing: { fields: { subcategory: { merge: sameThing }, category: { merge: sameThing } } },
+    },
   }),
   defaultOptions: {
     // Polled badges (notifications, conversations…) stop polling while the

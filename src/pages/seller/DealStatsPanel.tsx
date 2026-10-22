@@ -34,7 +34,6 @@ export default function DealStatsPanel({ d, loading }: { d: SellerDealStats | un
   const sources = d ? [
     { k: 'code', label: 'avec le code', n: d.salesCode },
     { k: 'both', label: 'par vos deux « Oui »', n: d.salesBoth },
-    { k: 'declared', label: 'déclarées', n: d.salesDeclared },
   ].filter(x => x.n > 0) : []
   return (
     <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5" aria-labelledby="deal-stats-title">
@@ -49,14 +48,15 @@ export default function DealStatsPanel({ d, loading }: { d: SellerDealStats | un
         <Tile label="Contacts" value={v(formatNumber(d?.contacts ?? 0))} foot="discussions ouvertes" />
         <Tile label="En cours" value={v(formatNumber(d?.activeConversations ?? 0))} foot="conversations actives" />
         <Tile label="Votre réponse" value={v(formatResponseTime(d?.responseTimeMinutes) ?? '—')} foot={d?.within24hPct != null ? `${pct(d.within24hPct)} en moins de 24 h` : 'délai médian'} />
-        <Tile label="Ventes" value={v(formatNumber(d?.sales ?? 0))} foot={d && d.salesAmount ? <Price amount={d.salesAmount} /> : 'sur Dilchap'} />
+        <Tile label="Ventes confirmées" value={v(formatNumber(d?.sales ?? 0))} foot={d && d.salesAmount ? <Price amount={d.salesAmount} /> : 'sur Dilchap'} />
         <div className="col-span-2 lg:col-span-1">
           <Tile label="Conversion" value={v(pct(d?.conversionRate))} foot="contacts → ventes" />
         </div>
       </div>
-      {d && (sources.length > 0 || d.salesOffsite > 0) && (
+      {d && (sources.length > 0 || d.salesDeclared > 0 || d.salesOffsite > 0) && (
         <div className="mt-3 flex flex-wrap gap-1.5 text-label-sm">
           {sources.map(s => <span key={s.k} className="rounded-full bg-tertiary-soft px-2.5 py-1 text-tertiary">{s.n} {s.label}</span>)}
+          {d.salesDeclared > 0 && <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface-variant">{d.salesDeclared} déclarée{d.salesDeclared > 1 ? 's' : ''}, à confirmer</span>}
           {d.salesOffsite > 0 && <span className="rounded-full bg-surface-container px-2.5 py-1 text-on-surface-variant">{d.salesOffsite} hors Dilchap</span>}
         </div>
       )}

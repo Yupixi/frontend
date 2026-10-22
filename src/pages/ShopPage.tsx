@@ -234,7 +234,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   const aisleChips = shop.aisles.filter(a => a.listingsCount > 0)
   const stats = [
     { icon: 'inventory_2', value: formatNumber(shop.listingsCount), label: 'Articles en ligne' },
-    { icon: 'handshake', value: formatNumber(shop.salesCount), label: 'Ventes conclues' },
+    { icon: 'handshake', value: formatNumber(shop.salesCount), label: 'Ventes confirmées' },
     { icon: 'group', value: formatNumber(shop.followersCount), label: 'Abonnés' },
     { icon: 'star', value: shop.reviewsCount ? shop.averageRating.toFixed(1) : '—', label: `${shop.reviewsCount} avis` },
   ]

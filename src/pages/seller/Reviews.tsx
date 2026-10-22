@@ -46,7 +46,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
   const c = badge?.criteria
   const checks = badge && c ? [
     { ok: badge.identityVerified, label: 'Pièce d’identité validée par Dilchap' },
-    { ok: badge.sales >= c.minSales, label: `Au moins ${c.minSales} ventes conclues (${badge.sales})` },
+    { ok: badge.sales >= c.minSales, label: `Au moins ${c.minSales} ventes confirmées (${badge.sales})` },
     { ok: badge.reviews >= c.minReviews, label: `Au moins ${c.minReviews} avis d’acheteurs (${badge.reviews})` },
     { ok: badge.reviews > 0 && badge.rating >= c.minRating, label: `Note moyenne d’au moins ${c.minRating.toLocaleString('fr-FR')} / 5` },
     { ok: badge.penalties === 0, label: 'Aucune pénalité de litige' },
@@ -118,7 +118,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                 { icon: 'forum', v: responseTime ?? '—', label: 'Réactivité chat', sub: 'Messagerie Dilchap' },
                 { icon: 'sentiment_satisfied', v: rep?.satisfactionRate != null ? `${rep.satisfactionRate}%` : '—', label: 'Satisfaction', sub: 'Avis 4 et 5 étoiles' },
                 { icon: 'event_available', v: rep?.confirmedMeetups ?? 0, label: 'RDV confirmés', sub: 'Remises planifiées' },
-                { icon: 'handshake', v: rep?.salesCount ?? 0, label: 'Ventes conclues', sub: 'Transactions directes' },
+                { icon: 'handshake', v: rep?.salesCount ?? 0, label: 'Ventes confirmées', sub: 'Code de remise ou confirmées par les deux' },
               ].map(c => (
                 <div key={c.label} className="rounded-xl bg-surface-container-low p-2.5">
                   <div className="flex items-center justify-between"><Icon name={c.icon} size={17} className="text-tertiary" /><span className="text-label-lg text-on-surface">{c.v}</span></div>
@@ -209,7 +209,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                   <div key={t.title} className="flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><span className="text-primary">{t.icon}</span><div><div className="font-semibold text-on-surface">{t.title}</div><div className="text-on-surface-variant">{t.text}</div></div></div>
                 ))}
               </div>
-              <button onClick={() => onNavigate('seller-orders')} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Voir mes commandes <ArrowRight size={15} /></button>
+              <button onClick={() => onNavigate('seller-orders')} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Voir mes ventes <ArrowRight size={15} /></button>
             </div>
 
             <div id="statut" className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">

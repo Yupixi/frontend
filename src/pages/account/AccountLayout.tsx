@@ -50,7 +50,7 @@ const SECTIONS: { title: string; items: NavEntry[] }[] = [
       },
       {
         label: 'Ventes', icon: Truck, items: [
-          { key: 'seller-orders', icon: Truck, label: 'Commandes & Envois' },
+          { key: 'seller-orders', icon: Truck, label: 'Mes ventes' },
           { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
           { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
         ],
@@ -101,7 +101,7 @@ export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
   'buyer-notifications': 'Notifications',
   'buyer-history': 'Historique',
   'seller-premium': 'Booster & Visibilité',
-  'seller-orders': 'Commandes & Envois',
+  'seller-orders': 'Mes ventes',
   'seller-wallet': 'Porte-monnaie',
   'seller-reviews': 'Avis & Réputation',
   'buyer-settings': 'Paramètres',

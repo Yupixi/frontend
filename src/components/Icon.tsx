@@ -1,6 +1,6 @@
 import AnimatedIcon, { hasAnimatedIcon } from './AnimatedIcon'
-import type { CSSProperties } from 'react'
-import { ensureIcon, extraIconFamily, isBundledIcon } from '../lib/iconFont'
+import { useSyncExternalStore, type CSSProperties } from 'react'
+import { ensureIcon, extraIconFamily, isBundledIcon, isMissingIcon, onMissingIcons } from '../lib/iconFont'
 import { GLYPHS, MATERIAL_TO_ICONSAX } from '../lib/iconsaxGlyphs'
 
 type IconProps = {
@@ -65,24 +65,54 @@ export default function Icon({ name, size = 20, fill, className, style, title }:
 // Category icons come from the DB (Material names). The ones with an
 // Iconsax animation (src/assets/lottie/cat-<name>.json) play when their
 // tile first shows (staggered with `delay`) and on hover / press.
+// What the Backoffice may hold in a category's icon field besides a
+// Material name: a picture (URL), or an emoji of older rows.
+const IMAGE_ICON = /^(https?:\/\/|\/|data:image\/)/i
+
 export function CategoryIcon({ icon, size = 28, className, delay }: { icon: string, size?: number, className?: string, delay?: number }) {
+  // A picture: contained in the icon's square whatever its ratio (a wide
+  // logo never runs out of the tile).
+  if (IMAGE_ICON.test(icon.trim())) {
+    return (
+      <img
+        src={icon.trim()}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        decoding="async"
+        className={`block shrink-0 rounded-md object-contain${className ? ` ${className}` : ''}`}
+        style={{ width: '100%', height: '100%', maxWidth: Math.round(size * 1.85), maxHeight: Math.round(size * 1.85) }}
+      />
+    )
+  }
   if (hasAnimatedIcon(`cat-${icon}`)) {
     // Iconsax artwork has more inner padding than Material Symbols: scale it up a bit.
     return <AnimatedIcon name={`cat-${icon}`} fallback={icon} size={Math.round(size * 1.15)} className={className} playOnView={delay ?? 0} playOnInteract />
   }
   if (/^[a-z0-9_]+$/.test(icon)) {
     if (isBundledIcon(icon) || iconsaxGlyph(icon)) return <Icon name={icon} size={size} className={className} />
-    ensureIcon(icon)
-    return (
-      <span
-        className={`ms ms-x${className ? ` ${className}` : ''}`}
-        data-ms={icon}
-        style={{ fontSize: size, width: size, height: size, fontFamily: `'${extraIconFamily(icon)}'` }}
-        aria-hidden
-      >
-        {icon}
-      </span>
-    )
+    return <ExtraIcon icon={icon} size={size} className={className} />
   }
+  // An emoji (older rows); anything longer is not an icon: the default one.
+  if ([...icon.trim()].length > 2) return <Icon name="category" size={size} className={className} />
   return <span className={className} style={{ fontSize: size * 0.9, lineHeight: 1 }}>{icon}</span>
+}
+
+// A Material Symbol outside the bundled subset, fetched on demand; a name
+// the font does not know (« pommade ») gets the default icon instead of its
+// letters running out of the tile.
+function ExtraIcon({ icon, size, className }: { icon: string, size: number, className?: string }) {
+  const missing = useSyncExternalStore(onMissingIcons, () => isMissingIcon(icon))
+  if (missing) return <Icon name="category" size={size} className={className} />
+  ensureIcon(icon)
+  return (
+    <span
+      className={`ms ms-x overflow-hidden${className ? ` ${className}` : ''}`}
+      data-ms={icon}
+      style={{ fontSize: size, width: size, height: size, fontFamily: `'${extraIconFamily(icon)}'` }}
+      aria-hidden
+    >
+      {icon}
+    </span>
+  )
 }

@@ -125,7 +125,7 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
           <span className={`flex h-8 w-8 items-center justify-center rounded-full text-white ${open ? 'bg-primary' : 'bg-tertiary'}`}><Icon name={open ? 'priority_high' : 'task_alt'} size={18} /></span>
           <div>
             <div className={`text-label-sm uppercase ${open ? 'text-primary' : 'text-tertiary'}`}>{open ? (d.status === 'AWAITING_SELLER' ? 'Dossier prioritaire ouvert' : 'Dossier en cours') : 'Dossier clôturé'}</div>
-            <div className="text-label-md text-on-surface">Litige #{d.reference} • Commande #{d.orderReference}</div>
+            <div className="text-label-md text-on-surface">Litige #{d.reference} • Vente n° {d.orderReference}</div>
           </div>
         </div>
         {d.status === 'AWAITING_SELLER' ? (

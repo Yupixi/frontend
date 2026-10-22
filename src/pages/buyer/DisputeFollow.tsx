@@ -168,7 +168,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Litige #${d.reference}` }, { label: 'Suivi & Résolution' }]} />
-              <span className="mb-3 hidden text-label-sm uppercase text-on-surface-variant md:block">Dossier ouvert le {new Date(d.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} • Commande #{d.orderReference}</span>
+              <span className="mb-3 hidden text-label-sm uppercase text-on-surface-variant md:block">Dossier ouvert le {new Date(d.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} • Vente n° {d.orderReference}</span>
             </div>
             <Banner d={d} />
 
@@ -208,7 +208,7 @@ export default function DisputeFollow({ focusDisputeId, onNavigate, onSelectDisp
                 )}
                 {disputeIsOpen(d.status) && (
                   <section className="hidden rounded-2xl bg-surface-container-low p-4 md:block max-lg:order-4">
-                    <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="lock" size={19} /></span><div><div className="text-label-md text-on-surface">Code de remise gelé</div><div className="text-body-sm text-on-surface-variant">Commande #{d.orderReference}</div></div></div>
+                    <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="lock" size={19} /></span><div><div className="text-label-md text-on-surface">Code de remise gelé</div><div className="text-body-sm text-on-surface-variant">Vente n° {d.orderReference}</div></div></div>
                     <div className="mt-3 rounded-xl bg-surface-lowest p-3 text-center">
                       <div className="text-label-sm uppercase text-on-surface-variant">Code temporairement verrouillé</div>
                       <div className="mt-2 flex justify-center gap-2">{[0, 1, 2, 3].map(i => <span key={i} className="h-3 w-3 rounded-full bg-on-surface-variant" />)}</div>

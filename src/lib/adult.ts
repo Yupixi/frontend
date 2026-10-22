@@ -82,7 +82,12 @@ export function refreshAdultAccess(client: ApolloClient) {
   client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'adultAccess' })
   client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'adultHome' })
   client.cache.gc()
-  void client.refetchQueries({ include: [ADULT_ACCESS_QUERY] }).catch(() => undefined)
+  // Only the ones on screen (naming the query asked Apollo for one even
+  // when no page watched it: « Unknown query AdultAccess » warning).
+  void client.refetchQueries({
+    include: 'active',
+    onQueryUpdated: (oq) => oq.queryName === 'AdultAccess',
+  }).catch(() => undefined)
 }
 
 // The server's « gate instead of the data » answer, with its reason.

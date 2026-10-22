@@ -146,7 +146,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
               <section className="rounded-2xl bg-tertiary-soft p-5 text-center">
                 <Icon name="task_alt" size={44} className="text-tertiary" />
                 <h2 className="m-0 mt-2 text-headline-sm text-on-surface">Remise validée, vente clôturée</h2>
-                <p className="m-0 mt-1 text-body-md text-on-surface-variant">Commande #{o.reference} • <Price amount={amount} currency={o.listing.currency} /> encaissés en direct. L'annonce est marquée comme vendue.</p>
+                <p className="m-0 mt-1 text-body-md text-on-surface-variant">Vente n° {o.reference} • <Price amount={amount} currency={o.listing.currency} /> encaissés en direct. L'annonce est marquée comme vendue.</p>
                 <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white">Retour aux remises</button>
               </section>
             ) : !o.meetup || o.meetup.status !== 'CONFIRMED' ? (

@@ -56,7 +56,7 @@ export default function MyBadgePage({ onNavigate, currentUser, onLogout, onProfi
   }
   const criteria = [
     { ok: b.identityVerified, label: 'Identité vérifiée par Dilchap', value: b.identityVerified ? 'Validée' : 'À faire' },
-    { ok: b.sales >= b.criteria.minSales, label: `Au moins ${b.criteria.minSales} ventes conclues`, value: `${b.sales} / ${b.criteria.minSales}` },
+    { ok: b.sales >= b.criteria.minSales, label: `Au moins ${b.criteria.minSales} ventes confirmées`, value: `${b.sales} / ${b.criteria.minSales}` },
     { ok: b.reviews >= b.criteria.minReviews, label: `Au moins ${b.criteria.minReviews} avis d’acheteurs`, value: `${b.reviews} / ${b.criteria.minReviews}` },
     { ok: b.reviews > 0 && b.rating >= b.criteria.minRating, label: `Note moyenne d’au moins ${b.criteria.minRating.toLocaleString('fr-FR')} / 5`, value: b.reviews ? `${b.rating.toFixed(1)} / 5` : '—' },
     { ok: b.penalties === 0, label: 'Aucune pénalité de litige', value: b.penalties ? `${b.penalties}` : 'Aucune' },

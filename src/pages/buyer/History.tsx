@@ -186,7 +186,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
 
         <section className="mt-4 hidden items-center gap-3 rounded-2xl bg-surface-container-low p-4 md:flex">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="lock" size={20} /></span>
-          <div className="flex-1"><div className="text-label-lg text-on-surface">Confidentialité &amp; Données</div><div className="text-body-sm text-on-surface-variant">L'historique est privé et n'est visible que par vous. Le désactiver n'affecte ni vos favoris ni vos commandes.</div></div>
+          <div className="flex-1"><div className="text-label-lg text-on-surface">Confidentialité &amp; Données</div><div className="text-body-sm text-on-surface-variant">L'historique est privé et n'est visible que par vous. Le désactiver n'affecte ni vos favoris ni vos achats.</div></div>
         </section>
       </div>
     </AccountLayout>

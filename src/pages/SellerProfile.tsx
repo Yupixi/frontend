@@ -178,7 +178,7 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
 
   const stats = [
     { value: seller.reviewsCount ? <>{seller.averageRating.toFixed(1)} <Star size={15} fill="#F59E0B" color="#F59E0B" /></> : '—', label: `${seller.reviewsCount} avis vérifié${seller.reviewsCount > 1 ? 's' : ''}` },
-    { value: seller.salesCount, label: `Vente${seller.salesCount > 1 ? 's' : ''} conclue${seller.salesCount > 1 ? 's' : ''}` },
+    { value: seller.salesCount, label: `Vente${seller.salesCount > 1 ? 's' : ''} confirmée${seller.salesCount > 1 ? 's' : ''}` },
     ...(responseTime ? [{ value: responseTime, label: 'Réponse' }] : []),
     { value: seller.followersCount, label: `Abonné${seller.followersCount > 1 ? 's' : ''}` },
   ]

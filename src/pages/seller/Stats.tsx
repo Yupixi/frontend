@@ -15,6 +15,7 @@ import Credits from '../../components/Credits'
 import { PaymentLogos } from '../../components/PaymentLogo'
 import { Claim } from '../../lib/site'
 import VisibilityPanel from '../../components/VisibilityPanel'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -114,13 +115,17 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
   const f = s?.funnel
   const ratio = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : null)
 
+  // Only the layout on screen: a chart inside a hidden subtree measures
+  // 0 × 0 (recharts warning) and the other layout's queries run for nothing.
+  const wide = useMediaQuery('(min-width: 768px)')
+
   return (
     <AccountLayout active="seller-stats" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
-      <div className="md:hidden">
+      {!wide && <div>
         <StatsMobile s={s} period={period} periods={PERIODS} onPeriod={setPeriod} badge={currentUser?.badge} onNavigate={onNavigate} onSelectListing={onSelectListing} advanced={advanced} />
         <VisibilityPanel days={days} className="mt-4" />
-      </div>
-      <div className="mx-auto hidden max-w-[1180px] pb-8 md:block">
+      </div>}
+      {wide && <div className="mx-auto max-w-[1180px] pb-8">
         <nav className="mb-2 hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
           <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />
           <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">Tableau de bord</button>
@@ -160,7 +165,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           <Kpi label="Conversion chat" icon="price_check" iconCls="bg-surface-container text-primary" value={loading ? '—' : pct(s?.conversionRate)} foot={<><Trend now={s?.conversionRate ?? null} prev={s?.conversionRatePrev ?? null} /> conclus en deal</>} />
           <Kpi label="Volume d'affaires" icon="payments" iconCls="bg-tertiary-soft text-tertiary" value={loading ? '—' : <Price amount={s?.revenue ?? 0} />} foot={<Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="savings" size={14} /> Économisé : <Price amount={s?.savedCommission ?? 0} /></span></Claim>} />
           <div className="col-span-2 lg:col-span-1">
-            <Kpi label="Délai moyen vente" icon="bolt" iconCls="bg-surface-container text-primary" value={loading ? '—' : s?.avgSaleDays != null ? <>{formatNumber(s.avgSaleDays)} <span className="text-headline-sm font-semibold">jours</span></> : '—'} foot={s?.avgSaleDaysBoosted != null ? <span className="rounded bg-primary-fixed px-1.5 text-label-sm text-primary">{formatNumber(s.avgSaleDaysBoosted)} j si boosté</span> : 'publication → vente conclue'} />
+            <Kpi label="Délai moyen vente" icon="bolt" iconCls="bg-surface-container text-primary" value={loading ? '—' : s?.avgSaleDays != null ? <>{formatNumber(s.avgSaleDays)} <span className="text-headline-sm font-semibold">jours</span></> : '—'} foot={s?.avgSaleDaysBoosted != null ? <span className="rounded bg-primary-fixed px-1.5 text-label-sm text-primary">{formatNumber(s.avgSaleDaysBoosted)} j si boosté</span> : 'publication → vente confirmée'} />
           </div>
         </section>
 
@@ -231,7 +236,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             {s?.favoritePlace && (
               <div className="mt-4 flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
                 <Icon name="verified" size={18} className="shrink-0 text-tertiary" />
-                <span><b className="text-on-surface">Point de retrait favori :</b> {pct(s.favoritePlaceShare)} de vos ventes conclues se font en main propre à {s.favoritePlace}.</span>
+                <span><b className="text-on-surface">Point de retrait favori :</b> {pct(s.favoritePlaceShare)} de vos ventes confirmées se font en main propre à {s.favoritePlace}.</span>
               </div>
             )}
           </div>
@@ -254,7 +259,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               { n: 2, icon: 'ads_click', value: f?.views, title: 'Clics & Fiches lues', sub: "Visiteurs ayant examiné l'état et photos", foot: `${pct(f ? ratio(f.views, f.impressions) : null)} de taux de clic`, accent: true },
               { n: 3, icon: 'favorite', value: f?.favorites, title: 'Favoris enregistrés', sub: 'Acheteurs en phase de réflexion ou veille', foot: `${pct(f ? ratio(f.favorites, f.views) : null)} des vues` },
               { n: 4, icon: 'forum', value: f?.contacts, title: 'Chats déclenchés', sub: 'Négociations, questions et offres envoyées', foot: `${pct(f ? ratio(f.contacts, f.views) : null)} engagement` },
-              { n: 5, icon: 'task_alt', value: f?.sales, title: 'Ventes Conclues', sub: 'Rendez-vous honorés et paiement remis', foot: `${pct(f ? ratio(f.sales, f.contacts) : null)} conv. chat`, done: true },
+              { n: 5, icon: 'task_alt', value: f?.sales, title: 'Ventes confirmées', sub: 'Code de remise ou confirmées par les deux', foot: `${pct(f ? ratio(f.sales, f.contacts) : null)} conv. chat`, done: true },
             ].map(st => (
               <div key={st.n} className={`flex flex-col rounded-xl p-4 ${st.done ? 'border border-tertiary/40 bg-tertiary-soft' : 'bg-surface-container-low'}`}>
                 <div className={`flex items-center justify-between text-label-sm ${st.done ? 'text-tertiary' : 'text-on-surface-variant'}`}>Étape {st.n} <Icon name={st.icon} size={17} /></div>
@@ -444,7 +449,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           onUpgrade={upgrade}
         />
         )}
-      </div>
+      </div>}
     </AccountLayout>
   )
 }

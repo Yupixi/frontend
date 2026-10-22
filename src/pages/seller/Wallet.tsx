@@ -109,7 +109,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
               <Claim><div className="text-[11px] text-tertiary">0 F de commission</div></Claim>
             </div>
             <div className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
-              <div className="text-label-sm text-on-surface-variant">Ventes conclues</div>
+              <div className="text-label-sm text-on-surface-variant">Ventes confirmées</div>
               <div className="mt-0.5 text-headline-sm font-extrabold text-on-surface">{salesCount}</div>
               <div className="text-[11px] text-on-surface-variant">Confirmation : <b className="text-tertiary">{wallet?.confirmationRate != null ? `${wallet.confirmationRate}%` : '—'}</b></div>
             </div>
@@ -140,7 +140,7 @@ export default function Wallet({ onNavigate, currentUser, onLogout }: Props) {
           <div className="relative overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest">
             <div className="p-5">
               <div className="flex items-center justify-between text-label-md text-on-surface">Transactions directes conclues <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-container text-on-surface"><Icon name="handshake" size={17} /></span></div>
-              <div className="mt-2 flex items-baseline gap-2"><span className="text-[44px] font-extrabold leading-none text-on-surface">{salesCount}</span><span className="text-headline-sm text-on-surface">vente{salesCount > 1 ? 's' : ''} réussie{salesCount > 1 ? 's' : ''}</span></div>
+              <div className="mt-2 flex items-baseline gap-2"><span className="text-[44px] font-extrabold leading-none text-on-surface">{salesCount}</span><span className="text-headline-sm text-on-surface">vente{salesCount > 1 ? 's' : ''} confirmée{salesCount > 1 ? 's' : ''}</span></div>
               <p className="m-0 mt-2 flex items-center gap-1 text-body-sm text-on-surface-variant"><Star size={14} className="text-primary" /> {wallet?.reviewsCount ? `${wallet.averageRating.toFixed(1)} / 5 (sur ${wallet.reviewsCount} avis acheteurs)` : 'Pas encore d’avis acheteurs'}</p>
             </div>
             <div className="flex items-center justify-between bg-surface-container-low px-5 py-3 text-body-sm text-on-surface-variant">Taux de confirmation <span className="font-semibold text-tertiary">{wallet?.confirmationRate != null ? `${wallet.confirmationRate}%` : '—'}</span></div>
