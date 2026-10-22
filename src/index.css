@@ -649,6 +649,8 @@ h1, h2, h3, h4, h5, h6, .font-brand {
 .ms-x { visibility: hidden; }
 /* Iconsax glyphs (Icon / icons.tsx): sit in text like the font icons did. */
 .isx { display: inline-block; flex-shrink: 0; vertical-align: middle; overflow: visible; }
+/* Unlayered: a display utility on <Icon> (hidden, sm:hidden…) loses to
+   it. Hide a responsive icon through a wrapping <span>. */
 
 /* Home hero slider progress (duration set inline). */
 /* transform, not width: animating width re-lays out the hero every frame. */
@@ -943,4 +945,17 @@ input, textarea, [contenteditable='true'], .ProseMirror {
 }
 @media (prefers-reduced-motion: reduce) {
   .boostdemo * { animation: none !important; }
+}
+
+/* A small icon button (heart on a card, × of a filter chip) keeps its look
+   but gets a 44 × 44 px touch area (WCAG 2.5.5 / Apple HIG). The button
+   must be positioned (absolute, or add `relative`). */
+.tap-44::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }

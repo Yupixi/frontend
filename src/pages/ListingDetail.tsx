@@ -51,7 +51,7 @@ import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
-import { formatRelativeDate } from '../lib/format'
+import { formatRelativeDate, placeLabel } from '../lib/format'
 import { agoLabel } from '../lib/bumps'
 import { BumpLine } from '../components/BumpProof'
 import { requestOpenLink } from '../lib/navigation'
@@ -238,10 +238,22 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     )
   if (!listing) {
     return (
-      <div className="p-12 text-center">
-        <p className="mb-4 text-on-surface-variant">Cette annonce n'existe plus ou a été retirée.</p>
-        <button onClick={() => onNavigate('home')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour à l'accueil</button>
-      </div>
+      <>
+        {/* Phone: the page's own back bar (the site header is hidden here). */}
+        <div className="safe-top sticky z-[100] flex h-14 items-center gap-1 border-0 border-b border-solid border-outline-variant bg-surface px-2 lg:hidden">
+          <button onClick={() => (window.history.length > 1 ? window.history.back() : onNavigate('home'))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface" aria-label="Retour">
+            <ArrowLeft size={22} />
+          </button>
+          <span className="min-w-0 flex-1 truncate text-headline-sm text-on-surface">Annonce introuvable</span>
+        </div>
+        <div className="p-12 text-center">
+          <p className="mb-4 text-on-surface-variant">Cette annonce n'existe plus ou a été retirée.</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button onClick={() => onNavigate('search')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">Voir les annonces</button>
+            <button onClick={() => onNavigate('home')} className="cursor-pointer rounded-lg border border-solid border-outline-variant bg-surface-lowest px-5 py-2.5 text-label-lg text-on-surface">Retour à l'accueil</button>
+          </div>
+        </div>
+      </>
     )
   }
 
@@ -268,7 +280,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
   const canContact = !isOwner && listing.status === 'APPROVED'
   const saving = listing.originalPrice && listing.price != null && listing.originalPrice > listing.price
     ? Math.round((1 - listing.price / listing.originalPrice) * 100) : 0
-  const location = listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+  const location = placeLabel(listing)
   // Live promotion (shop sale or Dilchap campaign) and shop bundle.
   const promoPrice = discountedPrice(listing)
   const promo = listing.activeCampaignDiscount
@@ -318,6 +330,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
       .filter(([, v]) => v !== '' && v != null)
       .map(([k, v]) => ({ label: category?.attributes.find(a => a.key === k)?.label ?? k, value: String(v), icon: 'tune' })),
   ]
+    // A category field named like a listing field (« Marque », « État ») is
+    // shown once, with the listing's own value (one row, one key, per label).
+    .filter((s, i, all) => all.findIndex(o => o.label.trim().toLowerCase() === s.label.trim().toLowerCase()) === i)
   const responseTime = formatResponseTime(seller?.responseTimeMinutes)
   const shareUrl = `${window.location.origin}${listingPath(listing.id, listing.title)}`
 
@@ -555,7 +570,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               {promoPrice != null
                 ? <span className="text-headline-sm text-outline line-through"><Price amount={listing.price} currency={listing.currency} /></span>
                 : saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
-              {promoPrice == null && saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">-{saving}% épargné</span>}
+              {promoPrice == null && saving > 0 && <span className="rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">-{saving} % sur le prix neuf</span>}
               {promoTag}
               {stock}
             </div>
@@ -576,9 +591,9 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <div className="grid grid-cols-2 gap-2">
                 {specs.map((s, i) => (
                   <div key={s.label} className={`min-w-0 rounded-xl bg-surface-container-low p-3 ${i === specs.length - 1 && specs.length % 2 === 1 ? 'col-span-2' : ''}`}>
-                    <div className="flex min-w-0 items-center gap-1 text-label-sm text-tertiary">
-                      <Icon name={s.icon ?? SPEC_ICONS[s.label] ?? 'info'} size={14} className="shrink-0" />
-                      <span className="truncate">{s.label}</span>
+                    <div className="flex min-w-0 items-start gap-1 text-label-sm text-tertiary">
+                      <Icon name={s.icon ?? SPEC_ICONS[s.label] ?? 'info'} size={14} className="mt-px shrink-0" />
+                      <span className="min-w-0 break-words">{s.label}</span>
                     </div>
                     <div className="mt-0.5 break-words text-label-lg text-on-surface">{s.value}</div>
                   </div>
@@ -600,7 +615,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               <section className={tab === 'description' ? '' : 'lg:hidden'}>
                 <h2 className="m-0 mb-3 text-label-lg text-on-surface lg:hidden">Description de l'article</h2>
                 <div className="rich-text selectable rounded-xl bg-surface-lowest text-body-md leading-7 text-on-surface max-lg:border max-lg:border-solid max-lg:border-outline-variant/60 max-lg:p-4 lg:bg-transparent [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: richHtml(listing.description) }} />
-                <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · {listing.bumpedAt ? <>remontée {agoLabel(listing.bumpedAt)}</> : <>publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</>}</p>
+                <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><MapPin size={14} /> Visible à {location} · {listing.bumpedAt ? <>remontée {agoLabel(listing.bumpedAt)}</> : <>publié {formatRelativeDate(listing.publishedAt ?? listing.createdAt).replace(/^./, c => c.toLowerCase())}</>}</p>
               </section>
               <section className={tab === 'specs' ? 'hidden lg:block' : 'hidden'}>
                 {specs.length === 0 ? <p className="m-0 text-body-md text-on-surface-variant">Le vendeur n'a pas renseigné de caractéristiques.</p> : (
@@ -616,7 +631,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
               </section>
               <section className={tab === 'safety' ? 'mt-6 lg:mt-0' : 'mt-6 lg:hidden'}>
                 <h2 className="m-0 mb-3 flex items-center justify-between gap-2 text-label-lg text-on-surface lg:justify-start lg:text-headline-sm">
-                  <span className="min-w-0 truncate">Lieu de rencontre suggéré</span>
+                  <span className="min-w-0">Lieu de rencontre suggéré</span>
                   <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><ShieldCheck size={12} /> Espace public sécurisé</span>
                 </h2>
                 <div className="map-placeholder mb-4 h-40 items-end! justify-start! p-3">
@@ -661,7 +676,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   : saving > 0 && <span className="text-headline-sm text-outline line-through"><Price amount={listing.originalPrice} currency={listing.currency} /></span>}
               </div>
               {promoTag && <span className="mr-2 mt-2 inline-flex max-w-full">{promoTag}</span>}
-              {promoPrice == null && saving > 0 && <span className="mt-2 inline-block rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">-{saving}% par rapport au prix neuf</span>}
+              {promoPrice == null && saving > 0 && <span className="mt-2 inline-block rounded-md bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">-{saving} % par rapport au prix neuf</span>}
               {listing.negotiable && <span className="ml-2 mt-2 inline-block rounded-md bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">Prix négociable</span>}
               {stock && <span className="ml-2 mt-2 inline-block">{stock}</span>}
               {bundle}

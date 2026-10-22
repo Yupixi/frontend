@@ -48,3 +48,17 @@ export function plainText(html: string | null | undefined): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+// « Liberté 6, Dakar »: the place typed by the seller, then the city — once
+// (the place often already ends with it: never « Liberté 6, Dakar, Dakar »).
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+export function placeLabel(l: { locationLabel?: string | null; city: string }): string {
+  const label = l.locationLabel?.trim()
+  if (!label) return l.city
+  if (!l.city) return label
+  const parts = label.split(',').map(fold)
+  return parts.includes(fold(l.city)) ? label : `${label}, ${l.city}`
+}
+
+// « Taille M », never « Taille Taille unique ».
+export const sizeLabel = (size: string) => (/^taille\b/i.test(size.trim()) ? size.trim() : `Taille ${size}`)

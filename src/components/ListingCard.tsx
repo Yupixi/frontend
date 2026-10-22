@@ -9,7 +9,7 @@ import PromoPill from './PromoPill'
 import { useImpressionRef } from '../lib/impressions'
 import { useAdultSpace } from '../lib/adultMode'
 import { entryDiscountPercent as discountPct } from '../lib/campaignDiscount'
-import { formatRelativeDate, plainText } from '../lib/format'
+import { formatRelativeDate, placeLabel, plainText, sizeLabel } from '../lib/format'
 import { agoLabel } from '../lib/bumps'
 import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
@@ -75,7 +75,7 @@ function ArchetypeLine({ listing }: { listing: RemoteListing }) {
 }
 
 export function listingLocation(listing: RemoteListing): string {
-  return listing.locationLabel ? `${listing.locationLabel}, ${listing.city}` : listing.city
+  return placeLabel(listing)
 }
 
 export function listingImage(listing: RemoteListing): string {
@@ -225,8 +225,8 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
     )
   // Phone photo tag: rail cards lead with the condition, feed cards with the size.
   const phoneTag = featured
-    ? condition ?? (listing.size ? `Taille ${listing.size}` : category)
-    : listing.size ? `Taille ${listing.size}` : condition ?? category
+    ? condition ?? (listing.size ? sizeLabel(listing.size) : category)
+    : listing.size ? sizeLabel(listing.size) : condition ?? category
 
   return (
     <div
@@ -268,7 +268,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
 
           <button
             onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
-            className={`absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
+            className={`tap-44 absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
             aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
             <AnimatedIcon name="heart" fallback="favorite" size={17} fill={isFav} trigger={isFav} />
@@ -277,9 +277,9 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
 
         {/* Phone body */}
         <div className="flex flex-col gap-0.5 p-2.5 md:hidden">
-          <div className="flex min-w-0 items-baseline justify-between gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-1.5">
             <span className="shrink-0 text-headline-sm font-bold text-primary">{price}</span>
-            {struck != null && <span className={`min-w-0 truncate text-on-surface-variant line-through ${featured ? 'text-body-sm' : 'text-[11px]'}`}><Price amount={struck} currency={listing.currency} /></span>}
+            {struck != null && <span className={`whitespace-nowrap text-on-surface-variant line-through ${featured ? 'text-body-sm' : 'text-[11px]'}`}><Price amount={struck} currency={listing.currency} /></span>}
           </div>
           <h4 className={`m-0 truncate text-on-surface ${featured ? 'text-label-lg font-bold' : 'text-label-md font-semibold'}`}>{listing.title}</h4>
           {place}

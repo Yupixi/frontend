@@ -132,11 +132,11 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
       <CampaignHero campaign={campaign} />
 
       {/* Search & filters within the campaign */}
-      <section className="sticky top-[var(--header-h,64px)] z-20 -mx-4 mt-5 bg-surface/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:bg-surface-lowest md:p-4 md:shadow-sm">
+      <section className="sticky top-[var(--header-h,64px)] z-20 -mx-4 mt-5 bg-surface/95 px-4 py-3 md:static md:mx-0 md:rounded-2xl md:bg-surface-lowest md:p-4 md:shadow-sm">
         <div className="flex flex-wrap items-center gap-2 max-md:flex-nowrap max-md:flex-col max-md:items-stretch">
           <label className="flex h-10 min-w-0 flex-1 basis-60 items-center max-md:basis-auto max-md:flex-none gap-2 rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3">
             <Icon name="search" size={18} className="text-outline" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher dans cette campagne" className="min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher dans cette campagne" aria-label="Rechercher dans cette campagne" className="min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none" />
           </label>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] md:contents">
           <select aria-label="Commune" value={city} onChange={e => setCity(e.target.value)} className={select}>

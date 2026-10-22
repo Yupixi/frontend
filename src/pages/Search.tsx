@@ -121,7 +121,7 @@ function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
     <>
       <div className="relative mb-2">
         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-outline">{icon ?? <SearchIcon size={15} />}</span>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder={placeholder} className="w-full rounded-lg border-none bg-surface-container-low py-2 pl-8 pr-2 text-body-sm text-on-surface outline-none placeholder:text-outline" />
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder={placeholder} aria-label={placeholder.replace(/…$/, '')} className="w-full rounded-lg border-none bg-surface-container-low py-2 pl-8 pr-2 text-body-sm text-on-surface outline-none placeholder:text-outline focus-visible:ring-2 focus-visible:ring-primary/40" />
       </div>
       <div className="flex max-h-40 flex-col overflow-y-auto">
         {shown.map(f => <CheckRow key={f.value} checked={selected.includes(f.value)} label={f.label} count={f.count} onChange={() => onToggle(f.value)} />)}
@@ -668,7 +668,7 @@ export default function SearchPage({
               {chips.map(c => (
                 <span key={c.key} className={`flex items-center gap-1 rounded-lg px-2 py-1 text-label-md ${c.near ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-lowest text-on-surface'}`}>
                   {c.near && <MapPin size={13} />}{c.label}
-                  <button onClick={c.clear} className="flex cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary" aria-label={`Retirer ${c.label}`}><X size={13} /></button>
+                  <button onClick={c.clear} className="tap-44 relative flex cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary" aria-label={`Retirer ${c.label}`}><X size={13} /></button>
                 </span>
               ))}
               <button onClick={resetAll} className="cursor-pointer border-none bg-transparent px-1 text-label-sm text-primary hover:underline">Tout effacer</button>

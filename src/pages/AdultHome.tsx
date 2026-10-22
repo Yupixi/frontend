@@ -106,7 +106,7 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
             className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80" />
         </label>
         <button type="submit" className="flex h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white">
-          <span className="max-sm:hidden">Rechercher</span><Icon name="arrow_forward" size={18} className="sm:hidden" />
+          <span className="max-sm:hidden">Rechercher</span><span className="flex sm:hidden"><Icon name="arrow_forward" size={18} /></span>
         </button>
       </form>
       {home && <p className="m-0 mt-3 text-body-sm text-on-surface-variant"><b className="text-on-surface">{formatNumber(home.total, 0)}</b> annonce{home.total > 1 ? 's' : ''} en ligne dans la section</p>}
