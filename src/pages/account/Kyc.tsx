@@ -605,7 +605,7 @@ function Validated({ kyc, currentUser, onNavigate, onViewShop }: { kyc: MyKyc; c
             <span className="relative h-16 w-16 shrink-0"><span className="block h-full w-full overflow-hidden rounded-full bg-primary-fixed"><SafeImg src={currentUser.avatarUrl} icon="person" /></span><span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-tertiary text-white ring-2 ring-surface-lowest"><Icon name="verified" size={15} /></span></span>
             <div className="min-w-0">
               <div className="truncate text-headline-sm text-on-surface">{currentUser.fullName}</div>
-              {rep && <div className="flex items-center gap-1.5 text-body-sm text-on-surface-variant">{rep.reviewsCount > 0 && <><Icon name="star" size={15} fill className="text-primary" /> {rep.averageRating.toFixed(1)} •</>} {rep.salesCount} vente{rep.salesCount > 1 ? 's' : ''} conclue{rep.salesCount > 1 ? 's' : ''}</div>}
+              {rep && <div className="flex items-center gap-1.5 text-body-sm text-on-surface-variant">{rep.reviewsCount > 0 && <><Icon name="star" size={15} fill className="text-primary" /> {rep.averageRating.toFixed(1)} •</>} {rep.salesCount} vente{rep.salesCount > 1 ? 's' : ''} confirmée{rep.salesCount > 1 ? 's' : ''}</div>}
             </div>
           </div>
           <div className="mt-4 flex items-center gap-3 rounded-xl bg-tertiary-soft p-3">

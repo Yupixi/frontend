@@ -41,6 +41,7 @@ import { spaceCategories, useAdultMode } from '../../lib/adultMode'
 import { ReelEditLink, ReelPostCard, ReelPostUpload, useReelsOffered } from '../../components/reels/ReelPostCard'
 import { keepNewListingReel, keepPendingReel, newListingReel, pendingReel, type ReelDraft } from '../../lib/reelDrafts'
 import { formatDuration } from '../../lib/reels'
+import { useDebounced } from '../../lib/useDebounced'
 
 const TITLE_MAX = 80
 
@@ -266,11 +267,20 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   // published like a new listing; only a submitted listing is merely edited.
   const editingDraft = existingData?.myListing.status === 'DRAFT'
   const publishes = !isEditing || editingDraft
-  const { data: rangeData } = useQuery<{ priceRange: PriceRange | null }>(PRICE_RANGE_QUERY, {
-    variables: { categoryId: form.categoryId, subcategoryId: form.subcategoryId || undefined, countryCode: form.countryCode },
+  // Compared with the same kind of item (title, brand, model, city): asked
+  // again a moment after the seller stops typing, the last range kept
+  // meanwhile.
+  const rangeKey = useDebounced(JSON.stringify([form.title.trim(), form.brand.trim(), form.modelName.trim(), form.city.trim()]), 600)
+  const [rTitle, rBrand, rModel, rCity] = JSON.parse(rangeKey) as string[]
+  const { data: rangeData, previousData: prevRange } = useQuery<{ priceRange: PriceRange | null }>(PRICE_RANGE_QUERY, {
+    variables: {
+      categoryId: form.categoryId, subcategoryId: form.subcategoryId || undefined, countryCode: form.countryCode,
+      title: rTitle.slice(0, 120) || undefined, brand: rBrand.slice(0, 120) || undefined, modelName: rModel.slice(0, 120) || undefined,
+      city: rCity.slice(0, 120) || undefined, excludeListingId: listingId || undefined,
+    },
     skip: !form.categoryId,
   })
-  const range = rangeData?.priceRange
+  const range = form.categoryId ? (rangeData ?? prevRange)?.priceRange : null
 
   const [createListing, { loading: creating }] = useMutation<{ createListing: { id: string } }>(CREATE_LISTING_MUTATION)
   const [updateListing, { loading: updating }] = useMutation(UPDATE_LISTING_MUTATION)
@@ -851,7 +861,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   <FieldError show={bad('description')}>Décrivez votre article.</FieldError>
                 </div>
                 <ListingAdvicePanel title={form.title} description={form.description} price={requiresPrice ? priceNum || null : null} currency={form.currency}
-                  categoryId={form.categoryId} subcategoryId={form.subcategoryId} photoCount={photoCount} listingId={listingId} />
+                  categoryId={form.categoryId} subcategoryId={form.subcategoryId} photoCount={photoCount} listingId={listingId}
+                  countryCode={form.countryCode} brand={form.brand} modelName={form.modelName} city={form.city} />
               </div>
             </Card>
 
@@ -892,10 +903,10 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                         )}
                       </div>
                       <div className="mt-2 flex justify-between text-[11px] text-on-surface-variant"><span>Vente express</span><span className="text-tertiary">Prix conseillé</span><span>Prix haut</span></div>
-                      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Basé sur {range.sampleSize} annonces comparables en ligne.</p>
+                      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Basé sur {range.sampleSize} annonces {range.scope === 'SIMILAR' ? 'semblables' : 'de la même sous-catégorie'} en ligne.</p>
                     </>
                   ) : (
-                    <p className="m-0 mt-2 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Info size={15} className="mt-0.5 shrink-0" /> {form.categoryId ? 'Pas encore assez d’annonces comparables pour suggérer un prix.' : 'Choisissez une catégorie pour voir les prix constatés.'}</p>
+                    <p className="m-0 mt-2 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Info size={15} className="mt-0.5 shrink-0" /> {form.categoryId ? (form.subcategoryId || form.title.trim() ? 'Pas encore assez d’annonces comparables pour conseiller un prix.' : 'Choisissez la sous-catégorie ou écrivez le titre pour voir les prix d’annonces semblables.') : 'Choisissez une catégorie pour voir les prix constatés.'}</p>
                   )}
                 </div>
               </div>

@@ -62,7 +62,7 @@ export default function ShopStats({ onNavigate, onSelectListing, currentUser, on
     { icon: 'storefront', label: 'Visites de la boutique', value: formatNumber(s.visits), now: s.visits, before: s.visitsPrevious, sub: 'Page boutique, visiteurs uniques par session' },
     { icon: 'person_add', label: 'Abonnés gagnés', value: `+${formatNumber(s.followsGained)}`, now: s.followsGained, before: s.followsPrevious, sub: `Total : ${formatNumber(s.followersCount)} abonnés` },
     { icon: 'visibility', label: 'Vues des articles', value: formatNumber(s.listingViews), now: s.listingViews, before: s.listingViewsPrevious, sub: 'Sur l’ensemble de vos annonces' },
-    { icon: 'handshake', label: 'Ventes conclues', value: formatNumber(s.periodSales), now: s.periodSales, before: s.periodSalesPrevious, sub: <>Volume : <Price amount={s.periodSalesVolume} /></> },
+    { icon: 'handshake', label: 'Ventes confirmées', value: formatNumber(s.periodSales), now: s.periodSales, before: s.periodSalesPrevious, sub: <>Volume : <Price amount={s.periodSalesVolume} /></> },
   ] : []
   const chart = (s?.series ?? []).map(d => ({ ...d, label: new Date(`${d.day}T00:00:00Z`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' }) }))
 
@@ -159,7 +159,7 @@ export default function ShopStats({ onNavigate, onSelectListing, currentUser, on
           )}
         </section>
       </div>
-      <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Ventes : deals marqués « conclus » dans vos conversations. {formatNumber(s.salesCount)} vente{s.salesCount > 1 ? 's' : ''} depuis l’ouverture du compte.</p>
+      <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Ventes confirmées : remise validée par code ou confirmée par l’acheteur et vous. {formatNumber(s.salesCount)} vente{s.salesCount > 1 ? 's' : ''} confirmée{s.salesCount > 1 ? 's' : ''} depuis l’ouverture du compte.</p>
     </>}
   </>)
 }

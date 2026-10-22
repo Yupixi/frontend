@@ -9,6 +9,15 @@ declare const __ICON_FONT_AXES__: string
 const bundled = new Set(__ICON_NAMES__)
 const requested = new Set<string>()
 let pending: string[] = []
+// Names that are no Material Symbol (« pommade » typed in the Backoffice):
+// the font would draw their letters; CategoryIcon shows a default instead.
+const missing = new Set<string>()
+const listeners = new Set<() => void>()
+export const isMissingIcon = (name: string) => missing.has(name)
+export function onMissingIcons(fn: () => void) {
+  listeners.add(fn)
+  return () => { listeners.delete(fn) }
+}
 
 export function isBundledIcon(name: string) {
   return bundled.has(name)
@@ -42,7 +51,27 @@ async function flush() {
   if (!src) return
   const style = document.createElement('style')
   style.textContent = names
-    .map(n => `@font-face{font-family:'${extraIconFamily(n)}';font-display:block;font-weight:400 600;src:${src}}.ms-x[data-ms="${n}"]{visibility:visible}`)
+    .map(n => `@font-face{font-family:'${extraIconFamily(n)}';font-display:block;font-weight:400 600;src:${src}}`)
     .join('\n')
   document.head.appendChild(style)
+  // A ligature draws one square glyph; a name the font does not know draws
+  // its letters, far wider: those stay hidden and get the default icon.
+  const ctx = document.createElement('canvas').getContext('2d')
+  const shown: string[] = []
+  for (const n of names) {
+    let known = true
+    try {
+      await document.fonts.load(`24px '${extraIconFamily(n)}'`, n)
+      if (ctx) {
+        ctx.font = `24px '${extraIconFamily(n)}'`
+        known = ctx.measureText(n).width <= 36
+      }
+    } catch { /* kept: shown as before */ }
+    if (known) shown.push(n)
+    else missing.add(n)
+  }
+  const visible = document.createElement('style')
+  visible.textContent = shown.map(n => `.ms-x[data-ms="${n}"]{visibility:visible}`).join('\n')
+  document.head.appendChild(visible)
+  if (shown.length < names.length) listeners.forEach(fn => fn())
 }

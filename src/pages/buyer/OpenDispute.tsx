@@ -42,7 +42,7 @@ const steps = (h: number) => [
   { title: 'Décision finale', text: 'Vente finalisée, remise accordée ou achat annulé : aucun paiement n’est dû avant la décision.' },
 ]
 
-// "Déclarer un litige sur votre commande" (desktop + mobile mockups).
+// "Déclarer un litige sur votre achat" (desktop + mobile mockups).
 export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpened, onOpenConversation, currentUser, onLogout }: Props) {
   const answerHours = useRules(useMemberCountryCode()).DISPUTE_ANSWER_HOURS
   const { disputeReasons } = useMemberLists()
@@ -83,14 +83,14 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
               ))}
             </div>
           </section>
-        ) : loading && !o ? <p className="text-body-md text-on-surface-variant">Chargement…</p> : !o ? <p className="text-body-md text-on-surface-variant">Commande introuvable.</p> : o.disputeId ? (
+        ) : loading && !o ? <p className="text-body-md text-on-surface-variant">Chargement…</p> : !o ? <p className="text-body-md text-on-surface-variant">Achat introuvable.</p> : o.disputeId ? (
           <section className="rounded-2xl bg-surface-container-low p-6 text-center">
-            <p className="m-0 text-headline-sm text-on-surface">Un litige existe déjà pour cette commande</p>
+            <p className="m-0 text-headline-sm text-on-surface">Un litige existe déjà pour cet achat</p>
             <button onClick={() => onOpened(o.disputeId!)} className="mt-3 cursor-pointer rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white">Suivre mon litige</button>
           </section>
         ) : (
           <>
-            <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Commande #${o.reference}`, page: 'buyer-handover' }, { label: 'Ouverture de litige' }]} />
+            <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Achat n° ${o.reference}`, page: 'buyer-handover' }, { label: 'Ouverture de litige' }]} />
             <section className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-4">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="gavel" size={21} /></span>
               <div className="min-w-[12rem] flex-1"><div className="text-headline-sm text-on-surface">Garantie Tierce-Partie Dilchap</div><div className="text-body-sm text-on-surface-variant">Tant que le litige est ouvert, votre code de remise est gelé : aucun paiement n'est dû.</div></div>
@@ -112,7 +112,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
             <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
               <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5">
                 <div className="flex items-center gap-1 text-label-sm uppercase text-primary"><Icon name="shield" size={15} /> Signalement tiers de confiance</div>
-                <h1 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Déclarer un litige sur votre commande</h1>
+                <h1 className="m-0 mt-1 text-headline-md text-on-surface md:text-headline-lg">Déclarer un litige sur votre achat</h1>
                 <p className="m-0 mt-1 text-body-md text-on-surface-variant">Bénéficiez de la médiation Dilchap : notre équipe d'arbitrage protège votre paiement.</p>
 
                 <h2 className="m-0 mt-5 flex items-center gap-2 text-label-lg text-on-surface"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm text-white">1</span> Motif principal du litige</h2>
@@ -162,7 +162,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
               <aside className="flex flex-col gap-4">
                 <section className="hidden rounded-2xl bg-surface-lowest p-4 shadow-sm lg:block">
                   <div className="flex items-center justify-between rounded-xl bg-surface-container-low p-3">
-                    <div><div className="text-label-sm uppercase text-on-surface-variant">N° commande</div><div className="text-label-lg text-on-surface">#{o.reference}</div></div>
+                    <div><div className="text-label-sm uppercase text-on-surface-variant">N° de vente</div><div className="text-label-lg text-on-surface">{o.reference}</div></div>
                     <span className="rounded bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">Litige imminent</span>
                   </div>
                   <div className="mt-3 flex gap-3">

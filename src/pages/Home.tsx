@@ -9,6 +9,7 @@ import {
   MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
+import Flag from '../components/Flag'
 import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { rotationSeed } from '../lib/rotationSeed'
@@ -61,6 +62,16 @@ const SORTS: { value: ListingSort, label: string }[] = [
   { value: 'PRICE_DESC', label: 'Prix décroissant' },
   { value: 'POPULAR', label: 'Populaires' },
 ]
+
+// A name typed in capitals (« COSMÉTIQUES ») reads as a word in a tile
+// (« Cosmétiques »): two lines at most, cut between syllables.
+const tileName = (name: string) =>
+  name.length > 4 && name === name.toLocaleUpperCase('fr') && /\p{Lu}{3}/u.test(name)
+    ? name.charAt(0) + name.slice(1).toLocaleLowerCase('fr')
+    : name
+// A long word (« Cosmétiques », « Électronique ») a little smaller, never
+// cut before its last letter.
+const longWord = (name: string) => name.split(/\s+/).some(w => w.length >= 10)
 
 // "Explorer par rayon" tiles cycle through the mockup's tints.
 const TILE_TINTS = [
@@ -286,6 +297,10 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     return stop < 0 ? order : order.slice(0, stop + 1)
   }
   const zone = location?.city ?? market?.name ?? 'Tous les pays'
+  // Phones: a long country name (« Côte d'Ivoire ») cut in the « Zone
+  // active » pill becomes its code next to the flag (« CI »).
+  const zoneCode = !location?.city && !!market && market.name.length > 9 ? market.code : null
+  const zoneShort = zoneCode ?? zone
 
   const loadMore = !!feedData && <InfiniteLoader key={feedKey} list={nextFeedPage} pageSize={pageSize} endLabel={latest.length > pageSize ? 'Vous avez tout vu' : null} />
 
@@ -337,7 +352,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               <div className="grid grid-cols-7 gap-3">
                 {topCategories.map((cat, i) => (
                   <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex cursor-pointer flex-col items-center rounded-2xl border-none bg-surface-lowest p-4 text-center shadow-sm transition-all hover:bg-surface-container-low hover:shadow" style={{ '--i': i } as React.CSSProperties}>
-                    <span className="cat-tile-icon mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-container text-primary">
+                    <span className="cat-tile-icon mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-surface-container p-1 text-primary">
                       <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
                     </span>
                     <span className="text-label-md font-bold leading-snug text-on-surface">{cat.name}</span>
@@ -503,11 +518,11 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             />
             <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none] md:-mx-8 md:px-8">
               {categories.map((cat, i) => (
-                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex w-[68px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0" style={{ '--i': i } as React.CSSProperties}>
-                  <span className={`cat-tile-icon flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm ${TILE_TINTS[i % TILE_TINTS.length]}`}>
+                <button key={cat.id} onClick={() => onCategorySelect?.(cat.slug)} className="cat-tile group flex w-[74px] shrink-0 cursor-pointer flex-col items-center gap-1.5 border-none bg-transparent p-0" style={{ '--i': i } as React.CSSProperties}>
+                  <span className={`cat-tile-icon flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl p-1.5 shadow-sm ${TILE_TINTS[i % TILE_TINTS.length]}`}>
                     <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
                   </span>
-                  <span title={cat.name} className="w-full truncate text-center text-label-sm font-semibold text-on-surface">{cat.name}</span>
+                  <span title={cat.name} className={`line-clamp-2 w-full break-words text-center font-semibold leading-tight text-on-surface ${longWord(cat.name) ? 'text-[11px] tracking-tight' : 'text-label-sm'}`}>{tileName(cat.name)}</span>
                 </button>
               ))}
             </div>
@@ -697,12 +712,15 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 <span className="relative flex min-w-0 items-center rounded-full bg-surface-container shadow-sm">
                   <span className="pointer-events-none absolute left-2.5 h-2 w-2 animate-pulse rounded-full bg-tertiary" />
                   {cities.length > 0 ? (
-                    <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Ville des dernières annonces" className="min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-1.5 text-label-md text-on-surface outline-none">
-                      <option value="">{location?.city ? `Tout ${location.city}` : zone}</option>
+                    <>
+                    {zoneCode && !feedCity && <Flag code={zoneCode} size={14} className="pointer-events-none absolute left-[22px]" />}
+                    <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Ville des dernières annonces" className={`min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pr-1.5 text-label-md text-on-surface outline-none ${zoneCode && !feedCity ? 'pl-[48px]' : 'pl-6'}`}>
+                      <option value="">{location?.city ? `Tout ${location.city}` : zoneShort}</option>
                       {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
                     </Select>
+                    </>
                   ) : (
-                    <button type="button" onClick={requestOpenLocation} className="cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-2.5 text-label-md text-on-surface">{zone}</button>
+                    <button type="button" onClick={requestOpenLocation} className="cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-2.5 text-label-md text-on-surface" aria-label={zone}>{zoneCode && <Flag code={zoneCode} size={14} className="mr-1 inline-block align-[-2px]" />}{zoneShort}</button>
                   )}
                 </span>
               </div>

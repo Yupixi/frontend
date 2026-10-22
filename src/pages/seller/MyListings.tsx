@@ -452,7 +452,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             <div className="text-headline-sm text-on-surface">Conseil vente sécurisée</div>
             <p className="m-0 text-body-sm text-on-surface-variant">Privilégiez les remises en main propre dans des lieux publics animés (centres commerciaux, stations-service). Ne remettez jamais l'article avant d'avoir vérifié la réception du paiement.</p>
           </div>
-          <button onClick={() => onNavigate('seller-orders')} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Voir mes commandes <ArrowRight size={15} /></button>
+          <button onClick={() => onNavigate('seller-orders')} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Voir mes ventes <ArrowRight size={15} /></button>
         </section>
       </div>
     </AccountLayout>

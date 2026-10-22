@@ -795,9 +795,12 @@ export const CREATE_SAVED_SEARCH_MUTATION = gql`
   }
 `
 
+// « Fourchette recommandée »: the same kind of item first (words of the
+// title, brand, model; same city when enough), else the subcategory, else
+// none — never the whole category.
 export const PRICE_RANGE_QUERY = gql`
-  query PriceRange($categoryId: String!, $subcategoryId: String, $countryCode: String) {
-    priceRange(categoryId: $categoryId, subcategoryId: $subcategoryId, countryCode: $countryCode) { low median high sampleSize }
+  query PriceRange($categoryId: String!, $subcategoryId: String, $countryCode: String, $title: String, $brand: String, $modelName: String, $city: String, $excludeListingId: String) {
+    priceRange(categoryId: $categoryId, subcategoryId: $subcategoryId, countryCode: $countryCode, title: $title, brand: $brand, modelName: $modelName, city: $city, excludeListingId: $excludeListingId) { low median high sampleSize scope }
   }
 `
-export type PriceRange = { low: number; median: number; high: number; sampleSize: number }
+export type PriceRange = { low: number; median: number; high: number; sampleSize: number; scope: 'SIMILAR' | 'SUBCATEGORY' }

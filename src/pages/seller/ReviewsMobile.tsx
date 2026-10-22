@@ -43,7 +43,7 @@ export default function ReviewsMobile({ rep, reviews, currentUser, replying, onR
             <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-primary text-headline-sm text-white">{currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : currentUser?.fullName.charAt(0)}</span>
             {currentUser?.badge && <span className={`absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-solid border-surface-lowest text-white ${currentUser.badge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}><Icon name="check" size={12} /></span>}
           </span>
-          <div className="min-w-0 flex-1"><div className="truncate text-headline-sm text-on-surface">{currentUser?.fullName}</div><div className="text-body-sm text-on-surface-variant">{rep?.salesCount ?? 0} vente{(rep?.salesCount ?? 0) > 1 ? 's' : ''} conclue{(rep?.salesCount ?? 0) > 1 ? 's' : ''}</div></div>
+          <div className="min-w-0 flex-1"><div className="truncate text-headline-sm text-on-surface">{currentUser?.fullName}</div><div className="text-body-sm text-on-surface-variant">{rep?.salesCount ?? 0} vente{(rep?.salesCount ?? 0) > 1 ? 's' : ''} confirmée{(rep?.salesCount ?? 0) > 1 ? 's' : ''}</div></div>
           <SellerBadge tier={currentUser?.badge} variant="pill" size={15} short />
         </div>
         <div className="mt-3 rounded-2xl bg-surface-container-low p-3">

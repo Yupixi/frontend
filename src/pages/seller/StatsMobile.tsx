@@ -73,7 +73,7 @@ export default function StatsMobile({ s, period, periods, onPeriod, badge, onNav
         {[
           { icon: 'visibility', value: formatNumber(s?.views ?? 0), label: "Vues d'annonces", side: <Delta v={growth(s?.views, s?.viewsPrev)} /> },
           { icon: 'forum', value: formatNumber(s?.contacts ?? 0), label: (s?.contacts ?? 0) > 1 ? 'Contacts initiés' : 'Contact initié', side: <Delta v={growth(s?.contacts, s?.contactsPrev)} /> },
-          { icon: 'shopping_bag', value: formatNumber(s?.funnel.sales ?? 0), label: (s?.funnel.sales ?? 0) > 1 ? 'Ventes conclues' : 'Vente conclue', side: <span className="text-label-sm text-on-surface-variant">Tx conv. {s?.conversionRate != null ? `${Math.round(s.conversionRate)}%` : '—'}</span> },
+          { icon: 'shopping_bag', value: formatNumber(s?.funnel.sales ?? 0), label: (s?.funnel.sales ?? 0) > 1 ? 'Ventes confirmées' : 'Vente confirmée', side: <span className="text-label-sm text-on-surface-variant">Tx conv. {s?.conversionRate != null ? `${Math.round(s.conversionRate)}%` : '—'}</span> },
           { icon: 'star', value: rep?.reviewsCount ? <>{rep.averageRating.toFixed(1)}<span className="text-body-sm font-normal text-on-surface-variant"> / 5</span></> : '—', label: `${rep?.reviewsCount ?? 0} avis`, side: rep && rep.averageRating >= 4.5 && rep.reviewsCount ? <span className="rounded bg-tertiary-soft px-1.5 text-label-sm text-tertiary">Excellent</span> : null },
         ].map(k => (
           <div key={k.label} className="rounded-2xl bg-surface-lowest p-3 shadow-sm">

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useApolloClient, useMutation } from '@apollo/client/react'
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react'
+import { ME_QUERY, type AuthUser } from '../graphql/auth'
+import { parsePhoneNumberFromString } from 'libphonenumber-js/mobile'
 import BottomSheet from './BottomSheet'
 import { useClarityHold } from '../lib/clarity'
 import Icon from './Icon'
@@ -47,7 +49,23 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   // Nothing preselected: the number field appears once an operator is picked.
   const [provider, setProvider] = useState<PaymentProvider | null>(null)
   // One remembered number per operator (an Orange number is no use for MTN).
-  const savedPhone = (p: PaymentProvider) => { try { return formatPhone(localStorage.getItem(`${PHONE_KEY}_${p}`) ?? '') } catch { return '' } }
+  // Else the account's verified number (SMS code), when it is an Ivorian
+  // number of that network — still editable.
+  const { data: meData } = useQuery<{ me: AuthUser }>(ME_QUERY, { fetchPolicy: 'cache-only' })
+  const verifiedPhone = (p: PaymentProvider) => {
+    const me = meData?.me
+    if (!me?.phone || !me.phoneVerifiedAt) return ''
+    const n = parsePhoneNumberFromString(me.phone, 'CI')
+    if (!n || n.country !== 'CI' || !n.isValid()) return ''
+    const prefix = NETWORK_PREFIX[p]
+    if (prefix && !n.nationalNumber.startsWith(prefix)) return ''
+    return formatPhone(n.nationalNumber)
+  }
+  const savedPhone = (p: PaymentProvider) => {
+    let saved = ''
+    try { saved = formatPhone(localStorage.getItem(`${PHONE_KEY}_${p}`) ?? '') } catch { /* private mode */ }
+    return saved || verifiedPhone(p)
+  }
   const [phone, setPhone] = useState('')
   const [touched, setTouched] = useState(false)
   const [otp, setOtp] = useState('')

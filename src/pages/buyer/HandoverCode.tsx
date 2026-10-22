@@ -64,7 +64,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
     <AccountLayout active="buyer-handover" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1180px] pb-8">
         <BuyerTabs active="buyer-handover" onNavigate={onNavigate} />
-        {o && <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Commande #${o.reference}` }, { label: 'Remise en main propre' }]} />}
+        {o && <Breadcrumb onNavigate={onNavigate} items={[{ label: 'Mes achats', page: 'buyer-purchases' }, { label: `Achat n° ${o.reference}` }, { label: 'Remise en main propre' }]} />}
         {loading && !o && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
         {!loading && !o && <p className="text-body-md text-on-surface-variant">Remise introuvable.</p>}
 
@@ -78,7 +78,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
               {!frozen && (code || done) && <section className={`flex items-center gap-3 rounded-2xl p-4 ${confirmed ? 'bg-tertiary-soft' : 'bg-surface-container-low'}`}>
                 <Icon name={confirmed ? 'verified_user' : 'hourglass_top'} size={26} className={confirmed ? 'text-tertiary' : 'text-on-surface-variant'} />
                 <div className="min-w-0 flex-1">
-                  <div className={`text-headline-sm ${confirmed ? 'text-tertiary' : 'text-on-surface'}`}>{done ? 'Remise effectuée' : frozen ? 'Commande en médiation' : confirmed ? 'Rendez-vous confirmé & sécurisé' : o.meetup ? 'Rendez-vous à confirmer' : 'Rendez-vous à planifier'}</div>
+                  <div className={`text-headline-sm ${confirmed ? 'text-tertiary' : 'text-on-surface'}`}>{done ? 'Remise effectuée' : frozen ? 'Achat en médiation' : confirmed ? 'Rendez-vous confirmé & sécurisé' : o.meetup ? 'Rendez-vous à confirmer' : 'Rendez-vous à planifier'}</div>
                   <div className="text-body-sm text-on-surface-variant">{done ? 'La vente a été clôturée avec votre code.' : frozen ? 'Aucun paiement ni remise avant la décision du médiateur.' : confirmed ? "Protection acheteur active jusqu'à la remise." : 'Proposez un lieu et une heure au vendeur dans le chat.'}</div>
                 </div>
                 {confirmed && !done && <span className="hidden items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm text-tertiary sm:flex"><span className="h-2 w-2 rounded-full bg-tertiary" /> {frozen ? 'Code gelé' : 'Code de remise actif'}</span>}
@@ -90,7 +90,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 <section className="rounded-2xl bg-surface-lowest p-5 text-center shadow-sm">
                   <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed/60 text-primary"><Icon name="lock" size={28} /></span>
                   <h2 className="m-0 mt-3 text-headline-sm text-on-surface">Code gelé pendant la médiation</h2>
-                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Un litige est ouvert sur cette commande : ne remettez aucun code et ne payez pas tant que le médiateur n'a pas rendu sa décision.</p>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Un litige est ouvert sur cet achat : ne remettez aucun code et ne payez pas tant que le médiateur n'a pas rendu sa décision.</p>
                   {o.disputeId && <button onClick={() => onOpenDispute(o.disputeId!)} className="mx-auto mt-4 flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white"><Icon name="gavel" size={18} /> Suivre mon litige</button>}
                 </section>
               ) : !code && !done ? (
