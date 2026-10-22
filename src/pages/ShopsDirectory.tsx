@@ -86,7 +86,7 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
       <section className="mt-5 flex flex-col gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm md:flex-row md:items-center md:p-4">
         <form onSubmit={e => { e.preventDefault(); setTerm(search.trim()) }} className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-container-low px-3">
           <Icon name="search" size={19} className="shrink-0 text-outline" />
-          <input value={search} onChange={e => setSearch(e.target.value)} onBlur={() => setTerm(search.trim())} placeholder="Rechercher une boutique par nom…" className="h-11 w-full min-w-0 border-none bg-transparent text-body-md text-on-surface outline-none" />
+          <input value={search} onChange={e => setSearch(e.target.value)} onBlur={() => setTerm(search.trim())} placeholder="Rechercher une boutique par nom…" aria-label="Rechercher une boutique par nom" className="h-11 w-full min-w-0 border-none bg-transparent text-body-md text-on-surface outline-none" />
         </form>
         <div className="grid grid-cols-2 gap-2 md:flex">
           <Select value={category} onChange={e => setCategory(e.target.value)} className="h-11 min-w-0 cursor-pointer rounded-xl border-none bg-surface-container-low px-3 text-label-md text-on-surface outline-none md:w-48">

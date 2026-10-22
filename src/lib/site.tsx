@@ -152,7 +152,9 @@ export function useSeo(page: string, ctx: { searchTerm?: string; category?: stri
   if (page !== firstPage.current || ctx.adult) moved.current = true
   const own = routeTitle(page, ctx)
   useLayoutEffect(() => {
-    if (!moved.current) return
+    // First page: the server's title stays, unless it is the generic one of
+    // a page it doesn't render (account, sign-in, a search: /compte, /connexion…).
+    if (!moved.current && !(own && !document.title.includes(` | ${brand.name}`))) return
     document.title = own ? `${own} | ${brand.name}` : seo.title || brand.name
   }, [page, own, seo.title, brand.name])
   useEffect(() => {

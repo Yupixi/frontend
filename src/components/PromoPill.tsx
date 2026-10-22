@@ -31,7 +31,10 @@ export default function PromoPill({ badge, size = 'card', className = '' }: { ba
       className={`inline-flex min-w-0 max-w-full items-center gap-1 whitespace-nowrap rounded-md font-bold ${big ? 'px-2 py-1 text-label-md' : 'px-1.5 py-0.5 text-[10px] md:px-2 md:text-label-sm'} ${badge.kind === 'BUMP' ? '' : 'uppercase'} ${look.cls} ${className}`}
     >
       <Icon name={look.icon} size={big ? 15 : 12} fill={look.fill} className="shrink-0" />
-      <span className="truncate">{text}</span>
+      {/* A narrow card cuts the label, never the discount. */}
+      {badge.kind === 'PROMO' && badge.percent
+        ? <><span className="min-w-0 truncate">{badge.label}</span><span className="shrink-0">-{badge.percent} %</span></>
+        : <span className="truncate">{text}</span>}
     </span>
   )
 }

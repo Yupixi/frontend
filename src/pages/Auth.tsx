@@ -60,7 +60,7 @@ function PasswordInput({ value, onChange, placeholder, autoComplete, id, invalid
     <div className={`flex items-center gap-2 rounded-xl bg-surface-container-low px-3 focus-within:ring-1 ${invalid ? 'ring-1 ring-primary' : 'focus-within:ring-primary'}`}>
       <Icon name="lock" size={19} className="text-on-surface-variant" />
       <input id={id} type={show ? 'text' : 'password'} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoComplete={autoComplete} autoFocus={autoFocus} aria-invalid={invalid} autoCapitalize="none" spellCheck={false} className="w-full min-w-0 border-none bg-transparent py-3 text-body-md text-on-surface outline-none" />
-      <button type="button" onClick={() => setShow(s => !s)} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant" aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} aria-pressed={show}><Icon name={show ? 'visibility_off' : 'visibility'} size={20} /> <span className="max-[380px]:hidden">{show ? 'Masquer' : 'Afficher'}</span></button>
+      <button type="button" onClick={() => setShow(s => !s)} className="tap-44 relative flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant" aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} aria-pressed={show}><Icon name={show ? 'visibility_off' : 'visibility'} size={20} /> <span className="max-[380px]:hidden">{show ? 'Masquer' : 'Afficher'}</span></button>
     </div>
   )
 }

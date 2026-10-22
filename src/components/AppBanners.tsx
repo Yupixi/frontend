@@ -65,12 +65,16 @@ export function InstallBanner({ show, guide, onInstall, onDismiss }: { show: boo
           </div>
         </div>
       )}
-      <div className="tour-hide fixed inset-x-3 bottom-[84px] z-[9999] mx-auto max-w-xl md:bottom-4">
-        <div className={card}>
+      <div className="tour-hide fixed inset-x-3 bottom-[84px] z-[9980] mx-auto max-w-xl md:bottom-4">
+        {/* Phone: buttons under the text (no squeezed, cut text), as the other
+            banners. Under the bottom sheets (z 9990): never over a payment. */}
+        <div className={`${card} flex-wrap min-[480px]:flex-nowrap`}>
           <AppMark />
-          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Installer Dilchap</div><div className="truncate text-body-sm text-on-surface-variant">Accès direct depuis votre écran d'accueil</div></div>
-          <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
-          <button onClick={onInstall} className={primaryBtn}>Installer</button>
+          <div className="min-w-0 flex-1 basis-[calc(100%-3.5rem)] min-[480px]:basis-auto"><div className="text-label-lg text-on-surface">Installer Dilchap</div><div className="text-body-sm text-on-surface-variant">Accès direct depuis votre écran d'accueil</div></div>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <button onClick={onDismiss} className={laterBtn}>Plus tard</button>
+            <button onClick={onInstall} className={primaryBtn}>Installer</button>
+          </div>
         </div>
       </div>
     </>

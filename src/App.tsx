@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, Suspense, startTransition
 import { useApolloClient, useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import Layout from './components/Layout'
+import Icon from './components/Icon'
 import { InstallBanner, PushBanner, UpdateBanner, isSnoozed, snooze } from './components/AppBanners'
 import { isAppMode, pwaEvent } from './lib/pwaInstall'
 import ConsentBanner, { useConsentOpen } from './components/ConsentBanner'
@@ -201,6 +202,9 @@ const routePage = (): Page | null =>
   !initialRoute ? null
     : initialRoute.page === 'account' ? (savedNav.page && pathFor(savedNav.page) === '/compte' ? savedNav.page : 'buyer-dashboard')
       : initialRoute.page
+// An address the storefront doesn't know (old link, typo): the home page,
+// with a word saying so (the server answered 404 « Page introuvable »).
+const unknownAddress = window.location.pathname.replace(/\/+$/, '') !== '' && !initialRoute
 const initialSearch = initialRoute?.page === 'search'
 // The marketplace the address opens: the section's for /adultes…, else
 // the general one.
@@ -237,6 +241,8 @@ export default function App() {
   // to, from the address and each history entry — never kept elsewhere.
   const [space, setSpace] = useState<Space>(() => (SPACE_PAGES.includes(page) ? initialSpace : 'general'))
   const adultSpace = space === 'adult'
+  const [lostAddress, setLostAddress] = useState(unknownAddress)
+  useEffect(() => { if (page !== 'home') setLostAddress(false) }, [page])
   useLayoutEffect(() => { setAdultSpaceTheme(adultSpace) }, [adultSpace])
   // Scroll position to apply on the next page change (see the layout effect
   // below); the app restores it itself, the browser's automatic restoration
@@ -1019,7 +1025,16 @@ export default function App() {
       case 'adult-home':
         return <AdultHome onNavigate={go} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onOpenRubric={openSectionRubric} onSearch={openSection} onLeave={leaveSection} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
       case 'home':
-        return <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerFrom} onSearch={searchFromHome} />
+        return <>
+          {lostAddress && (
+            <div role="status" className="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-solid border-outline-variant bg-surface-lowest p-3 lg:mx-auto lg:max-w-[1280px]">
+              <Icon name="search_off" size={20} className="mt-0.5 shrink-0 text-primary" />
+              <p className="m-0 min-w-0 flex-1 text-body-sm text-on-surface"><b>Page introuvable.</b> Ce lien n’existe pas ou plus : voici l’accueil de Dilchap.</p>
+              <button type="button" onClick={() => setLostAddress(false)} aria-label="Fermer" className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant"><Icon name="close" size={18} /></button>
+            </div>
+          )}
+          <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerFrom} onSearch={searchFromHome} />
+        </>
       case 'search':
         return <SearchPage key={space} onNavigate={go} onOpenSection={openSection} onSpaceKnown={settleSpace} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} categoryFilter={categoryFilter} categoryCity={categoryCity} onCategoryCityChange={setCategoryCity} onClearCategoryFilter={() => setCategoryFilter('')} searchTerm={searchTerm} onSearchTermChange={setSearchTerm} selectedCity={searchPreset?.city ?? marketLocation?.city ?? ''} initialMaxPrice={searchPreset?.maxPrice} initialPromoOnly={searchPreset?.promo} onCityChange={setSearchCity} onCategorySelect={navigateToCategory} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onContactSeller={contactSellerFrom} />
       case 'listing-detail':
@@ -1188,7 +1203,7 @@ export default function App() {
         <ConsentBanner onOpenLegal={openLegal} />
         {verifyPrompt}
         {verifySheet}
-        <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit' && page !== 'reels'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+        <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit' && page !== 'reels' && page !== 'buyer-messages'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
         {onboarding}
       </div>
     )
@@ -1221,7 +1236,7 @@ export default function App() {
         </ErrorBoundary>
       </Layout>
       </AdultSpaceContext.Provider>
-      <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit' && page !== 'reels'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
+      <InstallBanner show={showInstallBanner && !showUpdateBanner && !consentOpen && page !== 'seller-post' && page !== 'seller-edit' && page !== 'reels' && page !== 'buyer-messages'} guide={showInstallGuide} onInstall={handleInstall} onDismiss={handleDismiss} />
       {/* One prompt at a time — stacked banners hid the page on a phone. */}
       {verifyPrompt}
       {verifySheet}

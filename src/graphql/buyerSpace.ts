@@ -26,4 +26,4 @@ export type CardListing = {
 export type FavoriteEntry = { savedAt: string; priceAtSave: number | null; listing: CardListing }
 export type HistoryEntry = { viewedAt: string; listing: CardListing }
 
-export const listingPlace = (l: { locationLabel: string | null; city: string }) => (l.locationLabel ? `${l.locationLabel}, ${l.city}` : l.city)
+export { placeLabel as listingPlace } from '../lib/format'

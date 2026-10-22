@@ -716,7 +716,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               <Search size={22} className="ml-1 shrink-0 text-primary" />
               <span className="truncate">Que recherchez-vous aujourd'hui ?</span>
             </button>
-            <button onClick={() => onNavigate('search')} aria-label="Filtres avancés" className="flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container p-1 text-on-surface-variant">
+            <button onClick={() => onNavigate('search')} aria-label="Filtres avancés" className="tap-44 relative flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container p-1 text-on-surface-variant">
               <Icon name="tune" size={20} />
             </button>
           </div>
