@@ -60,6 +60,13 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
   const [deleteFor, setDeleteFor] = useState<MyReel | null>(null)
   const [remove, { loading: removing }] = useMutation(DELETE_REEL_MUTATION)
 
+  // A refused Reel whose listing still takes one: send another video.
+  const retryFor = (r: MyReel): Row | null => {
+    const l = r.listing
+    if (!settings.enabled || (r.status !== 'REJECTED' && r.status !== 'FAILED') || !l || (l.status !== 'APPROVED' && l.status !== 'PENDING_REVIEW')) return null
+    return { id: l.id, title: l.title, status: l.status, coverImageUrl: l.coverImageUrl ?? null, countryCode: currentUser?.countryCode }
+  }
+
   const totals = reels.reduce((t, r) => ({
     views: t.views + r.viewsCount, clicks: t.clicks + (r.clicksCount ?? 0), contacts: t.contacts + (r.contactsCount ?? 0), live: t.live + (r.status === 'APPROVED' ? 1 : 0),
   }), { views: 0, clicks: 0, contacts: 0, live: 0 })
@@ -138,6 +145,7 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
                   {r.boost?.active && <p className="m-0 mt-1 text-body-sm text-on-surface">Boost : {formatNumber(r.boost.views)} / {formatNumber(r.boost.viewsGoal)} vues · jusqu’au {new Date(r.boost.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {r.status === 'APPROVED' && <button onClick={() => setStatsFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-surface-container-low px-2.5 text-label-md text-on-surface"><Icon name="bar_chart" size={16} /> Statistiques</button>}
+                    {retryFor(r) && <button onClick={() => setComposeFor(retryFor(r))} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-2.5 text-label-md text-white"><Icon name="video_call" size={16} /> Publier une autre vidéo</button>}
                     {r.canBoost && settings.boostEnabled && <button onClick={() => setBoostFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-2.5 text-label-md text-white"><Icon name="rocket_launch" size={16} /> Booster</button>}
                     {r.status !== 'ARCHIVED' && <button onClick={() => setDeleteFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-transparent px-2 text-label-md text-on-surface-variant hover:text-primary"><Icon name="delete" size={16} /> Supprimer</button>}
                   </div>
