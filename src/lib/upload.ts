@@ -1,4 +1,5 @@
 import { getAccessToken } from './auth'
+import { localeHeaders } from '../i18n/headers'
 
 const defaultGraphqlUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
   ? 'http://localhost:3000/graphql'
@@ -14,7 +15,7 @@ export async function uploadAudio(blob: Blob, filename: string): Promise<{ url: 
   formData.append('file', blob, filename)
   const res = await fetch(`${UPLOADS_URL}/audio`, {
     method: 'POST',
-    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    headers: { ...localeHeaders(), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: formData,
   })
   if (!res.ok) {
@@ -62,7 +63,7 @@ async function uploadOne(file: File, token: string | null): Promise<string> {
   try {
     res = await fetch(UPLOADS_URL, {
       method: 'POST',
-      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      headers: { ...localeHeaders(), ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: formData,
     })
   } catch {
@@ -93,7 +94,7 @@ export async function uploadKycPhoto(file: Blob, filename = 'photo.jpg'): Promis
   formData.append('file', file, filename)
   const res = await fetch(GRAPHQL_URL.replace(/\/graphql\/?$/, '/kyc/uploads'), {
     method: 'POST',
-    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    headers: { ...localeHeaders(), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: formData,
   })
   if (!res.ok) {
@@ -111,7 +112,7 @@ export async function uploadShopDocument(file: File): Promise<string> {
   formData.append('file', file, file.name)
   const res = await fetch(GRAPHQL_URL.replace(/\/graphql\/?$/, '/shops/uploads'), {
     method: 'POST',
-    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    headers: { ...localeHeaders(), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: formData,
   })
   if (!res.ok) {

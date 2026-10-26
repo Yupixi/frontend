@@ -2,6 +2,7 @@ import { GRAPHQL_URL } from './apollo'
 import { getAccessToken } from './auth'
 import { track } from './analytics'
 import { getMarketCode } from './countries'
+import { localeHeaders } from '../i18n/headers'
 
 // « Application installée » (Backend modules/app-installs, BO Surveillance
 // and member page): is Dilchap installed as an app, opened from its icon,
@@ -126,7 +127,7 @@ function send(events: PwaEvent[], leaving: boolean) {
   try {
     void fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      headers: { 'content-type': 'application/json', ...localeHeaders(), ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ query: MUTATION, variables: { input } }),
       credentials: 'omit',
       keepalive: leaving,

@@ -1,5 +1,6 @@
 import { GRAPHQL_URL, refreshAccessToken } from './apollo'
 import { getAccessToken } from './auth'
+import { localeHeaders } from '../i18n/headers'
 
 // Sending a Reel's video: 1 Mo pieces in order, each one retried, so a cut
 // mobile connection (very common on 3G) never starts the whole file over —
@@ -34,6 +35,7 @@ function sendChunk(url: string, chunk: Blob, token: string | null, onProgress: (
     const xhr = new XMLHttpRequest()
     xhr.open('POST', url)
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    for (const [k, v] of Object.entries(localeHeaders())) xhr.setRequestHeader(k, v)
     xhr.upload.onprogress = e => onProgress(e.loaded)
     xhr.onload = () => {
       let body: Answer['body'] = null
@@ -54,7 +56,7 @@ function sendChunk(url: string, chunk: Blob, token: string | null, onProgress: (
 async function receivedBytes(path: string, signal?: AbortSignal): Promise<number | null> {
   try {
     const token = getAccessToken()
-    const res = await fetch(`${API}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {}, signal })
+    const res = await fetch(`${API}${path}`, { headers: { ...localeHeaders(), ...(token ? { authorization: `Bearer ${token}` } : {}) }, signal })
     if (!res.ok) return null
     return ((await res.json()) as { received: number }).received
   } catch { return null }

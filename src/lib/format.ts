@@ -1,31 +1,33 @@
-import { numberFormat } from './intl'
+import common from '../i18n/ns/common'
+import { fmtNumber } from '../i18n/format'
+
+const t = common.t
 
 export function formatRelativeDate(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime()
   const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1) return "À l'instant"
-  if (minutes < 60) return `Il y a ${minutes} minute${minutes > 1 ? 's' : ''}`
+  if (minutes < 1) return t('justNow')
+  if (minutes < 60) return t('minutesAgo', { count: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `Il y a ${hours} heure${hours > 1 ? 's' : ''}`
+  if (hours < 24) return t('hoursAgo', { count: hours })
   const days = Math.floor(hours / 24)
-  if (days < 30) return `Il y a ${days} jour${days > 1 ? 's' : ''}`
+  if (days < 30) return t('daysAgo', { count: days })
   const months = Math.floor(days / 30)
-  if (months < 12) return `Il y a ${months} mois`
-  const years = Math.floor(months / 12)
-  return `Il y a ${years} an${years > 1 ? 's' : ''}`
+  if (months < 12) return t('monthsAgo', { count: months })
+  return t('yearsAgo', { count: Math.floor(months / 12) })
 }
 
-// fr-FR number grouping uses U+202F, which Plus Jakarta Sans has no glyph
-// for — swap it for a regular no-break space ("1 815", "22,8").
+// In the page's language: « 1 815 », « 22,8 » (no-break spaces the font has)
+// in French, « 1,815 », « 22.8 » in English.
 export function formatNumber(n: number, maximumFractionDigits = 1): string {
-  return numberFormat('fr-FR', { maximumFractionDigits }).format(n).replace(/ /g, ' ')
+  return fmtNumber(n, maximumFractionDigits)
 }
 
 // How a concluded hand-over was validated (receipts).
 export const handoverProof = (m: { handedOverAt: string | null; handoverMethod?: 'CODE' | 'SELLER_DECLARED' | null } | null | undefined) =>
-  !m?.handedOverAt ? 'Clôturée après accord de médiation'
-    : m.handoverMethod === 'SELLER_DECLARED' ? 'Remise confirmée par le vendeur'
-      : 'Validée par le code de remise à 4 chiffres'
+  !m?.handedOverAt ? t('handoverMediation')
+    : m.handoverMethod === 'SELLER_DECLARED' ? t('handoverSellerConfirmed')
+      : t('handoverCode')
 
 // The 4-digit code was really typed (not a seller declaration, nor a deal
 // closed by mediation or without a meet-up): only then may a receipt say
@@ -35,7 +37,7 @@ export const handoverByCode = (m: { handedOverAt: string | null; handoverMethod?
 
 // Receipt headline matching how the sale was actually closed.
 export const handoverHeadline = (m: Parameters<typeof handoverByCode>[0]) =>
-  handoverByCode(m) ? 'Remise validée par code sécurisé' : m?.handedOverAt ? 'Remise confirmée par le vendeur' : 'Vente conclue'
+  handoverByCode(m) ? t('handoverHeadlineCode') : m?.handedOverAt ? t('handoverSellerConfirmed') : t('handoverHeadlineSold')
 
 // Listing descriptions are rich text (HTML from the editor): card excerpts
 // need the words only.
@@ -61,4 +63,4 @@ export function placeLabel(l: { locationLabel?: string | null; city: string }): 
 }
 
 // « Taille M », never « Taille Taille unique ».
-export const sizeLabel = (size: string) => (/^taille\b/i.test(size.trim()) ? size.trim() : `Taille ${size}`)
+export const sizeLabel = (size: string) => (/^(taille|size)\b/i.test(size.trim()) ? size.trim() : t('size', { size }))

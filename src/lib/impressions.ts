@@ -2,6 +2,7 @@ import { createContext, createElement, useCallback, useContext, useMemo, type Re
 import { GRAPHQL_URL } from './apollo'
 import { RECORD_IMPRESSIONS_MUTATION, type ImpressionPlacement, type ImpressionSlot } from '../graphql/visibility'
 import type { PromotedPlace } from '../graphql/listings'
+import { localeHeaders } from '../i18n/headers'
 
 // « Affichages »: a listing card counts once it has been at least half on
 // screen for a second, once per page view and place — re-renders, scrolling
@@ -40,7 +41,7 @@ function send(batch: Item[], leaving: boolean) {
   try {
     void fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...localeHeaders() },
       body: JSON.stringify({ query: RECORD_IMPRESSIONS_MUTATION, variables: { items: batch } }),
       // No cookie nor token: the counters never know who saw a card.
       credentials: 'omit',

@@ -1,3 +1,7 @@
+import LanguagePicker from '../../components/LanguagePicker'
+import { useSiteLocales } from '../../i18n/LocaleSync'
+import { useT } from '../../i18n'
+import common from '../../i18n/ns/common'
 import AdultConfirmationSetting from '../../components/AdultConfirmationSetting'
 import PersonalizeHomeSetting from '../../components/PersonalizeHomeSetting'
 import { requestOpenHelp } from '../../lib/navigation'
@@ -80,6 +84,18 @@ function Toggle({ on, onChange, label, tone = 'primary', disabled, title }: { on
     <button role="switch" aria-checked={on} aria-label={label} title={title} disabled={disabled} onClick={() => onChange(!on)} className={`relative h-6 w-11 shrink-0 rounded-full border-none p-0 transition-colors ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} ${on ? (tone === 'tertiary' ? 'bg-tertiary' : 'bg-primary') : 'bg-surface-container-high'}`}>
       <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
     </button>
+  )
+}
+
+// « Langue »: only when the member's country offers several languages.
+function LanguageCard() {
+  const t = useT(common)
+  const { enabled } = useSiteLocales()
+  if (enabled.length < 2) return null
+  return (
+    <Card id="langue" icon="language" title={t('language')} sub={t('languageHint')}>
+      <LanguagePicker variant="settings" />
+    </Card>
   )
 }
 
@@ -449,6 +465,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
               {me && <HandleCard key={`h-${me.id}`} handle={me.handle} changedAt={me.handleChangedAt} onSaved={() => void refetch()} />}
 
               {me && <SellerPageCard key={me.id} me={me} certified={currentUser?.badge === 'CERTIFIED'} onSaved={() => void refetch()} onUpgrade={() => onNavigate('seller-badge')} />}
+
+              <LanguageCard />
 
               {/* Alertes */}
               <Card id="alertes" icon="notifications_active" title="Gestion des Notifications & Alertes" sub="Choisissez comment et quand vous souhaitez être prévenu des opportunités de vente."

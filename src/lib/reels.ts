@@ -5,6 +5,7 @@ import { getAccessToken } from './auth'
 import { useMarketCode } from './countries'
 import { rotationSeed } from './rotationSeed'
 import { RECORD_REEL_EVENTS_MUTATION, REEL_SETTINGS_QUERY, type Reel, type ReelSettings } from '../graphql/reels'
+import { localeHeaders } from '../i18n/headers'
 
 // Reels on the storefront: settings of the market, the data-saving choice,
 // the sound choice, the « déjà vu » list of a visitor and the statistics
@@ -104,7 +105,7 @@ function flush(leaving = false) {
   try {
     void fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      headers: { 'content-type': 'application/json', ...localeHeaders(), ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ query: RECORD_REEL_EVENTS_MUTATION, variables: { events, sessionId: rotationSeed() } }),
       credentials: 'omit',
       keepalive: leaving,

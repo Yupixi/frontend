@@ -6,6 +6,7 @@ import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import { setContext } from '@apollo/client/link/context'
 import { createClient } from 'graphql-ws'
 import { Observable } from 'rxjs'
+import { localeHeaders } from '../i18n/headers'
 import { clearTokens, dropLegacyRefreshToken, getAccessToken, getLegacyRefreshToken, storeAccessToken, storeGuestSecret, tokenExpiry, SESSION_EXPIRED_EVENT } from './auth'
 
 // A deployed browser must never call its own `localhost`; only local
@@ -36,7 +37,7 @@ const wsLink = new GraphQLWsLink(
         token = await refreshPromise.finally(() => { refreshPromise = null })
       }
       wsTokenRefused = false
-      return token ? { authorization: `Bearer ${token}` } : {}
+      return { ...(token ? { authorization: `Bearer ${token}` } : {}), locale: localeHeaders()['x-dilchap-locale'] }
     },
     on: {
       closed: (event) => {
@@ -51,6 +52,8 @@ const authLink = setContext((_, { headers }) => {
   return {
     headers: {
       ...headers,
+      // The API answers in the page's language (categories, CMS, campaigns…).
+      ...localeHeaders(),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
   }
@@ -90,7 +93,7 @@ async function doRefresh(): Promise<string | null> {
     const res = await fetch(GRAPHQL_URL, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...localeHeaders() },
       body: JSON.stringify({
         // A pre-cookie session sends its stored token once; the server
         // answers with the cookie from then on.

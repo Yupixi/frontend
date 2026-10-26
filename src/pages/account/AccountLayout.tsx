@@ -1,3 +1,4 @@
+import LanguagePicker from '../../components/LanguagePicker'
 import AnimatedIcon, { useIncreaseCounter } from '../../components/AnimatedIcon'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
@@ -414,6 +415,7 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
             <div className="min-h-0 flex-1">
               <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} />
             </div>
+            <LanguagePicker variant="menu" className="border-0 border-t border-solid border-outline-variant" />
           </aside>
         </div>
       )}

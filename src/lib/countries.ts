@@ -3,6 +3,8 @@ import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { getStoredLocation } from './location'
 import { getAccessToken } from './auth'
+import common from '../i18n/ns/common'
+import { getLocale } from '../i18n/core'
 import { COUNTRIES, DEFAULT_COUNTRY, isCountryCode, marketForCountry, type Country, type PaymentMethodCode } from '../data/markets'
 
 // Active UEMOA countries with what each offers (Backend « Pays »). The
@@ -11,19 +13,36 @@ export const COUNTRIES_QUERY = gql`
   query Countries { countries }
 `
 
+// Country names in the page's language (the 8 countries are fixed facts:
+// French as stored, else their English names).
+const TAX_KEY: Record<string, string> = { BJ: 'IFU_BJ', BF: 'IFU_BF' }
+export function localizeCountry(c: Country): Country {
+  if (getLocale() === 'fr') return c
+  const t = common.t as (key: string) => string
+  return {
+    ...c,
+    name: t(`countryName.${c.code}`),
+    inName: t(`countryIn.${c.code}`),
+    taxIdLabel: t(`taxIdLabel.${TAX_KEY[c.code] ?? c.taxId}`),
+  }
+}
+
 export function useCountries(): Country[] {
   const { data } = useQuery<{ countries: Partial<Country>[] }>(COUNTRIES_QUERY, { fetchPolicy: 'cache-first' })
   return useMemo(() => {
     const live = data?.countries?.filter(c => isCountryCode(c.code) && c.enabled !== false)
-    if (!live?.length) return COUNTRIES
-    return live.map(c => ({ ...marketForCountry(c.code)!, ...c }) as Country)
+    if (!live?.length) return COUNTRIES.map(localizeCountry)
+    return live.map(c => localizeCountry({ ...marketForCountry(c.code)!, ...c } as Country))
   }, [data])
 }
 
 // An active country; `any` also returns an inactive one (static facts).
 export function useCountry(code: string | null | undefined, any = false): Country | undefined {
   const countries = useCountries()
-  return countries.find(c => c.code === code) ?? (any ? marketForCountry(code) : undefined)
+  const found = countries.find(c => c.code === code)
+  if (found || !any) return found
+  const fixed = marketForCountry(code)
+  return fixed && localizeCountry(fixed)
 }
 
 // The signed-in member's country, remembered so a reload shows it at once.
@@ -90,7 +109,7 @@ export function useHomeCountry(): Country {
   const account = useAccountCountryCode()
   const market = useMarketCode()
   return countries.find(c => c.code === account) ?? countries.find(c => c.code === market)
-    ?? countries.find(c => c.code === DEFAULT_COUNTRY) ?? countries[0] ?? COUNTRIES[0]
+    ?? countries.find(c => c.code === DEFAULT_COUNTRY) ?? countries[0] ?? localizeCountry(COUNTRIES[0])
 }
 
 // Back-office texts may contain {{ville}} and {{pays}}.
@@ -99,8 +118,8 @@ export function fillPlaces(text: string | null | undefined, country: Country | u
 export function fillPlaces(text: string | null | undefined, country: Country | undefined) {
   if (!text) return text
   return text
-    .replace(/\{\{\s*ville\s*\}\}/gi, country?.mainCity ?? 'votre ville')
-    .replace(/\{\{\s*pays\s*\}\}/gi, country?.inName ?? 'en Afrique de l’Ouest')
+    .replace(/\{\{\s*ville\s*\}\}/gi, country?.mainCity ?? common.t('yourCity'))
+    .replace(/\{\{\s*pays\s*\}\}/gi, country?.inName ?? common.t('inWestAfrica'))
 }
 
 // Every text of a config object (home page…).
@@ -114,7 +133,9 @@ export function fillPlacesDeep<T>(value: T, country: Country | undefined): T {
 // Payments between members.
 export const METHOD_LABELS: Record<PaymentMethodCode, string> = {
   WAVE: 'Wave', ORANGE_MONEY: 'Orange Money', MTN_MOMO: 'MTN MoMo', MOOV_MONEY: 'Moov Money (Flooz)',
-  FREE_MONEY: 'Free Money', T_MONEY: 'T-Money', AIRTEL_MONEY: 'Airtel Money', CASH: 'Espèces',
+  FREE_MONEY: 'Free Money', T_MONEY: 'T-Money', AIRTEL_MONEY: 'Airtel Money',
+  // Read at each use: in the page's language.
+  get CASH() { return common.t('cash') },
 }
 export const ALL_METHODS = Object.keys(METHOD_LABELS) as PaymentMethodCode[]
 
@@ -127,8 +148,8 @@ export function useMethods(code?: string | null): PaymentMethodCode[] {
 
 // Mobile Money wording of a country: « Wave, Orange Money ou espèces ».
 export function methodsSentence(methods: string[]) {
-  const names = methods.map(m => (m === 'CASH' ? 'espèces' : METHOD_LABELS[m as PaymentMethodCode] ?? m))
-  return names.length > 1 ? `${names.slice(0, -1).join(', ')} ou ${names[names.length - 1]}` : names[0] ?? ''
+  const names = methods.map(m => (m === 'CASH' ? common.t('cashLower') : METHOD_LABELS[m as PaymentMethodCode] ?? m))
+  return names.length > 1 ? common.t('listOr', { a: names.slice(0, -1).join(', '), b: names[names.length - 1] }) : names[0] ?? ''
 }
 
 export type { Country, PaymentMethodCode }

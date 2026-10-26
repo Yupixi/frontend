@@ -1,3 +1,4 @@
+import LanguagePicker from './LanguagePicker'
 import AnimatedIcon, { useIncreaseCounter } from './AnimatedIcon'
 import Icon from './Icon'
 import { useState, useEffect, useRef } from 'react'
@@ -754,6 +755,7 @@ export default function Layout({
             <p className="m-0">
               {footer?.copyrightText || `© ${new Date().getFullYear()} ${site.brand.name}. Tous droits réservés.`}
             </p>
+            <LanguagePicker />
             <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> Mise en relation sécurisée · Fait en Afrique de l’Ouest</span>
           </div>
         </div>
