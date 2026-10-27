@@ -6,18 +6,6 @@
   "panel.empty": "Aucune offre pour l'instant.",
   "accept": "Accepter",
   "reject": "Refuser",
-  "banner.op.BUMP": "les remontées",
-  "banner.op.BOOST": "les boosts",
-  "banner.op.CAMPAIGN": "les campagnes",
-  "banner.op.BADGE": "les badges",
-  "banner.op.SHOP": "l’abonnement boutique",
-  "banner.op.AI_ASSIST": "l’assistant IA",
-  "banner.free": "Gratuit",
-  "banner.percent": "−{{n}} %",
-  "banner.allOptions": "toutes les options payantes",
-  "banner.summary": "{{what}} sur {{on}}",
-  "banner.until": "jusqu’au {{date}}",
-  "banner.hide": "Masquer l’offre",
   "bubble.status.PENDING": "En attente de réponse",
   "bubble.status.ACCEPTED": "Offre acceptée",
   "bubble.status.REJECTED": "Offre refusée",
@@ -48,6 +36,5 @@
   "quick.sending": "Envoi…",
   "quick.sendOffer": "Envoyer l'offre de {{amount}} & Ouvrir le chat",
   "quick.send": "Envoyer & Ouvrir le chat",
-  "quick.responseTime": "Réponse moyenne de {{name}} en {{time}}",
-  "label.free": "Offert"
+  "quick.responseTime": "Réponse moyenne de {{name}} en {{time}}"
 }

@@ -1,0 +1,14 @@
+{
+  "open": "Open",
+  "closed": "Closed",
+  "legalIdVerified": "{{id}} verified",
+  "card.items_one": "<b>{{n}}</b> item",
+  "card.items_other": "<b>{{n}}</b> items",
+  "card.followers_one": "<b>{{n}}</b> follower",
+  "card.followers_other": "<b>{{n}}</b> followers",
+  "card.highlights": "Featured items",
+  "photoAlt": "{{title}} — photo {{n}}",
+  "followed": "Following",
+  "follow": "Follow",
+  "card.see": "View shop"
+}

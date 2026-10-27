@@ -6,18 +6,6 @@
   "panel.empty": "No offers yet.",
   "accept": "Accept",
   "reject": "Decline",
-  "banner.op.BUMP": "bumps",
-  "banner.op.BOOST": "boosts",
-  "banner.op.CAMPAIGN": "campaigns",
-  "banner.op.BADGE": "badges",
-  "banner.op.SHOP": "the shop subscription",
-  "banner.op.AI_ASSIST": "the AI assistant",
-  "banner.free": "Free",
-  "banner.percent": "−{{n}}%",
-  "banner.allOptions": "all paid options",
-  "banner.summary": "{{what}} on {{on}}",
-  "banner.until": "until {{date}}",
-  "banner.hide": "Hide offer",
   "bubble.status.PENDING": "Awaiting reply",
   "bubble.status.ACCEPTED": "Offer accepted",
   "bubble.status.REJECTED": "Offer declined",
@@ -48,6 +36,5 @@
   "quick.sending": "Sending…",
   "quick.sendOffer": "Send {{amount}} offer & open chat",
   "quick.send": "Send & open chat",
-  "quick.responseTime": "{{name}} usually replies in {{time}}",
-  "label.free": "Free"
+  "quick.responseTime": "{{name}} usually replies in {{time}}"
 }

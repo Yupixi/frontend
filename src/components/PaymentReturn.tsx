@@ -9,7 +9,7 @@ import { trackCreditPurchase } from '../lib/analytics'
 import { OPEN_PAYMENT, PAYMENT_QUERY, PENDING_PAYMENT_KEY, PROVIDERS, VERIFYING_PAYMENT, type PaymentIntent } from '../graphql/payments'
 import PaymentVerifying from './PaymentVerifying'
 import { useT } from '../i18n'
-import payment from '../i18n/ns/payment'
+import payment from '../i18n/ns/paymentCore'
 
 // Back from the Wave checkout (…/?payment=<id>): show the outcome while
 // the server confirms the payment with Paytic. Wave sends the payer to the

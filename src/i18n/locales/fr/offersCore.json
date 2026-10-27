@@ -1,0 +1,15 @@
+{
+  "banner.op.BUMP": "les remontées",
+  "banner.op.BOOST": "les boosts",
+  "banner.op.CAMPAIGN": "les campagnes",
+  "banner.op.BADGE": "les badges",
+  "banner.op.SHOP": "l’abonnement boutique",
+  "banner.op.AI_ASSIST": "l’assistant IA",
+  "banner.free": "Gratuit",
+  "banner.percent": "−{{n}} %",
+  "banner.allOptions": "toutes les options payantes",
+  "banner.summary": "{{what}} sur {{on}}",
+  "banner.until": "jusqu’au {{date}}",
+  "banner.hide": "Masquer l’offre",
+  "label.free": "Offert"
+}

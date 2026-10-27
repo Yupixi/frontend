@@ -2,7 +2,7 @@ import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 import { CHECKIN_FIELDS, type RemoteCheckin } from './deals'
 import common from '../i18n/ns/common'
-import messagesNs from '../i18n/ns/messages'
+import messagesNs from '../i18n/ns/messagesCore'
 
 const MESSAGE_FIELDS = `
   id

@@ -4,7 +4,7 @@ import { openNow, type Shop } from '../graphql/shops'
 import { formatNumber } from '../lib/format'
 import { marketForCountry } from '../data/markets'
 import { useT } from '../i18n'
-import shopPublic from '../i18n/ns/shopPublic'
+import shopPublic from '../i18n/ns/shopPublicCore'
 
 export function ShopLogo({ shop, size = 'md' }: { shop: Pick<Shop, 'name' | 'logoUrl'>, size?: 'sm' | 'md' | 'lg' }) {
   const cls = size === 'lg' ? 'h-24 w-24 rounded-2xl text-headline-lg md:h-28 md:w-28' : size === 'md' ? 'h-14 w-14 rounded-xl text-headline-sm' : 'h-10 w-10 rounded-lg text-label-lg'

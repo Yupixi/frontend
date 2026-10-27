@@ -13,7 +13,7 @@ import { ADULT_BLUR_CLASS, SEARCH_ROUTING_QUERY, useAdultBlur, type SearchRoutin
 import { AdultSearchNotice } from './AdultSearchNotice'
 import { useT } from '../i18n'
 import common from '../i18n/ns/common'
-import search from '../i18n/ns/search'
+import search from '../i18n/ns/searchCore'
 
 type Props = {
   query: string

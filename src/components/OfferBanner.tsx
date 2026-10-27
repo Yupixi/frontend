@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Icon from './Icon'
 import { usePriceOffers, type LiveOffer } from '../lib/priceOffers'
 import { fmtDate, useT } from '../i18n'
-import offersNs from '../i18n/ns/offers'
+import offersNs from '../i18n/ns/offersCore'
 
 const DISMISSED_KEY = 'yupixi_offer_dismissed'
 

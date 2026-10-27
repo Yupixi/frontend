@@ -2,7 +2,7 @@ import PaymentLogo from './PaymentLogo'
 import Icon from './Icon'
 import type { PaymentIntent } from '../graphql/payments'
 import { useT } from '../i18n'
-import payment from '../i18n/ns/payment'
+import payment from '../i18n/ns/paymentCore'
 
 // A payment whose outcome the operator has not confirmed yet (no answer,
 // polling over, « À confirmer » on the server). Never a failure nor a
