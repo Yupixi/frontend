@@ -15,17 +15,16 @@ import HelpLink from '../../components/HelpLink'
 import SellerBadge from '../../components/SellerBadge'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { Claim } from '../../lib/site'
+import { fmtDate, useT } from '../../i18n'
+import common from '../../i18n/ns/common'
+import handover from '../../i18n/ns/handover'
 
 // Kept as a fallback for old links (e-mails, push, bookmarks): the
 // hand-over now happens in the conversation, which this page opens on its
 // « Remise » card as soon as the sale is found (`onOpenRemise`).
 type Props = { orderId: string; onNavigate: (p: any) => void; onOpenDispute: (id: string) => void; onOpenRemise?: (conversationId: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
-const CHECKS = [
-  'Article allumé / essayé et fonctionnel, testé avec l’acheteur',
-  "État esthétique strictement conforme aux photos de l'annonce",
-  "Accessoires et éléments d'origine annoncés remis",
-]
+const CHECKS = ['seller.check.working', 'seller.check.photos', 'seller.check.accessories'] as const
 // Full-row tappable check (the native box stays for a11y, drawn at 24px).
 function CheckRow({ checked, onChange, tone = 'tertiary', children, className = '' }: { checked: boolean, onChange: (v: boolean) => void, tone?: 'tertiary' | 'primary', children: React.ReactNode, className?: string }) {
   const on = tone === 'tertiary' ? 'border-tertiary bg-tertiary' : 'border-primary bg-primary'
@@ -40,12 +39,20 @@ function CheckRow({ checked, onChange, tone = 'tertiary', children, className = 
   )
 }
 
-const BUYER_TAGS = ['Ponctuel au rendez-vous', 'Paiement immédiat', 'Très respectueux', 'Négociation courtoise']
+// `value` is what the API stores (French, as before); `label` is shown.
+const BUYER_TAGS = [
+  { value: 'Ponctuel au rendez-vous', label: 'seller.tag.punctual' }, // i18n-ignore
+  { value: 'Paiement immédiat', label: 'seller.tag.payment' }, // i18n-ignore
+  { value: 'Très respectueux', label: 'seller.tag.respectful' }, // i18n-ignore
+  { value: 'Négociation courtoise', label: 'seller.tag.courteous' }, // i18n-ignore
+] as const
 
 // "Confirmation De Remise" (mobile mockup, centred on desktop): the seller
 // types the buyer's 4-digit code, checks the item together with the buyer,
 // attests the payment and rates the buyer — the sale is then concluded.
 export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRemise, currentUser, onLogout }: Props) {
+  const t = useT(handover)
+  const tc = useT(common)
   const { data, loading, refetch } = useQuery<{ salesOrder: HandoverOrder }>(SALES_ORDER_QUERY, { variables: { id: orderId }, skip: !orderId })
   const o = data?.salesOrder
   const [code, setCode] = useState('')
@@ -76,7 +83,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
 
 
   const amount = o?.agreedPrice ?? o?.listing.price ?? 0
-  const buyerFirst = o?.buyer.fullName.split(' ')[0] ?? "l'acheteur"
+  const buyerFirst = o?.buyer.fullName.split(' ')[0] ?? t('seller.theBuyer')
   const ready = codeState === 'valid' && checks.every(Boolean) && attested && !!method
   const submit = () => o?.meetup && void confirm({
     variables: { input: { meetupId: o.meetup.id, code, paymentMethod: method, buyerRating: rating, buyerTags: tags } },
@@ -88,23 +95,23 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
   const frozen = !!o?.disputeStatus && disputeIsOpen(o.disputeStatus)
 
   return (
-    <AccountLayout active="seller-orders" title="Confirmation de remise" onBack={() => onNavigate('seller-orders')} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+    <AccountLayout active="seller-orders" title={t('seller.title')} onBack={() => onNavigate('seller-orders')} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-xl pb-10">
         {/* Mobile: the account header already carries back + this title */}
         <div className="mb-3 hidden items-center gap-2 lg:flex">
-          <button onClick={() => onNavigate('seller-orders')} className="flex cursor-pointer border-none bg-transparent p-1 text-primary" aria-label="Retour"><Icon name="arrow_back" size={24} /></button>
-          <h1 className="m-0 text-headline-md text-on-surface">Confirmation de remise</h1>
+          <button onClick={() => onNavigate('seller-orders')} className="flex cursor-pointer border-none bg-transparent p-1 text-primary" aria-label={tc('back')}><Icon name="arrow_back" size={24} /></button>
+          <h1 className="m-0 text-headline-md text-on-surface">{t('seller.title')}</h1>
         </div>
         <div className="mb-4">
-          <div className="flex justify-between text-label-sm uppercase"><span className="text-primary">Étape {done ? 3 : 2} sur 3</span><span className="text-on-surface-variant">{done ? 'Vente clôturée' : 'Finalisation de la transaction'}</span></div>
+          <div className="flex justify-between text-label-sm uppercase"><span className="text-primary">{t('seller.step', { step: done ? 3 : 2, total: 3 })}</span><span className="text-on-surface-variant">{done ? t('seller.stepDone') : t('seller.stepFinalising')}</span></div>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full bg-primary" style={{ width: done ? '100%' : '66%' }} /></div>
         </div>
 
-        {loading && <p className="text-body-md text-on-surface-variant">Chargement…</p>}
+        {loading && <p className="text-body-md text-on-surface-variant">{tc('loading')}</p>}
         {!loading && !o && (
           <div className="rounded-2xl bg-surface-container-low p-6 text-center">
-            <p className="m-0 text-body-md text-on-surface-variant">Remise introuvable.</p>
-            <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour aux remises</button>
+            <p className="m-0 text-body-md text-on-surface-variant">{t('seller.notFound')}</p>
+            <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-lg text-white">{t('seller.backToHandovers')}</button>
           </div>
         )}
 
@@ -114,8 +121,8 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
               <section className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="verified_user" size={22} fill /></span>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-label-md text-on-surface">Lieu de remise convenu {o.meetup.status === 'CONFIRMED' && <span className="rounded bg-tertiary px-1.5 text-label-sm text-white">Actif</span>}</div>
-                  <div className="text-body-sm text-on-surface-variant">{o.meetup.place} • {new Date(o.meetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</div>
+                  <div className="flex items-center gap-2 text-label-md text-on-surface">{t('seller.agreedPlace')} {o.meetup.status === 'CONFIRMED' && <span className="rounded bg-tertiary px-1.5 text-label-sm text-white">{t('seller.active')}</span>}</div>
+                  <div className="text-body-sm text-on-surface-variant">{o.meetup.place} • {fmtDate(o.meetup.scheduledAt, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
               </section>
             )}
@@ -125,18 +132,18 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
                 <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container">{o.listing.coverImageUrl && <img src={o.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="rounded bg-tertiary-soft px-1.5 py-0.5 text-label-sm text-tertiary">Remise en main propre</span>
+                    <span className="rounded bg-tertiary-soft px-1.5 py-0.5 text-label-sm text-tertiary">{t('seller.inPerson')}</span>
                     <span className="text-headline-sm font-extrabold text-primary"><Price amount={amount} currency={o.listing.currency} /></span>
                   </div>
                   <div className="mt-1 truncate text-label-lg text-on-surface">{o.listing.title}</div>
-                  {o.listing.condition && o.listing.condition !== 'N/A' && <div className="text-body-sm text-on-surface-variant">État : {o.listing.condition}</div>}
+                  {o.listing.condition && o.listing.condition !== 'N/A' && <div className="text-body-sm text-on-surface-variant">{t('seller.condition', { condition: o.listing.condition })}</div>}
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{o.buyer.avatarUrl ? <img src={o.buyer.avatarUrl} alt="" className="h-full w-full object-cover" /> : o.buyer.fullName.charAt(0)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1 text-label-md text-on-surface">{o.buyer.fullName}<SellerBadge tier={o.buyer.badge} size={15} /></div>
-                  <div className="text-label-sm text-on-surface-variant">{o.buyer.badge ? BADGE_LABEL[o.buyer.badge] : 'Membre Dilchap'}{o.buyer.buyerReviewsCount ? ` • ${o.buyer.buyerReviewsCount} achat${o.buyer.buyerReviewsCount > 1 ? 's' : ''} réussi${o.buyer.buyerReviewsCount > 1 ? 's' : ''}` : ''}</div>
+                  <div className="text-label-sm text-on-surface-variant">{o.buyer.badge ? BADGE_LABEL[o.buyer.badge] : t('seller.member')}{o.buyer.buyerReviewsCount ? ` • ${t('seller.buyerPurchases', { count: o.buyer.buyerReviewsCount })}` : ''}</div>
                 </div>
                 {!!o.buyer.buyerReviewsCount && <span className="flex items-center gap-0.5 rounded-lg bg-surface-lowest px-2 py-1 text-label-sm text-on-surface"><Icon name="star" size={14} fill className="text-amber-500" /> {o.buyer.buyerRating.toFixed(1)}</span>}
               </div>
@@ -145,24 +152,24 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
             {done ? (
               <section className="rounded-2xl bg-tertiary-soft p-5 text-center">
                 <Icon name="task_alt" size={44} className="text-tertiary" />
-                <h2 className="m-0 mt-2 text-headline-sm text-on-surface">Remise validée, vente clôturée</h2>
-                <p className="m-0 mt-1 text-body-md text-on-surface-variant">Vente n° {o.reference} • <Price amount={amount} currency={o.listing.currency} /> encaissés en direct. L'annonce est marquée comme vendue.</p>
-                <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white">Retour aux remises</button>
+                <h2 className="m-0 mt-2 text-headline-sm text-on-surface">{t('seller.done.title')}</h2>
+                <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t.rich('seller.done.text', { ref: String(o.reference), price: <Price amount={amount} currency={o.listing.currency} /> })}</p>
+                <button onClick={() => onNavigate('seller-orders')} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white">{t('seller.backToHandovers')}</button>
               </section>
             ) : !o.meetup || o.meetup.status !== 'CONFIRMED' ? (
               <section className="rounded-2xl bg-surface-container-low p-5">
-                <h2 className="m-0 text-headline-sm text-on-surface">Rendez-vous non confirmé</h2>
-                <p className="m-0 mt-1 text-body-md text-on-surface-variant">Le code de remise de l'acheteur est généré dès que le rendez-vous est confirmé dans le chat.</p>
+                <h2 className="m-0 text-headline-sm text-on-surface">{t('seller.notConfirmed.title')}</h2>
+                <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('seller.notConfirmed.text')}</p>
               </section>
             ) : (
               <>
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                  <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="pin" size={22} className="text-primary" /> Code de remise secret</h2>
-                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Demandez à {buyerFirst} de vous dicter son code à 4 chiffres affiché dans son application Dilchap.</p>
+                  <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="pin" size={22} className="text-primary" /> {t('seller.code.title')}</h2>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('seller.code.text', { name: buyerFirst })}</p>
                   {frozen && (
                     <div role="status" className="mt-3 flex items-start gap-2 rounded-xl bg-primary-fixed/60 p-3 text-body-sm text-on-surface">
                       <Icon name="lock" size={20} className="shrink-0 text-primary" />
-                      <span><b className="text-primary">Code gelé</b> : un litige est en cours sur cette vente. La remise pourra être validée une fois le litige résolu.</span>
+                      <span>{t.rich('seller.code.frozen', { b: c => <b className="text-primary">{c}</b> })}</span>
                     </div>
                   )}
                   {/* One real input (paste / autofill / fast typing safe) drawn as 4 boxes. */}
@@ -173,7 +180,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
                       inputMode="numeric"
                       autoComplete="one-time-code"
                       maxLength={4}
-                      aria-label="Code de remise à 4 chiffres"
+                      aria-label={t('seller.code.aria')}
                       onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
                       onFocus={() => setCodeFocused(true)}
                       onBlur={() => setCodeFocused(false)}
@@ -188,24 +195,24 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
                       )
                     })}
                   </label>
-                  {codeState === 'valid' && <div className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-tertiary-soft py-2 text-label-md text-tertiary"><Icon name="check_circle" size={18} fill /> Code de remise synchronisé et valide</div>}
-                  {codeState === 'invalid' && <div className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-primary-fixed py-2 text-label-md text-primary"><Icon name="error" size={18} /> {verifyError?.message ?? 'Code incorrect — vérifiez avec l’acheteur'}</div>}
+                  {codeState === 'valid' && <div className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-tertiary-soft py-2 text-label-md text-tertiary"><Icon name="check_circle" size={18} fill /> {t('seller.code.valid')}</div>}
+                  {codeState === 'invalid' && <div className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-primary-fixed py-2 text-label-md text-primary"><Icon name="error" size={18} /> {verifyError?.message ?? t('seller.code.invalid')}</div>}
                 </section>
 
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                  <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={22} className="text-tertiary" /> Contrôle physique conjoint</h2>
-                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Cochez les points vérifiés ensemble pour sceller la vente : <HelpLink article="rendez-vous-et-code-de-remise" className="ml-1 align-middle" /></p>
+                  <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={22} className="text-tertiary" /> {t('seller.checks.title')}</h2>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('seller.checks.text')} <HelpLink article="rendez-vous-et-code-de-remise" className="ml-1 align-middle" /></p>
                   <div className="mt-3 flex flex-col gap-2">
                     {CHECKS.map((c, i) => (
-                      <CheckRow key={c} checked={checks[i]} onChange={v => setChecks(prev => prev.map((x, j) => (j === i ? v : x)))} className="bg-surface-container-low">{c}</CheckRow>
+                      <CheckRow key={c} checked={checks[i]} onChange={v => setChecks(prev => prev.map((x, j) => (j === i ? v : x)))} className="bg-surface-container-low">{t(c)}</CheckRow>
                     ))}
                   </div>
                 </section>
 
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 className="m-0 text-headline-sm text-on-surface">Règlement du vendeur</h2>
-                    <Claim><span className="rounded-full border border-outline-variant px-2 py-0.5 text-label-sm text-on-surface-variant">0 F de frais Dilchap</span></Claim>
+                    <h2 className="m-0 text-headline-sm text-on-surface">{t('seller.payment.title')}</h2>
+                    <Claim><span className="rounded-full border border-outline-variant px-2 py-0.5 text-label-sm text-on-surface-variant">{t('seller.payment.noFees')}</span></Claim>
                   </div>
                   <div className="mt-3 flex flex-col gap-2">
                     {methods.map(m => (
@@ -220,43 +227,45 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
                   {method !== 'CASH' && (
                     <div className="mt-3 flex gap-3 rounded-xl bg-primary-fixed/60 p-3">
                       <Icon name="crisis_alert" size={24} className="shrink-0 text-primary" />
-                      <p className="m-0 text-body-sm text-on-surface"><b className="text-primary">Alerte sécurité Dilchap</b><br />Ne validez <b className="text-primary">JAMAIS</b> sur la foi d'un simple SMS reçu. Ouvrez votre application {PAYMENT_LABELS[method] ?? ''} et vérifiez que votre solde affiche le versement effectif de <Price amount={amount} currency={o.listing.currency} />.</p>
+                      <p className="m-0 text-body-sm text-on-surface">{t.rich('seller.payment.alert', { b: c => <b className="text-primary">{c}</b>, br: () => <br />, method: PAYMENT_LABELS[method] ?? '', price: <Price amount={amount} currency={o.listing.currency} /> })}</p>
                     </div>
                   )}
                   <CheckRow checked={attested} onChange={setAttested} tone="primary" className="-mx-3 mt-1">
-                    J'atteste sur l'honneur avoir {method === 'CASH' ? 'reçu' : 'visualisé et encaissé'} <Price amount={amount} currency={o.listing.currency} /> nets {method === 'CASH' ? 'en espèces' : `sur mon compte ${PAYMENT_LABELS[method] ?? ''}`}.
+                    {method === 'CASH'
+                      ? t.rich('seller.payment.attestCash', { price: <Price amount={amount} currency={o.listing.currency} /> })
+                      : t.rich('seller.payment.attestMobile', { price: <Price amount={amount} currency={o.listing.currency} />, method: PAYMENT_LABELS[method] ?? '' })}
                   </CheckRow>
                 </section>
 
                 <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                  <h2 className="m-0 text-headline-sm text-on-surface">Évaluer l'acheteur {buyerFirst}</h2>
-                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Aidez la communauté en notant son comportement lors de cette remise :</p>
+                  <h2 className="m-0 text-headline-sm text-on-surface">{t('seller.rate.title', { name: buyerFirst })}</h2>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('seller.rate.text')}</p>
                   <div className="mt-3 flex justify-center gap-2">
                     {[1, 2, 3, 4, 5].map(n => (
-                      <button key={n} onClick={() => setRating(n)} className="cursor-pointer border-none bg-transparent p-0" aria-label={`${n} étoile${n > 1 ? 's' : ''}`}>
+                      <button key={n} onClick={() => setRating(n)} className="cursor-pointer border-none bg-transparent p-0" aria-label={t('seller.rate.stars', { count: n })}>
                         <Icon name="star" size={36} fill={n <= rating} className={n <= rating ? 'text-primary' : 'text-outline-variant'} />
                       </button>
                     ))}
                   </div>
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
-                    {BUYER_TAGS.map(t => {
-                      const on = tags.includes(t)
-                      return <button key={t} onClick={() => setTags(prev => on ? prev.filter(x => x !== t) : [...prev, t])} className={`cursor-pointer rounded-full border-none px-3 py-1.5 text-label-md ${on ? 'bg-primary text-white' : 'bg-surface-container text-on-surface'}`}>{t}</button>
+                    {BUYER_TAGS.map(tag => {
+                      const on = tags.includes(tag.value)
+                      return <button key={tag.value} onClick={() => setTags(prev => on ? prev.filter(x => x !== tag.value) : [...prev, tag.value])} className={`cursor-pointer rounded-full border-none px-3 py-1.5 text-label-md ${on ? 'bg-primary text-white' : 'bg-surface-container text-on-surface'}`}>{t(tag.label)}</button>
                     })}
                   </div>
                 </section>
 
                 {confirmError && <p className="m-0 text-center text-body-sm text-primary">{confirmError.message}</p>}
                 <button onClick={submit} disabled={!ready || confirming} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-primary px-4 py-4 text-label-lg text-white hover:bg-primary-dark disabled:opacity-50">
-                  <Icon name="task_alt" size={22} /> <span className="max-[380px]:hidden">Valider la remise &amp; Clôturer la vente</span><span className="min-[380px]:hidden">Valider la remise</span>
+                  <Icon name="task_alt" size={22} /> <span className="max-[380px]:hidden">{t('seller.submit')}</span><span className="min-[380px]:hidden">{t('seller.submitShort')}</span>
                 </button>
               </>
             )}
 
             {!done && (
               o.disputeId
-                ? <button onClick={() => onOpenDispute(o.disputeId!)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="gavel" size={18} /> Litige en cours — le consulter</button>
-                : <button onClick={() => setDisputeOpen(true)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="report_problem" size={18} /> Un imprévu ? Signaler un litige</button>
+                ? <button onClick={() => onOpenDispute(o.disputeId!)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="gavel" size={18} /> {t('seller.disputeOpen')}</button>
+                : <button onClick={() => setDisputeOpen(true)} className="flex cursor-pointer items-center justify-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="report_problem" size={18} /> {t('seller.disputeReport')}</button>
             )}
           </div>
         )}
