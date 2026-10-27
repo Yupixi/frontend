@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { useMutation, useQuery } from '@apollo/client/react'
+import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react'
+import { SELLER_BADGE_NAMES_QUERY, setSellerBadgeNames } from '../graphql/badges'
 import { countryVars, useMarketCode } from '../lib/countries'
 import { getAccessToken } from '../lib/auth'
 import { MY_LOCALE_QUERY, SITE_LOCALES_QUERY, UPDATE_MY_LOCALE_MUTATION } from '../graphql/locale'
@@ -75,6 +76,11 @@ export function useLocaleSync(signedIn: boolean) {
   const market = useMarketCode()
   const locale = useLocale()
   const token = signedIn && !!getAccessToken()
+  // The paid badges' names in this language (set in the Backoffice).
+  const [loadBadgeNames] = useLazyQuery<{ sellerBadgeNames: Record<string, string> }>(SELLER_BADGE_NAMES_QUERY, { fetchPolicy: 'network-only' })
+  useEffect(() => {
+    void loadBadgeNames().then(r => { if (r.data?.sellerBadgeNames) setSellerBadgeNames(locale, r.data.sellerBadgeNames) }).catch(() => undefined)
+  }, [locale, loadBadgeNames])
   const { data: me } = useQuery<{ me: { id: string; locale: string | null } | null }>(MY_LOCALE_QUERY, {
     skip: !token,
     fetchPolicy: 'cache-first',

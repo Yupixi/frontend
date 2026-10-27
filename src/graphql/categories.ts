@@ -27,6 +27,7 @@ export const CATEGORIES_QUERY = gql`
         label
         type
         options
+        optionLabels { value label }
         required
       }
     }
@@ -46,8 +47,15 @@ export type CategoryAttribute = {
   label: string
   type: 'TEXT' | 'NUMBER' | 'SELECT'
   options: string[]
+  // Each option's stored value (kept in the listing, as sent) and its label
+  // in the page's language (BO « Catégories » › EN).
+  optionLabels?: { value: string; label: string }[]
   required: boolean
 }
+
+// The label of a stored option value, in the page's language.
+export const optionLabel = (a: Pick<CategoryAttribute, 'optionLabels'> | undefined, value: string) =>
+  a?.optionLabels?.find(o => o.value === value)?.label ?? value
 
 export type RemoteCategory = {
   id: string
