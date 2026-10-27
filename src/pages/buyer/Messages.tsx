@@ -44,6 +44,9 @@ import { isNotVerifiedError, requestAccountVerification } from '../../lib/accoun
 import { useMemberLists } from '../../lib/lists'
 import { useMediaQuery } from '../../lib/useMediaQuery'
 import { useChatViewport } from '../../lib/useChatViewport'
+import { useT, fmtDate, fmtCfa, cfaUnit } from '../../i18n'
+import common from '../../i18n/ns/common'
+import messagesNs from '../../i18n/ns/messages'
 
 // Heavy and occasional: loaded on first use only.
 const AssistantPanel = lazy(() => import('../../components/chat/AssistantPanel'))
@@ -72,6 +75,8 @@ let tmpSeq = 0
 // compact header, a sticky listing card, the composer above the keyboard,
 // quick actions and « Aide Dilchap » (the member's private AI assistant).
 export default function Messages({ onNavigate, onSelectListing, currentUser, onLogout, startWith, onStartWithConsumed, openConversationId, focusRemise, onOpenConversationConsumed, onOpenDispute }: Props) {
+  const t = useT(messagesNs)
+  const tc = useT(common)
   const lists = useMemberLists()
   const isPhone = !useMediaQuery('(min-width: 768px)')
   // ≥ 1280 px: Aide Dilchap is a third column (in place of the recap).
@@ -201,7 +206,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
       .then(() => setPending(list => list.filter(x => x.id !== p.id)))
       .catch((e: unknown) => {
         if (isNotVerifiedError(e)) requestAccountVerification(() => deliver(p))
-        setPending(list => list.map(x => (x.id === p.id ? { ...x, status: 'failed', error: e instanceof Error && e.message.length < 140 ? e.message : 'Non envoyé' } : x)))
+        setPending(list => list.map(x => (x.id === p.id ? { ...x, status: 'failed', error: e instanceof Error && e.message.length < 140 ? e.message : messagesNs.t('thread.notSent') } : x)))
       })
   }
   const send = (text: string) => {
@@ -219,7 +224,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   }
   const replyToMessage = (m: RemoteMessage) => setReplyTo({
     id: m.id,
-    author: m.senderId === currentUser?.id ? 'vous-même' : m.sender.fullName.split(' ')[0],
+    author: m.senderId === currentUser?.id ? t('thread.yourself') : m.sender.fullName.split(' ')[0],
     preview: messagePreview(m),
     photo: m.attachments?.[0],
   })
@@ -238,7 +243,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const submitOffer = () => {
     if (!activeId || !conv?.listingId) return
     const amount = Number(offerAmount.replace(/[^\d]/g, ''))
-    if (!amount) { setOfferError('Entrez un montant valide.'); return }
+    if (!amount) { setOfferError(t('offer.invalidAmount')); return }
     setOfferError(null)
     void makeOffer({ variables: { input: { listingId: conv.listingId, amount, conversationId: activeId } } })
       .then(() => { setOfferOpen(false); setOfferAmount(''); void refresh() })
@@ -255,6 +260,8 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   }
   const reportScam = () => {
     if (!other) return
+    // Report reason and message are read by the Dilchap team: they stay in French.
+    // i18n-ignore
     void createReport({ variables: { targetType: 'USER', targetUserId: other.id, reason: 'Tentative d’arnaque', message: `Conversation ${activeId}` } }).then(() => setReported(true)).finally(() => setConfirming(null))
   }
   const openAssistant = () => { setAssistantLoaded(true); setAssistantOpen(true) }
@@ -317,17 +324,17 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const otherPlace = other?.city || (conv && !conv.canManageDeal && conv.listing ? [conv.listing.locationLabel, conv.listing.city].filter(Boolean).join(', ') : '')
   const firstName = other?.fullName.split(' ')[0] ?? ''
   const menuItems = !conv ? [] : [
-    discussing && { icon: 'location_on', label: 'Fixer un rendez-vous', onClick: () => openMeetup() },
-    conv.listing && { icon: 'open_in_new', label: 'Voir la fiche', onClick: () => onSelectListing?.(conv.listing!.id) },
-    remisePending && { icon: 'task_alt', label: conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise', onClick: openRemise },
-    conv.canManageDeal && conv.listing && discussing && conv.listing.status !== 'SOLD' && { icon: 'handshake', label: 'Marquer comme vendu', onClick: () => setMarkSoldOpen(true) },
-    conv.canManageDeal && conv.listing && discussing && { icon: 'cancel', label: 'Discussion non conclue', onClick: () => setConfirming('NOT_CONCLUDED') },
-    !reported && { icon: 'flag', label: 'Signaler une arnaque', onClick: () => setConfirming('REPORT'), danger: true },
+    discussing && { icon: 'location_on', label: t('menu.meetup'), onClick: () => openMeetup() },
+    conv.listing && { icon: 'open_in_new', label: t('menu.viewListing'), onClick: () => onSelectListing?.(conv.listing!.id) },
+    remisePending && { icon: 'task_alt', label: conv.canManageDeal ? t('menu.confirmHandover') : t('menu.myHandoverCode'), onClick: openRemise },
+    conv.canManageDeal && conv.listing && discussing && conv.listing.status !== 'SOLD' && { icon: 'handshake', label: t('menu.markSold'), onClick: () => setMarkSoldOpen(true) },
+    conv.canManageDeal && conv.listing && discussing && { icon: 'cancel', label: t('menu.notConcluded'), onClick: () => setConfirming('NOT_CONCLUDED') },
+    !reported && { icon: 'flag', label: t('menu.reportScam'), onClick: () => setConfirming('REPORT'), danger: true },
   ].filter(Boolean) as { icon: string, label: string, onClick: () => void, danger?: boolean }[]
   const myPending = pending.filter(p => p.conv === activeId)
   const offerChip = latestOffer && conv?.listing && (
     <span className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-bold ${latestOffer.status === 'ACCEPTED' ? 'bg-tertiary-soft text-tertiary' : latestOffer.status === 'PENDING' ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-100' : 'bg-surface-container text-on-surface-variant'}`}>
-      {latestOffer.status === 'ACCEPTED' ? 'Offre acceptée' : latestOffer.status === 'PENDING' ? 'Offre en attente' : 'Offre refusée'} <Price amount={latestOffer.amount} currency={conv.listing.currency} />
+      {t.rich(latestOffer.status === 'ACCEPTED' ? 'offerChip.accepted' : latestOffer.status === 'PENDING' ? 'offerChip.pending' : 'offerChip.declined', { price: <Price amount={latestOffer.amount} currency={conv.listing.currency} /> })}
     </span>
   )
 
@@ -335,25 +342,25 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   const listingBar = conv?.listing && (
     <div className="z-10 shrink-0 border-0 border-b border-solid border-outline-variant/70 bg-surface-lowest/95 px-3 py-2 sm:px-4">
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => onSelectListing?.(conv.listing!.id)} aria-label={`Voir l’annonce ${conv.listing.title}`} className="h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-high p-0"><ListingThumb listing={conv.listing} src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></button>
+        <button type="button" onClick={() => onSelectListing?.(conv.listing!.id)} aria-label={t('listingBar.viewAria', { title: conv.listing.title })} className="h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-high p-0"><ListingThumb listing={conv.listing} src={conv.listing.coverImageUrl} alt={conv.listing.title} icon="sell" /></button>
         <div className="min-w-0 flex-1">
           <div className="truncate text-label-md font-bold text-on-surface">{conv.listing.title}</div>
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="whitespace-nowrap text-label-lg font-extrabold text-primary"><Price amount={conv.listing.price} currency={conv.listing.currency} /></span>
             {!!conv.listing.originalPrice && conv.listing.price != null && conv.listing.originalPrice > conv.listing.price && <span className="whitespace-nowrap text-body-sm text-on-surface-variant line-through"><Price amount={conv.listing.originalPrice} currency={conv.listing.currency} /></span>}
-            {offerChip ?? <span className="whitespace-nowrap rounded-md bg-tertiary-soft px-1.5 py-0.5 text-[11px] font-bold text-tertiary">Main propre</span>}
+            {offerChip ?? <span className="whitespace-nowrap rounded-md bg-tertiary-soft px-1.5 py-0.5 text-[11px] font-bold text-tertiary">{t('listingBar.inPerson')}</span>}
           </div>
         </div>
         {discussing && (
           <div className="flex shrink-0 gap-1.5">
-            {canNegotiate && !remisePending && <button type="button" onClick={() => { setOfferOpen(o => !o) }} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white max-[379px]:px-2.5"><Icon name="sell" size={15} /> <span className="max-[379px]:hidden">Offre</span></button>}
+            {canNegotiate && !remisePending && <button type="button" onClick={() => { setOfferOpen(o => !o) }} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white max-[379px]:px-2.5"><Icon name="sell" size={15} /> <span className="max-[379px]:hidden">{t('listingBar.offer')}</span></button>}
             {remisePending ? (
               // Confirmed meet-up: the hand-over, from anywhere in the thread.
-              <button type="button" onClick={openRemise} aria-label={conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise'} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white">
-                <Icon name="task_alt" size={15} /> <span className="max-[379px]:hidden">{conv.canManageDeal ? 'Confirmer la remise' : 'Code de remise'}</span><span className="min-[380px]:hidden">Remise</span>
+              <button type="button" onClick={openRemise} aria-label={conv.canManageDeal ? t('menu.confirmHandover') : t('menu.myHandoverCode')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm font-semibold text-white">
+                <Icon name="task_alt" size={15} /> <span className="max-[379px]:hidden">{conv.canManageDeal ? t('menu.confirmHandover') : t('listingBar.handoverCode')}</span><span className="min-[380px]:hidden">{t('listingBar.handover')}</span>
               </button>
             ) : (
-              <button type="button" onClick={() => openMeetup()} aria-label="Fixer un rendez-vous" className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-surface-container px-3 py-2 text-label-sm font-semibold text-on-surface max-[379px]:px-2.5"><Icon name="event" size={15} /> <span className="max-sm:hidden">Rendez-vous</span></button>
+              <button type="button" onClick={() => openMeetup()} aria-label={t('menu.meetup')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-surface-container px-3 py-2 text-label-sm font-semibold text-on-surface max-[379px]:px-2.5"><Icon name="event" size={15} /> <span className="max-sm:hidden">{t('listingBar.meetup')}</span></button>
             )}
           </div>
         )}
@@ -362,10 +369,10 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   )
 
   const chips: { key: string; icon: string; label: string; onClick: () => void; accent?: boolean }[] = !discussing ? [] : [
-    ...(assistantOn ? [{ key: 'ai', icon: 'auto_awesome', label: 'Aide Dilchap', onClick: openAssistant, accent: true }] : []),
-    ...(canNegotiate ? [{ key: 'offer', icon: 'sell', label: 'Proposer un prix', onClick: () => setOfferOpen(o => !o) }] : []),
-    { key: 'meetup', icon: 'event', label: 'Fixer un rendez-vous', onClick: () => openMeetup() },
-    { key: 'photo', icon: 'photo_camera', label: 'Envoyer une photo', onClick: () => inputRef.current?.pickPhotos() },
+    ...(assistantOn ? [{ key: 'ai', icon: 'auto_awesome', label: t('chips.assistant'), onClick: openAssistant, accent: true }] : []),
+    ...(canNegotiate ? [{ key: 'offer', icon: 'sell', label: t('chips.offer'), onClick: () => setOfferOpen(o => !o) }] : []),
+    { key: 'meetup', icon: 'event', label: t('menu.meetup'), onClick: () => openMeetup() },
+    { key: 'photo', icon: 'photo_camera', label: t('chips.photo'), onClick: () => inputRef.current?.pickPhotos() },
   ]
 
   const assistantColumn = (
@@ -382,15 +389,20 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
   )
 
   return (
-    <AccountLayout active="buyer-messages" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} fill immersive={threadOpen} onBack={showList ? undefined : () => setShowList(true)} title={showList ? undefined : 'Conversation'}>
+    <AccountLayout active="buyer-messages" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} fill immersive={threadOpen} onBack={showList ? undefined : () => setShowList(true)} title={showList ? undefined : t('layoutTitle')}>
       <div className="flex min-h-0 flex-1 flex-col">
         {/* Golden rule banner */}
         <div className="hidden items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-6 py-2.5 lg:flex">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-tertiary text-white"><ShieldCheck size={17} /></span>
           <p className="m-0 flex-1 text-body-sm text-on-surface-variant">
-            <b className="text-on-surface">Règle d'or Dilchap : remise en main propre<Claim> &amp; 0 F de frais</Claim></b> <Claim><span className="font-semibold text-tertiary">• 100% gratuit.</span> </Claim>Rencontrez-vous dans un lieu public et testez l'article avant tout paiement (espèces ou Mobile Money).
+            {t.rich('goldenRule', {
+              b: c => <b className="text-on-surface">{c}</b>,
+              claim: c => <Claim>{c}</Claim>,
+              claim2: c => <Claim>{c}</Claim>,
+              free: c => <span className="font-semibold text-tertiary">{c}</span>,
+            })}
           </p>
-          <span className="flex shrink-0 items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1 text-label-sm text-tertiary"><Lock size={13} /> Échanges protégés</span>
+          <span className="flex shrink-0 items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1 text-label-sm text-tertiary"><Lock size={13} /> {t('protected')}</span>
         </div>
 
         <div className="relative flex min-h-0 flex-1">
@@ -408,13 +420,13 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
               />
             )}
             {/* max-lg:pb-8: the raised « Déposer » button of the bottom bar sits over this line */}
-            <p className="m-0 border-0 border-t border-solid border-outline-variant p-3 text-center text-body-sm text-on-surface-variant max-lg:pb-8">Toutes les discussions sont sauvegardées sur votre compte</p>
+            <p className="m-0 border-0 border-t border-solid border-outline-variant p-3 text-center text-body-sm text-on-surface-variant max-lg:pb-8">{t('savedNote')}</p>
           </aside>
 
           {/* Thread */}
-          <section className={`${showList ? 'hidden' : 'flex'} relative min-w-0 flex-1 flex-col bg-surface md:flex`} aria-label="Discussion">
+          <section className={`${showList ? 'hidden' : 'flex'} relative min-w-0 flex-1 flex-col bg-surface md:flex`} aria-label={t('threadAria')}>
             {!activeId ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-on-surface-variant"><Icon name="forum" size={36} className="text-outline" /> Sélectionnez une conversation</div>
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-on-surface-variant"><Icon name="forum" size={36} className="text-outline" /> {t('selectConversation')}</div>
             ) : !conv ? (
               <>
                 <div className="flex items-center gap-3 bg-surface-lowest px-3 py-2.5 shadow-sm"><div className="chat-skeleton h-10 w-10 rounded-full" /><div className="chat-skeleton h-4 w-40 rounded" /></div>
@@ -424,15 +436,15 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
               <>
                 {/* Compact contact header */}
                 <header className="relative z-20 flex items-center gap-2.5 bg-surface-lowest px-2 py-2 shadow-sm sm:px-4">
-                  <button type="button" onClick={() => setShowList(true)} aria-label="Retour aux conversations" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface md:hidden"><Icon name="arrow_back" size={22} /></button>
+                  <button type="button" onClick={() => setShowList(true)} aria-label={t('backToList')} className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface md:hidden"><Icon name="arrow_back" size={22} /></button>
                   <Avatar url={other!.avatarUrl} name={other!.fullName} size={40} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 text-label-lg font-bold text-on-surface"><span className="truncate">{other!.fullName}</span><SellerBadge tier={other!.badge} size={17} /></div>
                     <div className="flex min-w-0 items-center gap-1.5 truncate text-[12px] text-on-surface-variant">
-                      {otherIsTyping ? <span className="font-semibold text-primary">écrit…</span> : (
+                      {otherIsTyping ? <span className="font-semibold text-primary">{t('typing')}</span> : (
                         <>
                           {!!other!.reviewsCount && <span className="flex shrink-0 items-center gap-0.5"><Star size={12} fill="#F59E0B" color="#F59E0B" /> {other!.averageRating?.toFixed(1)}</span>}
-                          {otherResponse && <span className="flex shrink-0 items-center gap-0.5"><Zap size={12} className="text-tertiary" /> Répond en {otherResponse}</span>}
+                          {otherResponse && <span className="flex shrink-0 items-center gap-0.5"><Zap size={12} className="text-tertiary" /> {t('respondsIn', { time: otherResponse })}</span>}
                           {otherPlace && <span className="flex min-w-0 items-center gap-0.5 max-sm:hidden"><MapPin size={12} className="shrink-0" /><span className="truncate">{otherPlace}</span></span>}
                         </>
                       )}
@@ -441,17 +453,17 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   {liveMeetup && <LiveHeaderPill onOpen={() => setLiveSheet('map')} />}
                   {assistantOn && (
                     <button type="button" onClick={() => (assistantOpen ? setAssistantOpen(false) : openAssistant())} aria-expanded={assistantOpen} className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-none bg-primary-fixed/70 px-3 py-2 text-label-sm font-semibold text-primary hover:bg-primary-fixed max-[379px]:px-2.5">
-                      <Icon name="auto_awesome" size={17} /> <span className="max-[379px]:hidden">Aide Dilchap</span>
+                      <Icon name="auto_awesome" size={17} /> <span className="max-[379px]:hidden">{t('chips.assistant')}</span>
                     </button>
                   )}
                   {conv.canManageDeal && conv.listing && discussing && conv.listing.status !== 'SOLD' && !remisePending && (
                     <button onClick={() => setMarkSoldOpen(true)} className="flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary px-3 py-2 text-label-sm text-white hover:bg-primary-dark max-lg:hidden">
-                      <CheckCircle2 size={16} /> Marquer comme vendu
+                      <CheckCircle2 size={16} /> {t('menu.markSold')}
                     </button>
                   )}
                   {menuItems.length > 0 && (
                     <div className="relative shrink-0">
-                      <button onClick={() => setMenuOpen(o => !o)} aria-label="Options du fil" aria-expanded={menuOpen} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface hover:bg-surface-container-high">
+                      <button onClick={() => setMenuOpen(o => !o)} aria-label={t('threadOptions')} aria-expanded={menuOpen} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface hover:bg-surface-container-high">
                         <Icon name="more_vert" size={20} />
                       </button>
                       {menuOpen && (
@@ -484,20 +496,20 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                     <div className="flex flex-col gap-2 px-3 pt-3 sm:px-4">
                       {conv.dealStatus !== 'DISCUSSING' && (
                         <p className={`m-0 flex items-center gap-2 rounded-xl p-3 text-label-md ${conv.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
-                          {conv.dealStatus === 'CONCLUDED' ? <><Handshake size={17} className="shrink-0" /> Remise effectuée — la vente est conclue et l'annonce est marquée comme vendue.</> : <><CircleX size={17} className="shrink-0" /> Cette discussion n'a pas abouti à une vente.</>}
+                          {conv.dealStatus === 'CONCLUDED' ? <><Handshake size={17} className="shrink-0" /> {t('dealConcluded')}</> : <><CircleX size={17} className="shrink-0" /> {t('dealNotConcluded')}</>}
                         </p>
                       )}
                       <div className="flex items-start gap-2 rounded-xl bg-surface-container-high/70 p-2.5 lg:hidden">
                         <Icon name="shield" size={18} fill className="mt-0.5 shrink-0 text-tertiary" />
-                        <p className="m-0 text-body-sm text-on-surface-variant"><b className="text-on-surface">Sécurité Dilchap :</b> lieu public, article vérifié, paiement à la remise uniquement.<Claim> 0 F de commission.</Claim></p>
+                        <p className="m-0 text-body-sm text-on-surface-variant">{t.rich('safetyTip', { b: c => <b className="text-on-surface">{c}</b>, claim: c => <Claim>{c}</Claim> })}</p>
                       </div>
                     </div>
                   )}
                   empty={!closed && (
                     <div className="m-auto max-w-md py-6 text-center">
                       <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="forum" size={24} /></span>
-                      <h3 className="m-0 text-headline-sm text-on-surface">Commencez la discussion</h3>
-                      <p className="m-0 mb-3 mt-1 text-body-sm text-on-surface-variant">Choisissez une question ou écrivez votre message. Ne partagez jamais de code reçu par SMS.</p>
+                      <h3 className="m-0 text-headline-sm text-on-surface">{t('empty.title')}</h3>
+                      <p className="m-0 mb-3 mt-1 text-body-sm text-on-surface-variant">{t('empty.text')}</p>
                       <div className="flex flex-col gap-2">
                         {suggestions.slice(0, 3).map(s => <button key={s} onClick={() => send(s)} className="cursor-pointer rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-left text-body-sm text-on-surface hover:border-primary">{s}</button>)}
                       </div>
@@ -506,19 +518,19 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   onRespondOffer={respondOffer}
                   onAnswerMeetup={answerMeetup}
                   meetupAction={m => !remisePending || !m.meetup || m.meetup.id !== handover!.meetupId ? undefined
-                    : { label: conv.canManageDeal ? 'Confirmer la remise' : 'Mon code de remise', icon: 'task_alt', onClick: openRemise }}
+                    : { label: conv.canManageDeal ? t('menu.confirmHandover') : t('menu.myHandoverCode'), icon: 'task_alt', onClick: openRemise }}
                   footer={<>
-                    {conv.checkin && <CheckinCard c={conv.checkin} otherName={firstName || 'l’autre membre'} concluded={conv.dealStatus === 'CONCLUDED'} onAnswered={() => void refresh()} onReschedule={() => openMeetup()} />}
+                    {conv.checkin && <CheckinCard c={conv.checkin} otherName={firstName || t('otherMember')} concluded={conv.dealStatus === 'CONCLUDED'} onAnswered={() => void refresh()} onReschedule={() => openMeetup()} />}
                     {handover && (remiseShown
-                    ? <HandoverCard h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onConfirmed={() => void refresh()} onOpenDispute={remiseDispute} onHide={handover.inWindow ? undefined : () => setRemiseFor(null)} />
+                    ? <HandoverCard h={handover} conversationId={conv.id} otherName={firstName || t('otherMember')} onConfirmed={() => void refresh()} onOpenDispute={remiseDispute} onHide={handover.inWindow ? undefined : () => setRemiseFor(null)} />
                     : handover.status === 'DONE' && !hasDealCard && (handover.inlineRating || handover.myReview || handover.certifiable)
-                      ? <DealDoneCard h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} amount={agreedPrice} currency={conv.listing?.currency ?? 'XOF'} onSaved={() => void refetchConv()} />
+                      ? <DealDoneCard h={handover} conversationId={conv.id} otherName={firstName || t('otherMember')} amount={agreedPrice} currency={conv.listing?.currency ?? 'XOF'} onSaved={() => void refetchConv()} />
                       : null)}
                   </>}
                   cardExtra={card => card.type === 'DEAL_CONCLUDED' && handover?.status === 'DONE'
                     ? <>
-                      <CertifyWithCode h={handover} otherName={firstName || 'l’autre membre'} onDone={() => void refresh()} />
-                      <DealReview h={handover} conversationId={conv.id} otherName={firstName || 'l’autre membre'} onSaved={() => void refetchConv()} />
+                      <CertifyWithCode h={handover} otherName={firstName || t('otherMember')} onDone={() => void refresh()} />
+                      <DealReview h={handover} conversationId={conv.id} otherName={firstName || t('otherMember')} onSaved={() => void refetchConv()} />
                     </>
                     : null}
                   meetupLive={m => (liveMeetup && m.meetup?.id === liveMeetup.id ? {
@@ -542,17 +554,17 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                           <Icon name={conv.closedReason === 'DEAL_CONCLUDED' ? 'handshake' : 'lock'} size={20} />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-label-lg text-on-surface">Discussion fermée</div>
+                          <div className="text-label-lg text-on-surface">{t('closed.title')}</div>
                           <div className="text-body-sm text-on-surface-variant">
                             {conv.closedReason === 'DEAL_CONCLUDED'
-                              ? 'La vente est conclue : plus aucun message ni offre n’est possible, pour votre sécurité.'
-                              : 'Fermée faute d’activité. Vous pouvez la relancer si l’article vous intéresse toujours.'}
+                              ? t('closed.deal')
+                              : t('closed.inactive')}
                           </div>
                         </div>
                       </div>
                       {conv.closedReason === 'INACTIVE' && (
                         <button onClick={reopen} disabled={reopening} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white disabled:opacity-60">
-                          <Icon name="refresh" size={18} /> {reopening ? 'Un instant…' : 'Relancer la discussion'}
+                          <Icon name="refresh" size={18} /> {reopening ? t('closed.wait') : t('closed.reopen')}
                         </button>
                       )}
                     </div>
@@ -565,19 +577,19 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                     {conv.closesAt && (
                       <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-body-sm text-amber-900">
                         <Icon name="schedule" size={18} className="mt-0.5 shrink-0" />
-                        <span>Sans nouveau message, cette discussion sera fermée le <b>{new Date(conv.closesAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</b>. Écrivez pour la garder ouverte.</span>
+                        <span>{t.rich('closesAt', { date: fmtDate(conv.closesAt, { weekday: 'long', day: 'numeric', month: 'long' }), b: c => <b>{c}</b> })}</span>
                       </p>
                     )}
 
                     {offerOpen && (
                       <div className="chat-in mb-2 rounded-2xl border border-solid border-outline-variant p-3">
-                        <div className="mb-1 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="sell" size={16} className="text-primary" /> Votre offre ({conv.listing?.currency === 'XOF' || !conv.listing ? 'F' : conv.listing.currency})</div>
+                        <div className="mb-1 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="sell" size={16} className="text-primary" /> {t('offer.title', { unit: conv.listing?.currency === 'XOF' || !conv.listing ? cfaUnit() : conv.listing.currency })}</div>
                         <PriceSuggestionHint listingId={conv.listingId} onUseAmount={a => setOfferAmount(String(a))} />
-                        <input className="input" inputMode="numeric" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder="Ex : 130 000" aria-label="Montant de votre offre" />
+                        <input className="input" inputMode="numeric" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} placeholder={t('offer.placeholder')} aria-label={t('offer.amountAria')} />
                         {offerError && <p className="m-0 mt-1.5 text-body-sm text-primary">{offerError}</p>}
                         <div className="mt-2 flex gap-2">
-                          <button disabled={sendingOffer} onClick={submitOffer} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">{sendingOffer ? 'Envoi…' : "Envoyer l'offre"}</button>
-                          <button onClick={() => setOfferOpen(false)} aria-label="Fermer" className="cursor-pointer rounded-lg border-none bg-surface-container px-3"><X size={16} /></button>
+                          <button disabled={sendingOffer} onClick={submitOffer} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white">{sendingOffer ? t('offer.sending') : t('offer.send')}</button>
+                          <button onClick={() => setOfferOpen(false)} aria-label={tc('close')} className="cursor-pointer rounded-lg border-none bg-surface-container px-3"><X size={16} /></button>
                         </div>
                       </div>
                     )}
@@ -601,7 +613,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                       onSend={sendFromComposer}
                       replyTo={replyTo}
                       onCancelReply={() => setReplyTo(null)}
-                      placeholder={`Écrivez à ${firstName}…`}
+                      placeholder={t('composerPlaceholder', { name: firstName })}
                     />
                   </div>
                 )}
@@ -612,7 +624,7 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
 
           {/* Right panel: Aide Dilchap when open, else the recap */}
           {conv && isWide && assistantOpen && (
-            <aside className="chat-drawer flex w-[360px] shrink-0 flex-col border-0 border-l border-solid border-outline-variant bg-surface" aria-label="Aide Dilchap">{assistantColumn}</aside>
+            <aside className="chat-drawer flex w-[360px] shrink-0 flex-col border-0 border-l border-solid border-outline-variant bg-surface" aria-label={t('chips.assistant')}>{assistantColumn}</aside>
           )}
           {conv && other && !(isWide && assistantOpen) && (
             <aside className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto border-0 border-l border-solid border-outline-variant bg-surface p-3 xl:flex">
@@ -621,14 +633,14 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
                   <Avatar url={other.avatarUrl} name={other.fullName} size={52} />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1 text-headline-sm text-on-surface"><span className="truncate">{other.fullName}</span><SellerBadge tier={other.badge} size={17} /></div>
-                    {other.createdAt && <div className="text-body-sm text-on-surface-variant">Membre depuis {new Date(other.createdAt).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</div>}
-                    {otherResponse && <div className="flex items-center gap-1 text-body-sm text-tertiary"><Zap size={13} /> Répond en {otherResponse}</div>}
+                    {other.createdAt && <div className="text-body-sm text-on-surface-variant">{t('recap.memberSince', { date: fmtDate(other.createdAt, { month: 'short', year: 'numeric' }) })}</div>}
+                    {otherResponse && <div className="flex items-center gap-1 text-body-sm text-tertiary"><Zap size={13} /> {t('respondsIn', { time: otherResponse })}</div>}
                   </div>
                 </div>
                 {otherProfile && (
                   <div className="mt-3 flex items-center justify-between rounded-xl bg-surface-container-low px-3 py-2 text-body-sm">
-                    <span className="flex items-center gap-1 text-on-surface">{otherProfile.reviewsCount ? <><Star size={14} fill="#F59E0B" color="#F59E0B" /> {otherProfile.averageRating.toFixed(1)}/5</> : 'Pas encore d’avis'}</span>
-                    <span className="text-on-surface-variant">{otherProfile.reviewsCount} avis • {otherProfile.salesCount} vente{otherProfile.salesCount > 1 ? 's' : ''}</span>
+                    <span className="flex items-center gap-1 text-on-surface">{otherProfile.reviewsCount ? <><Star size={14} fill="#F59E0B" color="#F59E0B" /> {otherProfile.averageRating.toFixed(1)}/5</> : t('recap.noReviews')}</span>
+                    <span className="text-on-surface-variant">{t('recap.stats', { reviews: t('recap.reviews', { count: otherProfile.reviewsCount }), sales: t('recap.sales', { count: otherProfile.salesCount }) })}</span>
                   </div>
                 )}
               </div>
@@ -636,37 +648,37 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
               {conv.listing && (
                 <div className="rounded-2xl bg-surface-lowest p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-label-lg text-on-surface">Récapitulatif convenu</span>
-                    <span className="rounded bg-tertiary px-2 py-0.5 text-label-sm text-white">Main propre</span>
+                    <span className="text-label-lg text-on-surface">{t('recap.title')}</span>
+                    <span className="rounded bg-tertiary px-2 py-0.5 text-label-sm text-white">{t('listingBar.inPerson')}</span>
                   </div>
                   <dl className="m-0 flex flex-col gap-2 text-body-sm">
-                    <div className="flex justify-between"><dt className="text-on-surface-variant">Prix de l'article</dt><dd className="m-0 text-on-surface"><Price amount={conv.listing.price} currency={conv.listing.currency} /></dd></div>
-                    {acceptedOffer && <div className="flex justify-between"><dt className="text-on-surface-variant">Offre acceptée</dt><dd className="m-0 text-on-surface"><Price amount={acceptedOffer.amount} currency={conv.listing.currency} /></dd></div>}
-                    <Claim><div className="flex justify-between"><dt className="flex items-center gap-1 text-tertiary">Commission Dilchap <Info size={13} /></dt><dd className="m-0 font-bold text-tertiary">0 F (0%)</dd></div>
-                    <div className="flex justify-between"><dt className="text-on-surface-variant">Frais de réservation</dt><dd className="m-0 text-on-surface">0 F</dd></div></Claim>
+                    <div className="flex justify-between"><dt className="text-on-surface-variant">{t('recap.itemPrice')}</dt><dd className="m-0 text-on-surface"><Price amount={conv.listing.price} currency={conv.listing.currency} /></dd></div>
+                    {acceptedOffer && <div className="flex justify-between"><dt className="text-on-surface-variant">{t('recap.acceptedOffer')}</dt><dd className="m-0 text-on-surface"><Price amount={acceptedOffer.amount} currency={conv.listing.currency} /></dd></div>}
+                    <Claim><div className="flex justify-between"><dt className="flex items-center gap-1 text-tertiary">{t('recap.commission')} <Info size={13} /></dt><dd className="m-0 font-bold text-tertiary">{fmtCfa(0)} (0%)</dd></div>
+                    <div className="flex justify-between"><dt className="text-on-surface-variant">{t('recap.bookingFee')}</dt><dd className="m-0 text-on-surface">{fmtCfa(0)}</dd></div></Claim>
                   </dl>
                   <div className="mt-3 flex items-center justify-between border-0 border-t border-solid border-outline-variant pt-3">
-                    <span className="text-label-md text-on-surface">Montant à régler au vendeur</span>
+                    <span className="text-label-md text-on-surface">{t('recap.toPay')}</span>
                     <span className="text-headline-sm font-extrabold text-primary"><Price amount={agreedPrice} currency={conv.listing.currency} /></span>
                   </div>
                   {!!conv.listing.paymentMethods?.length && (
-                    <p className="m-0 mt-3 flex items-start gap-2 rounded-lg bg-surface-container-low p-2.5 text-body-sm text-on-surface"><Wallet size={16} className="mt-0.5 shrink-0 text-tertiary" /> Modes acceptés : {conv.listing.paymentMethods.map(p => PAYMENT_LABELS[p] ?? p).join(', ')} à la remise</p>
+                    <p className="m-0 mt-3 flex items-start gap-2 rounded-lg bg-surface-container-low p-2.5 text-body-sm text-on-surface"><Wallet size={16} className="mt-0.5 shrink-0 text-tertiary" /> {t('recap.payment', { methods: conv.listing.paymentMethods.map(p => PAYMENT_LABELS[p] ?? p).join(', ') })}</p>
                   )}
                   {lastMeetup && (
-                    <p className="m-0 mt-2 flex items-start gap-2 rounded-lg bg-surface-container-low p-2.5 text-body-sm text-on-surface"><Calendar size={16} className="mt-0.5 shrink-0 text-primary" /> {lastMeetup.place} — {new Date(lastMeetup.scheduledAt).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} {lastMeetup.status === 'CONFIRMED' ? '(confirmé)' : lastMeetup.status === 'PROPOSED' ? '(en attente)' : ''}</p>
+                    <p className="m-0 mt-2 flex items-start gap-2 rounded-lg bg-surface-container-low p-2.5 text-body-sm text-on-surface"><Calendar size={16} className="mt-0.5 shrink-0 text-primary" /> {lastMeetup.place} — {fmtDate(lastMeetup.scheduledAt, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} {lastMeetup.status === 'CONFIRMED' ? t('recap.meetupConfirmed') : lastMeetup.status === 'PROPOSED' ? t('recap.meetupPending') : ''}</p>
                   )}
                 </div>
               )}
 
               <div className="rounded-2xl bg-surface-lowest p-4">
-                <div className="mb-2 flex items-center gap-1.5 text-label-md text-primary"><ShieldCheck size={17} /> Checklist sécurité Dilchap</div>
+                <div className="mb-2 flex items-center gap-1.5 text-label-md text-primary"><ShieldCheck size={17} /> {t('checklist.title')}</div>
                 <ul className="m-0 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
-                  {['Rendez-vous dans un lieu public et fréquenté', 'Testez l’article avant de payer', 'Ne payez jamais à l’avance', 'Ne communiquez jamais un code reçu par SMS'].map(t => (
-                    <li key={t} className="flex items-start gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-tertiary" /> {t}</li>
+                  {[t('checklist.public'), t('checklist.test'), t('checklist.noAdvance'), t('checklist.noCode')].map(item => (
+                    <li key={item} className="flex items-start gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-tertiary" /> {item}</li>
                   ))}
                 </ul>
                 <button disabled={reported} onClick={() => setConfirming('REPORT')} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-transparent py-2 text-label-md text-on-surface hover:bg-primary-fixed/40 disabled:cursor-default disabled:text-tertiary">
-                  {reported ? <><CheckCircle2 size={15} /> Signalement envoyé</> : <><Flag size={15} /> Signaler une tentative d'arnaque</>}
+                  {reported ? <><CheckCircle2 size={15} /> {t('report.sent')}</> : <><Flag size={15} /> {t('report.button')}</>}
                 </button>
               </div>
             </aside>
@@ -676,18 +688,18 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
       {conv && <LiveLocationController conversationId={conv.id} meetup={liveMeetup} otherName={firstName} />}
       {liveMeetup && (
         <>
-          <LiveConsentSheet open={liveSheet === 'consent'} onClose={() => setLiveSheet(null)} otherName={firstName || 'l’autre membre'} />
+          <LiveConsentSheet open={liveSheet === 'consent'} onClose={() => setLiveSheet(null)} otherName={firstName || t('otherMember')} />
           <LiveMapSheet open={liveSheet === 'map'} onClose={() => setLiveSheet(null)} meetup={liveMeetup} otherName={firstName} onShare={() => setLiveSheet('consent')} />
         </>
       )}
-      {viewer && <ImageLightbox images={viewer.photos} start={viewer.index} alt={`Photos de ${other?.fullName ?? 'la discussion'}`} onClose={() => setViewer(null)} />}
+      {viewer && <ImageLightbox images={viewer.photos} start={viewer.index} alt={other?.fullName ? t('photosOf', { name: other.fullName }) : t('photosOfChat')} onClose={() => setViewer(null)} />}
       {meetup.loaded && activeId && (
         <Suspense fallback={null}>
-          <MeetupSheet open={meetup.open} onClose={() => setMeetup(m => ({ ...m, open: false }))} onSent={() => void refresh()} conversationId={activeId} otherName={firstName || 'l’autre membre'} listing={conv?.listing} prefill={meetup.prefill} />
+          <MeetupSheet open={meetup.open} onClose={() => setMeetup(m => ({ ...m, open: false }))} onSent={() => void refresh()} conversationId={activeId} otherName={firstName || t('otherMember')} listing={conv?.listing} prefill={meetup.prefill} />
         </Suspense>
       )}
       {isPhone && assistantLoaded && activeId && (
-        <BottomSheet open={assistantOpen} onClose={() => setAssistantOpen(false)} title="Aide Dilchap" maxHeight="88dvh">
+        <BottomSheet open={assistantOpen} onClose={() => setAssistantOpen(false)} title={t('chips.assistant')} maxHeight="88dvh">
           <Suspense fallback={<div className="chat-skeleton h-40 rounded-2xl" />}>
             <AssistantPanel asSheet conversationId={activeId} isBuyer={!conv?.canManageDeal} canOffer={canNegotiate} onUse={applyAssistant} onClose={() => setAssistantOpen(false)} />
           </Suspense>
@@ -695,17 +707,17 @@ export default function Messages({ onNavigate, onSelectListing, currentUser, onL
       )}
       <ConfirmSheet
         open={!!confirming}
-        title={confirming === 'REPORT' ? 'Signaler une tentative d’arnaque' : 'Discussion non conclue ?'}
-        confirmLabel={confirming === 'REPORT' ? 'Signaler' : 'Confirmer'}
+        title={confirming === 'REPORT' ? t('report.title') : t('notConcluded.title')}
+        confirmLabel={confirming === 'REPORT' ? t('report.confirm') : tc('confirm')}
         loading={closingDeal}
         tone={confirming === 'REPORT' ? 'danger' : 'primary'}
         onClose={() => { setConfirming(null); setNcReason(null) }}
         onConfirm={() => (confirming === 'REPORT' ? reportScam() : closeNotConcluded())}
       >
-        {confirming === 'REPORT' ? `Signaler ${other?.fullName ?? 'ce membre'} à l’équipe Dilchap ? La conversation sera jointe au signalement.`
+        {confirming === 'REPORT' ? t('report.body', { name: other?.fullName ?? t('report.thisMember') })
           : <>
-            Cette discussion sera marquée comme n’ayant pas abouti. Pourquoi ? <span className="text-on-surface-variant">(facultatif)</span>
-            <span className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Raison">
+            {t.rich('notConcluded.body', { muted: c => <span className="text-on-surface-variant">{c}</span> })}
+            <span className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('notConcluded.reasonAria')}>
               {NOT_CONCLUDED_REASONS.map(r => (
                 <button key={r.key} type="button" role="radio" aria-checked={ncReason === r.key} onClick={() => setNcReason(cur => (cur === r.key ? null : r.key))}
                   className={`cursor-pointer rounded-full border border-solid px-3 py-1.5 text-label-sm font-semibold ${ncReason === r.key ? 'border-primary bg-primary-fixed/40 text-on-surface' : 'border-outline-variant bg-surface-lowest text-on-surface-variant'}`}>

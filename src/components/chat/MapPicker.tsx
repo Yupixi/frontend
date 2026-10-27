@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from '../Icon'
 import { project, tilesFor, unproject, type LatLng } from '../../lib/maps'
+import { useT } from '../../i18n'
+import meetupNs from '../../i18n/ns/meetup'
 
 const MIN_Z = 5
 const MAX_Z = 18
@@ -15,6 +17,7 @@ export default function MapPicker({ center, value, marks = [], onPick, onPickMar
   onPick: (p: LatLng) => void
   onPickMark?: (id: string) => void
 }) {
+  const tr = useT(meetupNs)
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 320, h: 260 })
   const [view, setView] = useState({ c: value ?? center, z: 15 })
@@ -72,7 +75,7 @@ export default function MapPicker({ center, value, marks = [], onPick, onPickMar
         onPointerCancel={() => { drag.current = null }}
         onWheel={e => zoom(e.deltaY < 0 ? 1 : -1)}
         role="application"
-        aria-label="Carte : touchez pour placer le point de rendez-vous, glissez pour vous déplacer"
+        aria-label={tr('picker.mapAria')}
         className="relative h-64 w-full cursor-crosshair touch-none select-none overflow-hidden rounded-2xl bg-surface-container sm:h-72"
       >
         {tilesFor(view.c, view.z, size.w, size.h).map(t => (
@@ -82,7 +85,7 @@ export default function MapPicker({ center, value, marks = [], onPick, onPickMar
           const s = toScreen(m.point)
           if (s.x < -10 || s.y < -10 || s.x > size.w + 10 || s.y > size.h + 10) return null
           return (
-            <button key={m.id} type="button" onClick={() => onPickMark?.(m.id)} title={m.name} aria-label={`Choisir ${m.name}`}
+            <button key={m.id} type="button" onClick={() => onPickMark?.(m.id)} title={m.name} aria-label={tr('picker.chooseAria', { name: m.name })}
               className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-2 border-solid border-white bg-tertiary p-0 text-white shadow" style={{ left: s.x, top: s.y }}>
               <Icon name="verified_user" size={12} />
             </button>
@@ -93,11 +96,11 @@ export default function MapPicker({ center, value, marks = [], onPick, onPickMar
             <Icon name="location_on" size={38} fill />
           </span>
         )}
-        <span className="pointer-events-none absolute bottom-0 right-0 rounded-tl-md bg-white/85 px-1 text-[9px] leading-4 text-neutral-700">© OpenStreetMap</span>
+        <span className="pointer-events-none absolute bottom-0 right-0 rounded-tl-md bg-white/85 px-1 text-[9px] leading-4 text-neutral-700">© OpenStreetMap{/* i18n-ignore */}</span>
       </div>
       <div className="absolute right-2 top-2 flex flex-col overflow-hidden rounded-xl bg-surface-lowest shadow">
-        <button type="button" onClick={() => zoom(1)} aria-label="Zoomer" className="flex h-9 w-9 cursor-pointer items-center justify-center border-none bg-transparent text-on-surface"><Icon name="add" size={18} /></button>
-        <button type="button" onClick={() => zoom(-1)} aria-label="Dézoomer" className="flex h-9 w-9 cursor-pointer items-center justify-center border-0 border-t border-solid border-outline-variant bg-transparent text-on-surface"><Icon name="remove" size={18} /></button>
+        <button type="button" onClick={() => zoom(1)} aria-label={tr('picker.zoomIn')} className="flex h-9 w-9 cursor-pointer items-center justify-center border-none bg-transparent text-on-surface"><Icon name="add" size={18} /></button>
+        <button type="button" onClick={() => zoom(-1)} aria-label={tr('picker.zoomOut')} className="flex h-9 w-9 cursor-pointer items-center justify-center border-0 border-t border-solid border-outline-variant bg-transparent text-on-surface"><Icon name="remove" size={18} /></button>
       </div>
     </div>
   )

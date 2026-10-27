@@ -7,6 +7,9 @@
 // (Backend src/modules/messaging/chat-ai/live-location.ts); its constants
 // come from the server (`liveLocation.throttle`).
 
+import { fmtNumber, fmtTime } from '../i18n'
+import meetupNs from '../i18n/ns/meetup'
+
 export type LatLng = { lat: number; lng: number }
 
 export type LiveThrottle = {
@@ -71,21 +74,21 @@ export const hasPos = (s: { lat: number | null; lng: number | null } | null | un
 
 // « à environ 350 m du point », « à environ 1,2 km du point ».
 export function distanceLabel(m: number) {
-  if (m < 40) return 'au point de rendez-vous'
-  if (m < 1000) return `à environ ${Math.round(m / 50) * 50 || 50} m du point`
-  return `à environ ${(m / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km du point`
+  if (m < 40) return meetupNs.t('live.distance.atPoint')
+  if (m < 1000) return meetupNs.t('live.distance.m', { m: Math.round(m / 50) * 50 || 50 })
+  return meetupNs.t('live.distance.km', { km: fmtNumber(m / 1000, 1) })
 }
 
 // « il y a 20 s », « il y a 3 min » (computed at render time: refreshed by
 // the next position received or sent, never by a timer).
 export function agoLabel(iso: string, now = Date.now()) {
   const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000))
-  if (s < 10) return 'à l’instant'
-  if (s < 60) return `il y a ${s} s`
-  return `il y a ${Math.round(s / 60)} min`
+  if (s < 10) return meetupNs.t('live.ago.now')
+  if (s < 60) return meetupNs.t('live.ago.s', { s })
+  return meetupNs.t('live.ago.min', { min: Math.round(s / 60) })
 }
 
-export const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+export const hhmm = (iso: string) => fmtTime(iso)
 
 // ms until a position becomes stale (negative: already stale). Used as a
 // CSS animation delay, so the greying needs no timer.

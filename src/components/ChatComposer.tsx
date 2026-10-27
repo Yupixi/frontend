@@ -4,6 +4,8 @@ import AnimatedIcon from './AnimatedIcon'
 import { uploadAudio, uploadImages } from '../lib/upload'
 import { formatSeconds, useVoiceRecorder, type VoiceRecording } from './VoiceMessage'
 import { thumbnailUrl } from '../lib/media'
+import { useT } from '../i18n'
+import chatNs from '../i18n/ns/chat'
 
 export const MAX_PHOTOS = 6
 const MAX_LENGTH = 2000
@@ -36,6 +38,7 @@ const enterSends = () => typeof window !== 'undefined' && window.matchMedia('(ho
 // drag & drop — uploaded right away, previewed with remove), quoted reply,
 // Enter to send on desktop.
 const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ value, onChange, onSend, placeholder, replyTo, onCancelReply, onTyping, disabled, noVoice, maxPhotos = MAX_PHOTOS }, ref) {
+  const t = useT(chatNs)
   const field = useRef<HTMLTextAreaElement>(null)
   const picker = useRef<HTMLInputElement>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -62,8 +65,8 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
     const files = Array.from(list).filter(f => f.type.startsWith('image/'))
     if (!files.length || maxPhotos <= 0) return
     const room = maxPhotos - photos.length
-    if (room <= 0) { setError(`${maxPhotos} photos maximum par message.`); return }
-    if (files.length > room) setError(`${maxPhotos} photos maximum par message.`)
+    if (room <= 0) { setError(t('composer.maxPhotos', { max: maxPhotos })); return }
+    if (files.length > room) setError(t('composer.maxPhotos', { max: maxPhotos }))
     else setError(null)
     const added = files.slice(0, room).map(f => ({ key: `${f.name}-${f.size}-${Math.random()}`, preview: URL.createObjectURL(f), file: f }))
     setPhotos(p => [...p, ...added.map(({ key, preview }) => ({ key, preview }))])
@@ -95,7 +98,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
       setSentCount(c => c + 1)
       onCancelReply?.()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Message vocal non envoyé, réessayez.')
+      setError(e instanceof Error ? e.message : t('composer.voiceFailed'))
     } finally {
       setSending(false)
     }
@@ -114,7 +117,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
       setSentCount(c => c + 1)
       onCancelReply?.()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Message non envoyé, réessayez.')
+      setError(e instanceof Error ? e.message : t('composer.failed'))
     } finally {
       setSending(false)
       field.current?.focus()
@@ -133,10 +136,10 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
           <span className="w-1 self-stretch rounded-full bg-primary" />
           {replyTo.photo && <img src={thumbnailUrl(replyTo.photo)} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />}
           <div className="min-w-0 flex-1">
-            <div className="text-label-sm normal-case tracking-normal text-primary">Réponse à {replyTo.author}</div>
+            <div className="text-label-sm normal-case tracking-normal text-primary">{t('composer.replyTo', { name: replyTo.author })}</div>
             <div className="truncate text-body-sm text-on-surface-variant">{replyTo.preview}</div>
           </div>
-          <button type="button" onClick={onCancelReply} aria-label="Annuler la réponse" className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container"><Icon name="close" size={18} /></button>
+          <button type="button" onClick={onCancelReply} aria-label={t('composer.cancelReply')} className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container"><Icon name="close" size={18} /></button>
         </div>
       )}
 
@@ -147,11 +150,11 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
               <img src={p.preview} alt="" className={`h-full w-full object-cover ${p.url ? '' : 'opacity-60'}`} />
               {!p.url && !p.error && <span className="absolute inset-0 flex items-center justify-center"><Icon name="progress_activity" size={22} className="animate-spin text-white drop-shadow" /></span>}
               {p.error && <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white"><Icon name="error" size={22} /></span>}
-              <button type="button" onClick={() => removePhoto(p.key)} aria-label="Retirer la photo" className="absolute right-1 top-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-none bg-black/60 p-0 text-white"><Icon name="close" size={14} /></button>
+              <button type="button" onClick={() => removePhoto(p.key)} aria-label={t('composer.removePhoto')} className="absolute right-1 top-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-none bg-black/60 p-0 text-white"><Icon name="close" size={14} /></button>
             </div>
           ))}
           {photos.length < maxPhotos && (
-            <button type="button" onClick={() => picker.current?.click()} aria-label="Ajouter une photo" className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-transparent text-on-surface-variant"><Icon name="add" size={22} /></button>
+            <button type="button" onClick={() => picker.current?.click()} aria-label={t('composer.addPhoto')} className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-transparent text-on-surface-variant"><Icon name="add" size={22} /></button>
           )}
         </div>
       )}
@@ -160,7 +163,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
 
       {voice.recording ? (
         <div className="flex items-center gap-2 animate-[fadeIn_0.15s_ease-out]">
-          <button type="button" onClick={voice.cancel} aria-label="Annuler l’enregistrement" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:text-primary"><Icon name="delete" size={22} /></button>
+          <button type="button" onClick={voice.cancel} aria-label={t('composer.cancelRecording')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:text-primary"><Icon name="delete" size={22} /></button>
           <div className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-3xl bg-primary-fixed/40 px-4">
             <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-primary" />
             <span className="w-10 shrink-0 text-label-lg tabular-nums text-on-surface">{formatSeconds(voice.elapsed)}</span>
@@ -168,7 +171,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
               {Array.from({ length: 24 }, (_, i) => <span key={i} className="w-[3px] shrink-0 rounded-full bg-primary/70 transition-[height] duration-100" style={{ height: `${Math.max(12, Math.round(voice.level * 100 * (0.45 + 0.55 * Math.abs(Math.sin(i * 1.7 + voice.elapsed * 6)))))}%` }} />)}
             </span>
           </div>
-          <button type="button" onClick={() => void voice.stop().then(sendVoice)} aria-label="Envoyer le message vocal" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md active:scale-90"><Icon name="send" size={20} /></button>
+          <button type="button" onClick={() => void voice.stop().then(sendVoice)} aria-label={t('composer.sendVoice')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md active:scale-90"><Icon name="send" size={20} /></button>
         </div>
       ) : (
 
@@ -177,7 +180,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
         {maxPhotos > 0 && (
           <>
             <input ref={picker} type="file" accept="image/*" multiple hidden onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = '' }} />
-            <button type="button" disabled={disabled || photos.length >= maxPhotos} onClick={() => picker.current?.click()} aria-label="Joindre des photos" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40">
+            <button type="button" disabled={disabled || photos.length >= maxPhotos} onClick={() => picker.current?.click()} aria-label={t('composer.attachPhotos')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-primary disabled:opacity-40">
               <Icon name="add_photo_alternate" size={22} />
             </button>
           </>
@@ -191,7 +194,7 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
             disabled={disabled}
             placeholder={placeholder}
             enterKeyHint={enterSends() ? 'send' : 'enter'}
-            aria-label="Votre message"
+            aria-label={t('composer.messageAria')}
             onChange={e => { onChange(e.target.value); onTyping?.() }}
             onPaste={e => { if (e.clipboardData.files.length) { e.preventDefault(); addFiles(e.clipboardData.files) } }}
             onKeyDown={e => {
@@ -201,11 +204,11 @@ const ChatComposer = forwardRef<ComposerHandle, Props>(function ChatComposer({ v
           />
         </div>
         {voiceMode && !sending ? (
-          <button type="button" disabled={disabled} onClick={() => void voice.start()} aria-label="Enregistrer un message vocal" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md transition-transform active:scale-90 disabled:opacity-45">
+          <button type="button" disabled={disabled} onClick={() => void voice.start()} aria-label={t('composer.recordVoice')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md transition-transform active:scale-90 disabled:opacity-45">
             <Icon name="mic" size={22} />
           </button>
         ) : (
-          <button type="submit" disabled={!canSend} aria-label="Envoyer le message" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md transition-transform active:scale-90 disabled:opacity-45 disabled:shadow-none">
+          <button type="submit" disabled={!canSend} aria-label={t('composer.send')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-primary text-white shadow-md transition-transform active:scale-90 disabled:opacity-45 disabled:shadow-none">
           {sending ? <Icon name="progress_activity" size={20} className="animate-spin" /> : <AnimatedIcon name="send" fallback="send" size={19} trigger={sentCount} />}
         </button>
         )}

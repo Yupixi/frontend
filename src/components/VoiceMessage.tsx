@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
+import { useT } from '../i18n'
+import chatNs from '../i18n/ns/chat'
 
 export const MAX_VOICE_SECONDS = 300
 
@@ -43,14 +45,14 @@ export function useVoiceRecorder(onAutoStop: (rec: VoiceRecording) => void) {
   const start = async () => {
     setError(null)
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setError('Votre navigateur ne permet pas d’enregistrer un message vocal.')
+      setError(chatNs.t('voice.unsupported'))
       return
     }
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
     } catch {
-      setError('Autorisez l’accès au micro pour envoyer un message vocal.')
+      setError(chatNs.t('voice.micDenied'))
       return
     }
     const type = RECORDING_TYPES.find(t => MediaRecorder.isTypeSupported?.(t))
@@ -134,6 +136,7 @@ const SPEEDS = [1, 1.5, 2]
 // Voice note player: play / pause, seek on the bars, elapsed time, speed.
 // Starting one note pauses any other.
 export function VoicePlayer({ src, duration, mine, seed }: { src: string; duration: number; mine: boolean; seed: string }) {
+  const t = useT(chatNs)
   const audio = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
@@ -183,17 +186,17 @@ export function VoicePlayer({ src, duration, mine, seed }: { src: string; durati
         onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
         onError={() => setFailed(true)}
       />
-      <button type="button" onClick={toggle} disabled={failed} aria-label={playing ? 'Pause' : 'Écouter le message vocal'} className={`flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-none disabled:opacity-50 ${mine ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
+      <button type="button" onClick={toggle} disabled={failed} aria-label={playing ? t('voice.pause') : t('voice.play')} className={`flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-none disabled:opacity-50 ${mine ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
         <Icon name={failed ? 'error' : playing ? 'pause' : 'play_arrow'} size={24} fill />
       </button>
       <div className="min-w-0 flex-1">
-        <div role="slider" aria-label="Position de lecture" aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(time)} onClick={seek} className="flex h-7 cursor-pointer items-center gap-[2px]">
+        <div role="slider" aria-label={t('voice.position')} aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(time)} onClick={seek} className="flex h-7 cursor-pointer items-center gap-[2px]">
           {bars.map((b, i) => (
             <span key={i} style={{ height: `${Math.round(b * 100)}%` }} className={`w-[3px] flex-1 rounded-full transition-colors ${i / bars.length < progress ? (mine ? 'bg-white' : 'bg-primary') : (mine ? 'bg-white/40' : 'bg-outline-variant')}`} />
           ))}
         </div>
         <div className={`mt-0.5 flex items-center justify-between text-label-sm normal-case tracking-normal ${mine ? 'text-white/80' : 'text-on-surface-variant'}`}>
-          <span>{failed ? 'Lecture impossible' : formatSeconds(playing || time ? time : total)}</span>
+          <span>{failed ? t('voice.failed') : formatSeconds(playing || time ? time : total)}</span>
           <button type="button" onClick={nextSpeed} className={`cursor-pointer rounded-full border-none px-1.5 py-0 text-label-sm ${mine ? 'bg-white/20 text-white' : 'bg-surface-container text-on-surface'}`}>{speed}×</button>
         </div>
       </div>

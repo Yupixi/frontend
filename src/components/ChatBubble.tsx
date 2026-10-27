@@ -4,6 +4,8 @@ import Icon from './Icon'
 import { thumbnailUrl } from '../lib/media'
 import { VoicePlayer } from './VoiceMessage'
 import { messagePreview, type RemoteMessage } from '../graphql/messaging'
+import { useT } from '../i18n'
+import chatNs from '../i18n/ns/chat'
 
 type Props = {
   message: RemoteMessage
@@ -32,12 +34,13 @@ function Linkified({ text, mine }: { text: string; mine: boolean }) {
 }
 
 function PhotoGrid({ photos, onOpen }: { photos: string[]; onOpen: (i: number) => void }) {
+  const t = useT(chatNs)
   const shown = photos.slice(0, 4)
   const extra = photos.length - shown.length
   return (
     <div className={`grid gap-1 overflow-hidden rounded-xl ${photos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
       {shown.map((src, i) => (
-        <button key={src + i} type="button" onClick={e => { e.stopPropagation(); onOpen(i) }} aria-label={`Voir la photo ${i + 1}`} className={`relative cursor-zoom-in overflow-hidden border-none bg-surface-container p-0 ${photos.length === 1 ? 'h-auto max-h-72 w-60 max-w-full' : 'h-28 w-28 sm:h-32 sm:w-32'} ${photos.length === 3 && i === 0 ? 'col-span-2 w-full' : ''}`}>
+        <button key={src + i} type="button" onClick={e => { e.stopPropagation(); onOpen(i) }} aria-label={t('bubble.viewPhotoAria', { n: i + 1 })} className={`relative cursor-zoom-in overflow-hidden border-none bg-surface-container p-0 ${photos.length === 1 ? 'h-auto max-h-72 w-60 max-w-full' : 'h-28 w-28 sm:h-32 sm:w-32'} ${photos.length === 3 && i === 0 ? 'col-span-2 w-full' : ''}`}>
           <img src={photos.length === 1 ? src : thumbnailUrl(src)} alt="" loading="lazy" decoding="async" className="block h-full max-h-72 w-full object-cover" />
           {extra > 0 && i === shown.length - 1 && <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-headline-sm text-white">+{extra}</span>}
         </button>
@@ -49,6 +52,7 @@ function PhotoGrid({ photos, onOpen }: { photos: string[]; onOpen: (i: number) =
 // A text / photo message of the thread, with its quoted reply and actions
 // (hover buttons on desktop, long-press sheet on touch screens).
 export default function ChatBubble({ message: m, mine, quoteAuthor, onReply, onOpenPhotos, onJumpTo, grouped }: Props) {
+  const t = useT(chatNs)
   const [menu, setMenu] = useState(false)
   const [copied, setCopied] = useState(false)
   const press = useRef<number | null>(null)
@@ -103,15 +107,15 @@ export default function ChatBubble({ message: m, mine, quoteAuthor, onReply, onO
       </div>
       {/* Desktop hover actions */}
       <div className="hidden shrink-0 gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100 [@media(hover:hover)]:flex">
-        <button type="button" onClick={onReply} title="Répondre" aria-label="Répondre" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container"><Icon name="reply" size={18} /></button>
-        {m.body && <button type="button" onClick={copy} title="Copier" aria-label="Copier le texte" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container"><Icon name={copied ? 'check' : 'content_copy'} size={17} /></button>}
+        <button type="button" onClick={onReply} title={t('bubble.reply')} aria-label={t('bubble.reply')} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container"><Icon name="reply" size={18} /></button>
+        {m.body && <button type="button" onClick={copy} title={t('bubble.copy')} aria-label={t('bubble.copyText')} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container"><Icon name={copied ? 'check' : 'content_copy'} size={17} /></button>}
       </div>
 
       <BottomSheet open={menu} onClose={() => setMenu(false)}>
         <div className="flex flex-col gap-1 pt-1">
-          <button type="button" onClick={() => { setMenu(false); onReply() }} className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-3 text-left text-body-lg text-on-surface hover:bg-surface-container-low"><Icon name="reply" size={22} /> Répondre</button>
-          {m.body && <button type="button" onClick={copy} className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-3 text-left text-body-lg text-on-surface hover:bg-surface-container-low"><Icon name="content_copy" size={22} /> Copier le texte</button>}
-          {photos.length > 0 && <button type="button" onClick={() => { setMenu(false); onOpenPhotos(photos, 0) }} className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-3 text-left text-body-lg text-on-surface hover:bg-surface-container-low"><Icon name="photo_library" size={22} /> Voir {photos.length > 1 ? 'les photos' : 'la photo'}</button>}
+          <button type="button" onClick={() => { setMenu(false); onReply() }} className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-3 text-left text-body-lg text-on-surface hover:bg-surface-container-low"><Icon name="reply" size={22} /> {t('bubble.reply')}</button>
+          {m.body && <button type="button" onClick={copy} className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-3 text-left text-body-lg text-on-surface hover:bg-surface-container-low"><Icon name="content_copy" size={22} /> {t('bubble.copyText')}</button>}
+          {photos.length > 0 && <button type="button" onClick={() => { setMenu(false); onOpenPhotos(photos, 0) }} className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-3 text-left text-body-lg text-on-surface hover:bg-surface-container-low"><Icon name="photo_library" size={22} /> {t('bubble.viewPhotos', { count: photos.length })}</button>}
         </div>
       </BottomSheet>
     </div>

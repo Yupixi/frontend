@@ -8,6 +8,8 @@ import {
 } from '../../graphql/messaging'
 import { distanceKm, type LatLng } from '../../lib/maps'
 import { useMemberLists } from '../../lib/lists'
+import { useT } from '../../i18n'
+import meetupNs from '../../i18n/ns/meetup'
 
 const MapPicker = lazy(() => import('./MapPicker'))
 
@@ -45,6 +47,7 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
   listing?: { city?: string | null; meetupSpot?: string | null } | null
   prefill?: MeetupPrefill | null
 }) {
+  const t = useT(meetupNs)
   const lists = useMemberLists()
   const [near, setNear] = useState<LatLng | null>(null)
   const { data } = useQuery<{ meetupPlaceSuggestions: MeetupPlaces }>(MEETUP_PLACES_QUERY, {
@@ -89,16 +92,16 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
     setName(p.name); setAddress(p.address); setError(null)
   }
   const locate = () => {
-    if (!navigator.geolocation) { setError('Votre appareil ne permet pas la localisation.'); return }
+    if (!navigator.geolocation) { setError(t('sheet.noGeo')); return }
     setLocating(true); setError(null)
     navigator.geolocation.getCurrentPosition(
       pos => {
         const p = { lat: pos.coords.latitude, lng: pos.coords.longitude }
         setLocating(false); setNear(p)
         setPoint({ ...p, source: 'CURRENT' })
-        if (!name.trim()) setName('Ma position')
+        if (!name.trim()) setName(t('sheet.myPosition'))
       },
-      () => { setLocating(false); setError('Position introuvable : autorisez la localisation ou choisissez un lieu conseillé.') },
+      () => { setLocating(false); setError(t('sheet.geoFailed')) },
       { enableHighAccuracy: true, timeout: 12_000, maximumAge: 60_000 },
     )
   }
@@ -107,8 +110,8 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
   const nearSafe = point && (point.source === 'SUGGESTED' || places.some(p => distanceKm(p, point) < 0.15))
 
   const submit = () => {
-    if (!name.trim()) { setError('Donnez un nom au lieu (ex : centre commercial, station-service…).'); return }
-    if (!when) { setError('Choisissez une date et une heure.'); return }
+    if (!name.trim()) { setError(t('sheet.nameRequired')); return }
+    if (!when) { setError(t('sheet.whenRequired')); return }
     setError(null)
     void propose({
       variables: {
@@ -123,27 +126,27 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
   }
 
   const tabs: [Mode, string, string][] = [
-    ['places', 'Lieux conseillés', 'verified_user'],
-    ['map', 'Sur la carte', 'map'],
-    ...(info?.currentPosition ? [['here', 'Ma position', 'my_location'] as [Mode, string, string]] : []),
+    ['places', t('sheet.tab.places'), 'verified_user'],
+    ['map', t('sheet.tab.map'), 'map'],
+    ...(info?.currentPosition ? [['here', t('sheet.myPosition'), 'my_location'] as [Mode, string, string]] : []),
   ]
   const footer = (
     <div className="border-0 border-t border-solid border-outline-variant bg-surface px-4 pb-4 pt-3">
       {error && <p role="alert" className="m-0 mb-2 text-body-sm text-primary">{error}</p>}
       <button type="button" disabled={loading} onClick={submit} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white disabled:opacity-60">
-        <Icon name="send" size={18} /> {loading ? 'Envoi…' : `Proposer à ${otherName}`}
+        <Icon name="send" size={18} /> {loading ? t('sheet.sending') : t('sheet.proposeTo', { name: otherName })}
       </button>
     </div>
   )
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Fixer un rendez-vous" maxHeight="92dvh" maxWidth="560px" footer={footer}>
+    <BottomSheet open={open} onClose={onClose} title={t('sheet.title')} maxHeight="92dvh" maxWidth="560px" footer={footer}>
       <div className="flex flex-col gap-3">
-        <p className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft/60 px-3 py-2 text-body-sm text-on-surface"><Icon name="shield" size={17} className="mt-0.5 shrink-0 text-tertiary" /> Pour votre sécurité, préférez un lieu public plutôt que votre domicile, de jour.</p>
+        <p className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft/60 px-3 py-2 text-body-sm text-on-surface"><Icon name="shield" size={17} className="mt-0.5 shrink-0 text-tertiary" /> {t('sheet.safety')}</p>
 
         {info?.enabled !== false && (
           <>
-            <div role="tablist" aria-label="Choisir le lieu" className="flex gap-1 rounded-full bg-surface-container-low p-1">
+            <div role="tablist" aria-label={t('sheet.tabsAria')} className="flex gap-1 rounded-full bg-surface-container-low p-1">
               {tabs.map(([m, label, icon]) => (
                 <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => { setMode(m); if (m === 'here' && point?.source !== 'CURRENT') locate() }}
                   className={`flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-1 rounded-full border-none px-2 py-2 text-label-sm font-semibold ${mode === m ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
@@ -157,13 +160,17 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
                 {places.length > 4 && (
                   <label className="flex items-center gap-2 rounded-full bg-surface-container-low px-3.5 py-2">
                     <Icon name="search" size={17} className="text-outline" />
-                    <input value={q} onChange={e => setQ(e.target.value)} placeholder="Chercher un lieu" aria-label="Chercher un lieu conseillé" className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
+                    <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('sheet.searchPlaceholder')} aria-label={t('sheet.searchAria')} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
                   </label>
                 )}
                 {!info && <div className="space-y-2"><div className="chat-skeleton h-14 rounded-xl" /><div className="chat-skeleton h-14 rounded-xl" /></div>}
                 {info && !places.length && (
                   <p className="m-0 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
-                    Pas encore de lieu conseillé {info.city ? `à ${info.city}` : 'ici'}. Choisissez un point sur la carte{info.currentPosition ? ' ou votre position' : ''}, ou saisissez le nom d’un lieu public{lists.meetupSpots[0] ? ` (ex : ${lists.meetupSpots[0].name})` : ''}.
+                    {t(info.city ? 'sheet.noPlacesCity' : 'sheet.noPlacesHere', {
+                      city: info.city,
+                      orPosition: info.currentPosition ? t('sheet.orPosition') : '',
+                      example: lists.meetupSpots[0] ? t('sheet.exampleParen', { name: lists.meetupSpots[0].name }) : '',
+                    })}
                   </p>
                 )}
                 <ul className="m-0 flex max-h-64 list-none flex-col gap-1.5 overflow-y-auto p-0">
@@ -175,7 +182,7 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
                           className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border border-solid px-3 py-2.5 text-left ${on ? 'border-primary bg-primary-fixed/40' : 'border-outline-variant bg-surface-lowest hover:border-primary/60'}`}>
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><Icon name="verified_user" size={18} /></span>
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-1.5 text-label-md text-on-surface"><span className="truncate">{p.name}</span>{p.closest && <span className="shrink-0 rounded bg-primary px-1.5 text-[10px] font-bold text-white">Le plus proche</span>}</span>
+                            <span className="flex items-center gap-1.5 text-label-md text-on-surface"><span className="truncate">{p.name}</span>{p.closest && <span className="shrink-0 rounded bg-primary px-1.5 text-[10px] font-bold text-white">{t('sheet.closest')}</span>}</span>
                             <span className="block truncate text-body-sm text-on-surface-variant">{p.typeLabel}{p.address ? ` • ${p.address}` : ''}</span>
                           </span>
                           {p.distanceKm != null && <span className="shrink-0 text-label-sm text-on-surface-variant">{p.distanceKm < 1 ? `${Math.round(p.distanceKm * 1000)} m` : `${p.distanceKm.toFixed(1)} km`}</span>}
@@ -186,7 +193,7 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
                 </ul>
                 {info?.currentPosition && !near && places.length > 1 && (
                   <button type="button" onClick={() => { locate() }} disabled={locating} className="flex cursor-pointer items-center justify-center gap-1.5 self-start rounded-full border-none bg-surface-container px-3 py-1.5 text-label-sm text-on-surface">
-                    <Icon name="near_me" size={15} /> {locating ? 'Localisation…' : 'Trier par distance depuis ma position'}
+                    <Icon name="near_me" size={15} /> {locating ? t('sheet.locating') : t('sheet.sortByDistance')}
                   </button>
                 )}
               </div>
@@ -201,32 +208,32 @@ export default function MeetupSheet({ open, onClose, onSent, conversationId, oth
                   onPick={p => { setPoint({ ...p, source: mode === 'here' ? 'CURRENT' : 'MAP' }); if (mode === 'here') setMode('map') }}
                   onPickMark={id => { const p = places.find(x => x.id === id); if (p) pick(p) }}
                 />
-                <p className="m-0 text-body-sm text-on-surface-variant">Touchez la carte pour placer le point, ou un repère vert pour choisir un lieu conseillé.</p>
+                <p className="m-0 text-body-sm text-on-surface-variant">{t('sheet.mapHint')}</p>
               </Suspense>
             )}
             {mode === 'here' && point?.source !== 'CURRENT' && (
-              <p className="m-0 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant">{locating ? 'Localisation en cours…' : 'Votre position est demandée une seule fois, jamais suivie.'}</p>
+              <p className="m-0 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant">{locating ? t('sheet.locatingLong') : t('sheet.oneShot')}</p>
             )}
 
             {point && !nearSafe && (
-              <p className="m-0 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-body-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-100"><Icon name="warning" size={17} className="mt-0.5 shrink-0" /> Ce point n’est pas un lieu conseillé : vérifiez qu’il s’agit d’un endroit public et fréquenté.</p>
+              <p className="m-0 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-body-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-100"><Icon name="warning" size={17} className="mt-0.5 shrink-0" /> {t('sheet.notSafe')}</p>
             )}
           </>
         )}
 
         <div className="grid gap-2 sm:grid-cols-[1fr_200px]">
-          <label className="text-label-sm text-on-surface-variant">Nom du lieu
-            <input className="input mt-1" value={name} maxLength={160} onChange={e => setName(e.target.value)} placeholder={lists.meetupSpots[0] ? `Ex : ${lists.meetupSpots[0].name}` : 'Ex : centre commercial, station-service…'} />
+          <label className="text-label-sm text-on-surface-variant">{t('sheet.placeName')}
+            <input className="input mt-1" value={name} maxLength={160} onChange={e => setName(e.target.value)} placeholder={lists.meetupSpots[0] ? t('sheet.placeExample', { name: lists.meetupSpots[0].name }) : t('sheet.placePlaceholder')} />
           </label>
-          <label className="text-label-sm text-on-surface-variant">Date et heure
+          <label className="text-label-sm text-on-surface-variant">{t('sheet.when')}
             <input className="input mt-1" type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} />
           </label>
         </div>
-        <label className="text-label-sm text-on-surface-variant">Adresse ou repère (facultatif)
-          <input className="input mt-1" value={address} maxLength={200} onChange={e => setAddress(e.target.value)} placeholder="Ex : entrée principale, à côté de la pharmacie" />
+        <label className="text-label-sm text-on-surface-variant">{t('sheet.address')}
+          <input className="input mt-1" value={address} maxLength={200} onChange={e => setAddress(e.target.value)} placeholder={t('sheet.addressPlaceholder')} />
         </label>
         {point && info?.enabled && (
-          <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface-variant"><Icon name="lock" size={16} className="mt-0.5 shrink-0" /> Le point sur la carte sera visible seulement par {otherName} et vous, une fois la proposition envoyée.</p>
+          <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface-variant"><Icon name="lock" size={16} className="mt-0.5 shrink-0" /> {t('sheet.pointPrivacy', { name: otherName })}</p>
         )}
       </div>
     </BottomSheet>

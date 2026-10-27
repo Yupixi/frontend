@@ -4,15 +4,17 @@ import Price from '../Price'
 import { hasPoint } from '../../lib/maps'
 import type { RemoteMeetup, SystemCard as Card } from '../../graphql/messaging'
 import { MapsActions, StaticMap } from './MeetupPoint'
+import { useT, fmtDate } from '../../i18n'
+import chatNs from '../../i18n/ns/chat'
 
-export const MEETUP_CHECKLIST = [
-  'Lieu public et fréquenté, de jour',
-  'Vérifiez l’article avant de payer',
-  'Payez à la remise, jamais avant',
+export const meetupChecklist = () => [
+  chatNs.t('card.checklist.public'),
+  chatNs.t('card.checklist.check'),
+  chatNs.t('card.checklist.payAtHandover'),
 ]
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+  fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 
 function Checklist({ items }: { items: string[] }) {
   return (
@@ -35,6 +37,7 @@ export function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action, li
   action?: { label: string; icon: string; onClick: () => void }
   live?: { map?: ReactNode; panel?: ReactNode }
 }) {
+  const t = useT(chatNs)
   const point = hasPoint(meetup) ? { lat: meetup.lat!, lng: meetup.lng! } : null
   const live = meetup.status !== 'DECLINED'
   return (
@@ -44,23 +47,23 @@ export function MeetupCard({ meetup, mine, busy, onConfirm, onChange, action, li
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container text-primary"><Icon name={meetup.pointSource === 'SUGGESTED' ? 'verified_user' : 'location_on'} size={20} /></span>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-1.5 text-label-lg text-on-surface"><span className="break-words">{meetup.place}</span>{meetup.pointSource === 'SUGGESTED' && <span className="rounded bg-tertiary-soft px-1.5 text-[10px] font-bold text-tertiary">Lieu conseillé</span>}</div>
+            <div className="flex flex-wrap items-center gap-x-1.5 text-label-lg text-on-surface"><span className="break-words">{meetup.place}</span>{meetup.pointSource === 'SUGGESTED' && <span className="rounded bg-tertiary-soft px-1.5 text-[10px] font-bold text-tertiary">{t('card.suggestedPlace')}</span>}</div>
             {meetup.address && <div className="break-words text-body-sm text-on-surface-variant">{meetup.address}</div>}
             <div className="text-body-sm text-on-surface first-letter:uppercase">{when(meetup.scheduledAt)}</div>
           </div>
         </div>
         {meetup.status === 'PROPOSED' ? (
           mine ? (
-            <p className="m-0 rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">En attente de confirmation…</p>
+            <p className="m-0 rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">{t('card.awaiting')}</p>
           ) : (
             <div className="flex gap-2">
-              <button disabled={busy} onClick={onConfirm} className="flex-1 cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary py-2 text-label-md text-white disabled:opacity-60">Confirmer le RDV</button>
-              <button disabled={busy} onClick={onChange} className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container px-3 py-2 text-label-md text-on-surface">Changer</button>
+              <button disabled={busy} onClick={onConfirm} className="flex-1 cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary py-2 text-label-md text-white disabled:opacity-60">{t('card.confirm')}</button>
+              <button disabled={busy} onClick={onChange} className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container px-3 py-2 text-label-md text-on-surface">{t('card.change')}</button>
             </div>
           )
         ) : (
           <p className={`m-0 flex items-center gap-1.5 rounded-lg px-3 py-2 text-label-md ${meetup.status === 'CONFIRMED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>
-            <Icon name={meetup.status === 'CONFIRMED' ? 'check_circle' : 'cancel'} size={16} /> {meetup.status === 'CONFIRMED' ? (meetup.handedOverAt ? 'Remise effectuée' : 'Rendez-vous confirmé') : 'Proposition remplacée ou déclinée'}
+            <Icon name={meetup.status === 'CONFIRMED' ? 'check_circle' : 'cancel'} size={16} /> {meetup.status === 'CONFIRMED' ? (meetup.handedOverAt ? t('card.handedOver') : t('card.confirmed')) : t('card.declined')}
           </p>
         )}
         {liveSlot?.panel}
@@ -81,15 +84,16 @@ export function SystemCard({ card, currency, onAction, children }: {
   // Private extra for the viewer (the inline rating of « Vente conclue »).
   children?: React.ReactNode
 }) {
+  const t = useT(chatNs)
   const point = hasPoint(card) ? { lat: card.lat!, lng: card.lng! } : null
   const safety = card.type === 'SAFETY_NOTICE'
   const icon = card.type === 'OFFER_ACCEPTED' ? 'handshake' : card.type === 'MEETUP_CONFIRMED' ? 'event_available' : card.type === 'DEAL_CONCLUDED' ? 'verified' : 'shield'
   return (
-    <section aria-label={`Dilchap : ${card.title}`} className={`mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-solid ${safety ? 'border-amber-300/70 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-outline-variant/70 bg-surface-lowest'} shadow-sm`}>
+    <section aria-label={t('card.aria', { title: card.title })} className={`mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-solid ${safety ? 'border-amber-300/70 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-outline-variant/70 bg-surface-lowest'} shadow-sm`}>
       <div className="flex items-center gap-2 px-3.5 pb-1 pt-3">
         <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${safety ? 'bg-amber-200 text-amber-900 dark:bg-amber-500/25 dark:text-amber-200' : 'bg-primary text-white'}`}><Icon name={icon} size={16} /></span>
         <span className="min-w-0 flex-1 text-label-lg text-on-surface">{card.title}</span>
-        <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant"><Icon name="verified_user" size={12} /> Dilchap</span>
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant"><Icon name="verified_user" size={12} /> Dilchap{/* i18n-ignore */}</span>
       </div>
       <div className="flex flex-col gap-2.5 px-3.5 pb-3.5 pt-1.5">
         {card.type === 'OFFER_ACCEPTED' && card.amount != null && (
@@ -107,7 +111,7 @@ export function SystemCard({ card, currency, onAction, children }: {
               {card.scheduledAt && <div className="text-body-sm text-on-surface first-letter:uppercase">{when(card.scheduledAt)}</div>}
             </div>
             <MapsActions point={point} label={card.place ?? ''} address={card.address} />
-            <Checklist items={card.checklist?.length ? card.checklist : MEETUP_CHECKLIST} />
+            <Checklist items={card.checklist?.length ? card.checklist : meetupChecklist()} />
           </>
         ) : card.type !== 'OFFER_ACCEPTED' && (
           card.lines.map((l, i) => <p key={i} className={`m-0 text-body-sm ${safety ? 'text-amber-950 dark:text-amber-100' : 'text-on-surface-variant'}`}>{l}</p>)
@@ -117,7 +121,7 @@ export function SystemCard({ card, currency, onAction, children }: {
         {card.cta && onAction && (
           <button type="button" onClick={() => onAction(card.cta!)} className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none px-3 py-2 text-label-md ${card.cta === 'REPORT' ? 'bg-transparent text-on-surface underline' : 'bg-primary text-white'}`}>
             <Icon name={card.cta === 'MEETUP' ? 'event' : card.cta === 'REVIEW' ? 'rate_review' : 'flag'} size={17} />
-            {card.cta === 'MEETUP' ? 'Fixer le rendez-vous' : card.cta === 'REVIEW' ? 'Laisser un avis' : 'Signaler ce membre'}
+            {card.cta === 'MEETUP' ? t('card.cta.meetup') : card.cta === 'REVIEW' ? t('card.cta.review') : t('card.cta.report')}
           </button>
         )}
       </div>

@@ -3,16 +3,19 @@ import { useMutation } from '@apollo/client/react'
 import Icon from '../Icon'
 import { DISMISS_SAFETY_ALERT_MUTATION, type SafetyAlert } from '../../graphql/messaging'
 import { CREATE_REPORT_MUTATION } from '../../graphql/reports'
+import { useT } from '../../i18n'
+import chatNs from '../../i18n/ns/chat'
 
+// Written into the report read by the Dilchap team: stays in French.
 const RULE_REASON: Record<string, string> = {
-  DEPOSIT: 'Demande d’acompte',
-  PAY_FIRST: 'Paiement demandé avant le rendez-vous',
-  OTP_CODE: 'Demande de code reçu par SMS',
-  SHIPPING_PREPAY: 'Envoi par transporteur payé d’avance',
-  EXTERNAL_LINK: 'Lien suspect',
-  OFF_PLATFORM: 'Passage sur une autre messagerie',
-  PHONE_EARLY: 'Numéro partagé très tôt',
-  LOW_PRICE: 'Prix anormalement bas',
+  DEPOSIT: 'Demande d’acompte', // i18n-ignore
+  PAY_FIRST: 'Paiement demandé avant le rendez-vous', // i18n-ignore
+  OTP_CODE: 'Demande de code reçu par SMS', // i18n-ignore
+  SHIPPING_PREPAY: 'Envoi par transporteur payé d’avance', // i18n-ignore
+  EXTERNAL_LINK: 'Lien suspect', // i18n-ignore
+  OFF_PLATFORM: 'Passage sur une autre messagerie', // i18n-ignore
+  PHONE_EARLY: 'Numéro partagé très tôt', // i18n-ignore
+  LOW_PRICE: 'Prix anormalement bas', // i18n-ignore
 }
 
 // Private safety banners: only the member at risk sees them (the server
@@ -25,6 +28,7 @@ export default function SafetyBanners({ alerts, conversationId, otherId, onDone,
   onDone: () => void
   compact?: boolean
 }) {
+  const t = useT(chatNs)
   const [dismiss] = useMutation(DISMISS_SAFETY_ALERT_MUTATION)
   const [report] = useMutation(CREATE_REPORT_MUTATION)
   const [busy, setBusy] = useState<string | null>(null)
@@ -37,12 +41,13 @@ export default function SafetyBanners({ alerts, conversationId, otherId, onDone,
   const signal = (a: SafetyAlert) => {
     if (!otherId) return close(a, false)
     setBusy(a.id)
+    // i18n-ignore
     void report({ variables: { targetType: 'USER', targetUserId: a.senderId || otherId, reason: 'Tentative d’arnaque', message: `Alerte Dilchap « ${RULE_REASON[a.rule] ?? a.rule} » — conversation ${conversationId}` } })
       .then(() => { setReported(a.id); close(a, true) })
       .catch(() => setBusy(null))
   }
   return (
-    <div className="flex flex-col gap-2" role="region" aria-label="Alertes de sécurité">
+    <div className="flex flex-col gap-2" role="region" aria-label={t('safety.regionAria')}>
       {alerts.map(a => {
         const high = a.severity === 'HIGH'
         return (
@@ -50,10 +55,10 @@ export default function SafetyBanners({ alerts, conversationId, otherId, onDone,
             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${high ? 'bg-primary text-white' : 'bg-amber-200 text-amber-900 dark:bg-amber-500/25 dark:text-amber-200'}`}><Icon name={high ? 'gpp_maybe' : 'shield'} size={18} /></span>
             <div className="min-w-0 flex-1">
               <p className={`m-0 text-body-sm ${high ? 'text-on-surface' : 'text-amber-950 dark:text-amber-100'}`}>{a.text}</p>
-              <p className="m-0 mt-0.5 text-[11px] text-on-surface-variant">Visible par vous seul{compact ? '' : ' — l’autre membre ne voit pas cette alerte'}.</p>
+              <p className="m-0 mt-0.5 text-[11px] text-on-surface-variant">{compact ? t('safety.onlyYou') : t('safety.onlyYouLong')}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <button type="button" disabled={busy === a.id} onClick={() => close(a, false)} className="cursor-pointer rounded-full border-none bg-surface-lowest px-3 py-1.5 text-label-sm font-semibold text-on-surface disabled:opacity-60">Compris</button>
-                <button type="button" disabled={busy === a.id || reported === a.id} onClick={() => signal(a)} className="flex cursor-pointer items-center gap-1 rounded-full border-none bg-transparent px-2 py-1.5 text-label-sm font-semibold text-primary disabled:opacity-60"><Icon name="flag" size={15} /> {reported === a.id ? 'Signalé' : 'Signaler'}</button>
+                <button type="button" disabled={busy === a.id} onClick={() => close(a, false)} className="cursor-pointer rounded-full border-none bg-surface-lowest px-3 py-1.5 text-label-sm font-semibold text-on-surface disabled:opacity-60">{t('safety.ok')}</button>
+                <button type="button" disabled={busy === a.id || reported === a.id} onClick={() => signal(a)} className="flex cursor-pointer items-center gap-1 rounded-full border-none bg-transparent px-2 py-1.5 text-label-sm font-semibold text-primary disabled:opacity-60"><Icon name="flag" size={15} /> {reported === a.id ? t('safety.reported') : t('safety.report')}</button>
               </div>
             </div>
           </div>
