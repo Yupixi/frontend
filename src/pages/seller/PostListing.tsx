@@ -44,6 +44,7 @@ import { formatDuration } from '../../lib/reels'
 import { useDebounced } from '../../lib/useDebounced'
 import { cfaUnit, fmtCfa, fmtTime, getLocale, useT } from '../../i18n'
 import post from '../../i18n/ns/post'
+import { conditionLabel } from '../../lib/format'
 
 const TITLE_MAX = 80
 
@@ -822,7 +823,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                       const on = form.condition === c.value
                       return (
                         <button key={c.value} type="button" role="radio" aria-checked={on} onClick={() => set('condition', c.value)} className={`cursor-pointer rounded-xl border-[1.5px] border-solid p-3 text-left ${on ? 'border-primary bg-primary-fixed/40' : bad('condition') ? 'border-primary bg-surface-container-low' : 'border-outline-variant bg-surface-container-low hover:bg-surface-container'}`}>
-                          <span className="flex items-center justify-between text-label-md text-on-surface">{c.value} <CategoryIcon icon={c.icon} size={17} className={on ? 'text-primary' : 'text-on-surface-variant'} /></span>
+                          <span className="flex items-center justify-between text-label-md text-on-surface">{conditionLabel(c.value)} <CategoryIcon icon={c.icon} size={17} className={on ? 'text-primary' : 'text-on-surface-variant'} /></span>
                           <span className="mt-1 block text-body-sm text-on-surface-variant">{c.hint}</span>
                         </button>
                       )
@@ -1057,7 +1058,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <div className="overflow-hidden rounded-xl border border-outline-variant">
                 <div className="relative aspect-[4/3] overflow-hidden bg-surface-container-low">
                   {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Icon name="image" size={40} /></div>}
-                  {form.condition && <span className="absolute left-2 top-2 rounded-md bg-tertiary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{form.condition}</span>}
+                  {form.condition && <span className="absolute left-2 top-2 rounded-md bg-tertiary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{conditionLabel(form.condition)}</span>}
                   {reelDraft && publishes && reelsOffered && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white"><Icon name="smart_display" size={12} /> {/* i18n-ignore */}Reel{reelDraft.duration ? ` · ${formatDuration(Math.max(0, reelDraft.range[1] - reelDraft.range[0]))}` : ''}</span>}
                   {form.city && <span className="absolute right-2 top-2 flex items-center gap-0.5 rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-semibold text-on-surface"><MapPin size={11} /> {form.city}</span>}
                 </div>

@@ -19,6 +19,7 @@ import { useMemberCountryCode } from '../../lib/countries'
 import { useT } from '../../i18n'
 import common from '../../i18n/ns/common'
 import disputes from '../../i18n/ns/disputes'
+import { conditionLabel } from '../../lib/format'
 
 type Props = {
   orderId: string
@@ -173,7 +174,7 @@ export default function OpenDispute({ orderId, onNavigate, onSelectOrder, onOpen
                   </div>
                   <div className="mt-3 flex gap-3">
                     <span className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
-                    <div className="min-w-0"><div className="text-label-sm uppercase text-on-surface-variant">{o.listing.category.name}</div><div className="truncate text-label-lg text-on-surface">{o.listing.title}</div>{o.listing.condition && <div className="text-body-sm text-on-surface-variant">{t('open.declaredCondition', { condition: o.listing.condition })}</div>}</div>
+                    <div className="min-w-0"><div className="text-label-sm uppercase text-on-surface-variant">{o.listing.category.name}</div><div className="truncate text-label-lg text-on-surface">{o.listing.title}</div>{o.listing.condition && <div className="text-body-sm text-on-surface-variant">{t('open.declaredCondition', { condition: conditionLabel(o.listing.condition) })}</div>}</div>
                   </div>
                   <div className="mt-3 flex items-center justify-between rounded-xl bg-surface-container-low p-3">
                     <span className="flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="account_balance_wallet" size={17} /> {t('open.amountAtStake')}</span>

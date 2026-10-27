@@ -5,7 +5,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import { AccountLayout } from './AccountLayout'
 import AccountVerifyPanel from '../../components/AccountVerifyPanel'
-import { formatNumber } from '../../lib/format'
+import { formatNumber, conditionLabel } from '../../lib/format'
 import { MY_LISTINGS_QUERY, type MyListingRow } from '../../graphql/listings'
 import { MY_CONVERSATIONS_QUERY, type RemoteConversation } from '../../graphql/messaging'
 import { MY_REPUTATION_QUERY, MY_SALES_ORDERS_QUERY, MY_WALLET_QUERY, type SalesOrder, type WalletSummary } from '../../graphql/sellerHub'
@@ -181,7 +181,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
               <div className="relative h-60 overflow-hidden rounded-2xl bg-surface-container">
                 <ListingThumb listing={upcoming.listing} src={upcoming.listing.coverImageUrl} iconSize={40} />
-                {upcoming.listing.condition && upcoming.listing.condition !== 'N/A' && <span className="absolute left-3 top-3 rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm uppercase text-tertiary">{upcoming.listing.condition}</span>}
+                {upcoming.listing.condition && upcoming.listing.condition !== 'N/A' && <span className="absolute left-3 top-3 rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm uppercase text-tertiary">{conditionLabel(upcoming.listing.condition)}</span>}
                 <span className="absolute bottom-3 right-3 rounded bg-inverse-surface/80 px-2 py-0.5 text-label-sm text-white">{t('meetup.ref', { ref: upcoming.reference })}</span>
               </div>
               <div>
@@ -243,7 +243,7 @@ export default function Dashboard({ onNavigate, onSelectListing, onOpenPurchase,
                     <button onClick={() => onSelectListing(l.id)} aria-label={t('listings.viewAria', { title: l.title })} className="h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container p-0"><ListingThumb listing={l} src={l.coverImageUrl} /></button>
                     {/* min width: on narrow phones the Booster button wraps under instead of covering the price */}
                     <div className="min-w-[8.5rem] flex-1">
-                      <div className="flex flex-wrap items-center gap-2 text-label-sm text-on-surface-variant">{l.condition && l.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 text-tertiary">{l.condition}</span>}<span>{l.city}</span></div>
+                      <div className="flex flex-wrap items-center gap-2 text-label-sm text-on-surface-variant">{l.condition && l.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 text-tertiary">{conditionLabel(l.condition)}</span>}<span>{l.city}</span></div>
                       <button onClick={() => onSelectListing(l.id)} className="block max-w-full cursor-pointer truncate border-none bg-transparent p-0 text-left text-label-lg text-on-surface">{l.title}</button>
                       <div className="mt-0.5 flex flex-wrap items-center gap-3"><span className="whitespace-nowrap text-headline-sm font-extrabold text-on-surface max-sm:text-label-lg max-sm:font-extrabold"><Price amount={l.price} currency={l.currency} /></span>
                         <span className="flex items-center gap-2 text-label-sm text-on-surface-variant"><span className="flex items-center gap-0.5"><Icon name="visibility" size={14} /> {formatNumber(l.viewsCount)}</span><span className="flex items-center gap-0.5"><Icon name="favorite" size={14} /> {l.favoritesCount}</span>{!!l.pendingOffersCount && <span className="flex items-center gap-0.5 text-primary"><Icon name="local_offer" size={14} /> {t('listings.offers', { count: l.pendingOffersCount })}</span>}</span>

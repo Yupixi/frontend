@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import Icon from '../../components/Icon'
-import { formatNumber } from '../../lib/format'
+import { formatNumber, conditionLabel } from '../../lib/format'
 import Price from '../../components/Price'
 import { AccountLayout } from '../account/AccountLayout'
 import StatsMobile from './StatsMobile'
@@ -310,7 +310,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
                         <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{p.listing.coverImageUrl && <img src={p.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
                         <span className="min-w-0">
                           <span className="block max-w-[190px] truncate text-label-md text-on-surface">{p.listing.title}</span>
-                          <span className="block text-body-sm text-primary">{p.listing.category.name}{p.listing.condition && p.listing.condition !== 'N/A' ? ` • ${p.listing.condition}` : ''}</span>
+                          <span className="block text-body-sm text-primary">{p.listing.category.name}{p.listing.condition && p.listing.condition !== 'N/A' ? ` • ${conditionLabel(p.listing.condition)}` : ''}</span>
                         </span>
                       </button>
                     </td>

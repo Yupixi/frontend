@@ -7,6 +7,7 @@ import { useLists } from '../lib/lists'
 import { cfaUnit, useT } from '../i18n'
 import common from '../i18n/ns/common'
 import search from '../i18n/ns/search'
+import { conditionLabel } from '../lib/format'
 
 // "Filtres de recherche" mobile bottom sheet (Stitch mockup). Filters
 // apply live, the result count comes from the search query.
@@ -178,7 +179,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
                     <label key={c.value} className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3">
                       <input type="checkbox" checked={on} onChange={() => onChange({ conditions: toggle(state.conditions, c.value) })} className="mt-0.5 h-5 w-5 accent-[var(--primary)]" />
                       <span>
-                        <span className="block text-label-md text-on-surface">{c.label} <span className="text-label-sm text-on-surface-variant">({c.count})</span></span>
+                        <span className="block text-label-md text-on-surface">{conditionLabel(c.label)} <span className="text-label-sm text-on-surface-variant">({c.count})</span></span>
                         {conditionHint(c.value) && <span className="block text-body-sm text-on-surface-variant">{conditionHint(c.value)}</span>}
                       </span>
                     </label>

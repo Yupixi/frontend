@@ -7,7 +7,7 @@ import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
-import { plainText } from '../../lib/format'
+import { plainText, conditionLabel } from '../../lib/format'
 import { MY_FAVORITE_ENTRIES_QUERY, listingPlace, type FavoriteEntry } from '../../graphql/buyerSpace'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
@@ -49,7 +49,7 @@ function FavoriteCard({ e, onSelect, onUnfav, onChat, onSimilar }: { e: Favorite
         </button>
         <div className="absolute left-2 top-2 flex flex-col items-start gap-1 md:left-3 md:top-3">
           {drop > 0 && <span className="flex items-center gap-1 rounded bg-tertiary px-2 py-0.5 text-label-sm text-white"><Icon name="trending_down" size={14} /> -{fmtCfa(drop)}</span>}
-          {l.condition && l.condition !== 'N/A' && <span className="rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm uppercase text-on-surface">{l.condition}</span>}
+          {l.condition && l.condition !== 'N/A' && <span className="rounded bg-surface-lowest/90 px-2 py-0.5 text-label-sm uppercase text-on-surface">{conditionLabel(l.condition)}</span>}
         </div>
         {unavailable && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-inverse-surface/80 px-3 py-1 text-label-lg uppercase tracking-widest text-white md:px-4 md:py-2 md:text-headline-sm">{sold ? t('sold') : t('unavailable')}</span>}
         <button onClick={onUnfav} className="absolute right-2 top-2 flex h-9 w-9 md:right-3 md:top-3 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest text-primary shadow" aria-label={t('removeAria')}><Icon name="favorite" size={20} fill /></button>

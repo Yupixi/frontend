@@ -34,9 +34,9 @@
   "picker.selected_one": "{{count}} item selected",
   "picker.selected_other": "{{count}} items selected",
 
-  "notOfficial.title": "For Official shops only",
-  "notOfficial.text": "Sales, bundles and posts to followers are included in the Official shop subscription. Dilchap campaigns have their own page, with each one’s conditions.",
-  "notOfficial.myShop": "My Official shop",
+  "notOfficial.title": "For official shops only",
+  "notOfficial.text": "Sales, bundles and posts to followers are included in the official shop subscription. Dilchap campaigns have their own page, with each one’s conditions.",
+  "notOfficial.myShop": "My official shop",
 
   "tab.sales": "Sales",
   "tab.campaigns": "Dilchap campaigns",

@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { thumbnailUrl } from '../lib/media'
-import { handoverHeadline, handoverProof } from '../lib/format'
+import { handoverHeadline, handoverProof, conditionLabel } from '../lib/format'
 import type { HandoverOrder } from '../graphql/sellerTools'
 import { Claim } from '../lib/site'
 import { marketForCountry } from '../data/markets'
@@ -88,7 +88,7 @@ export default function PrintableReceipt({ order: o, amount, payment, closedAt }
                   {o.listing.coverImageUrl && <img src={thumbnailUrl(o.listing.coverImageUrl)} alt="" className="h-14 w-14 rounded-md object-cover" />}
                   <div>
                     <div className="font-bold">{o.listing.title}</div>
-                    <div className="text-[9pt] text-[#6b6363]">{[o.listing.brand, o.listing.condition && o.listing.condition !== 'N/A' ? o.listing.condition : null, o.listing.size, o.listing.city].filter(Boolean).join(' • ')}</div>
+                    <div className="text-[9pt] text-[#6b6363]">{[o.listing.brand, o.listing.condition && o.listing.condition !== 'N/A' ? conditionLabel(o.listing.condition) : null, o.listing.size, o.listing.city].filter(Boolean).join(' • ')}</div>
                   </div>
                 </div>
               </td>

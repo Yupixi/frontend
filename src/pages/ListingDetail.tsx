@@ -51,7 +51,7 @@ import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import type { AuthUser } from '../graphql/auth'
 import { getAccessToken } from '../lib/auth'
 import { setAuthReason, type AuthReason } from '../lib/authReason'
-import { formatRelativeDate, placeLabel } from '../lib/format'
+import { formatRelativeDate, placeLabel, conditionLabel } from '../lib/format'
 import { agoLabel } from '../lib/bumps'
 import { BumpLine } from '../components/BumpProof'
 import { requestOpenLink } from '../lib/navigation'
@@ -331,7 +331,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     ...(listing.brand ? [{ label: t('spec.brand'), value: listing.brand, icon: 'sell' }] : []),
     ...(listing.modelName ? [{ label: t('spec.model'), value: listing.modelName, icon: 'devices' }] : []),
     ...(listing.size ? [{ label: t('spec.size'), value: listing.size, icon: 'straighten' }] : []),
-    ...(listing.condition && listing.condition !== 'N/A' ? [{ label: t('spec.condition'), value: listing.condition, icon: 'verified' }] : []),
+    ...(listing.condition && listing.condition !== 'N/A' ? [{ label: t('spec.condition'), value: conditionLabel(listing.condition), icon: 'verified' }] : []),
     ...Object.entries(listing.attributes ?? {})
       .filter(([, v]) => v !== '' && v != null)
       .map(([k, v]) => ({ label: category?.attributes.find(a => a.key === k)?.label ?? k, value: String(v), icon: 'tune' })),
@@ -526,7 +526,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                   <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-label-sm uppercase text-white ${sellerBadge === 'CERTIFIED' ? 'bg-tertiary' : 'bg-verified'}`}><Icon name="verified" size={13} fill /> {BADGE_LABEL[sellerBadge]}</span>
                 )}
                 {listing.condition && listing.condition !== 'N/A' && (
-                  <span className="rounded-full bg-surface-lowest px-2.5 py-1 text-label-sm uppercase text-on-surface">{listing.condition}</span>
+                  <span className="rounded-full bg-surface-lowest px-2.5 py-1 text-label-sm uppercase text-on-surface">{conditionLabel(listing.condition)}</span>
                 )}
                 {/* The listing's one pill, as on its card (« Badges des annonces »). */}
                 {pill && <PromoPill badge={pill} size="page" />}
@@ -667,7 +667,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
                 {[listing.brand, listing.modelName].filter(Boolean).join(' • ') || listing.category.name}
               </span>
               {listing.condition && listing.condition !== 'N/A' && (
-                <span className="flex shrink-0 items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><CheckCircle2 size={12} /> {listing.condition}</span>
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><CheckCircle2 size={12} /> {conditionLabel(listing.condition)}</span>
               )}
             </div>
             {archiveLabel && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-inverse-surface px-2.5 py-0.5 text-label-md uppercase text-white"><Archive size={13} /> {archiveLabel}</span>}

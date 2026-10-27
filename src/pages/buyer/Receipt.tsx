@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@apollo/client/react'
 import Icon from '../../components/Icon'
 import Price from '../../components/Price'
 import SafeImg from '../../components/SafeImg'
-import { handoverByCode, handoverHeadline, handoverProof } from '../../lib/format'
+import { handoverByCode, handoverHeadline, handoverProof, conditionLabel } from '../../lib/format'
 import PrintableReceipt from '../../components/PrintableReceipt'
 import { ListingCard } from '../../components/ListingCard'
 import { AccountLayout } from '../account/AccountLayout'
@@ -134,7 +134,7 @@ export default function Receipt({ orderId, onNavigate, onSelectListing, favorite
                     </div>
                     <div className="mt-3 flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
                       <span className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
-                      <div className="min-w-0"><div className="truncate text-label-lg text-on-surface">{o.listing.title}</div><div className="truncate text-body-sm text-on-surface-variant">{[o.listing.condition && o.listing.condition !== 'N/A' ? o.listing.condition : null, o.listing.city].filter(Boolean).join(' • ')}</div></div>
+                      <div className="min-w-0"><div className="truncate text-label-lg text-on-surface">{o.listing.title}</div><div className="truncate text-body-sm text-on-surface-variant">{[o.listing.condition && o.listing.condition !== 'N/A' ? conditionLabel(o.listing.condition) : null, o.listing.city].filter(Boolean).join(' • ')}</div></div>
                     </div>
                     <dl className="m-0 mt-3 flex flex-col gap-2 text-body-sm">
                       {[

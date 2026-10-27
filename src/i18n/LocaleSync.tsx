@@ -4,11 +4,8 @@ import { countryVars, useMarketCode } from '../lib/countries'
 import { getAccessToken } from '../lib/auth'
 import { MY_LOCALE_QUERY, SITE_LOCALES_QUERY, UPDATE_MY_LOCALE_MUTATION } from '../graphql/locale'
 import { getLocale, isLocale, useLocale, type Locale } from './core'
-import { cacheSiteLocales, cachedSiteLocales, detectLocale, FRENCH_ONLY, rememberChoice, switchLocale, urlLang, type SiteLocales } from './locale'
+import { cacheSiteLocales, cachedSiteLocales, detectLocale, FORCED, FRENCH_ONLY, rememberChoice, switchLocale, urlLang, type SiteLocales } from './locale'
 
-// Local test of a multilingual country before the API offers it:
-// VITE_SITE_LOCALES=fr,en in .env.local.
-const FORCED = (import.meta.env.VITE_SITE_LOCALES as string | undefined)?.split(',').map(s => s.trim()).filter(isLocale)
 
 /** Languages offered in the visitor's country (last known answer while loading). */
 export function useSiteLocales(): SiteLocales {

@@ -78,5 +78,10 @@
   "taxIdLabel.NINEA": "NINEA",
   "taxIdLabel.IFU_BJ": "Identifiant fiscal unique (IFU)",
   "taxIdLabel.IFU_BF": "Identifiant financier unique (IFU)",
-  "taxIdLabel.NIF": "Numéro d’identification fiscale (NIF)"
+  "taxIdLabel.NIF": "Numéro d’identification fiscale (NIF)",
+  "condition.new": "Neuf",
+  "condition.veryGood": "Très bon état",
+  "condition.good": "Bon état",
+  "condition.parts": "Pour pièces",
+  "condition.likeNew": "Comme neuf"
 }

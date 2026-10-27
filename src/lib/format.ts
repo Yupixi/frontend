@@ -1,5 +1,6 @@
 import common from '../i18n/ns/common'
 import { fmtNumber } from '../i18n/format'
+import { getLocale } from '../i18n/core'
 
 const t = common.t
 
@@ -64,3 +65,15 @@ export function placeLabel(l: { locationLabel?: string | null; city: string }): 
 
 // « Taille M », never « Taille Taille unique ».
 export const sizeLabel = (size: string) => (/^(taille|size)\b/i.test(size.trim()) ? size.trim() : t('size', { size }))
+
+// A listing's condition is stored as the French value of the list (« Bon
+// état »…): shown in the page's language; any other value as typed.
+const CONDITION_KEYS: Record<string, 'condition.new' | 'condition.veryGood' | 'condition.good' | 'condition.parts' | 'condition.likeNew'> = {
+  // i18n-ignore (stored values)
+  'neuf': 'condition.new', 'très bon état': 'condition.veryGood', 'bon état': 'condition.good', 'pour pièces': 'condition.parts', 'comme neuf': 'condition.likeNew',
+}
+export const conditionLabel = (value: string) => {
+  if (getLocale() === 'fr') return value
+  const key = CONDITION_KEYS[value.trim().toLowerCase()]
+  return key ? t(key) : value
+}

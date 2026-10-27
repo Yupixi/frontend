@@ -7,7 +7,7 @@
   "csv.file": "shop-statistics-{{days}}d.csv",
   "visits": "Shop visits",
   "listingViews": "Item views",
-  "noShop": "Shop statistics are reserved for Official shops.",
+  "noShop": "Shop statistics are reserved for official shops.",
   "openShop": "Open my shop",
   "card.visits": "Shop visits",
   "card.visitsSub": "Shop page, unique visitors per session",

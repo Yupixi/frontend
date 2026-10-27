@@ -14,7 +14,7 @@ import { UPDATE_PREFERENCES_JSON_MUTATION } from '../../graphql/sellerTools'
 import { POPULAR_SEARCHES_QUERY, type PopularSearch } from '../../graphql/categories'
 import { MY_VIEW_HISTORY_FULL_QUERY, listingPlace, type HistoryEntry } from '../../graphql/buyerSpace'
 import type { AuthUser } from '../../graphql/auth'
-import { plainText } from '../../lib/format'
+import { plainText, conditionLabel } from '../../lib/format'
 import SellerBadge from '../../components/SellerBadge'
 import { useT } from '../../i18n'
 import historyNs from '../../i18n/ns/history'
@@ -125,7 +125,7 @@ export default function History({ onNavigate, onSelectListing, onContactSeller, 
                     <article key={l.id} className="flex flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
                       <div className="relative aspect-square overflow-hidden bg-surface-container">
                         <button onClick={() => onSelectListing(l.id)} className="absolute inset-0 block cursor-pointer border-none bg-transparent p-0"><ListingThumb listing={l} src={l.coverImageUrl} className={`h-full w-full object-cover ${off ? 'opacity-50 grayscale' : ''}`} iconSize={36} /></button>
-                        {l.condition && l.condition !== 'N/A' && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-surface-lowest/90 px-2 py-0.5 text-label-sm text-on-surface"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {l.condition}</span>}
+                        {l.condition && l.condition !== 'N/A' && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-surface-lowest/90 px-2 py-0.5 text-label-sm text-on-surface"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {conditionLabel(l.condition)}</span>}
                         {off && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 rounded-full bg-surface-lowest px-3 py-1 text-label-sm uppercase text-primary"><Icon name="cancel" size={14} /> {l.status === 'SOLD' ? t('itemSold') : t('unavailable')}</span>}
                         <button onClick={() => remove(l.id)} className="absolute right-2 top-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest text-on-surface shadow" aria-label={t('removeAria')}><Icon name="close" size={17} /></button>
                       </div>

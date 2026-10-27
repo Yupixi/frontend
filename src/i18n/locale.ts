@@ -9,6 +9,10 @@ import { resolveLocale } from './resolve'
 export type SiteLocales = { default: string; enabled: string[] }
 export const FRENCH_ONLY: SiteLocales = { default: 'fr', enabled: ['fr'] }
 
+// Local test of a multilingual country before the API offers it:
+// VITE_SITE_LOCALES=fr,en in .env.local.
+export const FORCED = (import.meta.env.VITE_SITE_LOCALES as string | undefined)?.split(',').map(s => s.trim()).filter(isLocale)
+
 const CHOICE_KEY = 'yupixi_locale'
 const SITE_LOCALES_KEY = 'yupixi_site_locales'
 
@@ -59,7 +63,7 @@ export function detectLocale(site: SiteLocales, userLocale?: string | null): Loc
  * before the app renders, French renders at once.
  */
 export function bootLocale(country: string | null | undefined): Promise<void> {
-  const site = cachedSiteLocales(country)
+  const site = FORCED?.length ? { default: 'fr', enabled: FORCED } : cachedSiteLocales(country)
   // ?lang=en on a first visit (search engine result): shown in English
   // right away; siteLocales then confirms it (or falls back to French).
   const fromUrl = urlLang()

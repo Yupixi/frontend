@@ -8,7 +8,7 @@ import SafeImg from '../../components/SafeImg'
 import { AccountLayout } from '../account/AccountLayout'
 import { BuyerTabs } from './BuyerShared'
 import { MY_DISPUTE_STATS_QUERY, MY_PURCHASE_ORDERS_QUERY, disputeIsOpen, type DisputeStats, type PurchaseOrder } from '../../graphql/sellerTools'
-import { handoverByCode, sizeLabel } from '../../lib/format'
+import { handoverByCode, sizeLabel, conditionLabel } from '../../lib/format'
 import { RESPOND_TO_MEETUP_MUTATION } from '../../graphql/messaging'
 import type { AuthUser } from '../../graphql/auth'
 import SellerBadge from '../../components/SellerBadge'
@@ -155,7 +155,7 @@ export default function Purchases({ mode, onNavigate, onOpenOrder, onOpenDispute
                     <div className="min-w-0">
                       <span className="rounded bg-surface-container px-1.5 py-0.5 text-label-sm uppercase text-on-surface-variant">{o.listing.category.name}</span>
                       <div className="mt-1 truncate text-headline-sm text-on-surface">{o.listing.title}</div>
-                      <div className="text-body-sm text-on-surface-variant">{[o.listing.condition && o.listing.condition !== 'N/A' ? t('condition', { condition: o.listing.condition }) : null, o.listing.size ? sizeLabel(o.listing.size) : null].filter(Boolean).join(' • ')}</div>
+                      <div className="text-body-sm text-on-surface-variant">{[o.listing.condition && o.listing.condition !== 'N/A' ? t('condition', { condition: conditionLabel(o.listing.condition) }) : null, o.listing.size ? sizeLabel(o.listing.size) : null].filter(Boolean).join(' • ')}</div>
                       <div className="mt-1 flex items-baseline gap-2">
                         <span className="text-headline-md font-extrabold text-primary"><Price amount={o.agreedPrice ?? o.listing.price} currency={o.listing.currency} /></span>
                         {o.agreedPrice != null && o.listing.price != null && o.agreedPrice < o.listing.price && <span className="text-body-sm text-on-surface-variant line-through"><Price amount={o.listing.price} currency={o.listing.currency} /></span>}

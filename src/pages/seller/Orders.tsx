@@ -15,6 +15,7 @@ import { Claim, useNoCommissionClaims } from '../../lib/site'
 import { useT, fmtDate, fmtNumber, fmtCfa, cfaUnit } from '../../i18n'
 import ordersNs from '../../i18n/ns/orders'
 import common from '../../i18n/ns/common'
+import { conditionLabel } from '../../lib/format'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -149,7 +150,7 @@ export default function Orders({ onNavigate, onSelectListing, onOpenConversation
                         <span className="block truncate text-headline-sm text-on-surface">{o.listing.title}</span>
                         <span className="block text-headline-sm font-extrabold text-primary"><Price amount={o.agreedPrice} currency={o.listing.currency} /></span>
                         <span className="mt-1 flex flex-wrap gap-1.5 text-body-sm text-on-surface-variant">
-                          {o.listing.condition && o.listing.condition !== 'N/A' && <span className="rounded bg-surface-container px-1.5">{o.listing.condition}</span>}
+                          {o.listing.condition && o.listing.condition !== 'N/A' && <span className="rounded bg-surface-container px-1.5">{conditionLabel(o.listing.condition)}</span>}
                           {o.listing.size && <span className="rounded bg-surface-container px-1.5">{common.t('size', { size: o.listing.size })}</span>}
                           {o.acceptedOffer && o.listing.price && o.acceptedOffer.amount !== o.listing.price && <span>{t.rich('insteadOf', { price: <Price amount={o.listing.price} currency={o.listing.currency} /> })}</span>}
                         </span>

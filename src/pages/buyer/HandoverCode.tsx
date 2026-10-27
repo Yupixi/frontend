@@ -18,6 +18,7 @@ import { Claim } from '../../lib/site'
 import { fmtDate, useT } from '../../i18n'
 import common from '../../i18n/ns/common'
 import handover from '../../i18n/ns/handover'
+import { conditionLabel } from '../../lib/format'
 
 type Props = {
   orderId: string
@@ -191,7 +192,7 @@ export default function HandoverCode({ orderId, onNavigate, onOpenOrder, onOpenD
                 <div className="mt-2 flex gap-3">
                   <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container"><ListingThumb listing={o.listing} src={o.listing.coverImageUrl} icon="shopping_bag" /></span>
                   <div className="min-w-0">
-                    {o.listing.condition && o.listing.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 py-0.5 text-label-sm uppercase text-tertiary">{o.listing.condition}</span>}
+                    {o.listing.condition && o.listing.condition !== 'N/A' && <span className="rounded bg-tertiary-soft px-1.5 py-0.5 text-label-sm uppercase text-tertiary">{conditionLabel(o.listing.condition)}</span>}
                     <div className="mt-1 truncate text-headline-sm text-on-surface">{o.listing.title}</div>
                     <div className="text-headline-sm font-extrabold text-primary"><Price amount={amount} currency={o.listing.currency} /></div>
                   </div>

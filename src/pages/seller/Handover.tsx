@@ -18,6 +18,7 @@ import { Claim } from '../../lib/site'
 import { fmtDate, useT } from '../../i18n'
 import common from '../../i18n/ns/common'
 import handover from '../../i18n/ns/handover'
+import { conditionLabel } from '../../lib/format'
 
 // Kept as a fallback for old links (e-mails, push, bookmarks): the
 // hand-over now happens in the conversation, which this page opens on its
@@ -136,7 +137,7 @@ export default function Handover({ orderId, onNavigate, onOpenDispute, onOpenRem
                     <span className="text-headline-sm font-extrabold text-primary"><Price amount={amount} currency={o.listing.currency} /></span>
                   </div>
                   <div className="mt-1 truncate text-label-lg text-on-surface">{o.listing.title}</div>
-                  {o.listing.condition && o.listing.condition !== 'N/A' && <div className="text-body-sm text-on-surface-variant">{t('seller.condition', { condition: o.listing.condition })}</div>}
+                  {o.listing.condition && o.listing.condition !== 'N/A' && <div className="text-body-sm text-on-surface-variant">{t('seller.condition', { condition: conditionLabel(o.listing.condition) })}</div>}
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">

@@ -78,5 +78,10 @@
   "taxIdLabel.NINEA": "NINEA",
   "taxIdLabel.IFU_BJ": "Unique tax identifier (IFU)",
   "taxIdLabel.IFU_BF": "Unique financial identifier (IFU)",
-  "taxIdLabel.NIF": "Tax identification number (NIF)"
+  "taxIdLabel.NIF": "Tax identification number (NIF)",
+  "condition.new": "New",
+  "condition.veryGood": "Very good condition",
+  "condition.good": "Good condition",
+  "condition.parts": "For parts",
+  "condition.likeNew": "Like new"
 }

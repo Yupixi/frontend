@@ -85,7 +85,7 @@
   "gallery.fullscreen": "View full screen",
   "saving.short": "-{{n}}% off the new price",
   "saving.long": "-{{n}}% compared with the new price",
-  "commitment.title": "{{amount}} commission promise",
+  "commitment.title": "Our promise: {{amount}} commission",
   "commitment.text": "No hidden fees. Direct payment and in-person hand-over between individuals.",
   "specs.verified": "Verified specifications",
   "desc.title": "Item description",

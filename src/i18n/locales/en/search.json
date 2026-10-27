@@ -11,7 +11,7 @@
   "categories.title": "Explore everything on Dilchap",
   "categories.introMany": "Over {{n}} finds, checked and negotiated between individuals, {{where}}.",
   "categories.introFew": "Finds checked and negotiated between individuals, {{where}}.",
-  "categories.whereMarket": "in {{city}} and all over {{inCountry}}",
+  "categories.whereMarket": "in {{city}} and everywhere {{inCountry}}",
   "categories.whereAny": "near you, in West Africa",
   "categories.secure": "100% secure",
   "categories.inPerson": "In person",

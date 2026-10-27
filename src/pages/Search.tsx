@@ -27,7 +27,7 @@ import { track } from '../lib/analytics'
 import { GridSkeleton } from '../components/Skeleton'
 import InfiniteLoader from '../components/InfiniteLoader'
 import { useLoadMore } from '../lib/useLoadMore'
-import { formatNumber } from '../lib/format'
+import { formatNumber, conditionLabel } from '../lib/format'
 import { metaTrack, noteAdultSlugs } from '../lib/metaPixel'
 import { AdultSectionContext, SEARCH_ROUTING_QUERY, adultGateReason, useAdultAccessState, type SearchRouting } from '../lib/adult'
 import AdultGate from '../components/AdultGate'
@@ -410,7 +410,7 @@ export default function SearchPage({
     ...(pageCity ? [{ key: 'page-city', label: t('page.atPlace', { place: pagePlace }), clear: () => onCategoryCityChange?.('') }] : []),
     ...subcategories.map(v => ({ key: `sub-${v}`, label: facets?.subcategories.find(f => f.value === v)?.label ?? v, clear: () => setSubcategories(s => s.filter(x => x !== v)) })),
     ...cities.map(v => ({ key: `city-${v}`, label: v === nearCity ? t('page.nearYou', { city: v }) : v, near: v === nearCity, clear: () => setCities(s => s.filter(x => x !== v)) })),
-    ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
+    ...conditions.map(v => ({ key: `cond-${v}`, label: conditionLabel(v), clear: () => setConditions(s => s.filter(x => x !== v)) })),
     ...brands.map(v => ({ key: `brand-${v}`, label: v, clear: () => setBrands(s => s.filter(x => x !== v)) })),
     ...sizes.map(v => ({ key: `size-${v}`, label: t('page.size', { size: v }), clear: () => setSizes(s => s.filter(x => x !== v)) })),
     ...(minPrice || maxPrice ? [{ key: 'price', label: t('page.priceChip', { min: minPrice || '0', max: maxPrice || '∞', unit: cfaUnit() }), clear: () => applyPrice('', '') }] : []),
@@ -494,7 +494,7 @@ export default function SearchPage({
       {!!facets?.conditions.length && (
         <FilterBlock title={t('page.condition')}>
           {facets.conditions.map(f => (
-            <CheckRow key={f.value} checked={conditions.includes(f.value)} label={f.label} count={f.count} highlight onChange={() => setConditions(s => toggle(s, f.value))} />
+            <CheckRow key={f.value} checked={conditions.includes(f.value)} label={conditionLabel(f.label)} count={f.count} highlight onChange={() => setConditions(s => toggle(s, f.value))} />
           ))}
         </FilterBlock>
       )}

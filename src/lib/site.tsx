@@ -147,6 +147,9 @@ export function marketSeo(
 // runs after this one). The first page's tags come from the storefront's
 // server (Backend src/modules/seo), already right for that URL: left as
 // they are.
+// Language of the title last written (the first page's comes from the server, in French).
+let titleLocale = 'fr'
+
 export function useSeo(page: string, ctx: { searchTerm?: string; category?: string; adult?: boolean } = {}) {
   const { seo: siteSeo, brand } = useSite()
   // Titles are read in the visitor's language: a switch re-renders (and re-sets) them.
@@ -163,7 +166,10 @@ export function useSeo(page: string, ctx: { searchTerm?: string; category?: stri
   useLayoutEffect(() => {
     // First page: the server's title stays, unless it is the generic one of
     // a page it doesn't render (account, sign-in, a search: /compte, /connexion…).
-    if (!moved.current && !(own && !document.title.includes(` | ${brand.name}`))) return
+    // After a language switch (the app is mounted afresh) the title is
+    // always rewritten, in the new language.
+    if (!moved.current && titleLocale === locale && !(own && !document.title.includes(` | ${brand.name}`))) return
+    titleLocale = locale
     document.title = own ? `${own} | ${brand.name}` : seo.title || brand.name
   }, [page, own, seo.title, brand.name, locale])
   useEffect(() => {

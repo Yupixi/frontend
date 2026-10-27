@@ -8,7 +8,7 @@ import { AccountLayout } from '../account/AccountLayout'
 import ReviewsMobile from './ReviewsMobile'
 import { formatResponseTime } from '../../graphql/reviews'
 import { MY_REPUTATION_QUERY, SELLER_REVIEWS_FULL_QUERY, REPLY_TO_REVIEW_MUTATION, type Reputation, type FullReview } from '../../graphql/sellerHub'
-import { formatRelativeDate } from '../../lib/format'
+import { formatRelativeDate, conditionLabel } from '../../lib/format'
 import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import { BADGE_LABEL, MY_BADGE_QUERY, type MyBadge } from '../../graphql/badges'
@@ -166,7 +166,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                     <div className="mt-3 flex items-center gap-3 rounded-xl bg-surface-container-low p-2.5">
                       <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{r.listing.coverImageUrl && <img src={r.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
                       <div className="min-w-0 flex-1 text-body-sm">
-                        <div className="truncate font-semibold text-on-surface">{r.listing.title}{r.listing.condition && r.listing.condition !== 'N/A' ? ` • ${r.listing.condition}` : ''}</div>
+                        <div className="truncate font-semibold text-on-surface">{r.listing.title}{r.listing.condition && r.listing.condition !== 'N/A' ? ` • ${conditionLabel(r.listing.condition)}` : ''}</div>
                         <div className="text-on-surface-variant">{t.rich('listedPrice', { price: <Price amount={r.listing.price} currency={r.listing.currency} /> })}</div>
                       </div>
                       <span className="shrink-0 rounded bg-surface-lowest px-2 py-0.5 text-label-sm text-on-surface">{r.listing.category.name}</span>

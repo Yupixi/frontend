@@ -9,7 +9,7 @@ import PromoPill from './PromoPill'
 import { useImpressionRef } from '../lib/impressions'
 import { useAdultSpace } from '../lib/adultMode'
 import { entryDiscountPercent as discountPct } from '../lib/campaignDiscount'
-import { formatRelativeDate, placeLabel, plainText, sizeLabel } from '../lib/format'
+import { formatRelativeDate, placeLabel, plainText, sizeLabel, conditionLabel } from '../lib/format'
 import { agoLabel } from '../lib/bumps'
 import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
@@ -190,7 +190,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
   // Campaign price wins; otherwise the seller's "prix neuf" is struck through.
   const struck = salePrice != null ? listing.price : (listing.originalPrice && listing.price != null && listing.originalPrice > listing.price ? listing.originalPrice : null)
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
-  const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
+  const condition = listing.condition && listing.condition !== 'N/A' ? conditionLabel(listing.condition) : null
   const pill = cardPill(listing, useAdultSpace())
   const seenRef = useImpressionRef(listing.id, listing.seller.id, currentUserId)
   const intents = useListingIntents()
