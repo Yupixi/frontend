@@ -16,7 +16,7 @@ import ConfirmSheet from '../../components/ConfirmSheet'
 import { AccountLayout } from '../account/AccountLayout'
 import { marketForCountry } from '../../data/markets'
 import { countryVars, METHOD_LABELS, useCountries, useHomeCountry, type Country, type PaymentMethodCode } from '../../lib/countries'
-import { CATEGORIES_QUERY, type RemoteCategory } from '../../graphql/categories'
+import { CATEGORIES_QUERY, optionLabel, type RemoteCategory } from '../../graphql/categories'
 import {
   ATTACH_LISTING_MEDIA_MUTATION, CREATE_LISTING_MUTATION, DELETE_LISTING_MEDIA_MUTATION, MY_LISTING_QUERY,
   SUBMIT_LISTING_FOR_REVIEW_MUTATION, UPDATE_LISTING_MUTATION, PRICE_RANGE_QUERY, type MyListingDetail, type PriceRange,
@@ -843,7 +843,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                       {a.type === 'SELECT' ? (
                         <Select className={inputCls} value={form.attributes[a.key] ?? ''} onChange={e => set('attributes', { ...form.attributes, [a.key]: e.target.value })}>
                           <option value="">—</option>
-                          {a.options.map(o => <option key={o}>{o}</option>)}
+                          {/* The stored value stays the French one; the label is the page's language. */}
+                          {a.options.map(o => <option key={o} value={o}>{optionLabel(a, o)}</option>)}
                         </Select>
                       ) : (
                         <input className={inputCls} type={a.type === 'NUMBER' ? 'number' : 'text'} value={form.attributes[a.key] ?? ''} onChange={e => set('attributes', { ...form.attributes, [a.key]: e.target.value })} />

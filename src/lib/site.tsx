@@ -5,6 +5,7 @@ import { countryVars, useCountry, useMarket, useMarketCode, useMemberCountryCode
 import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
 import { useLocale } from '../i18n'
 import seoNs from '../i18n/ns/seo'
+import { urlLang } from '../i18n/locale'
 
 // Site-wide settings set in the back-office (« Réglages du site », Backend
 // content/site-config.ts): brand, SEO, contacts, social and app links, and
@@ -17,7 +18,8 @@ export const SITE_CONFIG_QUERY = gql`
 
 export type SiteConfig = {
   brand: { name: string, logoUrl: string, tagline: string }
-  seo: { title: string, description: string, image: string }
+  // translations: the title / description in other languages (BO Réglages du site).
+  seo: { title: string, description: string, image: string, translations?: Record<string, { title?: string, description?: string }> }
   contact: { email: string, hours: string, address: string }
   socials: { facebook: string, instagram: string, tiktok: string, youtube: string, x: string, linkedin: string, whatsapp: string }
   apps: { android: string, ios: string }
@@ -147,8 +149,9 @@ export function marketSeo(
 // runs after this one). The first page's tags come from the storefront's
 // server (Backend src/modules/seo), already right for that URL: left as
 // they are.
-// Language of the title last written (the first page's comes from the server, in French).
-let titleLocale = 'fr'
+// Language of the title last written: the first page's comes from the server,
+// in the language of its address (« ?lang=en »), else French.
+let titleLocale = urlLang() ?? 'fr'
 
 export function useSeo(page: string, ctx: { searchTerm?: string; category?: string; adult?: boolean } = {}) {
   const { seo: siteSeo, brand } = useSite()
@@ -158,7 +161,12 @@ export function useSeo(page: string, ctx: { searchTerm?: string; category?: stri
   // petites annonces à Abidjan et en Côte d’Ivoire » — what search engines
   // get (Backend seo homeMeta) — else the site's.
   const market = useMarket()
-  const seo = { ...siteSeo, ...marketSeo(market, siteSeo, brand.name) }
+  // The site's own title in this language (BO), else the French one (and
+  // the country's texts, French, only for a French page).
+  const ownSeo = siteSeo.translations?.[locale]
+  const seo = locale === 'fr'
+    ? { ...siteSeo, ...marketSeo(market, siteSeo, brand.name) }
+    : { ...siteSeo, ...marketSeo(market, siteSeo, brand.name), ...(ownSeo?.title ? { title: ownSeo.title } : {}), ...(ownSeo?.description ? { description: ownSeo.description } : {}) }
   const firstPage = useRef(page)
   const moved = useRef(false)
   if (page !== firstPage.current || ctx.adult) moved.current = true

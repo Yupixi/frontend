@@ -45,7 +45,7 @@ import PromoPill from '../components/PromoPill'
 import HelpLink from '../components/HelpLink'
 import { ImpressionScope } from '../lib/impressions'
 import { ALSO_VIEWED_LISTINGS_QUERY, BUMP_LISTING_MUTATION, LISTING_QUERY, SIMILAR_LISTINGS_QUERY, type RemoteListing, type RemoteListingDetail } from '../graphql/listings'
-import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
+import { CATEGORIES_QUERY, optionLabel, type RemoteCategory } from '../graphql/categories'
 import { SELLER_PROFILE_QUERY, FOLLOW_SELLER_MUTATION, UNFOLLOW_SELLER_MUTATION, formatResponseTime, type RemoteSellerProfile } from '../graphql/reviews'
 import { CREATE_REPORT_MUTATION } from '../graphql/reports'
 import type { AuthUser } from '../graphql/auth'
@@ -334,7 +334,10 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
     ...(listing.condition && listing.condition !== 'N/A' ? [{ label: t('spec.condition'), value: conditionLabel(listing.condition), icon: 'verified' }] : []),
     ...Object.entries(listing.attributes ?? {})
       .filter(([, v]) => v !== '' && v != null)
-      .map(([k, v]) => ({ label: category?.attributes.find(a => a.key === k)?.label ?? k, value: String(v), icon: 'tune' })),
+      .map(([k, v]) => {
+        const attr = category?.attributes.find(a => a.key === k)
+        return { label: attr?.label ?? k, value: optionLabel(attr, String(v)), icon: 'tune' }
+      }),
   ]
     // A category field named like a listing field (« Marque », « État ») is
     // shown once, with the listing's own value (one row, one key, per label).

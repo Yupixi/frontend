@@ -351,7 +351,7 @@ export function CertifyWithCode({ h, otherName, onDone }: { h: RemoteHandover; o
     <div className="flex flex-col gap-2 rounded-xl bg-surface-container-low p-3">
       <label htmlFor={`certify-${h.meetupId}`} className="text-label-md text-on-surface">{t('certify.label', { name: otherName })}</label>
       <div className="flex gap-2">
-        <input id={`certify-${h.meetupId}`} value={code} onChange={e => setCode(e.target.value.replace(/D/g, '').slice(0, 4))} onKeyDown={e => { if (e.key === 'Enter') submit() }}
+        <input id={`certify-${h.meetupId}`} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))} onKeyDown={e => { if (e.key === 'Enter') submit() }}
           inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" maxLength={4} placeholder="••••" aria-invalid={!!refusal || undefined}
           className="input h-11 w-28 min-w-0 !bg-surface-lowest text-center font-mono text-headline-sm tracking-[0.3em]" />
         <button type="button" onClick={submit} disabled={code.length !== 4 || loading} className="flex-1 cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-50">{loading ? t('handover.checking') : t('certify.submit')}</button>
