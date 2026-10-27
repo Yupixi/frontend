@@ -2,6 +2,7 @@ import { driver, type DriveStep } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import './tourRunner.css'
 import type { Tour } from './tours'
+import tours from '../i18n/ns/tours'
 
 export { TOURS } from './tours'
 
@@ -51,10 +52,10 @@ export async function runTour(tour: Tour, desktop: boolean): Promise<boolean> {
       steps,
       popoverClass: 'dilchap-tour',
       showProgress: steps.length > 1,
-      progressText: '{{current}} / {{total}}',
-      nextBtnText: 'Suivant',
-      prevBtnText: 'Retour',
-      doneBtnText: 'Terminer',
+      progressText: tours.t('runner.progress'),
+      nextBtnText: tours.t('runner.next'),
+      prevBtnText: tours.t('runner.prev'),
+      doneBtnText: tours.t('runner.done'),
       overlayColor: '#000',
       overlayOpacity: 0.55,
       stagePadding: 6,
@@ -62,7 +63,7 @@ export async function runTour(tour: Tour, desktop: boolean): Promise<boolean> {
       smoothScroll: true,
       // The highlighted control stays inert: a tap on it would leave the page mid-tour.
       disableActiveInteraction: true,
-      onPopoverRender: popover => { popover.closeButton.setAttribute('aria-label', 'Fermer la visite') },
+      onPopoverRender: popover => { popover.closeButton.setAttribute('aria-label', tours.t('runner.closeAria')) },
       onDestroyed: () => resolve(true),
     })
     d.drive()

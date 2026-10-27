@@ -1,5 +1,7 @@
 import { ChevronDown, MapPin } from './icons'
 import type { CategoryLanding, LandingLink } from '../graphql/categories'
+import { fmtNumber, useT } from '../i18n'
+import search from '../i18n/ns/search'
 
 // Bottom of a category page (/categorie/<slug>[/<ville>]): the team's
 // introduction and FAQ (BO « Catégories »), then the same page in other
@@ -12,6 +14,7 @@ export default function CategoryLandingExtras({ landing, rubricName, cityName, i
   introHtml: string
   onOpen: (slug: string, city?: string) => void
 }) {
+  const t = useT(search)
   const open = (l: LandingLink, city?: string) => (e: React.MouseEvent) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
     e.preventDefault()
@@ -24,14 +27,14 @@ export default function CategoryLandingExtras({ landing, rubricName, cityName, i
     <div className="mt-8 flex flex-col gap-6">
       {introHtml && (
         <section aria-labelledby="category-intro" className="rounded-2xl bg-surface-container-low p-5">
-          <h2 id="category-intro" className="m-0 mb-2 text-headline-sm text-on-surface">À propos de « {rubricName} »</h2>
+          <h2 id="category-intro" className="m-0 mb-2 text-headline-sm text-on-surface">{t('landing.about', { name: rubricName })}</h2>
           <div className="rich-text text-body-md leading-relaxed text-on-surface-variant [&_h2]:text-title-md [&_h2]:text-on-surface [&_h3]:text-on-surface [&_p]:my-2" dangerouslySetInnerHTML={{ __html: introHtml }} />
         </section>
       )}
 
       {landing.faq.length > 0 && (
         <section aria-labelledby="category-faq">
-          <h2 id="category-faq" className="m-0 mb-3 text-headline-sm text-on-surface">Questions fréquentes</h2>
+          <h2 id="category-faq" className="m-0 mb-3 text-headline-sm text-on-surface">{t('landing.faq')}</h2>
           <div className="flex flex-col gap-2">
             {landing.faq.map((f, i) => (
               <details key={i} className="group rounded-xl bg-surface-lowest p-4 [&_summary::-webkit-details-marker]:hidden">
@@ -48,13 +51,13 @@ export default function CategoryLandingExtras({ landing, rubricName, cityName, i
 
       {landing.otherCities.length > 0 && (
         <nav aria-labelledby="category-cities">
-          <h2 id="category-cities" className="m-0 mb-3 text-headline-sm text-on-surface">{cityName ? `${rubricName} dans d’autres villes` : 'Par ville'}</h2>
+          <h2 id="category-cities" className="m-0 mb-3 text-headline-sm text-on-surface">{cityName ? t('landing.otherCities', { name: rubricName }) : t('landing.byCity')}</h2>
           <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
             {landing.otherCities.map(c => (
               <li key={c.slug}>
                 <a href={c.path} onClick={open({ ...c, slug: landing.slug }, c.slug)} className="inline-flex items-center gap-1.5 rounded-full border border-solid border-outline-variant bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface no-underline hover:border-primary hover:text-primary">
-                  <MapPin size={14} className="text-primary" /> {rubricName} à {c.name}
-                  <span className="text-label-sm text-outline">{c.count.toLocaleString('fr-FR')}</span>
+                  <MapPin size={14} className="text-primary" /> {t('landing.inCity', { name: rubricName, city: c.name })}
+                  <span className="text-label-sm text-outline">{fmtNumber(c.count)}</span>
                 </a>
               </li>
             ))}
@@ -64,13 +67,13 @@ export default function CategoryLandingExtras({ landing, rubricName, cityName, i
 
       {landing.relatedCategories.length > 0 && (
         <nav aria-labelledby="category-related">
-          <h2 id="category-related" className="m-0 mb-3 text-headline-sm text-on-surface">{cityName ? `Autres catégories à ${cityName}` : 'Catégories proches'}</h2>
+          <h2 id="category-related" className="m-0 mb-3 text-headline-sm text-on-surface">{cityName ? t('landing.otherCategories', { city: cityName }) : t('landing.related')}</h2>
           <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
             {landing.relatedCategories.map(r => (
               <li key={r.slug}>
                 <a href={r.path} onClick={open(r, cityWord(r.path))} className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-3 py-1.5 text-label-md text-on-surface no-underline hover:text-primary">
-                  {cityName ? `${r.name} à ${cityName}` : r.name}
-                  <span className="text-label-sm text-outline">{r.count.toLocaleString('fr-FR')}</span>
+                  {cityName ? t('landing.inCity', { name: r.name, city: cityName }) : r.name}
+                  <span className="text-label-sm text-outline">{fmtNumber(r.count)}</span>
                 </a>
               </li>
             ))}

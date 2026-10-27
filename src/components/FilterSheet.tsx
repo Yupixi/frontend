@@ -1,25 +1,21 @@
 import Icon, { CategoryIcon } from './Icon'
 import BottomSheet from './BottomSheet'
-import { formatNumber } from '../lib/format'
 import type { ListingFacets, ListingSort } from '../graphql/listings'
 import type { RemoteCategory } from '../graphql/categories'
 import PaymentLogo, { useMobileMethods } from './PaymentLogo'
 import { useLists } from '../lib/lists'
+import { cfaUnit, useT } from '../i18n'
+import common from '../i18n/ns/common'
+import search from '../i18n/ns/search'
 
 // "Filtres de recherche" mobile bottom sheet (Stitch mockup). Filters
 // apply live, the result count comes from the search query.
-const SORTS: { value: ListingSort; label: string }[] = [
-  { value: 'RELEVANCE', label: 'Pertinence' },
-  { value: 'RECENT', label: 'Plus récents' },
-  { value: 'PRICE_ASC', label: 'Prix croissant' },
-  { value: 'PRICE_DESC', label: 'Prix décroissant' },
-  { value: 'POPULAR', label: 'Populaires' },
-]
-const BUDGETS = [
-  { label: 'Moins de 10 000 F', max: 10_000 },
-  { label: '10 000 F - 50 000 F', min: 10_000, max: 50_000 },
-  { label: '50 000 F - 150 000 F', min: 50_000, max: 150_000 },
-  { label: 'Plus de 150 000 F', min: 150_000 },
+const SORTS: ListingSort[] = ['RELEVANCE', 'RECENT', 'PRICE_ASC', 'PRICE_DESC', 'POPULAR']
+const BUDGETS: { key: 'under10k' | '10kTo50k' | '50kTo150k' | 'over150k', min?: number, max?: number }[] = [
+  { key: 'under10k', max: 10_000 },
+  { key: '10kTo50k', min: 10_000, max: 50_000 },
+  { key: '50kTo150k', min: 50_000, max: 150_000 },
+  { key: 'over150k', min: 150_000 },
 ]
 
 export type SheetState = {
@@ -65,6 +61,8 @@ function Section({ icon, title, sub, children }: { icon: string; title: string; 
 }
 
 export default function FilterSheet({ open, state, onChange, onReset, onClose, facets, categories, total, nearCity, adultSpace }: Props) {
+  const t = useT(search)
+  const tc = useT(common)
   const lists = useLists()
   const mobile = useMobileMethods()
   const conditionHint = (v: string) => lists.conditions.find(c => c.value === v)?.hint
@@ -86,45 +84,45 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
       maxHeight="94vh"
       footer={
         <div className="flex gap-3 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 py-3">
-          <button onClick={onReset} className="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container text-on-surface" aria-label="Réinitialiser"><Icon name="restart_alt" size={22} /></button>
-          <button onClick={onClose} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="search" size={20} /> {total === 0 ? 'Aucune annonce' : `Afficher ${formatNumber(total)} annonce${total > 1 ? 's' : ''}`}</button>
+          <button onClick={onReset} className="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container text-on-surface" aria-label={t('filters.reset')}><Icon name="restart_alt" size={22} /></button>
+          <button onClick={onClose} className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="search" size={20} /> {t('filters.show', { count: total })}</button>
         </div>
       }
     >
       <div>
         <div className="sticky top-0 z-10 -mx-4 -mt-1 mb-3 grid grid-cols-[1fr_auto_1fr] items-center bg-surface px-2 pb-2 pt-0.5">
-          <button onClick={onClose} aria-label="Fermer" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface"><Icon name="close" size={24} /></button>
-          <h3 className="m-0 text-headline-sm text-on-surface">Filtres</h3>
-          <button onClick={onReset} className="justify-self-end cursor-pointer border-none bg-transparent px-2 py-2 text-label-md text-primary">Réinitialiser</button>
+          <button onClick={onClose} aria-label={tc('close')} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface"><Icon name="close" size={24} /></button>
+          <h3 className="m-0 text-headline-sm text-on-surface">{t('filters.title')}</h3>
+          <button onClick={onReset} className="justify-self-end cursor-pointer border-none bg-transparent px-2 py-2 text-label-md text-primary">{t('filters.reset')}</button>
         </div>
         <div className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4">
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="tune" size={22} /></span>
           <div>
-            <div className="text-headline-sm text-on-surface">Affiner les résultats</div>
-            <div className="flex items-center gap-1 text-label-md text-tertiary"><span className="h-2 w-2 rounded-full bg-tertiary" /> {formatNumber(total)} annonce{total > 1 ? 's' : ''} disponible{total > 1 ? 's' : ''}</div>
+            <div className="text-headline-sm text-on-surface">{t('filters.refine')}</div>
+            <div className="flex items-center gap-1 text-label-md text-tertiary"><span className="h-2 w-2 rounded-full bg-tertiary" /> {t('filters.available', { count: total })}</div>
           </div>
         </div>
 
         <div className="mt-4">
-          <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="swap_vert" size={20} className="text-primary" /> Trier par</h3>
+          <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="swap_vert" size={20} className="text-primary" /> {t('filters.sortBy')}</h3>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
             {SORTS.map(s => (
-              <button key={s.value} onClick={() => onChange({ sort: s.value })} className={`shrink-0 cursor-pointer rounded-xl border-none px-4 py-2 text-label-md ${state.sort === s.value ? 'bg-inverse-surface text-white' : 'bg-surface-container text-on-surface'}`}>{s.label}</button>
+              <button key={s} onClick={() => onChange({ sort: s })} className={`shrink-0 cursor-pointer rounded-xl border-none px-4 py-2 text-label-md ${state.sort === s ? 'bg-inverse-surface text-white' : 'bg-surface-container text-on-surface'}`}>{t(`filters.sort.${s}`)}</button>
             ))}
           </div>
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
-          <Section icon="location_on" title="Localisation & Communes" sub={nearCity && state.cities.includes(nearCity) ? `Près de vous : ${nearCity} (détecté automatiquement)` : 'Sélectionnez vos zones favorites pour la remise directe'}>
+          <Section icon="location_on" title={t('filters.location')} sub={nearCity && state.cities.includes(nearCity) ? t('filters.nearYou', { city: nearCity }) : t('filters.locationHint')}>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => onChange({ cities: [] })} className={`cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${state.cities.length === 0 ? 'bg-inverse-surface text-white' : 'bg-surface-container text-on-surface'}`}>Toutes les zones</button>
+              <button onClick={() => onChange({ cities: [] })} className={`cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${state.cities.length === 0 ? 'bg-inverse-surface text-white' : 'bg-surface-container text-on-surface'}`}>{t('filters.allZones')}</button>
               {(facets?.cities ?? []).slice(0, 8).map(c => (
                 <button key={c.value} onClick={() => onChange({ cities: toggle(state.cities, c.value) })} className={`cursor-pointer rounded-xl border-none px-3 py-2 text-label-md ${state.cities.includes(c.value) ? 'bg-inverse-surface text-white' : 'bg-surface-container text-on-surface'}`}>{c.label}</button>
               ))}
             </div>
           </Section>
 
-          <Section icon="payments" title="Fourchette de prix (F)">
+          <Section icon="payments" title={t('filters.priceRange', { unit: cfaUnit() })}>
             {hist.length > 1 && (
               <div className="flex h-16 items-end gap-1" aria-hidden>
                 {hist.map(b => (
@@ -133,12 +131,12 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
               </div>
             )}
             <div className="mt-3 grid grid-cols-2 gap-2">
-              {([['Min', 'minPrice'], ['Max', 'maxPrice']] as const).map(([label, key]) => (
+              {([['filters.min', 'minPrice'], ['filters.max', 'maxPrice']] as const).map(([labelKey, key]) => (
                 <label key={key} className="rounded-xl bg-surface-container-low px-3 py-2">
-                  <span className="block text-label-sm text-on-surface-variant">{label}</span>
+                  <span className="block text-label-sm text-on-surface-variant">{t(labelKey)}</span>
                   <span className="flex items-center gap-1">
                     <input type="number" inputMode="numeric" min={0} value={state[key]} onChange={e => onChange({ [key]: e.target.value } as Partial<SheetState>)} placeholder={key === 'minPrice' ? '0' : '∞'} className="w-full min-w-0 border-none bg-transparent text-headline-sm text-on-surface outline-none" />
-                    <span className="text-label-md text-primary">F</span>
+                    <span className="text-label-md text-primary">{cfaUnit()}</span>
                   </span>
                 </label>
               ))}
@@ -147,14 +145,14 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
               {BUDGETS.map(b => {
                 const active = state.minPrice === String(b.min ?? '') && state.maxPrice === String(b.max ?? '')
                 return (
-                  <button key={b.label} onClick={() => onChange(active ? { minPrice: '', maxPrice: '' } : { minPrice: String(b.min ?? ''), maxPrice: String(b.max ?? '') })} className={`cursor-pointer rounded-full border-none px-3 py-1.5 text-label-sm ${active ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface'}`}>{b.label}</button>
+                  <button key={b.key} onClick={() => onChange(active ? { minPrice: '', maxPrice: '' } : { minPrice: String(b.min ?? ''), maxPrice: String(b.max ?? '') })} className={`cursor-pointer rounded-full border-none px-3 py-1.5 text-label-sm ${active ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface'}`}>{t(`filters.budget.${b.key}`)}</button>
                 )
               })}
             </div>
           </Section>
 
           {!adultSpace && <div>
-            <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="category" size={20} className="text-primary" /> Catégories phares</h3>
+            <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="category" size={20} className="text-primary" /> {t('filters.topCategories')}</h3>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {shownCategories.map(c => {
                 const on = state.categorySlugs.includes(c.slug)
@@ -163,7 +161,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
                     <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${on ? 'bg-primary text-white' : 'bg-surface-container-low text-primary'}`}><CategoryIcon icon={c.icon} size={22} /></span>
                     <span className="min-w-0">
                       <span className="block truncate text-label-md text-on-surface">{c.name}</span>
-                      <span className={`block text-body-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>{on ? 'Sélectionné' : `${formatNumber(catCount(c.slug))} annonce${catCount(c.slug) > 1 ? 's' : ''}`}</span>
+                      <span className={`block text-body-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>{on ? t('filters.selected') : t('categories.listings', { count: catCount(c.slug) })}</span>
                     </span>
                   </button>
                 )
@@ -172,7 +170,7 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
           </div>}
 
           {!!facets?.conditions.length && (
-            <Section icon="verified" title="État de l'article">
+            <Section icon="verified" title={t('filters.condition')}>
               <div className="flex flex-col gap-2">
                 {facets.conditions.map(c => {
                   const on = state.conditions.includes(c.value)
@@ -190,25 +188,25 @@ export default function FilterSheet({ open, state, onChange, onReset, onClose, f
             </Section>
           )}
 
-          {!adultSpace && <Section icon="percent" title="Bonnes affaires">
+          {!adultSpace && <Section icon="percent" title={t('filters.deals')}>
             <label className="relative flex cursor-pointer items-center gap-3 py-2">
               <Icon name="local_offer" size={22} className="shrink-0 text-primary" />
-              <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">En promotion</span><span className="block text-body-sm text-on-surface-variant">Soldes des boutiques et campagnes en cours</span></span>
+              <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">{t('filters.promo')}</span><span className="block text-body-sm text-on-surface-variant">{t('filters.promoHint')}</span></span>
               <input type="checkbox" className="peer sr-only" checked={state.promoOnly} onChange={() => onChange({ promoOnly: !state.promoOnly })} />
               <span className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5" />
             </label>
           </Section>}
 
-          <Section icon="shield" title="Vendeurs de confiance">
+          <Section icon="shield" title={t('filters.trusted')}>
             {([
-              ['verifiedOnly', 'verified_user', 'Vendeurs vérifiés uniquement', 'Badge Compte vérifié ou Vendeur certifié'],
-              ['shopsOnly', 'storefront', 'Boutiques officielles uniquement', 'Entreprises vérifiées (RCCM ou identifiant fiscal)'],
-              ['handoverOnly', 'storefront', 'Remise en main propre privilégiée', 'Point de rendez-vous public indiqué'],
-              ['mobileMoneyOnly', 'account_balance_wallet', 'Mobile Money accepté', 'Paiement mobile direct à la remise'],
-            ] as const).map(([key, icon, title, sub]) => (
+              ['verifiedOnly', 'verified_user'],
+              ['shopsOnly', 'storefront'],
+              ['handoverOnly', 'storefront'],
+              ['mobileMoneyOnly', 'account_balance_wallet'],
+            ] as const).map(([key, icon]) => (
               <label key={key} className="relative flex cursor-pointer items-center gap-3 py-2">
                 {key === 'mobileMoneyOnly' ? <span className="flex shrink-0 -space-x-2">{mobile.map(m => <PaymentLogo key={m} method={m} size={22} className="ring-2 ring-surface-lowest" />)}</span> : <Icon name={icon} size={20} className="text-tertiary" />}
-                <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">{title}</span><span className="block text-body-sm text-on-surface-variant">{sub}</span></span>
+                <span className="min-w-0 flex-1"><span className="block text-label-md text-on-surface">{t(`filters.${key}.title`)}</span><span className="block text-body-sm text-on-surface-variant">{t(`filters.${key}.text`)}</span></span>
                 <input type="checkbox" className="peer sr-only" checked={state[key]} onChange={() => onChange({ [key]: !state[key] } as Partial<SheetState>)} />
                 <span className="relative h-6 w-11 shrink-0 rounded-full bg-surface-container-high transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-tertiary peer-checked:after:translate-x-5" />
               </label>

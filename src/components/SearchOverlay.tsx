@@ -11,6 +11,9 @@ import { useMarketCode, useMarketVars } from '../lib/countries'
 import { fold, highlightParts, matchesAll, recordFinalSearch, searchKey } from '../lib/searchText'
 import { ADULT_BLUR_CLASS, SEARCH_ROUTING_QUERY, useAdultBlur, type SearchRouting } from '../lib/adult'
 import { AdultSearchNotice } from './AdultSearchNotice'
+import { useT } from '../i18n'
+import common from '../i18n/ns/common'
+import search from '../i18n/ns/search'
 
 type Props = {
   query: string
@@ -84,6 +87,8 @@ type Option =
 export default function SearchOverlay({ query, onQueryChange, onSearch, onSelectListing, onSelectCategory, onOpenSection, onClose }: Props) {
   // « Section Adultes » space: suggestions, popular and recent searches,
   // categories of the section only (lib/adultMode).
+  const t = useT(search)
+  const tc = useT(common)
   const adultSpace = useAdultSpace()
   const inputRef = useRef<HTMLInputElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -92,7 +97,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const [recent, setRecent] = useState<string[]>(() => {
     // Older lists could hold the same search twice.
     const seen = new Set<string>()
-    return readRecent(adultSpace).filter(t => { const k = searchKey(t); if (!k || seen.has(k)) return false; seen.add(k); return true })
+    return readRecent(adultSpace).filter(r => { const k = searchKey(r); if (!k || seen.has(k)) return false; seen.add(k); return true })
   })
   const countryCode = useMarketCode()
   const marketVars = useMarketVars()
@@ -105,8 +110,8 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 250)
+    return () => clearTimeout(timer)
   }, [query])
 
   // Keep keyboard focus inside the dialog.
@@ -148,7 +153,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const suggest = debouncedQuery ? (suggestData ?? previousSuggest)?.searchSuggestions : undefined
   const suggestions = suggest?.listings ?? []
   // The typed words themselves are « Voir tous les résultats ».
-  const terms = (suggest?.terms ?? []).filter(t => fold(t) !== fold(q)).slice(0, 4)
+  const terms = (suggest?.terms ?? []).filter(x => fold(x) !== fold(q)).slice(0, 4)
 
   // Categories whose name holds the words (« telephone » → Téléphones), then
   // those where the matching listings are (« pantalon » → Mode › Vêtements).
@@ -170,7 +175,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
 
   // Keyboard order: searches, listings, categories, « Voir tous les résultats ».
   const options: Option[] = q ? [
-    ...terms.map(t => ({ kind: 'term' as const, term: t })),
+    ...terms.map(x => ({ kind: 'term' as const, term: x })),
     ...suggestions.map(s => ({ kind: 'listing' as const, id: s.id })),
     ...categoryHits.map(c => ({ kind: 'category' as const, slug: c.slug, label: c.label })),
     { kind: 'all' as const },
@@ -221,7 +226,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
   const allIdx = options.length - 1
 
   return (
-    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label={adultSpace ? 'Rechercher dans la Section Adultes' : 'Rechercher sur Dilchap'} className="safe-pt fixed inset-0 z-[9999] flex flex-col bg-surface">
+    <div ref={overlayRef} role="dialog" aria-modal="true" aria-label={adultSpace ? t('overlay.dialogAdult') : t('overlay.dialog')} className="safe-pt fixed inset-0 z-[9999] flex flex-col bg-surface">
       <div className="border-0 border-b border-solid border-outline-variant bg-surface-lowest">
         <div className="mx-auto flex max-w-[760px] items-center gap-3 px-4 py-3">
           <div className="relative min-w-0 flex-1" role="none">
@@ -229,7 +234,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
             <input
               ref={inputRef}
               className={`h-13 w-full rounded-2xl border border-transparent bg-surface-container-low py-3.5 pl-12 ${query ? 'pr-12' : 'pr-4'} text-body-lg text-on-surface outline-none focus:border-primary`}
-              placeholder={adultSpace ? 'Rechercher dans la section' : 'Que cherchez-vous ?'}
+              placeholder={adultSpace ? t('overlay.placeholderAdult') : t('overlay.placeholder')}
               value={query}
               onChange={e => { onQueryChange(e.target.value); setSelectedIdx(-1) }}
               onKeyDown={handleKeyDown}
@@ -239,14 +244,14 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
               aria-controls={listboxId}
               aria-activedescendant={selectedIdx >= 0 ? optionId(selectedIdx) : undefined}
               aria-autocomplete="list"
-              aria-label="Rechercher"
+              aria-label={tc('search')}
               autoComplete="off"
             />
             {query && (
-              <button type="button" onClick={() => { onQueryChange(''); inputRef.current?.focus() }} aria-label="Effacer la recherche" className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={17} /></button>
+              <button type="button" onClick={() => { onQueryChange(''); inputRef.current?.focus() }} aria-label={t('overlay.clear')} className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={17} /></button>
             )}
           </div>
-          <button type="button" onClick={onClose} aria-label="Fermer la recherche" className="shrink-0 cursor-pointer border-none bg-transparent px-2 py-2 text-label-lg text-on-surface-variant">Annuler</button>
+          <button type="button" onClick={onClose} aria-label={t('overlay.close')} className="shrink-0 cursor-pointer border-none bg-transparent px-2 py-2 text-label-lg text-on-surface-variant">{tc('cancel')}</button>
         </div>
       </div>
 
@@ -254,22 +259,22 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
         <div className="mx-auto max-w-[760px] px-4 pb-8 pt-2">
           {routing && <AdultSearchNotice routing={routing} onOpenSection={slug => { if (onOpenSection) onOpenSection(q); else onSelectCategory(slug); onClose() }} className="mt-3" />}
 
-          {q && suggestLoading && !suggest && <p className="py-8 text-center text-body-md text-on-surface-variant">Recherche…</p>}
+          {q && suggestLoading && !suggest && <p className="py-8 text-center text-body-md text-on-surface-variant">{t('overlay.searching')}</p>}
 
           {q && suggest && !noResults && (
-            <div role="listbox" id={listboxId} aria-label="Suggestions">
+            <div role="listbox" id={listboxId} aria-label={t('overlay.suggestions')}>
               {terms.length > 0 && (
                 <>
-                  {section('search', 'Recherches fréquentes')}
+                  {section('search', t('overlay.frequent'))}
                   <div className="mb-1 flex flex-col gap-1">
-                    {terms.map(t => {
-                      const i = indexOf({ kind: 'term', term: t })
+                    {terms.map(term => {
+                      const i = indexOf({ kind: 'term', term })
                       return (
-                        <button key={t} id={optionId(i)} role="option" aria-selected={i === selectedIdx} type="button"
-                          onClick={() => choose({ kind: 'term', term: t })} onMouseEnter={() => setSelectedIdx(i)}
+                        <button key={term} id={optionId(i)} role="option" aria-selected={i === selectedIdx} type="button"
+                          onClick={() => choose({ kind: 'term', term })} onMouseEnter={() => setSelectedIdx(i)}
                           className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-none px-2 py-2 text-left ${i === selectedIdx ? 'bg-surface-container-low' : 'bg-transparent'}`}>
                           <Icon name="search" size={18} className="shrink-0 text-on-surface-variant" />
-                          <span className="min-w-0 flex-1 truncate text-label-lg text-on-surface"><Highlight text={t} query={q} /></span>
+                          <span className="min-w-0 flex-1 truncate text-label-lg text-on-surface"><Highlight text={term} query={q} /></span>
                           <Icon name="north_west" size={16} className="shrink-0 text-on-surface-variant" />
                         </button>
                       )
@@ -277,7 +282,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                   </div>
                 </>
               )}
-              {suggestions.length > 0 && section('trending_up', 'Suggestions')}
+              {suggestions.length > 0 && section('trending_up', t('overlay.suggestions'))}
               <div className="flex flex-col gap-1">
                 {suggestions.map(s => {
                   const i = indexOf({ kind: 'listing', id: s.id })
@@ -293,10 +298,10 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                       onMouseEnter={() => setSelectedIdx(i)}
                       className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-none p-2 text-left ${i === selectedIdx ? 'bg-surface-container-low' : 'bg-transparent'}`}
                     >
-                      <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{s.coverImageUrl ? <img loading="lazy" decoding="async" src={thumbnailUrl(s.coverImageUrl)} alt={`${s.title} — photo 1`} className={`h-full w-full object-cover ${blur ? ADULT_BLUR_CLASS : ''}`} /> : <Icon name="image" size={20} className="m-2.5 text-on-surface-variant" />}</span>
+                      <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{s.coverImageUrl ? <img loading="lazy" decoding="async" src={thumbnailUrl(s.coverImageUrl)} alt={t('overlay.photoAlt', { title: s.title })} className={`h-full w-full object-cover ${blur ? ADULT_BLUR_CLASS : ''}`} /> : <Icon name="image" size={20} className="m-2.5 text-on-surface-variant" />}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-label-lg text-on-surface"><Highlight text={s.title} query={q} /></span>
-                        <span className="block truncate text-body-sm text-on-surface-variant">dans <span className="text-primary">{s.category.name}</span> • {s.city}{s.isAdult ? ' • Section Adultes' : ''}</span>
+                        <span className="block truncate text-body-sm text-on-surface-variant">{t.rich(s.isAdult ? 'overlay.inCategoryAdult' : 'overlay.inCategory', { name: s.category.name, city: s.city, cat: c => <span className="text-primary">{c}</span> })}</span>
                       </span>
                       <span className="shrink-0 text-label-md text-on-surface"><Price amount={s.price} currency={s.currency} /></span>
                     </button>
@@ -305,7 +310,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
               </div>
               {categoryHits.length > 0 && (
                 <>
-                  {section('category', 'Dans les catégories')}
+                  {section('category', t('overlay.inCategories'))}
                   <div className="flex flex-col gap-1">
                     {categoryHits.map(c => {
                       const i = indexOf({ kind: 'category', slug: c.slug, label: c.label })
@@ -324,7 +329,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
               )}
               <button id={optionId(allIdx)} role="option" aria-selected={allIdx === selectedIdx} type="button" onClick={() => runSearch()} onMouseEnter={() => setSelectedIdx(allIdx)}
                 className={`mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none py-3 text-label-lg text-primary hover:bg-surface-container ${allIdx === selectedIdx ? 'bg-surface-container' : 'bg-surface-container-low'}`}>
-                <span className="min-w-0 truncate">Voir tous les résultats pour « {q} »</span> <Icon name="arrow_forward" size={18} className="shrink-0" />
+                <span className="min-w-0 truncate">{t('overlay.allResults', { q })}</span> <Icon name="arrow_forward" size={18} className="shrink-0" />
               </button>
             </div>
           )}
@@ -332,9 +337,9 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
           {noResults && (
             <div className="py-10 text-center">
               <Icon name="search_off" size={42} className="text-on-surface-variant" />
-              <p className="m-0 mt-2 text-headline-sm text-on-surface">Aucune annonce pour « {q} »</p>
+              <p className="m-0 mt-2 text-headline-sm text-on-surface">{t('overlay.noResult', { q })}</p>
               <p className="m-0 mx-auto mt-1 max-w-sm text-body-sm text-on-surface-variant">
-                {fold(q).split(' ').length > 2 ? 'Essayez avec moins de mots, ou ' : 'Vérifiez l’orthographe, essayez un mot proche, ou '}lancez la recherche pour créer une alerte.
+                {fold(q).split(' ').length > 2 ? t('overlay.noResultLong') : t('overlay.noResultShort')}
               </p>
               {categoryHits.length > 0 && (
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -343,7 +348,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                   ))}
                 </div>
               )}
-              <button type="button" onClick={() => runSearch()} className="mt-4 max-w-full cursor-pointer truncate rounded-xl border-none bg-primary px-5 py-2.5 text-label-md text-white">Rechercher « {q} »</button>
+              <button type="button" onClick={() => runSearch()} className="mt-4 max-w-full cursor-pointer truncate rounded-xl border-none bg-primary px-5 py-2.5 text-label-md text-white">{t('overlay.searchFor', { q })}</button>
             </div>
           )}
 
@@ -351,11 +356,11 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
             <>
               {recent.length > 0 && (
                 <>
-                  {section('history', 'Recherches récentes', <button type="button" onClick={() => { writeRecent([]); setRecent([]) }} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary">Effacer</button>)}
+                  {section('history', t('overlay.recent'), <button type="button" onClick={() => { writeRecent([]); setRecent([]) }} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary">{t('overlay.clearShort')}</button>)}
                   <div className="flex flex-col">
-                    {recent.map(t => (
-                      <button key={t} type="button" onClick={() => runSearch(t)} className="flex cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-2 py-2.5 text-left text-body-md text-on-surface hover:bg-surface-container-low">
-                        <Icon name="history" size={19} className="text-on-surface-variant" /> <span className="min-w-0 flex-1 truncate">{t}</span> <Icon name="north_west" size={17} className="text-on-surface-variant" />
+                    {recent.map(r => (
+                      <button key={r} type="button" onClick={() => runSearch(r)} className="flex cursor-pointer items-center gap-3 rounded-xl border-none bg-transparent px-2 py-2.5 text-left text-body-md text-on-surface hover:bg-surface-container-low">
+                        <Icon name="history" size={19} className="text-on-surface-variant" /> <span className="min-w-0 flex-1 truncate">{r}</span> <Icon name="north_west" size={17} className="text-on-surface-variant" />
                       </button>
                     ))}
                   </div>
@@ -363,7 +368,7 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
               )}
               {popular.length > 0 && (
                 <>
-                  {section('local_fire_department', 'Recherches populaires')}
+                  {section('local_fire_department', t('overlay.popular'))}
                   <div className="flex flex-wrap gap-2">
                     {popular.map(p => (
                       <button key={p.term} type="button" onClick={() => runSearch(p.term)} className="flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border-none bg-surface-lowest px-3.5 py-2 text-label-md text-on-surface hover:text-primary">
@@ -373,12 +378,12 @@ export default function SearchOverlay({ query, onQueryChange, onSearch, onSelect
                   </div>
                 </>
               )}
-              {section('category', adultSpace ? 'Rayons de la section' : 'Catégories')}
+              {section('category', adultSpace ? t('overlay.sectionAisles') : t('overlay.categories'))}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {tiles.map(cat => (
                   <button key={cat.id} type="button" onClick={() => { onSelectCategory(cat.slug); onClose() }} className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-xl border-none bg-surface-lowest p-3 text-left hover:bg-surface-container-low">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-fixed text-primary"><CategoryIcon icon={cat.icon} size={20} /></span>
-                    <span className="min-w-0"><span className="line-clamp-2 text-label-md leading-tight text-on-surface">{cat.name}</span>{cat.listingsCount != null && <span className="block text-label-sm text-on-surface-variant">{cat.listingsCount} annonce{cat.listingsCount > 1 ? 's' : ''}</span>}</span>
+                    <span className="min-w-0"><span className="line-clamp-2 text-label-md leading-tight text-on-surface">{cat.name}</span>{cat.listingsCount != null && <span className="block text-label-sm text-on-surface-variant">{t('overlay.listings', { count: cat.listingsCount, n: String(cat.listingsCount) })}</span>}</span>
                   </button>
                 ))}
               </div>

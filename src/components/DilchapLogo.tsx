@@ -44,7 +44,7 @@ export default function DilchapLogo({ size = 'md', variant = 'wordmark', colorMo
     const fontSize = { sm: 22, md: 26, lg: 32, xl: 40 }[size]
     return (
       <span className={className} style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 3, userSelect: 'none', ...style }}>
-        <span style={{ fontSize, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, color: '#FFFFFF' }}>dilchap</span>
+        <span style={{ fontSize, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, color: '#FFFFFF' }}>dilchap</span>{/* i18n-ignore */}
         <span style={{ width: fontSize * 0.26, height: fontSize * 0.26, borderRadius: '50%', background: 'var(--tertiary)', marginTop: fontSize * 0.08, flexShrink: 0 }} />
       </span>
     )

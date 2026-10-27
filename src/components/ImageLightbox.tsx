@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import ZoomableImage from './ZoomableImage'
 import { thumbnailUrl } from '../lib/media'
+import { useT } from '../i18n'
+import common from '../i18n/ns/common'
+import layout from '../i18n/ns/layout'
 
 type Props = {
   images: string[]
@@ -17,6 +20,8 @@ type Props = {
 // arrows / keyboard on desktop, and the system back button closes it
 // instead of leaving the page.
 export default function ImageLightbox({ images, start, alt, onClose, onIndexChange }: Props) {
+  const t = useT(layout)
+  const tc = useT(common)
   const track = useRef<HTMLDivElement>(null)
   const [idx, setIdx] = useState(start)
   const [zoomed, setZoomed] = useState(false)
@@ -73,10 +78,10 @@ export default function ImageLightbox({ images, start, alt, onClose, onIndexChan
 
   const many = images.length > 1
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label={`Photos : ${alt}`} className="fixed inset-0 z-[10000] flex flex-col bg-black animate-[fadeIn_0.2s_ease-out]">
+    <div role="dialog" aria-modal="true" aria-label={t('lightbox.aria', { alt })} className="fixed inset-0 z-[10000] flex flex-col bg-black animate-[fadeIn_0.2s_ease-out]">
       <div className="flex items-center justify-between px-4 pb-2 text-white" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
         <span className="text-label-lg">{many ? `${idx + 1} / ${images.length}` : ''}</span>
-        <button onClick={() => closeRef.current()} aria-label="Fermer" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white hover:bg-white/25">
+        <button onClick={() => closeRef.current()} aria-label={tc('close')} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white hover:bg-white/25">
           <Icon name="close" size={22} />
         </button>
       </div>
@@ -85,14 +90,14 @@ export default function ImageLightbox({ images, start, alt, onClose, onIndexChan
         <div ref={track} onScroll={onScroll} className={`flex h-full snap-x snap-mandatory overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${zoomed ? 'overflow-hidden' : 'overflow-x-auto'}`}>
           {images.map((src, i) => (
             <div key={i} className="flex h-full w-full shrink-0 snap-center items-center justify-center">
-              <ZoomableImage src={src} alt={`${alt} — photo ${i + 1}`} eager={Math.abs(i - start) <= 1} active={i === idx} onZoomChange={z => { if (i === idx || !z) setZoomed(z) }} />
+              <ZoomableImage src={src} alt={t('lightbox.photoAlt', { alt, n: i + 1 })} eager={Math.abs(i - start) <= 1} active={i === idx} onZoomChange={z => { if (i === idx || !z) setZoomed(z) }} />
             </div>
           ))}
         </div>
         {many && (
           <>
-            <button onClick={() => goTo(idx - 1)} aria-label="Photo précédente" className="absolute left-4 top-1/2 hidden h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white hover:bg-white/25 lg:flex"><Icon name="chevron_left" size={28} /></button>
-            <button onClick={() => goTo(idx + 1)} aria-label="Photo suivante" className="absolute right-4 top-1/2 hidden h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white hover:bg-white/25 lg:flex"><Icon name="chevron_right" size={28} /></button>
+            <button onClick={() => goTo(idx - 1)} aria-label={t('lightbox.prev')} className="absolute left-4 top-1/2 hidden h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white hover:bg-white/25 lg:flex"><Icon name="chevron_left" size={28} /></button>
+            <button onClick={() => goTo(idx + 1)} aria-label={t('lightbox.next')} className="absolute right-4 top-1/2 hidden h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white hover:bg-white/25 lg:flex"><Icon name="chevron_right" size={28} /></button>
           </>
         )}
       </div>
@@ -100,8 +105,8 @@ export default function ImageLightbox({ images, start, alt, onClose, onIndexChan
       {many && (
         <div className="flex justify-center gap-2 overflow-x-auto px-4 pt-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           {images.map((src, i) => (
-            <button key={i} onClick={() => goTo(i)} aria-label={`Photo ${i + 1}`} className={`h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 transition-opacity ${i === idx ? 'border-white opacity-100' : 'border-transparent opacity-50'}`}>
-              <img src={thumbnailUrl(src)} alt={`${alt} — photo ${i + 1}`} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            <button key={i} onClick={() => goTo(i)} aria-label={t('lightbox.photo', { n: i + 1 })} className={`h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 border-solid p-0 transition-opacity ${i === idx ? 'border-white opacity-100' : 'border-transparent opacity-50'}`}>
+              <img src={thumbnailUrl(src)} alt={t('lightbox.photoAlt', { alt, n: i + 1 })} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>

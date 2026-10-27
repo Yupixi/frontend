@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
+import { useT } from '../i18n'
+import common from '../i18n/ns/common'
 
 type BottomSheetProps = {
   open: boolean
@@ -22,6 +24,7 @@ type BottomSheetProps = {
 let pendingPop: ReturnType<typeof setTimeout> | null = null
 
 export default function BottomSheet({ open, onClose, title, children, maxHeight = '85vh', maxWidth = '640px', footer }: BottomSheetProps) {
+  const t = useT(common)
   const closedByBackRef = useRef(false)
   const onCloseRef = useRef(onClose)
 
@@ -90,7 +93,7 @@ export default function BottomSheet({ open, onClose, title, children, maxHeight 
         {title && (
           <div className="flex items-center justify-between px-4 pb-3 pt-2.5">
             <h3 className="m-0 text-headline-sm text-on-surface">{title}</h3>
-            <button onClick={() => onCloseRef.current()} aria-label="Fermer" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant">
+            <button onClick={() => onCloseRef.current()} aria-label={t('close')} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant">
               <Icon name="close" size={18} />
             </button>
           </div>
