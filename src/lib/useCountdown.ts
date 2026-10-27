@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import boost from '../i18n/ns/boost'
 
 export type Countdown = { days: number; hours: number; minutes: number; seconds: number; ended: boolean }
 
@@ -28,6 +29,8 @@ export const pad2 = (n: number) => String(n).padStart(2, '0')
 
 // "Fin dans 3j 08h" / "Fin dans 04h 12min".
 export function endsInLabel(c: Countdown | null) {
-  if (!c || c.ended) return 'Terminée'
-  return c.days ? `Fin dans ${c.days}j ${pad2(c.hours)}h` : `Fin dans ${pad2(c.hours)}h ${pad2(c.minutes)}min`
+  if (!c || c.ended) return boost.t('countdown.ended')
+  return c.days
+    ? boost.t('countdown.days', { d: String(c.days), h: pad2(c.hours) })
+    : boost.t('countdown.hours', { h: pad2(c.hours), m: pad2(c.minutes) })
 }

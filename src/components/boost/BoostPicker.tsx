@@ -11,6 +11,8 @@ import { WALLET_BALANCE_QUERY, type WalletBalance } from '../../graphql/payments
 import { usePriceVars } from '../../lib/countries'
 import { requestOpenHelp, requestOpenLink } from '../../lib/navigation'
 import { thumbnailUrl } from '../../lib/media'
+import { useT } from '../../i18n'
+import boostNs from '../../i18n/ns/boost'
 
 export type PickerListing = { id: string; title: string; coverImageUrl?: string | null; status?: string }
 
@@ -27,6 +29,7 @@ export default function BoostPicker({ open, onClose, listing, onDone, onSeeBilan
   // « Voir le bilan »: the Booster page itself scrolls; elsewhere it opens it.
   onSeeBilan?: () => void
 }) {
+  const t = useT(boostNs)
   const vars = usePriceVars()
   const packs = useQuery<{ boostPacks: BoostPackInfo[] }>(BOOST_PACKS_QUERY, { variables: vars, skip: !open }).data?.boostPacks ?? []
   const wallet = useQuery<WalletBalance>(WALLET_BALANCE_QUERY, { variables: vars, skip: !open, fetchPolicy: 'cache-and-network' }).data
@@ -48,7 +51,7 @@ export default function BoostPicker({ open, onClose, listing, onDone, onSeeBilan
   if (open && picked) return (
     <WalletPaySheet
       open
-      title="Payer en crédits"
+      title={t('picker.payTitle')}
       amount={picked.price}
       request={{ kind: 'BOOST_PACK', product: picked.pack, listingId: listing.id }}
       onClose={() => setPicked(null)}
@@ -67,29 +70,29 @@ export default function BoostPicker({ open, onClose, listing, onDone, onSeeBilan
   if (open && done?.family === 'BUMP' && proof.visible) return proof.sheet
 
   if (open && done) return (
-    <BottomSheet open onClose={onClose} title="Boost activé" maxWidth="480px"
+    <BottomSheet open onClose={onClose} title={t('picker.doneTitle')} maxWidth="480px"
       footer={<div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
-        <button type="button" onClick={onClose} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Terminer</button>
-        <button type="button" onClick={() => { onClose(); if (onSeeBilan) onSeeBilan(); else requestOpenLink(`/?shortcut=seller-premium&boost=${listing.id}`) }} className="h-12 flex-[1.4] cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white">Voir le bilan</button>
+        <button type="button" onClick={onClose} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">{t('proof.sheet.done')}</button>
+        <button type="button" onClick={() => { onClose(); if (onSeeBilan) onSeeBilan(); else requestOpenLink(`/?shortcut=seller-premium&boost=${listing.id}`) }} className="h-12 flex-[1.4] cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white">{t('picker.seeResults')}</button>
       </div>}>
       <div role="status" className="flex items-start gap-3 rounded-2xl bg-tertiary-soft p-4 text-tertiary">
         <Icon name="check_circle" size={24} fill className="shrink-0" />
         <div className="min-w-0 text-body-md text-on-surface">
           <b className="block text-label-lg text-tertiary">{done.label}</b>
           <span className="line-clamp-2">« {listing.title} »</span>
-          <span className="mt-1 block text-body-sm text-on-surface-variant">{listing.status === 'PENDING_REVIEW' ? 'Démarre à la mise en ligne de l’annonce.' : 'C’est parti, dès maintenant.'} Bilan dans Booster &amp; Visibilité.</span>
+          <span className="mt-1 block text-body-sm text-on-surface-variant">{listing.status === 'PENDING_REVIEW' ? t('picker.startsOnline') : t('picker.startsNow')}</span>
         </div>
       </div>
     </BottomSheet>
   )
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Booster l’annonce" maxHeight="92vh" maxWidth="560px">
+    <BottomSheet open={open} onClose={onClose} title={t('picker.title')} maxHeight="92vh" maxWidth="560px">
       <div className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-2.5">
         <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{cover && <img src={cover} alt="" className="h-full w-full object-cover" />}</span>
         <span className="min-w-0 flex-1 truncate text-label-md text-on-surface">{listing.title}</span>
         <span className="shrink-0 text-right">
-          <span className="block text-label-sm text-on-surface-variant">Solde</span>
+          <span className="block text-label-sm text-on-surface-variant">{t('picker.balance')}</span>
           {wallet ? <CreditsF n={wallet.myWallet.credits} value={wallet.walletSettings.creditValue} className="block text-label-md text-on-surface" /> : <span className="text-label-md">…</span>}
         </span>
       </div>
@@ -101,7 +104,7 @@ export default function BoostPicker({ open, onClose, listing, onDone, onSeeBilan
         </div>
       )}
       <button type="button" onClick={() => { onClose(); requestOpenHelp('booster-une-annonce') }} className="mt-3 flex h-10 cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary">
-        <Icon name="help" size={17} /> Comment ça marche ?
+        <Icon name="help" size={17} /> {t('picker.howItWorks')}
       </button>
     </BottomSheet>
   )

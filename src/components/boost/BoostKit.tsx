@@ -13,6 +13,8 @@ import type { BoostPackInfo } from '../../graphql/promotions'
 import type { PromoBadge } from '../../graphql/listings'
 import { LISTING_BADGE_SETTINGS_QUERY, type BadgeSetting } from '../../graphql/visibility'
 import { formatNumber } from '../../lib/format'
+import { useT } from '../../i18n'
+import boost from '../../i18n/ns/boost'
 
 // The pieces every boost / credits screen shares, so that a formula reads
 // the same everywhere: its name (server `label`), one line of what it does
@@ -48,14 +50,15 @@ export function PackPrice({ info, listingId, className = '' }: { info: BoostPack
 // « 1 · Achetez des crédits → 2 · Choisissez un boost → 3 · Votre annonce
 // passe devant », with « 1 crédit = 100 F » of the payer's country.
 export function BoostSteps({ className = '' }: { className?: string }) {
+  const t = useT(boost)
   const value = useCreditValue()
   const steps: { icon: string; title: string; sub: ReactNode }[] = [
-    { icon: 'add_card', title: 'Achetez des crédits', sub: value > 0 ? <><span className="hidden sm:inline">Mobile Money · </span>1 crédit = <Price amount={value} /></> : 'Par Mobile Money' },
-    { icon: 'rocket_launch', title: 'Choisissez un boost', sub: 'Sur l’annonce de votre choix' },
-    { icon: 'trending_up', title: 'Votre annonce passe devant', sub: 'Puis son bilan s’affiche' },
+    { icon: 'add_card', title: t('kit.steps.buy'), sub: value > 0 ? t.rich('kit.steps.buySub', { price: <Price amount={value} />, mm: c => <span className="hidden sm:inline">{c}</span> }) : t('kit.steps.buySubNoValue') },
+    { icon: 'rocket_launch', title: t('kit.steps.choose'), sub: t('kit.steps.chooseSub') },
+    { icon: 'trending_up', title: t('kit.steps.ahead'), sub: t('kit.steps.aheadSub') },
   ]
   return (
-    <ol className={`m-0 grid list-none grid-cols-3 gap-2 p-0 ${className}`} aria-label="Comment booster">
+    <ol className={`m-0 grid list-none grid-cols-3 gap-2 p-0 ${className}`} aria-label={t('kit.steps.aria')}>
       {steps.map((s, i) => (
         <li key={s.title} className="relative flex min-w-0 flex-col items-center gap-1.5 rounded-2xl bg-surface-container-low p-2 text-center sm:flex-row sm:gap-3 sm:p-3 sm:text-left">
           <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary sm:h-10 sm:w-10">
@@ -97,6 +100,7 @@ const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia
 // (Urgent). Pure CSS, mounted on demand only (never on the first render of
 // a page), paused off screen, static under « reduce motion ».
 export function BoostDemo({ info, pill, coverUrl, className = '' }: { info: BoostPackInfo; pill: PromoBadge | null; coverUrl?: string | null; className?: string }) {
+  const t = useT(boost)
   const ref = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
   const still = reducedMotion()
@@ -112,11 +116,11 @@ export function BoostDemo({ info, pill, coverUrl, className = '' }: { info: Boos
   // it from the bottom.
   const slot = moves ? 0 : 1
   const others = [0, 1, 2, 3].filter(i => i !== slot)
-  const caption = info.family === 'URGENT' ? 'Même place, avec la pastille'
-    : info.family === 'BUMP' ? (info.autoBump ? 'Revient en tête chaque jour' : 'Revient en tête de la liste')
-      : 'Passe devant, à une place réservée'
+  const caption = info.family === 'URGENT' ? t('kit.demo.urgent')
+    : info.family === 'BUMP' ? (info.autoBump ? t('kit.demo.autoBump') : t('kit.demo.bump'))
+      : t('kit.demo.featured')
   return (
-    <figure ref={ref} className={`boostdemo m-0 ${still ? 'boostdemo-still' : ''} ${moves ? 'boostdemo-moves' : 'boostdemo-pop'} ${className}`} data-paused={paused || undefined} aria-label={`Aperçu : ${caption}`}>
+    <figure ref={ref} className={`boostdemo m-0 ${still ? 'boostdemo-still' : ''} ${moves ? 'boostdemo-moves' : 'boostdemo-pop'} ${className}`} data-paused={paused || undefined} aria-label={t('kit.demo.aria', { caption })}>
       <div className="relative mx-auto h-[138px] w-full max-w-[240px]" aria-hidden>
         {others.map((s, i) => (
           <div key={s} className="boostdemo-row boostdemo-other absolute inset-x-0 flex h-[30px] items-center gap-2 rounded-lg bg-surface-container-low px-1.5" style={{ top: s * 36 }}>
@@ -126,7 +130,7 @@ export function BoostDemo({ info, pill, coverUrl, className = '' }: { info: Boos
         ))}
         <div className="boostdemo-row boostdemo-yours absolute inset-x-0 z-10 flex h-[30px] items-center gap-2 rounded-lg bg-surface-lowest px-1.5 shadow-sm ring-2 ring-primary" style={{ top: slot * 36 }}>
           <span className="h-5 w-5 shrink-0 overflow-hidden rounded bg-primary-fixed">{coverUrl && <img src={coverUrl} alt="" className="h-full w-full object-cover" />}</span>
-          <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-on-surface">Votre annonce</span>
+          <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-on-surface">{t('kit.demo.yours')}</span>
           {pill && <span className="boostdemo-pill flex min-w-0 max-w-[55%]"><PromoPill badge={pill} /></span>}
         </div>
       </div>
@@ -140,55 +144,59 @@ export function BoostDemo({ info, pill, coverUrl, className = '' }: { info: Boos
 // up to `reelViewsGoal` views (BO › Règles › Reels). `hasReel`: the listing
 // has a Reel (online or on its way); unknown when no listing is in view.
 export function ReelsPerk({ info, hasReel, className = '' }: { info: BoostPackInfo; hasReel?: boolean; className?: string }) {
+  const t = useT(boost)
   if (!info.reelViewsGoal) return null
-  const detail = `Jusqu’à ${formatNumber(info.reelViewsGoal)} vues dans le fil Reels, sans supplément`
+  const detail = t('kit.reels.detail', { n: formatNumber(info.reelViewsGoal) })
   return (
     <p className={`m-0 flex items-center gap-1 text-body-sm ${hasReel === false ? 'text-on-surface-variant' : 'text-tertiary'} ${className}`} title={detail}>
       <Icon name="smart_display" size={15} className="shrink-0" />
-      <span className="min-w-0">{hasReel === false ? 'Ajoutez un Reel pour en profiter' : '+ vos Reels mis en avant'}<span className="sr-only"> : {detail}</span></span>
+      <span className="min-w-0">{hasReel === false ? t('kit.reels.add') : t('kit.reels.perk')}<span className="sr-only">{t('kit.reels.srDetail', { detail })}</span></span>
     </p>
   )
 }
 
 // One line of the comparison: label, its (i) detail, the value per formula.
-type Row = { key: string; label: string; info: string; value: (p: BoostPackInfo, pill: PromoBadge | null) => ReactNode | boolean }
+// Labels are read at render (boost.t), never at module load.
+type Row = { key: 'bump' | 'pinned' | 'home' | 'pill' | 'reels'; label: string; info: string; value: (p: BoostPackInfo, pill: PromoBadge | null) => ReactNode | boolean }
 const ROWS: Row[] = [
   {
-    key: 'bump', label: 'Revient en tête',
-    info: 'L’annonce repasse en tête des annonces les plus récentes, comme si elle venait d’être publiée (après les annonces en vedette).',
-    value: p => p.autoBump ? (p.autoBumpHour != null ? `Chaque jour à ${p.autoBumpHour}\u00a0h` : 'Chaque jour') : p.bumpNow ? '1 fois' : false,
+    key: 'bump', get label() { return boost.t('kit.row.bump') },
+    get info() { return boost.t('kit.row.bumpInfo') },
+    value: p => p.autoBump ? (p.autoBumpHour != null ? boost.t('kit.row.bumpDailyAt', { hour: String(p.autoBumpHour) }) : boost.t('kit.row.bumpDaily')) : p.bumpNow ? boost.t('kit.row.bumpOnce') : false,
   },
   {
-    key: 'pinned', label: 'Place réservée en tête',
-    info: 'En tête des recherches et de sa catégorie, quel que soit le tri. Les annonces en vedette se partagent ces places à tour de rôle.',
+    key: 'pinned', get label() { return boost.t('kit.row.pinned') },
+    get info() { return boost.t('kit.row.pinnedInfo') },
     value: p => p.pinned,
   },
   {
-    key: 'home', label: 'Sur l’accueil',
-    info: 'Une place dans « Pépites à la Une » sur l’accueil de votre pays, partagée à tour de rôle avec les autres annonces en vedette.',
+    key: 'home', get label() { return boost.t('kit.row.home') },
+    get info() { return boost.t('kit.row.homeInfo') },
     value: p => p.onHome,
   },
   {
-    key: 'pill', label: 'Pastille sur la photo',
-    info: 'Visible partout où l’annonce apparaît, pendant la durée de la formule. Son nom est réglé par Dilchap pour votre pays.',
+    key: 'pill', get label() { return boost.t('kit.row.pill') },
+    get info() { return boost.t('kit.row.pillInfo') },
     value: (_, pill) => pill ? <PromoPill badge={pill} /> : false,
   },
   {
-    key: 'reels', label: 'Vos Reels mis en avant',
-    info: 'Les Reels en ligne de l’annonce passent aussi dans les places réservées du fil Reels et de la rangée Reels de l’accueil, sans supplément, jusqu’au nombre de vues indiqué (après les « Boost Reel »). Le bilan indique leurs vues.',
-    value: p => p.reelViewsGoal > 0 ? `${formatNumber(p.reelViewsGoal)} vues` : false,
+    key: 'reels', get label() { return boost.t('kit.row.reels') },
+    get info() { return boost.t('kit.row.reelsInfo') },
+    value: p => p.reelViewsGoal > 0 ? boost.t('kit.row.reelsViews', { n: formatNumber(p.reelViewsGoal) }) : false,
   },
 ]
 
 function Cell({ v }: { v: ReactNode | boolean }) {
-  if (v === true) return <Icon name="check_circle" size={20} fill className="text-tertiary" title="Oui" />
-  if (v === false || v == null) return <Icon name="remove" size={18} className="text-outline" title="Non" />
+  const t = useT(boost)
+  if (v === true) return <Icon name="check_circle" size={20} fill className="text-tertiary" title={t('kit.yes')} />
+  if (v === false || v == null) return <Icon name="remove" size={18} className="text-outline" title={t('kit.no')} />
   return <span className="text-label-md text-on-surface">{v}</span>
 }
 
 function InfoButton({ row, open, onToggle }: { row: Row; open: boolean; onToggle: () => void }) {
+  const t = useT(boost)
   return (
-    <button type="button" onClick={onToggle} aria-expanded={open} aria-label={`${row.label} : détail`} className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-none ${open ? 'bg-primary text-white' : 'bg-transparent text-on-surface-variant hover:bg-surface-container'}`}>
+    <button type="button" onClick={onToggle} aria-expanded={open} aria-label={t('kit.rowDetailAria', { label: row.label })} className={`inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border-none ${open ? 'bg-primary text-white' : 'bg-transparent text-on-surface-variant hover:bg-surface-container'}`}>
       <Icon name="info" size={16} />
     </button>
   )
@@ -203,6 +211,7 @@ export function BoostCompare({ packs, listing, hasReel, onPick, className = '' }
   onPick?: (p: BoostPackInfo) => void
   className?: string
 }) {
+  const t = useT(boost)
   const badges = useBadgeSettings()
   const [info, setInfo] = useState<string | null>(null)
   const [demo, setDemo] = useState<string | null>(null)
@@ -216,22 +225,22 @@ export function BoostCompare({ packs, listing, hasReel, onPick, className = '' }
       {/* Wide screens: the comparison table. */}
       <div className="hidden overflow-hidden rounded-2xl border border-outline-variant bg-surface-lowest xl:block">
         <table className="w-full table-fixed border-collapse text-center text-body-sm">
-          <caption className="sr-only">Comparaison des formules de boost</caption>
+          <caption className="sr-only">{t('kit.compare.caption')}</caption>
           <thead>
             <tr className="bg-surface-container-low align-top">
-              <th scope="col" className="w-[19%] p-3 text-left text-label-md text-on-surface-variant">Formule</th>
+              <th scope="col" className="w-[19%] p-3 text-left text-label-md text-on-surface-variant">{t('kit.compare.plan')}</th>
               {packs.map(p => (
                 <th key={p.pack} scope="col" className="p-3 font-normal">
-                  {p.mostChosen && <span className="mb-1 inline-block rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold uppercase text-white">Le plus choisi</span>}
+                  {p.mostChosen && <span className="mb-1 inline-block rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold uppercase text-white">{t('kit.mostChosen')}</span>}
                   <span className="block text-label-lg text-on-surface">{p.name}</span>
-                  <span className="block text-label-sm text-on-surface-variant">{p.durationLabel ?? 'Immédiat'}</span>
+                  <span className="block text-label-sm text-on-surface-variant">{p.durationLabel ?? t('kit.compare.immediate')}</span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             <tr className="border-0 border-t border-solid border-outline-variant">
-              <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">Ce que ça fait</th>
+              <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">{t('kit.compare.whatItDoes')}</th>
               {packs.map(p => <td key={p.pack} className="p-3 text-body-sm text-on-surface">{p.summary}</td>)}
             </tr>
             {rows.map(r => (
@@ -244,18 +253,18 @@ export function BoostCompare({ packs, listing, hasReel, onPick, className = '' }
               </tr>
             ))}
             <tr className="border-0 border-t border-solid border-outline-variant bg-surface-container-low/60">
-              <th scope="row" className="p-3 text-left text-label-md text-on-surface">Prix</th>
+              <th scope="row" className="p-3 text-left text-label-md text-on-surface">{t('kit.compare.price')}</th>
               {packs.map(p => <td key={p.pack} className="p-3"><PackPrice info={p} listingId={listing?.id} className="justify-center text-label-lg" /></td>)}
             </tr>
             <tr className="border-0 border-t border-solid border-outline-variant">
-              <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">Aperçu</th>
+              <th scope="row" className="p-3 text-left text-label-md font-normal text-on-surface-variant">{t('kit.compare.preview')}</th>
               {packs.map(p => (
                 <td key={p.pack} className="p-2">
                   <div className="flex flex-col items-center gap-1.5">
                     <button type="button" onClick={() => setDemo(demo === p.pack ? null : p.pack)} aria-pressed={demo === p.pack} className={`flex h-9 cursor-pointer items-center gap-1 rounded-full border border-solid px-3 text-label-md ${demo === p.pack ? 'border-primary bg-primary-fixed text-primary' : 'border-outline-variant bg-transparent text-on-surface'}`}>
-                      <Icon name="play_circle" size={16} /> Voir
+                      <Icon name="play_circle" size={16} /> {t('kit.see')}
                     </button>
-                    {onPick && <button type="button" onClick={() => onPick(p)} className="h-9 cursor-pointer rounded-full border-none bg-primary px-3 text-label-md text-white">Choisir</button>}
+                    {onPick && <button type="button" onClick={() => onPick(p)} className="h-9 cursor-pointer rounded-full border-none bg-primary px-3 text-label-md text-white">{t('kit.choose')}</button>}
                   </div>
                 </td>
               ))}
@@ -265,7 +274,7 @@ export function BoostCompare({ packs, listing, hasReel, onPick, className = '' }
         {demoPack && (
           <div className="flex flex-col items-center gap-2 border-0 border-t border-solid border-outline-variant p-4 sm:flex-row sm:justify-center sm:gap-6">
             <BoostDemo info={demoPack} pill={pillFor(demoPack, badges)} coverUrl={listing?.coverImageUrl} className="w-[240px]" />
-            <p className="m-0 max-w-sm text-body-sm text-on-surface"><b>{demoPack.label}</b> : {demoPack.summary}</p>
+            <p className="m-0 max-w-sm text-body-sm text-on-surface">{t.rich('kit.compare.demoLine', { label: demoPack.label, summary: demoPack.summary, b: c => <b>{c}</b> })}</p>
           </div>
         )}
       </div>
@@ -291,10 +300,11 @@ export function BoostCard({ info: p, pill, listing, hasReel, onPick, busy }: {
   onPick?: () => void
   busy?: boolean
 }) {
+  const t = useT(boost)
   const [demo, setDemo] = useState(false)
   return (
     <article className={`relative flex flex-col rounded-2xl bg-surface-lowest p-3.5 ${p.mostChosen ? 'border-2 border-solid border-primary' : 'border border-solid border-outline-variant'}`}>
-      {p.mostChosen && <span className="absolute -top-2.5 right-3 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold uppercase text-white">Le plus choisi</span>}
+      {p.mostChosen && <span className="absolute -top-2.5 right-3 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold uppercase text-white">{t('kit.mostChosen')}</span>}
       <div className="flex items-start justify-between gap-2">
         <h3 className="m-0 min-w-0 text-label-lg text-on-surface">{p.name} {p.durationLabel && <span className="font-normal text-on-surface-variant">· {p.durationLabel}</span>}</h3>
         {pill && <span className="flex min-w-0 max-w-[45%] shrink-0"><PromoPill badge={pill} /></span>}
@@ -305,10 +315,10 @@ export function BoostCard({ info: p, pill, listing, hasReel, onPick, busy }: {
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
         <PackPrice info={p} listingId={listing?.id} className="text-label-lg" />
         <span className="flex gap-1.5">
-          <button type="button" onClick={() => setDemo(!demo)} aria-pressed={demo} aria-label={`Voir l’effet : ${p.label}`} className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border-none ${demo ? 'bg-primary-fixed text-primary' : 'bg-surface-container-low text-on-surface'}`}>
+          <button type="button" onClick={() => setDemo(!demo)} aria-pressed={demo} aria-label={t('kit.card.seeEffect', { label: p.label })} className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border-none ${demo ? 'bg-primary-fixed text-primary' : 'bg-surface-container-low text-on-surface'}`}>
             <Icon name="play_circle" size={20} />
           </button>
-          {onPick && <button type="button" disabled={busy} onClick={onPick} className="h-10 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50">Choisir</button>}
+          {onPick && <button type="button" disabled={busy} onClick={onPick} className="h-10 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50">{t('kit.choose')}</button>}
         </span>
       </div>
     </article>
@@ -318,12 +328,13 @@ export function BoostCard({ info: p, pill, listing, hasReel, onPick, busy }: {
 // « Comment ça marche ? »: the exact detail of each formula (server
 // promises), its animation once opened, and how the bilan is measured.
 export function HowItWorks({ packs, className = '' }: { packs: BoostPackInfo[]; className?: string }) {
+  const t = useT(boost)
   const badges = useBadgeSettings()
   const [open, setOpen] = useState(false)
   return (
     <details className={`group rounded-2xl bg-surface-container-low ${className}`} onToggle={e => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-label-lg text-on-surface [&::-webkit-details-marker]:hidden">
-        <span className="flex items-center gap-2"><Icon name="help" size={20} className="text-primary" /> Comment ça marche ?</span>
+        <span className="flex items-center gap-2"><Icon name="help" size={20} className="text-primary" /> {t('picker.howItWorks')}</span>
         <Icon name="expand_more" size={22} className="transition-transform group-open:rotate-180" />
       </summary>
       {open && (
@@ -334,15 +345,15 @@ export function HowItWorks({ packs, className = '' }: { packs: BoostPackInfo[]; 
               <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start">
                 <BoostDemo info={p} pill={pillFor(p, badges)} className="sm:w-[220px] sm:shrink-0" />
                 <ul className="m-0 flex min-w-0 list-none flex-col gap-1.5 p-0 text-body-sm text-on-surface">
-                  {p.promises.map(t => <li key={t} className="flex items-start gap-2"><Icon name="check_circle" size={15} className="mt-0.5 shrink-0 text-tertiary" /> <span>{t}</span></li>)}
+                  {p.promises.map(line => <li key={line} className="flex items-start gap-2"><Icon name="check_circle" size={15} className="mt-0.5 shrink-0 text-tertiary" /> <span>{line}</span></li>)}
                 </ul>
               </div>
             </section>
           ))}
-          <p className="m-0 text-body-sm text-on-surface-variant">Le bilan compte les affichages, vues et contacts pendant le boost, comparés à la même durée juste avant (ou à une annonce moyenne de sa catégorie).</p>
+          <p className="m-0 text-body-sm text-on-surface-variant">{t('kit.how.results')}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <HelpLink article="booster-une-annonce" label="Booster une annonce" />
-            <HelpLink article="acheter-des-credits" label="Les crédits" />
+            <HelpLink article="booster-une-annonce" label={t('kit.how.helpBoost')} />
+            <HelpLink article="acheter-des-credits" label={t('kit.how.helpCredits')} />
           </div>
         </div>
       )}

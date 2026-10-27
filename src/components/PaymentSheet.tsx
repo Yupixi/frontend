@@ -16,6 +16,8 @@ import {
 import PaymentVerifying from './PaymentVerifying'
 import { momoNumberError, NETWORK_PREFIX } from '../lib/phone'
 import { trackCreditPurchase } from '../lib/analytics'
+import { useT } from '../i18n'
+import payment from '../i18n/ns/payment'
 
 const PHONE_KEY = 'dilchap_momo_phone'
 const POLL_MS = 3000
@@ -43,6 +45,7 @@ const formatPhone = (v: string) => {
 // (+ Orange Money code) → confirmation on the phone or in Wave → the credits are
 // applied by the server once the payment is confirmed.
 export default function PaymentSheet({ open, onClose, title, amount, request, children, onPaid }: Props) {
+  const t = useT(payment)
   const client = useApolloClient()
   // Payments are never recorded by Microsoft Clarity.
   useClarityHold(open)
@@ -122,7 +125,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
       poll(p.id)
     } catch (e) {
       if (isNotVerifiedError(e)) { setNeedsVerify(true); return }
-      setError(e instanceof Error ? e.message : 'Le paiement n’a pas pu être lancé.')
+      setError(e instanceof Error ? e.message : payment.t('sheet.startFailed'))
     }
   }
 
@@ -134,7 +137,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
   // Outcome not confirmed by Paytic (yet): the server keeps checking.
   const verifying = intent && (VERIFYING_PAYMENT.includes(intent.status) || (OPEN_PAYMENT.includes(intent.status) && timedOut))
   const selected = PROVIDERS.find((p) => p.key === provider)
-  const phoneError = provider && selected ? momoNumberError(phone, provider, selected.label) : 'Choisissez un moyen de paiement.'
+  const phoneError = provider && selected ? momoNumberError(phone, provider, selected.label) : t('sheet.chooseMethodDot')
   const showPhoneError = !!phoneError && !!phone && (touched || phone.replace(/\D/g, '').length >= 10)
   // Operator of the payment in progress (the picker may have been reset).
   const paidWith = PROVIDERS.find((p) => p.key === intent?.provider) ?? selected ?? PROVIDERS[0]
@@ -146,20 +149,20 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
     <div className="border-0 border-t border-solid border-outline-variant px-4 pb-3 pt-3">
       <button onClick={() => { if (intent) reset(); else void pay() }} disabled={!intent && (!canPay || loading)} className={`${btn} flex w-full items-center justify-center gap-2 bg-primary text-white disabled:cursor-not-allowed disabled:opacity-45`}>
         {intent
-          ? <><Icon name="refresh" size={18} /> Réessayer</>
+          ? <><Icon name="refresh" size={18} /> {t('sheet.retry')}</>
           : loading
-            ? <><Icon name="progress_activity" size={18} className="animate-spin" /> Connexion à {selected?.label}…</>
+            ? <><Icon name="progress_activity" size={18} className="animate-spin" /> {t('sheet.connecting', { operator: selected?.label })}</>
             : selected
-              ? <><Icon name="lock" size={18} /> Payer <Price amount={amount} /></>
-              : 'Choisissez un moyen de paiement'}
+              ? <><Icon name="lock" size={18} /> {t.rich('sheet.pay', { price: <Price amount={amount} /> })}</>
+              : t('sheet.chooseMethod')}
       </button>
       <p className="m-0 mt-2 flex items-center justify-center gap-1 text-label-sm normal-case tracking-normal text-on-surface-variant">
-        <Icon name="verified_user" size={14} className="text-tertiary" /> Paiement sécurisé par Paytic · aucun frais ajouté
+        <Icon name="verified_user" size={14} className="text-tertiary" /> {t('sheet.secured')}
       </p>
     </div>
   ) : (
     <div className="border-0 border-t border-solid border-outline-variant px-4 py-3">
-      <button onClick={onClose} className={`${btn} w-full bg-surface-container-high text-on-surface`}>{waiting || verifying ? 'Fermer (la vérification continue)' : 'Terminer'}</button>
+      <button onClick={onClose} className={`${btn} w-full bg-surface-container-high text-on-surface`}>{waiting || verifying ? t('sheet.closeVerifying') : t('return.done')}</button>
     </div>
   )
 
@@ -173,16 +176,16 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-3.5 py-2.5">
             <div className="min-w-0 text-body-sm text-on-surface-variant">{children}</div>
             <div className="shrink-0 text-right">
-              <div className="text-label-sm uppercase text-on-surface-variant">Total</div>
+              <div className="text-label-sm uppercase text-on-surface-variant">{t('sheet.total')}</div>
               <div className="text-headline-sm text-primary"><Price amount={amount} /></div>
             </div>
           </div>
 
           {/* 1. Operator */}
           <div className="mb-2 flex items-center gap-2 text-label-md text-on-surface">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">1</span> Moyen de paiement
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">1</span> {t('sheet.method')}
           </div>
-          <div role="radiogroup" aria-label="Moyen de paiement" className="grid grid-cols-4 gap-2">
+          <div role="radiogroup" aria-label={t('sheet.method')} className="grid grid-cols-4 gap-2">
             {PROVIDERS.map((p) => {
               const on = provider === p.key
               return (
@@ -209,7 +212,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           <div key={provider} className="animate-[slideDown_0.35s_cubic-bezier(0.16,1,0.3,1)]">
           {/* 2. Number */}
           <div className="mb-2 mt-4 flex items-center gap-2 text-label-md text-on-surface">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">2</span> Numéro {selected.label}
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">2</span> {t('sheet.number', { operator: selected.label })}
           </div>
           <label className={`flex h-13 items-center gap-2 rounded-2xl border-[1.5px] border-solid bg-surface-lowest pl-2 pr-3 transition-colors focus-within:border-primary ${showPhoneError ? 'border-primary' : 'border-outline-variant'}`}>
             <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-surface-container-low px-2 text-label-md text-on-surface">
@@ -221,7 +224,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
               onBlur={() => setTouched(true)}
               inputMode="tel"
               autoComplete="tel-national"
-              aria-label={`Numéro ${selected.label}`}
+              aria-label={t('sheet.number', { operator: selected.label })}
               aria-invalid={showPhoneError}
               autoFocus={!phone}
               placeholder={`${NETWORK_PREFIX[provider] ?? '07'} 00 00 00 00`}
@@ -231,18 +234,18 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           </label>
           {showPhoneError
             ? <p className="m-0 mt-1.5 flex items-start gap-1 text-body-sm text-primary"><Icon name="error" size={16} className="mt-0.5 shrink-0" /> {phoneError}</p>
-            : <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{provider === 'wave' ? 'Le numéro de votre compte Wave.' : `Le numéro qui recevra la demande de paiement ${selected.label}.`}</p>}
+            : <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{provider === 'wave' ? t('sheet.waveNumberHint') : t('sheet.numberHint', { operator: selected.label })}</p>}
 
           {/* 3. Orange Money code */}
           {provider === 'orange' && (
             <div className="mt-5">
               <div className="mb-2 flex items-center gap-2 text-label-md text-on-surface">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">3</span> Code de paiement
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-on-surface text-[11px] font-bold text-surface">3</span> {t('sheet.otp')}
               </div>
               <div className="rounded-2xl bg-[#FF7900]/10 p-3">
                 <p className="m-0 flex items-center gap-2 text-body-sm text-on-surface">
                   <Icon name="dialpad" size={18} className="shrink-0 text-[#FF7900]" />
-                  <span>Sur votre téléphone Orange, composez <a href="tel:%23144*82%23" className="font-bold text-on-surface">#144*82#</a> puis saisissez le code reçu.</span>
+                  <span>{t.rich('sheet.orangeDial', { link: c => <a href="tel:%23144*82%23" className="font-bold text-on-surface">{c}</a> })}</span>
                 </p>
                 <input
                   value={otp}
@@ -250,7 +253,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={8}
-                  aria-label="Code de paiement Orange Money"
+                  aria-label={t('sheet.otpAria')}
                   placeholder="• • • •"
                   className="mt-3 h-12 w-full rounded-xl border-[1.5px] border-solid border-outline-variant bg-surface-lowest px-3 text-center text-headline-sm tracking-[0.4em] text-on-surface outline-none focus:border-[#FF7900]"
                 />
@@ -261,7 +264,7 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
           )}
 
           {error && <p className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-primary-fixed px-3 py-2.5 text-body-sm text-primary"><Icon name="error" size={18} className="shrink-0" /> {error}</p>}
-          {needsVerify && <div className="mt-4"><AccountVerifyPanel intro="Pour payer, confirmez votre compte : par SMS, c’est immédiat, et le paiement reprend aussitôt." onVerified={() => { setNeedsVerify(false); void pay() }} /></div>}
+          {needsVerify && <div className="mt-4"><AccountVerifyPanel intro={t('sheet.verifyIntro')} onVerified={() => { setNeedsVerify(false); void pay() }} /></div>}
         </>
       )}
 
@@ -272,19 +275,19 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
             <PaymentLogo method={paidWith.method} size={64} />
           </span>
           <div>
-            <p className="m-0 text-headline-sm text-on-surface">{intent.redirectUrl ? 'Redirection vers Wave…' : 'Validez sur votre téléphone'}</p>
+            <p className="m-0 text-headline-sm text-on-surface">{intent.redirectUrl ? t('sheet.redirecting') : t('sheet.confirmOnPhone')}</p>
             <p className="m-0 mt-1 max-w-xs text-body-sm text-on-surface-variant">
-              {intent.redirectUrl ? 'Si rien ne se passe, ouvrez la page de paiement Wave.' : <>Une demande de <b className="text-on-surface"><Price amount={amount} /></b> a été envoyée au <b className="text-on-surface">{phone}</b>. Confirmez-la avec votre code secret {paidWith.label}.</>}
+              {intent.redirectUrl ? t('sheet.redirectHint') : t.rich('sheet.requestSent', { price: <Price amount={amount} />, phone, operator: paidWith.label, b: c => <b className="text-on-surface">{c}</b> })}
             </p>
           </div>
-          {intent.redirectUrl && <a href={intent.redirectUrl} className="flex items-center gap-2 rounded-xl bg-[#1DC8FF] px-5 py-3 text-label-lg text-white no-underline"><Icon name="open_in_new" size={18} /> Ouvrir Wave</a>}
+          {intent.redirectUrl && <a href={intent.redirectUrl} className="flex items-center gap-2 rounded-xl bg-[#1DC8FF] px-5 py-3 text-label-lg text-white no-underline"><Icon name="open_in_new" size={18} /> {t('sheet.openWave')}</a>}
           <ol className="m-0 flex w-full max-w-xs list-none flex-col gap-2.5 rounded-2xl bg-surface-container-low p-4 text-left text-body-sm">
-            <li className="flex items-center gap-2.5 text-on-surface"><Icon name="check_circle" size={20} fill className="text-tertiary" /> Demande envoyée à {paidWith.label}</li>
-            <li className="flex items-center gap-2.5 text-on-surface"><Icon name="progress_activity" size={20} className="animate-spin text-primary" /> Confirmation de l’opérateur</li>
-            <li className="flex items-center gap-2.5 text-on-surface-variant"><Icon name="radio_button_unchecked" size={20} /> Ajout de vos crédits</li>
+            <li className="flex items-center gap-2.5 text-on-surface"><Icon name="check_circle" size={20} fill className="text-tertiary" /> {t('sheet.step.sent', { operator: paidWith.label })}</li>
+            <li className="flex items-center gap-2.5 text-on-surface"><Icon name="progress_activity" size={20} className="animate-spin text-primary" /> {t('sheet.step.confirm')}</li>
+            <li className="flex items-center gap-2.5 text-on-surface-variant"><Icon name="radio_button_unchecked" size={20} /> {t('sheet.step.credits')}</li>
           </ol>
           <button onClick={() => copyRef(intent.reference)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-transparent text-label-sm normal-case tracking-normal text-on-surface-variant">
-            Réf. {intent.reference} <Icon name={copied ? 'check' : 'content_copy'} size={14} />
+            {t('verifying.ref', { ref: intent.reference })} <Icon name={copied ? 'check' : 'content_copy'} size={14} />
           </button>
         </div>
       )}
@@ -294,8 +297,8 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
       {intent?.status === 'SUCCESS' && (
         <div className="flex flex-col items-center gap-2 py-5 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={48} fill /></span>
-          <p className="m-0 mt-1 text-headline-sm text-on-surface">Paiement confirmé</p>
-          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.simulated ? 'Mode test : paiement simulé (Paytic non configuré).' : <>{intent.credits ? `${intent.credits} crédits ajoutés.` : 'Vos crédits sont ajoutés.'} Réf. {intent.reference}</>}</p>
+          <p className="m-0 mt-1 text-headline-sm text-on-surface">{t('return.success.title')}</p>
+          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.simulated ? t('sheet.simulated') : intent.credits ? t('sheet.successCredits', { n: String(intent.credits), ref: intent.reference }) : t('sheet.successNoCount', { ref: intent.reference })}</p>
         </div>
       )}
 
@@ -303,8 +306,8 @@ export default function PaymentSheet({ open, onClose, title, amount, request, ch
       {intent && (intent.status === 'FAILED' || intent.status === 'FULFILMENT_FAILED') && (
         <div className="flex flex-col items-center gap-2 py-5 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={48} /></span>
-          <p className="m-0 mt-1 text-headline-sm text-on-surface">{intent.status === 'FAILED' ? 'Paiement non abouti' : 'Paiement reçu, activation en attente'}</p>
-          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.status === 'FAILED' ? intent.failedReason ?? 'L’opérateur a refusé ou annulé la transaction. Aucun montant n’a été débité.' : `Notre équipe a été alertée et ajoutera vos crédits. Réf. ${intent.reference}`}</p>
+          <p className="m-0 mt-1 text-headline-sm text-on-surface">{intent.status === 'FAILED' ? t('return.failed.title') : t('sheet.fulfilmentPending')}</p>
+          <p className="m-0 max-w-xs text-body-sm text-on-surface-variant">{intent.status === 'FAILED' ? intent.failedReason ?? t('sheet.failedText') : t('sheet.fulfilmentText', { ref: intent.reference })}</p>
         </div>
       )}
       </div>
