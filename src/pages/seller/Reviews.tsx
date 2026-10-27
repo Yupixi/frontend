@@ -13,6 +13,8 @@ import type { AuthUser } from '../../graphql/auth'
 import Select from '../../components/Select'
 import { BADGE_LABEL, MY_BADGE_QUERY, type MyBadge } from '../../graphql/badges'
 import { usePriceVars } from '../../lib/countries'
+import { useT, fmtNumber } from '../../i18n'
+import reviewsNs from '../../i18n/ns/reviews'
 
 type Props = { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void }
 const PAGE = 5
@@ -24,6 +26,7 @@ function Stars({ value, size = 16 }: { value: number, size?: number }) {
 // "Avis & Réputation Vendeur" mockup — figures from myReputation, reviews
 // with the seller's public replies.
 export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
+  const t = useT(reviewsNs)
   const { data: repData } = useQuery<{ myReputation: Reputation }>(MY_REPUTATION_QUERY)
   const rep = repData?.myReputation
   const { data, refetch } = useQuery<{ sellerReviews: FullReview[] }>(SELLER_REVIEWS_FULL_QUERY, { variables: { sellerId: currentUser?.id ?? '' }, skip: !currentUser })
@@ -45,17 +48,17 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
   const badge = useQuery<{ myBadge: MyBadge }>(MY_BADGE_QUERY, { variables: usePriceVars() }).data?.myBadge
   const c = badge?.criteria
   const checks = badge && c ? [
-    { ok: badge.identityVerified, label: 'Pièce d’identité validée par Dilchap' },
-    { ok: badge.sales >= c.minSales, label: `Au moins ${c.minSales} ventes confirmées (${badge.sales})` },
-    { ok: badge.reviews >= c.minReviews, label: `Au moins ${c.minReviews} avis d’acheteurs (${badge.reviews})` },
-    { ok: badge.reviews > 0 && badge.rating >= c.minRating, label: `Note moyenne d’au moins ${c.minRating.toLocaleString('fr-FR')} / 5` },
-    { ok: badge.penalties === 0, label: 'Aucune pénalité de litige' },
+    { ok: badge.identityVerified, label: t('check.identity') },
+    { ok: badge.sales >= c.minSales, label: t('check.sales', { min: String(c.minSales), n: String(badge.sales) }) },
+    { ok: badge.reviews >= c.minReviews, label: t('check.reviews', { min: String(c.minReviews), n: String(badge.reviews) }) },
+    { ok: badge.reviews > 0 && badge.rating >= c.minRating, label: t('check.rating', { min: fmtNumber(c.minRating, 3) }) },
+    { ok: badge.penalties === 0, label: t('check.penalties') },
   ] : []
   const score = checks.filter(x => x.ok).length
 
   const share = async () => {
     if (!currentUser) return
-    await navigator.clipboard.writeText(`${window.location.origin}/vendeur/${currentUser.id}`)
+    await navigator.clipboard.writeText(`${window.location.origin}/vendeur/${currentUser.id}`) // i18n-ignore
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
   const publish = (id: string) => {
@@ -68,15 +71,15 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
     <AccountLayout active="seller-reviews" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="md:hidden"><ReviewsMobile rep={rep} reviews={reviews} currentUser={currentUser} replying={replying} onReply={(id, text) => reply({ variables: { reviewId: id, reply: text } }).then(() => { void refetch() })} /></div>
       <div className="mx-auto hidden max-w-[1160px] pb-6 md:block">
-        <div className="mb-1 flex items-center gap-2 text-label-sm uppercase"><span className="rounded bg-surface-container-high px-1.5 text-on-surface-variant">Confiance & réputation</span><span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Actualisé en temps réel</span></div>
+        <div className="mb-1 flex items-center gap-2 text-label-sm uppercase"><span className="rounded bg-surface-container-high px-1.5 text-on-surface-variant">{t('eyebrow')}</span><span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {t('live')}</span></div>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Avis &amp; Réputation Vendeur</h1>
-            <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">Consultez les retours de vos acheteurs et renforcez votre badge de confiance pour booster vos ventes en remise en main propre.</p>
+            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{t('title')}</h1>
+            <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">{t('intro')}</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => void share()} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2.5 text-label-md text-on-surface"><Share2 size={16} /> {copied ? 'Lien copié !' : 'Partager mon profil public'}</button>
-            <button onClick={() => document.getElementById('statut')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white"><ShieldCheck size={16} /> Critères Vendeur certifié</button>
+            <button onClick={() => void share()} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2.5 text-label-md text-on-surface"><Share2 size={16} /> {copied ? t('linkCopied') : t('sharePublic')}</button>
+            <button onClick={() => document.getElementById('statut')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white"><ShieldCheck size={16} /> {t('certifiedCriteria')}</button>
           </div>
         </div>
 
@@ -84,20 +87,20 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
         <section className="grid gap-4 lg:grid-cols-3">
           <div className="flex flex-col justify-between rounded-2xl border border-outline-variant bg-surface-lowest p-5">
             <div>
-              <div className="text-label-md text-on-surface-variant">Note globale d'expérience</div>
+              <div className="text-label-md text-on-surface-variant">{t('overall')}</div>
               <div className="mt-2 flex items-end gap-3"><span className="text-[52px] font-extrabold leading-none text-on-surface">{rep?.reviewsCount ? rep.averageRating.toFixed(1) : '—'}</span><Stars value={rep?.averageRating ?? 0} size={20} /></div>
-              <div className="mt-1 text-body-sm text-on-surface-variant">{rep?.reviewsCount ?? 0} avis d'acheteurs après échange</div>
+              <div className="mt-1 text-body-sm text-on-surface-variant">{t('afterExchange', { count: rep?.reviewsCount ?? 0 })}</div>
             </div>
             <div className="mt-4 flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
               <span className={`flex h-10 w-10 items-center justify-center rounded-full ${currentUser?.badge === 'CERTIFIED' ? 'bg-tertiary text-white' : currentUser?.badge ? 'bg-verified text-white' : 'bg-surface-container-high text-on-surface-variant'}`}><BadgeCheck size={20} /></span>
-              <div className="text-body-sm"><div className="font-semibold text-on-surface">{currentUser?.badge ? BADGE_LABEL[currentUser.badge] : 'Aucun badge actif'}</div><div className="text-on-surface-variant">{currentUser?.badge ? 'Badge affiché sur vos annonces' : <button onClick={() => onNavigate('seller-badge')} className="cursor-pointer border-none bg-transparent p-0 text-primary">Obtenir un badge</button>} • {rep?.negativeCount ?? 0} avis négatif{(rep?.negativeCount ?? 0) > 1 ? 's' : ''}</div></div>
+              <div className="text-body-sm"><div className="font-semibold text-on-surface">{currentUser?.badge ? BADGE_LABEL[currentUser.badge] : t('noBadge')}</div><div className="text-on-surface-variant">{currentUser?.badge ? t('badgeShown') : <button onClick={() => onNavigate('seller-badge')} className="cursor-pointer border-none bg-transparent p-0 text-primary">{t('getBadge')}</button>} • {t('negative', { count: rep?.negativeCount ?? 0 })}</div></div>
             </div>
           </div>
 
           <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
             <div className="flex items-start justify-between">
-              <div className="text-headline-sm text-on-surface">Distribution des notes</div>
-              <div className="text-right text-label-sm uppercase text-on-surface-variant">Taux de satisfaction<div className="text-label-md text-tertiary">{rep?.satisfactionRate != null ? `${rep.satisfactionRate}%` : '—'}</div></div>
+              <div className="text-headline-sm text-on-surface">{t('distribution')}</div>
+              <div className="text-right text-label-sm uppercase text-on-surface-variant">{t('satisfactionRate')}<div className="text-label-md text-tertiary">{rep?.satisfactionRate != null ? `${rep.satisfactionRate}%` : '—'}</div></div>
             </div>
             <div className="mt-4 flex flex-col gap-2">
               {(rep?.distribution ?? []).map(d => (
@@ -108,26 +111,26 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                 </div>
               ))}
             </div>
-            <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><CheckCircle2 size={15} className="text-tertiary" /> {rep?.negativeCount ? `${rep.negativeCount} évaluation(s) de 1-2 étoiles` : 'Zéro évaluation négative à ce jour'}</p>
+            <p className="m-0 mt-4 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><CheckCircle2 size={15} className="text-tertiary" /> {rep?.negativeCount ? t('lowRatings', { count: rep.negativeCount }) : t('noNegative')}</p>
           </div>
 
           <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
-            <div className="flex items-start justify-between"><div className="text-headline-sm text-on-surface">Critères d'excellence</div><span className="flex items-center gap-1 text-label-sm text-primary"><Zap size={13} /> Remise directe</span></div>
+            <div className="flex items-start justify-between"><div className="text-headline-sm text-on-surface">{t('excellence')}</div><span className="flex items-center gap-1 text-label-sm text-primary"><Zap size={13} /> {t('directHandover')}</span></div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {[
-                { icon: 'forum', v: responseTime ?? '—', label: 'Réactivité chat', sub: 'Messagerie Dilchap' },
-                { icon: 'sentiment_satisfied', v: rep?.satisfactionRate != null ? `${rep.satisfactionRate}%` : '—', label: 'Satisfaction', sub: 'Avis 4 et 5 étoiles' },
-                { icon: 'event_available', v: rep?.confirmedMeetups ?? 0, label: 'RDV confirmés', sub: 'Remises planifiées' },
-                { icon: 'handshake', v: rep?.salesCount ?? 0, label: 'Ventes confirmées', sub: 'Code de remise ou confirmées par les deux' },
+                { icon: 'forum', v: responseTime ?? '—', label: t('card.reactivity'), sub: t('card.reactivitySub') },
+                { icon: 'sentiment_satisfied', v: rep?.satisfactionRate != null ? `${rep.satisfactionRate}%` : '—', label: t('card.satisfaction'), sub: t('card.satisfactionSub') },
+                { icon: 'event_available', v: rep?.confirmedMeetups ?? 0, label: t('card.meetups'), sub: t('card.meetupsSub') },
+                { icon: 'handshake', v: rep?.salesCount ?? 0, label: t('card.sales'), sub: t('card.salesSub') },
               ].map(c => (
-                <div key={c.label} className="rounded-xl bg-surface-container-low p-2.5">
+                <div key={c.icon} className="rounded-xl bg-surface-container-low p-2.5">
                   <div className="flex items-center justify-between"><Icon name={c.icon} size={17} className="text-tertiary" /><span className="text-label-lg text-on-surface">{c.v}</span></div>
                   <div className="mt-1 text-label-md text-on-surface">{c.label}</div>
                   <div className="text-[11px] text-on-surface-variant">{c.sub}</div>
                 </div>
               ))}
             </div>
-            <div className="mt-2 flex items-center justify-between rounded-xl bg-surface-container-low px-3 py-2 text-body-sm"><span className="text-on-surface-variant">Lieu le plus fréquenté</span><span className="font-semibold text-on-surface">{rep?.topMeetupPlace ?? '—'}</span></div>
+            <div className="mt-2 flex items-center justify-between rounded-xl bg-surface-container-low px-3 py-2 text-body-sm"><span className="text-on-surface-variant">{t('topPlace')}</span><span className="font-semibold text-on-surface">{rep?.topMeetupPlace ?? '—'}</span></div>
           </div>
         </section>
 
@@ -135,17 +138,17 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
           {/* Reviews */}
           <section className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-surface-lowest p-2">
-              {([['all', `Tous les avis (${reviews.length})`], ['five', `5 étoiles (${reviews.filter(r => r.rating === 5).length})`], ['unanswered', `Sans réponse (${reviews.filter(r => !r.reply).length})`]] as const).map(([k, l]) => (
+              {([['all', t('filter.all', { n: reviews.length })], ['five', t('filter.five', { n: reviews.filter(r => r.rating === 5).length })], ['unanswered', t('filter.unanswered', { n: reviews.filter(r => !r.reply).length })]] as const).map(([k, l]) => (
                 <button key={k} onClick={() => setFilter(k)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>{l}</button>
               ))}
-              <label className="ml-auto flex items-center gap-1 text-label-md text-on-surface-variant">Trier par :
+              <label className="ml-auto flex items-center gap-1 text-label-md text-on-surface-variant">{t('sortBy')}
                 <Select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-surface-container-low px-2 py-1.5 text-label-md text-on-surface outline-none">
-                  <option value="recent">Plus récents d'abord</option><option value="best">Meilleures notes</option><option value="worst">Notes les plus basses</option>
+                  <option value="recent">{t('sort.recent')}</option><option value="best">{t('sort.best')}</option><option value="worst">{t('sort.worst')}</option>
                 </Select>
               </label>
             </div>
 
-            {list.length === 0 && <EmptyState icon="empty-star" fallback="star" title="Aucun avis pour le moment" text="Les acheteurs peuvent vous évaluer depuis votre profil après avoir échangé avec vous." />}
+            {list.length === 0 && <EmptyState icon="empty-star" fallback="star" title={t('empty.title')} text={t('empty.text')} />}
             <div className="flex flex-col gap-4">
               {list.slice(0, shown).map(r => (
                 <article key={r.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
@@ -155,7 +158,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                       <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-tertiary text-white"><CheckCircle2 size={9} /></span>
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2"><span className="text-label-lg text-on-surface">{r.author.fullName}</span><span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">Acheteur{r.author.city ? ` • ${r.author.city}` : ''}</span></div>
+                      <div className="flex flex-wrap items-center gap-2"><span className="text-label-lg text-on-surface">{r.author.fullName}</span><span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">{t('buyer')}{r.author.city ? ` • ${r.author.city}` : ''}</span></div>
                       <div className="flex items-center gap-2 text-body-sm text-on-surface-variant"><Stars value={r.rating} size={14} /> • {formatRelativeDate(r.createdAt)}</div>
                     </div>
                   </div>
@@ -164,7 +167,7 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
                       <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-surface-container">{r.listing.coverImageUrl && <img src={r.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
                       <div className="min-w-0 flex-1 text-body-sm">
                         <div className="truncate font-semibold text-on-surface">{r.listing.title}{r.listing.condition && r.listing.condition !== 'N/A' ? ` • ${r.listing.condition}` : ''}</div>
-                        <div className="text-on-surface-variant">Prix affiché <Price amount={r.listing.price} currency={r.listing.currency} /> • Remise directe</div>
+                        <div className="text-on-surface-variant">{t.rich('listedPrice', { price: <Price amount={r.listing.price} currency={r.listing.currency} /> })}</div>
                       </div>
                       <span className="shrink-0 rounded bg-surface-lowest px-2 py-0.5 text-label-sm text-on-surface">{r.listing.category.name}</span>
                     </div>
@@ -173,17 +176,17 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
 
                   {r.reply && editing !== r.id ? (
                     <div className="mt-3 rounded-xl border-l-4 border-solid border-l-outline-variant bg-surface-container-low p-3">
-                      <div className="flex items-center justify-between text-body-sm"><span className="flex items-center gap-1 font-semibold text-on-surface"><Icon name="reply" size={15} /> Votre réponse {r.repliedAt && <span className="font-normal text-on-surface-variant">• {formatRelativeDate(r.repliedAt)}</span>}</span>
-                        <button onClick={() => { setEditing(r.id); setDrafts(d => ({ ...d, [r.id]: r.reply ?? '' })) }} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary"><Edit3 size={13} /> Modifier</button></div>
+                      <div className="flex items-center justify-between text-body-sm"><span className="flex items-center gap-1 font-semibold text-on-surface"><Icon name="reply" size={15} /> {t('yourReply')} {r.repliedAt && <span className="font-normal text-on-surface-variant">• {formatRelativeDate(r.repliedAt)}</span>}</span>
+                        <button onClick={() => { setEditing(r.id); setDrafts(d => ({ ...d, [r.id]: r.reply ?? '' })) }} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary"><Edit3 size={13} /> {t('edit')}</button></div>
                       <p className="m-0 mt-1 text-body-sm italic text-on-surface-variant">« {r.reply} »</p>
                     </div>
                   ) : (
                     <div className="mt-3 rounded-xl bg-surface-container-low p-3">
-                      <div className="mb-2 flex items-center justify-between text-body-sm"><span className="flex items-center gap-1 text-primary"><MessageSquare size={15} /> Répondre à {r.author.fullName.split(' ')[0]}</span><span className="text-on-surface-variant">Répondre renforce votre image de sérieux</span></div>
-                      <textarea className="input" rows={2} aria-label="Votre réponse à cet avis" value={drafts[r.id] ?? ''} onChange={e => setDrafts(d => ({ ...d, [r.id]: e.target.value }))} placeholder="Remerciez l'acheteur et renforcez votre image de sérieux…" />
+                      <div className="mb-2 flex items-center justify-between text-body-sm"><span className="flex items-center gap-1 text-primary"><MessageSquare size={15} /> {t('replyTo', { name: r.author.fullName.split(' ')[0] })}</span><span className="text-on-surface-variant">{t('replyHint')}</span></div>
+                      <textarea className="input" rows={2} aria-label={t('replyAria')} value={drafts[r.id] ?? ''} onChange={e => setDrafts(d => ({ ...d, [r.id]: e.target.value }))} placeholder={t('replyPlaceholder')} />
                       <div className="mt-2 flex justify-end gap-2">
-                        {editing === r.id && <button onClick={() => setEditing(null)} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface">Annuler</button>}
-                        <button disabled={replying || !(drafts[r.id] ?? '').trim()} onClick={() => publish(r.id)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50"><Send size={15} /> Publier ma réponse</button>
+                        {editing === r.id && <button onClick={() => setEditing(null)} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-3 py-2 text-label-md text-on-surface">{t('cancel')}</button>}
+                        <button disabled={replying || !(drafts[r.id] ?? '').trim()} onClick={() => publish(r.id)} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50"><Send size={15} /> {t('publishReply')}</button>
                       </div>
                     </div>
                   )}
@@ -191,35 +194,35 @@ export default function Reviews({ onNavigate, currentUser, onLogout }: Props) {
               ))}
             </div>
             {list.length > shown && (
-              <button onClick={() => setShown(s => s + PAGE)} className="mx-auto mt-5 flex cursor-pointer items-center gap-1 rounded-full border border-outline-variant bg-surface-lowest px-5 py-2.5 text-label-md text-on-surface">Afficher les {list.length - shown} autres évaluations <ChevronDown size={16} /></button>
+              <button onClick={() => setShown(s => s + PAGE)} className="mx-auto mt-5 flex cursor-pointer items-center gap-1 rounded-full border border-outline-variant bg-surface-lowest px-5 py-2.5 text-label-md text-on-surface">{t('showMore', { n: list.length - shown })} <ChevronDown size={16} /></button>
             )}
           </section>
 
           {/* Aside */}
           <aside className="flex flex-col gap-4">
             <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
-              <div className="flex items-center gap-2 text-headline-sm text-on-surface"><Lightbulb size={20} className="text-primary" /> Conseils 5 étoiles</div>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Les acheteurs privilégient la transparence et la sécurité lors des remises en direct.</p>
+              <div className="flex items-center gap-2 text-headline-sm text-on-surface"><Lightbulb size={20} className="text-primary" /> {t('tips.title')}</div>
+              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('tips.sub')}</p>
               <div className="mt-3 flex flex-col gap-2">
                 {[
-                  { icon: <MapPin size={17} />, title: 'Lieu public éclairé', text: 'Privilégiez les galeries marchandes et lieux fréquentés.' },
-                  { icon: <Icon name="battery_charging_full" size={17} />, title: 'Appareils chargés à 100%', text: 'Permettez à l’acheteur de tester sur place, évitant tout malentendu.' },
-                  { icon: <Zap size={17} />, title: 'Réponse en < 10 minutes', text: 'Un vendeur rapide sur le chat conclut plus vite ses remises.' },
-                ].map(t => (
-                  <div key={t.title} className="flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><span className="text-primary">{t.icon}</span><div><div className="font-semibold text-on-surface">{t.title}</div><div className="text-on-surface-variant">{t.text}</div></div></div>
+                  { icon: <MapPin size={17} />, title: t('tips.place'), text: t('tips.placeText') },
+                  { icon: <Icon name="battery_charging_full" size={17} />, title: t('tips.charged'), text: t('tips.chargedText') },
+                  { icon: <Zap size={17} />, title: t('tips.fast'), text: t('tips.fastText') },
+                ].map(tip => (
+                  <div key={tip.title} className="flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><span className="text-primary">{tip.icon}</span><div><div className="font-semibold text-on-surface">{tip.title}</div><div className="text-on-surface-variant">{tip.text}</div></div></div>
                 ))}
               </div>
-              <button onClick={() => onNavigate('seller-orders')} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Voir mes ventes <ArrowRight size={15} /></button>
+              <button onClick={() => onNavigate('seller-orders')} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">{t('seeSales')} <ArrowRight size={15} /></button>
             </div>
 
             <div id="statut" className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
-              <div className="flex items-center justify-between text-label-lg text-on-surface">Badge Vendeur certifié <ShieldCheck size={19} className="text-tertiary" /></div>
-              <div className="mt-3 flex items-center justify-between text-body-sm text-on-surface-variant">Critères remplis <span className="font-bold text-tertiary">{score} / {checks.length}</span></div>
+              <div className="flex items-center justify-between text-label-lg text-on-surface">{t('badgeCertified')} <ShieldCheck size={19} className="text-tertiary" /></div>
+              <div className="mt-3 flex items-center justify-between text-body-sm text-on-surface-variant">{t('criteriaMet')} <span className="font-bold text-tertiary">{score} / {checks.length}</span></div>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full bg-tertiary" style={{ width: `${checks.length ? (score / checks.length) * 100 : 0}%` }} /></div>
               <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0 text-body-sm">
                 {checks.map(x => <li key={x.label} className={`flex items-start gap-2 ${x.ok ? 'text-on-surface' : 'text-on-surface-variant'}`}><CheckCircle2 size={15} className={`mt-0.5 shrink-0 ${x.ok ? 'text-tertiary' : 'text-outline'}`} /> {x.label}</li>)}
               </ul>
-              <button onClick={() => onNavigate('seller-badge')} className="mt-3 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container text-label-md text-on-surface"><Icon name="verified" size={17} fill className="text-tertiary" /> Voir les badges et tarifs</button>
+              <button onClick={() => onNavigate('seller-badge')} className="mt-3 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container text-label-md text-on-surface"><Icon name="verified" size={17} fill className="text-tertiary" /> {t('seeBadges')}</button>
             </div>
           </aside>
         </div>

@@ -16,15 +16,18 @@ import { PaymentLogos } from '../../components/PaymentLogo'
 import { Claim } from '../../lib/site'
 import VisibilityPanel from '../../components/VisibilityPanel'
 import { useMediaQuery } from '../../lib/useMediaQuery'
+import { useT, useLocale, fmtDate } from '../../i18n'
+import statsNs from '../../i18n/ns/stats'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; currentUser?: AuthUser | null; onLogout: () => void }
 
-const WEEKDAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+// Day name of a 0 (Sunday) – 6 weekday, in the page's language (7 Jan 2024 was a Sunday).
+const weekdayName = (weekday: number) => fmtDate(new Date(2024, 0, 7 + weekday), { weekday: 'long' })
 const PERIODS = [
-  { key: '7', label: '7 derniers jours', days: () => 7 },
-  { key: '30', label: '30 derniers jours', days: () => 30 },
-  { key: 'month', label: 'Ce mois-ci', days: () => new Date().getDate() },
-  { key: '90', label: '90 jours', days: () => 90 },
+  { key: '7', get label() { return statsNs.t('period.7') }, days: () => 7 },
+  { key: '30', get label() { return statsNs.t('period.30') }, days: () => 30 },
+  { key: 'month', get label() { return statsNs.t('period.month') }, days: () => new Date().getDate() },
+  { key: '90', get label() { return statsNs.t('period.90') }, days: () => 90 },
 ]
 
 const nf = (n: number) => formatNumber(n)
@@ -32,7 +35,7 @@ const pct = (n: number | null | undefined) => (n == null ? '—' : `${formatNumb
 const ago = (iso: string | null) => {
   if (!iso) return '—'
   const d = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000))
-  return d === 0 ? "Aujourd'hui" : `Il y a ${d}j`
+  return d === 0 ? statsNs.t('today') : statsNs.t('agoDays', { d })
 }
 
 function Trend({ now, prev }: { now: number | null; prev: number | null }) {
@@ -60,37 +63,42 @@ function Kpi({ label, icon, iconCls, value, foot }: { label: string; icon: strin
 }
 
 function exportCsv(stats: SellerStats) {
+  const t = statsNs.t
   const rows = [
-    ['Article', 'Catégorie', 'Prix', 'Mise en ligne', 'Vues', 'dont boost', 'Clics', 'Messages', 'Statut'],
+    [t('csv.article'), t('csv.category'), t('csv.price'), t('csv.published'), t('csv.views'), t('csv.boosted'), t('csv.clicks'), t('csv.messages'), t('csv.status')],
     ...stats.listings.map(p => [
       p.listing.title, p.listing.category.name, p.listing.price ?? '', (p.listing.publishedAt ?? p.listing.createdAt).slice(0, 10),
-      p.views, p.boostedViews, p.clicks, p.messages, p.listing.status === 'SOLD' ? 'Vendu' : p.boosted ? 'Boost actif' : 'En ligne',
+      p.views, p.boostedViews, p.clicks, p.messages, p.listing.status === 'SOLD' ? t('status.sold') : p.boosted ? t('status.boostActive') : t('status.online'),
     ]),
   ]
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
-  a.download = `dilchap-statistiques-${stats.days}j.csv`
+  a.download = t('csv.file', { days: String(stats.days) })
   a.click()
   URL.revokeObjectURL(a.href)
 }
 
 function StatusChip({ p }: { p: ListingPerformance }) {
-  if (p.listing.status === 'SOLD') return <span className="inline-flex items-center gap-1 rounded-lg bg-tertiary-soft px-2 py-1 text-label-sm text-tertiary"><Icon name="done_all" size={14} /> Vendu{p.soldInHours ? ` en ${p.soldInHours < 72 ? `${p.soldInHours}h` : `${Math.round(p.soldInHours / 24)}j`}` : ''}</span>
-  if (p.boosted) return <span className="inline-flex items-center gap-1 rounded-lg bg-primary-fixed px-2 py-1 text-label-sm text-primary"><Icon name="bolt" size={14} /> Boost actif</span>
-  if (p.pendingOffer) return <span className="inline-flex items-center gap-1 rounded-lg bg-tertiary-soft px-2 py-1 text-label-sm text-tertiary"><Icon name="local_offer" size={14} /> Offre reçue</span>
-  return <span className="rounded-lg bg-surface-container px-2 py-1 text-label-sm text-on-surface-variant">En ligne</span>
+  const t = useT(statsNs)
+  if (p.listing.status === 'SOLD') return <span className="inline-flex items-center gap-1 rounded-lg bg-tertiary-soft px-2 py-1 text-label-sm text-tertiary"><Icon name="done_all" size={14} /> {!p.soldInHours ? t('status.sold') : p.soldInHours < 72 ? t('status.soldInHours', { n: p.soldInHours }) : t('status.soldInDays', { n: Math.round(p.soldInHours / 24) })}</span>
+  if (p.boosted) return <span className="inline-flex items-center gap-1 rounded-lg bg-primary-fixed px-2 py-1 text-label-sm text-primary"><Icon name="bolt" size={14} /> {t('status.boostActive')}</span>
+  if (p.pendingOffer) return <span className="inline-flex items-center gap-1 rounded-lg bg-tertiary-soft px-2 py-1 text-label-sm text-tertiary"><Icon name="local_offer" size={14} /> {t('status.offer')}</span>
+  return <span className="rounded-lg bg-surface-container px-2 py-1 text-label-sm text-on-surface-variant">{t('status.online')}</span>
 }
 
 function RowAction({ p, onNavigate }: { p: ListingPerformance; onNavigate: (x: any) => void }) {
-  if (p.listing.status === 'SOLD') return <span className="text-body-sm text-on-surface-variant">Clôturé</span>
-  if (p.boosted) return <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface hover:bg-surface-container-low">Optimiser</button>
-  return <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white hover:bg-primary-dark">Booster</button>
+  const t = useT(statsNs)
+  if (p.listing.status === 'SOLD') return <span className="text-body-sm text-on-surface-variant">{t('action.closed')}</span>
+  if (p.boosted) return <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface hover:bg-surface-container-low">{t('action.optimize')}</button>
+  return <button onClick={() => onNavigate('seller-premium')} className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white hover:bg-primary-dark">{t('action.boost')}</button>
 }
 
 // "Statistiques de vente & Visibilité" mockup — every figure comes from
 // sellerStats (daily listing counters, chats, concluded deals, wallet).
 export default function Stats({ onNavigate, onSelectListing, currentUser, onLogout }: Props) {
+  const t = useT(statsNs)
+  const locale = useLocale()
   const [period, setPeriod] = useState('30')
   const [exportOpen, setExportOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -104,11 +112,11 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
   const upgrade = () => onNavigate('seller-badge')
 
   const chart = useMemo(() => (s?.series ?? []).map(d => ({
-    day: new Date(d.day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+    day: fmtDate(d.day, { day: 'numeric', month: 'short' }),
     boost: d.boostedViews,
     organique: d.views - d.boostedViews,
     total: d.views,
-  })), [s])
+  })), [s, locale]) // day labels follow the language
   const peak = chart.reduce<(typeof chart)[number] | null>((best, d) => (!best || d.total > best.total ? d : best), null)
   const boostedShare = s && s.views ? Math.round((s.series.reduce((n, d) => n + d.boostedViews, 0) / s.views) * 100) : 0
   const rows = (s?.listings ?? []).filter(p => p.listing.title.toLowerCase().includes(search.trim().toLowerCase()))
@@ -127,31 +135,31 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
       </div>}
       {wide && <div className="mx-auto max-w-[1180px] pb-8">
         <nav className="mb-2 hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
-          <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />
-          <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">Tableau de bord</button>
-          <Icon name="chevron_right" size={14} /><span className="text-on-surface">Statistiques &amp; Performances</span>
+          <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />{/* i18n-ignore */}
+          <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">{t('crumb.dashboard')}</button>
+          <Icon name="chevron_right" size={14} /><span className="text-on-surface">{t('crumb.stats')}</span>
         </nav>
 
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-2xl">
-            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Statistiques de vente &amp; Visibilité</h1>
-            <p className="m-0 mt-1 text-body-md text-on-surface-variant">Analysez le trafic de vos pépites, la conversion de vos discussions chat et le retour sur investissement de vos boosts.</p>
+            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{t('title')}</h1>
+            <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('intro')}</p>
           </div>
           <div className="flex flex-wrap gap-2 md:flex-col md:items-stretch">
             <label className="flex items-center gap-2 rounded-xl bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm">
               <Icon name="calendar_month" size={18} className="text-primary" />
               <Select value={period} onChange={e => setPeriod(e.target.value)} className="cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
-                {PERIODS.map(p => <option key={p.key} value={p.key} disabled={!advanced && p.key === '90'}>{p.label}{!advanced && p.key === '90' ? ' (Certifié)' : ''}</option>)}
+                {PERIODS.map(p => <option key={p.key} value={p.key} disabled={!advanced && p.key === '90'}>{!advanced && p.key === '90' ? t('periodCertified', { label: p.label }) : p.label}</option>)}
               </Select>
             </label>
             <div className="relative">
-              <button onClick={() => (advanced ? setExportOpen(o => !o) : upgrade())} disabled={!s} title={advanced ? undefined : 'Réservé aux Vendeurs certifiés'} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container-low">
-                <Icon name={advanced ? 'download' : 'lock'} size={18} /> Exporter (.PDF / .CSV)
+              <button onClick={() => (advanced ? setExportOpen(o => !o) : upgrade())} disabled={!s} title={advanced ? undefined : t('export.certifiedOnly')} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container-low">
+                <Icon name={advanced ? 'download' : 'lock'} size={18} /> {t('export.button')}
               </button>
               {exportOpen && s && (
                 <div className="absolute right-0 top-full z-50 mt-1 w-full min-w-[180px] rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-float">
-                  <button onClick={() => { setExportOpen(false); exportCsv(s) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Icon name="table_view" size={18} /> Tableau (.CSV)</button>
-                  <button onClick={() => { setExportOpen(false); window.print() }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Icon name="picture_as_pdf" size={18} /> Rapport (.PDF)</button>
+                  <button onClick={() => { setExportOpen(false); exportCsv(s) }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Icon name="table_view" size={18} /> {t('export.csv')}</button>
+                  <button onClick={() => { setExportOpen(false); window.print() }} className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2 text-left text-label-md text-on-surface hover:bg-surface-container-low"><Icon name="picture_as_pdf" size={18} /> {t('export.pdf')}</button>
                 </div>
               )}
             </div>
@@ -160,12 +168,12 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
 
         {/* KPIs */}
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Kpi label="Vues des annonces" icon="visibility" iconCls="bg-primary-fixed text-primary" value={loading ? '—' : nf(s?.views ?? 0)} foot={<><Trend now={s?.views ?? null} prev={s?.viewsPrev ?? null} /> vs période précédente</>} />
-          <Kpi label="Contacts chat" icon="chat_bubble" iconCls="bg-surface-container text-tertiary" value={loading ? '—' : nf(s?.contacts ?? 0)} foot={<><Trend now={s?.contacts ?? null} prev={s?.contactsPrev ?? null} /> échanges initiés</>} />
-          <Kpi label="Conversion chat" icon="price_check" iconCls="bg-surface-container text-primary" value={loading ? '—' : pct(s?.conversionRate)} foot={<><Trend now={s?.conversionRate ?? null} prev={s?.conversionRatePrev ?? null} /> conclus en deal</>} />
-          <Kpi label="Volume d'affaires" icon="payments" iconCls="bg-tertiary-soft text-tertiary" value={loading ? '—' : <Price amount={s?.revenue ?? 0} />} foot={<Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="savings" size={14} /> Économisé : <Price amount={s?.savedCommission ?? 0} /></span></Claim>} />
+          <Kpi label={t('kpi.views')} icon="visibility" iconCls="bg-primary-fixed text-primary" value={loading ? '—' : nf(s?.views ?? 0)} foot={<><Trend now={s?.views ?? null} prev={s?.viewsPrev ?? null} /> {t('kpi.vsPrevious')}</>} />
+          <Kpi label={t('kpi.contacts')} icon="chat_bubble" iconCls="bg-surface-container text-tertiary" value={loading ? '—' : nf(s?.contacts ?? 0)} foot={<><Trend now={s?.contacts ?? null} prev={s?.contactsPrev ?? null} /> {t('kpi.contactsFoot')}</>} />
+          <Kpi label={t('kpi.conversion')} icon="price_check" iconCls="bg-surface-container text-primary" value={loading ? '—' : pct(s?.conversionRate)} foot={<><Trend now={s?.conversionRate ?? null} prev={s?.conversionRatePrev ?? null} /> {t('kpi.conversionFoot')}</>} />
+          <Kpi label={t('kpi.revenue')} icon="payments" iconCls="bg-tertiary-soft text-tertiary" value={loading ? '—' : <Price amount={s?.revenue ?? 0} />} foot={<Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="savings" size={14} /> {t.rich('kpi.saved', { price: <Price amount={s?.savedCommission ?? 0} /> })}</span></Claim>} />
           <div className="col-span-2 lg:col-span-1">
-            <Kpi label="Délai moyen vente" icon="bolt" iconCls="bg-surface-container text-primary" value={loading ? '—' : s?.avgSaleDays != null ? <>{formatNumber(s.avgSaleDays)} <span className="text-headline-sm font-semibold">jours</span></> : '—'} foot={s?.avgSaleDaysBoosted != null ? <span className="rounded bg-primary-fixed px-1.5 text-label-sm text-primary">{formatNumber(s.avgSaleDaysBoosted)} j si boosté</span> : 'publication → vente confirmée'} />
+            <Kpi label={t('kpi.saleDelay')} icon="bolt" iconCls="bg-surface-container text-primary" value={loading ? '—' : s?.avgSaleDays != null ? t.rich('kpi.days', { n: formatNumber(s.avgSaleDays), u: c => <span className="text-headline-sm font-semibold">{c}</span> }) : '—'} foot={s?.avgSaleDaysBoosted != null ? <span className="rounded bg-primary-fixed px-1.5 text-label-sm text-primary">{t('kpi.daysIfBoosted', { n: formatNumber(s.avgSaleDaysBoosted) })}</span> : t('kpi.saleDelayFoot')} />
           </div>
         </section>
 
@@ -178,18 +186,18 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="m-0 text-headline-sm text-on-surface">Évolution du trafic d'annonces</h2>
-                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vues de vos annonces chaque jour : pendant une formule en cours (Remontée quotidienne, En vedette, Turbo, Urgent) et le reste du temps</p>
+                <h2 className="m-0 text-headline-sm text-on-surface">{t('traffic.title')}</h2>
+                <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('traffic.sub')}</p>
               </div>
               <div className="flex gap-3 text-label-sm text-on-surface">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" /> Pendant un boost ({boostedShare}%)</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#9c6b6b]" /> Hors boost ({100 - boostedShare}%)</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary" /> {t('traffic.duringBoost', { pct: boostedShare })}</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#9c6b6b]" /> {t('traffic.outsideBoost', { pct: 100 - boostedShare })}</span>
               </div>
             </div>
             {peak && peak.total > 0 && (
               <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-1.5 text-body-sm">
-                <Icon name="rocket_launch" size={15} className="text-primary" /> <span className="text-primary">Pic du {peak.day}</span>
-                <b className="text-on-surface">{nf(peak.total)} vues</b>{peak.boost > 0 && <span className="text-on-surface-variant">({Math.round((peak.boost / peak.total) * 100)}% boost)</span>}
+                <Icon name="rocket_launch" size={15} className="text-primary" /> <span className="text-primary">{t('traffic.peak', { day: peak.day })}</span>
+                <b className="text-on-surface">{t('traffic.peakViews', { n: nf(peak.total) })}</b>{peak.boost > 0 && <span className="text-on-surface-variant">{t('traffic.peakBoost', { pct: Math.round((peak.boost / peak.total) * 100) })}</span>}
               </div>
             )}
             <div className="mt-3 h-[260px]">
@@ -202,8 +210,8 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
                   <CartesianGrid vertical={false} stroke="var(--color-outline-variant)" strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-on-surface-variant)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
                   <Tooltip contentStyle={{ background: 'var(--color-surface-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 12, fontSize: 12 }} />
-                  <Area type="monotone" dataKey="organique" name="Organique" stackId="1" stroke="#9c6b6b" strokeWidth={2} fill="url(#gOrg)" />
-                  <Area type="monotone" dataKey="boost" name="Boosté" stackId="1" stroke="#FE0000" strokeWidth={2.5} fill="url(#gBoost)" />
+                  <Area type="monotone" dataKey="organique" name={t('traffic.organic')} stackId="1" stroke="#9c6b6b" strokeWidth={2} fill="url(#gOrg)" />
+                  <Area type="monotone" dataKey="boost" name={t('traffic.boosted')} stackId="1" stroke="#FE0000" strokeWidth={2.5} fill="url(#gBoost)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -212,18 +220,18 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           {advanced ? (
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
             <div className="flex items-start justify-between gap-2">
-              <h2 className="m-0 text-headline-sm text-on-surface">Origine du trafic</h2>
+              <h2 className="m-0 text-headline-sm text-on-surface">{t('origin.title')}</h2>
               <Icon name="location_on" size={20} className="text-primary" />
             </div>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Communes des acheteurs connectés qui ont consulté vos annonces</p>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('origin.sub')}</p>
             <div className="mt-4 flex flex-col gap-3">
-              {(s?.origins ?? []).length === 0 && <p className="m-0 text-body-sm text-on-surface-variant">Pas encore assez de visites d'acheteurs connectés.</p>}
+              {(s?.origins ?? []).length === 0 && <p className="m-0 text-body-sm text-on-surface-variant">{t('origin.empty')}</p>}
               {(s?.origins ?? []).map((o, i) => {
                 const topSales = Math.max(...(s?.origins ?? []).map(x => x.sales))
                 return (
                   <div key={o.city}>
                     <div className="mb-1 flex justify-between text-label-md text-on-surface">
-                      <span>{o.city}{topSales > 0 && o.sales === topSales && <span className="ml-1 text-label-sm text-primary">(Top conversion)</span>}</span>
+                      <span>{o.city}{topSales > 0 && o.sales === topSales && <span className="ml-1 text-label-sm text-primary">{t('origin.top')}</span>}</span>
                       <span>{pct(o.share)}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-surface-container">
@@ -236,11 +244,11 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             {s?.favoritePlace && (
               <div className="mt-4 flex gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
                 <Icon name="verified" size={18} className="shrink-0 text-tertiary" />
-                <span><b className="text-on-surface">Point de retrait favori :</b> {pct(s.favoritePlaceShare)} de vos ventes confirmées se font en main propre à {s.favoritePlace}.</span>
+                <span>{t.rich('origin.favorite', { pct: pct(s.favoritePlaceShare), place: s.favoritePlace, b: c => <b className="text-on-surface">{c}</b> })}</span>
               </div>
             )}
           </div>
-          ) : <CertifiedLock title="Origine du trafic" text="Les communes de vos acheteurs et votre point de remise favori." onUpgrade={upgrade} />}
+          ) : <CertifiedLock title={t('origin.title')} text={t('origin.lockText')} onUpgrade={upgrade} />}
         </section>
 
         {advanced ? (<>
@@ -248,21 +256,21 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
         <section className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <h2 className="m-0 text-headline-sm text-on-surface">Entonnoir de Conversion Dilchap</h2>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Découvrez à quelle étape vos visiteurs se transforment en acheteurs engagés</p>
+              <h2 className="m-0 text-headline-sm text-on-surface">{t('funnel.title')}</h2>
+              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('funnel.sub')}</p>
             </div>
-            <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="trending_up" size={15} /> Taux global de finalisation : {pct(f ? ratio(f.sales, f.views) : null)}</span>
+            <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm text-tertiary"><Icon name="trending_up" size={15} /> {t('funnel.globalRate', { pct: pct(f ? ratio(f.sales, f.views) : null) })}</span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              { n: 1, icon: 'storefront', value: f?.impressions, title: 'Impressions Catalogue', sub: 'Annonces apparues dans le flux & recherche', foot: '100% de base' },
-              { n: 2, icon: 'ads_click', value: f?.views, title: 'Clics & Fiches lues', sub: "Visiteurs ayant examiné l'état et photos", foot: `${pct(f ? ratio(f.views, f.impressions) : null)} de taux de clic`, accent: true },
-              { n: 3, icon: 'favorite', value: f?.favorites, title: 'Favoris enregistrés', sub: 'Acheteurs en phase de réflexion ou veille', foot: `${pct(f ? ratio(f.favorites, f.views) : null)} des vues` },
-              { n: 4, icon: 'forum', value: f?.contacts, title: 'Chats déclenchés', sub: 'Négociations, questions et offres envoyées', foot: `${pct(f ? ratio(f.contacts, f.views) : null)} engagement` },
-              { n: 5, icon: 'task_alt', value: f?.sales, title: 'Ventes confirmées', sub: 'Code de remise ou confirmées par les deux', foot: `${pct(f ? ratio(f.sales, f.contacts) : null)} conv. chat`, done: true },
+              { n: 1, icon: 'storefront', value: f?.impressions, title: t('funnel.impressions'), sub: t('funnel.impressionsSub'), foot: t('funnel.impressionsFoot') },
+              { n: 2, icon: 'ads_click', value: f?.views, title: t('funnel.views'), sub: t('funnel.viewsSub'), foot: t('funnel.viewsFoot', { pct: pct(f ? ratio(f.views, f.impressions) : null) }), accent: true },
+              { n: 3, icon: 'favorite', value: f?.favorites, title: t('funnel.favorites'), sub: t('funnel.favoritesSub'), foot: t('funnel.favoritesFoot', { pct: pct(f ? ratio(f.favorites, f.views) : null) }) },
+              { n: 4, icon: 'forum', value: f?.contacts, title: t('funnel.contacts'), sub: t('funnel.contactsSub'), foot: t('funnel.contactsFoot', { pct: pct(f ? ratio(f.contacts, f.views) : null) }) },
+              { n: 5, icon: 'task_alt', value: f?.sales, title: t('funnel.sales'), sub: t('funnel.salesSub'), foot: t('funnel.salesFoot', { pct: pct(f ? ratio(f.sales, f.contacts) : null) }), done: true },
             ].map(st => (
               <div key={st.n} className={`flex flex-col rounded-xl p-4 ${st.done ? 'border border-tertiary/40 bg-tertiary-soft' : 'bg-surface-container-low'}`}>
-                <div className={`flex items-center justify-between text-label-sm ${st.done ? 'text-tertiary' : 'text-on-surface-variant'}`}>Étape {st.n} <Icon name={st.icon} size={17} /></div>
+                <div className={`flex items-center justify-between text-label-sm ${st.done ? 'text-tertiary' : 'text-on-surface-variant'}`}>{t('funnel.step', { n: st.n })} <Icon name={st.icon} size={17} /></div>
                 <div className={`mt-2 text-headline-md font-extrabold ${st.done ? 'text-tertiary' : 'text-on-surface'}`}>{st.value == null ? '—' : nf(st.value)}</div>
                 <div className={`text-label-md ${st.done ? 'text-tertiary' : 'text-on-surface'}`}>{st.title}</div>
                 <div className="flex-1 text-body-sm text-on-surface-variant">{st.sub}</div>
@@ -276,12 +284,12 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
         <section className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="m-0 text-headline-sm text-on-surface">Performances détaillées par annonce</h2>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Identifiez vos articles les plus demandés et appliquez un boost pour accélérer la vente</p>
+              <h2 className="m-0 text-headline-sm text-on-surface">{t('table.title')}</h2>
+              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('table.sub')}</p>
             </div>
             <label className="flex w-full items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2 sm:w-64">
               <Icon name="search" size={18} className="text-on-surface-variant" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filtrer une annonce..." className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('table.filter')} className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
             </label>
           </div>
 
@@ -289,7 +297,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
-                  {['Article', 'Prix net', 'Mise en ligne', 'Vues (boost)', 'Clics', 'Intentions', 'Messages', 'Statut', 'Action'].map((h, i) => (
+                  {[t('table.article'), t('table.netPrice'), t('table.published'), t('table.views'), t('table.clicks'), t('table.intents'), t('table.messages'), t('table.status'), t('table.action')].map((h, i) => (
                     <th key={h} className={`px-3 py-3 font-semibold ${i === 0 ? 'rounded-l-xl' : ''} ${i === 8 ? 'rounded-r-xl text-right' : ''}`}>{h}</th>
                   ))}
                 </tr>
@@ -308,9 +316,9 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-label-md text-on-surface"><Price amount={p.listing.price} currency={p.listing.currency} /></td>
                     <td className="whitespace-nowrap px-3 py-3 text-body-sm text-on-surface-variant">{ago(p.listing.publishedAt ?? p.listing.createdAt)}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-label-md text-on-surface">{nf(p.views)} <span className={`text-label-sm ${p.boostedViews ? 'text-primary' : 'text-on-surface-variant'}`}>{p.boostedViews ? `(+${nf(p.boostedViews)} boost)` : '(organique)'}</span></td>
+                    <td className="whitespace-nowrap px-3 py-3 text-label-md text-on-surface">{nf(p.views)} <span className={`text-label-sm ${p.boostedViews ? 'text-primary' : 'text-on-surface-variant'}`}>{p.boostedViews ? t('table.boostViews', { n: nf(p.boostedViews) }) : t('table.organic')}</span></td>
                     <td className="px-3 py-3 text-label-md text-on-surface">{nf(p.clicks)}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-label-md text-on-surface" title="Discussions, « Appeler », favoris, offres, rendez-vous et partages, rapportés aux vues">{nf(p.intents)} <span className="text-label-sm text-on-surface-variant">{p.intentRate != null ? `(${formatNumber(p.intentRate)} %)` : ''}</span></td>
+                    <td className="whitespace-nowrap px-3 py-3 text-label-md text-on-surface" title={t('table.intentsTitle')}>{nf(p.intents)} <span className="text-label-sm text-on-surface-variant">{p.intentRate != null ? `(${t('pctSpaced', { n: formatNumber(p.intentRate) })})` : ''}</span></td>
                     <td className="px-3 py-3"><span className="flex items-center gap-1 text-label-md text-tertiary"><Icon name="chat" size={15} /> {p.messages}</span></td>
                     <td className="px-3 py-3"><StatusChip p={p} /></td>
                     <td className="px-3 py-3 text-right"><RowAction p={p} onNavigate={onNavigate} /></td>
@@ -334,7 +342,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
                   <StatusChip p={p} />
                 </button>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  {[['Vues', `${nf(p.views)}${p.boostedViews ? ` (+${p.boostedViews})` : ''}`], ['Clics', nf(p.clicks)], ['Messages', String(p.messages)]].map(([k, v]) => (
+                  {[[t('table.viewsShort'), `${nf(p.views)}${p.boostedViews ? ` (+${p.boostedViews})` : ''}`], [t('table.clicks'), nf(p.clicks)], [t('table.messages'), String(p.messages)]].map(([k, v]) => (
                     <div key={k} className="rounded-lg bg-surface-lowest py-1.5"><div className="text-label-md text-on-surface">{v}</div><div className="text-label-sm text-on-surface-variant">{k}</div></div>
                   ))}
                 </div>
@@ -342,7 +350,7 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
               </div>
             ))}
           </div>
-          {!loading && rows.length === 0 && <p className="m-0 mt-4 text-body-sm text-on-surface-variant">Aucune annonce en ligne sur la période.</p>}
+          {!loading && rows.length === 0 && <p className="m-0 mt-4 text-body-sm text-on-surface-variant">{t('table.empty')}</p>}
         </section>
 
         {/* Boost ROI + advice */}
@@ -350,57 +358,59 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="rocket_launch" size={19} /></span>
-              <h2 className="m-0 flex-1 text-headline-sm text-on-surface">Rentabilité des Boosts Visibilité</h2>
-              {s?.boost.roi != null && s.boost.roi > 0 && <span className="rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary">ROI x{formatNumber(s.boost.roi)} constaté</span>}
+              <h2 className="m-0 flex-1 text-headline-sm text-on-surface">{t('roi.title')}</h2>
+              {s?.boost.roi != null && s.boost.roi > 0 && <span className="rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary">{t('roi.badge', { n: formatNumber(s.boost.roi) })}</span>}
             </div>
-            <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Crédits dépensés en boosts sur la période et ventes de vos annonces boostées, comparées à vos annonces non boostées.</p>
+            <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{t('roi.sub')}</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl bg-surface-container-low p-3">
-                <div className="text-label-sm text-on-surface-variant">Accélération</div>
-                <div className="text-headline-md font-extrabold text-primary">{s?.boost.acceleration != null ? `${formatNumber(s.boost.acceleration)}x` : '—'}</div>
-                <div className="text-body-sm text-on-surface-variant">{s?.boost.acceleration != null ? `Vente conclue ${Math.round(s.boost.acceleration)}x plus vite` : 'Pas encore de vente boostée comparable'}</div>
+                <div className="text-label-sm text-on-surface-variant">{t('roi.acceleration')}</div>
+                <div className="text-headline-md font-extrabold text-primary">{s?.boost.acceleration != null ? t('roi.times', { n: formatNumber(s.boost.acceleration) }) : '—'}</div>
+                <div className="text-body-sm text-on-surface-variant">{s?.boost.acceleration != null ? t('roi.faster', { n: Math.round(s.boost.acceleration) }) : t('roi.noComparable')}</div>
               </div>
               <div className="rounded-xl bg-surface-container-low p-3">
-                <div className="text-label-sm text-on-surface-variant">Investissement</div>
+                <div className="text-label-sm text-on-surface-variant">{t('roi.investment')}</div>
                 <div className="whitespace-nowrap text-headline-md font-extrabold text-on-surface"><Credits n={s?.boost.investmentCredits ?? 0} /></div>
-                <div className="text-body-sm text-on-surface-variant">≈ <Price amount={s?.boost.investment ?? 0} /> • {s?.boost.boostActions ?? 0} boost{(s?.boost.boostActions ?? 0) > 1 ? 's' : ''}</div>
+                <div className="text-body-sm text-on-surface-variant">{t.rich('roi.investmentFoot', { price: <Price amount={s?.boost.investment ?? 0} />, count: s?.boost.boostActions ?? 0 })}</div>
               </div>
               <div className="rounded-xl bg-surface-container-low p-3">
-                <div className="text-label-sm text-on-surface-variant">Ventes débloquées</div>
+                <div className="text-label-sm text-on-surface-variant">{t('roi.unlocked')}</div>
                 <div className="text-headline-md font-extrabold text-tertiary"><Price amount={s?.boost.unlockedSales ?? 0} /></div>
-                <div className="text-body-sm text-on-surface-variant">Encaissés directement</div>
+                <div className="text-body-sm text-on-surface-variant">{t('roi.collected')}</div>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="m-0 flex max-w-xs flex-wrap items-center gap-1.5 text-body-sm text-on-surface-variant">Crédits achetés par <PaymentLogos size={18} /></p>
-              <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white hover:bg-primary-dark"><Icon name="bolt" size={18} /> Booster une nouvelle annonce</button>
+              <p className="m-0 flex max-w-xs flex-wrap items-center gap-1.5 text-body-sm text-on-surface-variant">{t.rich('roi.creditsBy', { logos: <PaymentLogos size={18} /> })}</p>
+              <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-md text-white hover:bg-primary-dark"><Icon name="bolt" size={18} /> {t('roi.boostNew')}</button>
             </div>
           </div>
 
           <div className="rounded-2xl bg-surface-container-high p-5">
             <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1 rounded-md bg-inverse-surface px-2 py-1 text-label-sm text-white"><Icon name="auto_awesome" size={14} className="text-primary-fixed" /> Conseil Dilchap</span>
-              <span className="text-label-sm text-on-surface-variant">Marché de votre catégorie</span>
+              <span className="flex items-center gap-1 rounded-md bg-inverse-surface px-2 py-1 text-label-sm text-white"><Icon name="auto_awesome" size={14} className="text-primary-fixed" /> {t('advice.badge')}</span>
+              <span className="text-label-sm text-on-surface-variant">{t('advice.market')}</span>
             </div>
-            <h3 className="m-0 mt-4 text-headline-sm text-on-surface">Optimisez vos horaires de publication</h3>
+            <h3 className="m-0 mt-4 text-headline-sm text-on-surface">{t('advice.title')}</h3>
             {s?.advice ? (
               <>
                 <p className="m-0 mt-2 text-body-md text-on-surface-variant">
-                  « Les annonces de catégorie <b className="text-on-surface">{s.advice.categoryName}</b> reçoivent{' '}
-                  <b className="text-tertiary">+{s.advice.lift}% de contacts</b> le <b className="text-on-surface">{WEEKDAYS[s.advice.weekday]} entre {s.advice.startHour}h et {s.advice.endHour}h</b>
-                  {s.advice.topCities.length > 0 && <> auprès des acheteurs de {s.advice.topCities.join(' & ')}</>}. »
+                  {t.rich(s.advice.topCities.length > 0 ? 'advice.textCities' : 'advice.text', {
+                    category: s.advice.categoryName, lift: s.advice.lift, weekday: weekdayName(s.advice.weekday), start: s.advice.startHour, end: s.advice.endHour,
+                    cities: s.advice.topCities.join(' & '),
+                    b: c => <b className="text-on-surface">{c}</b>, g: c => <b className="text-tertiary">{c}</b>,
+                  })}
                 </p>
                 <div className="mt-4 flex items-center gap-3 rounded-xl bg-surface-lowest p-3">
                   <Icon name="schedule" size={20} className="text-primary" />
                   <div className="flex-1">
-                    <div className="text-label-md text-on-surface">Prochain créneau optimal</div>
-                    <div className="text-body-sm text-on-surface-variant first-letter:uppercase">{new Date(s.advice.nextSlot).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                    <div className="text-label-md text-on-surface">{t('advice.nextSlot')}</div>
+                    <div className="text-body-sm text-on-surface-variant first-letter:uppercase">{fmtDate(s.advice.nextSlot, { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
                   </div>
-                  <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Programmer <Icon name="arrow_forward" size={16} /></button>
+                  <button onClick={() => onNavigate('seller-premium')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">{t('advice.schedule')} <Icon name="arrow_forward" size={16} /></button>
                 </div>
               </>
             ) : (
-              <p className="m-0 mt-2 text-body-md text-on-surface-variant">Pas encore assez de discussions dans votre catégorie pour dégager un créneau optimal. Revenez après quelques ventes.</p>
+              <p className="m-0 mt-2 text-body-md text-on-surface-variant">{t('advice.none')}</p>
             )}
           </div>
         </section>
@@ -409,17 +419,17 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
         <section className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <h2 className="m-0 text-headline-sm text-on-surface">Prix du marché</h2>
-              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vos annonces en ligne comparées aux prix des annonces similaires sur Dilchap</p>
+              <h2 className="m-0 text-headline-sm text-on-surface">{t('market.title')}</h2>
+              <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('market.sub')}</p>
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-2">
-            {(market ?? []).length === 0 && <p className="m-0 text-body-sm text-on-surface-variant">Aucune annonce en ligne à comparer pour le moment.</p>}
+            {(market ?? []).length === 0 && <p className="m-0 text-body-sm text-on-surface-variant">{t('market.empty')}</p>}
             {(market ?? []).map(m => {
               const gap = m.gapPct ?? 0
               const tone = gap > 15 ? 'bg-primary-fixed text-primary' : gap < -15 ? 'bg-verified-soft text-verified' : 'bg-tertiary-soft text-tertiary'
-              const label = gap > 15 ? 'Au-dessus du marché' : gap < -15 ? 'Sous le marché' : 'Dans le marché'
-              const compared = m.sampleSize === 0 ? 'aucune annonce comparable' : `${m.sampleSize} annonce${m.sampleSize > 1 ? 's' : ''} comparée${m.sampleSize > 1 ? 's' : ''}`
+              const label = gap > 15 ? t('market.above') : gap < -15 ? t('market.below') : t('market.within')
+              const compared = t('market.compared', { count: m.sampleSize })
               return (
                 <button key={m.listing.id} onClick={() => onSelectListing(m.listing.id)} className="flex cursor-pointer flex-col gap-2 rounded-xl border-none bg-surface-container-low p-3 text-left sm:flex-row sm:items-center">
                   <span className="flex min-w-0 flex-1 items-center gap-3">
@@ -427,12 +437,12 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
                     <span className="min-w-0"><span className="block truncate text-label-md text-on-surface">{m.listing.title}</span><span className="block truncate text-body-sm text-on-surface-variant">{m.categoryName} • {compared}</span></span>
                   </span>
                   {m.insufficientSample || m.median == null || m.low == null || m.high == null ? (
-                    <span className="shrink-0 whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">Échantillon insuffisant</span>
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{t('market.insufficient')}</span>
                   ) : (
                     <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-body-sm">
-                      <span className="whitespace-nowrap text-on-surface-variant">Médiane <b className="text-on-surface"><Price amount={m.median} /></b></span>
+                      <span className="whitespace-nowrap text-on-surface-variant">{t.rich('market.median', { price: <Price amount={m.median} />, b: c => <b className="text-on-surface">{c}</b> })}</span>
                       <span className="whitespace-nowrap text-on-surface-variant"><Price amount={m.low} /> – <Price amount={m.high} /></span>
-                      <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${tone}`}>{label} ({gap > 0 ? '+' : ''}{formatNumber(gap)} %)</span>
+                      <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${tone}`}>{t('market.gap', { label, gap: `${gap > 0 ? '+' : ''}${formatNumber(gap)}` })}</span>
                     </span>
                   )}
                 </button>
@@ -443,9 +453,9 @@ export default function Stats({ onNavigate, onSelectListing, currentUser, onLogo
         </>) : (
         <CertifiedLock
           className="mt-5"
-          title="Statistiques avancées"
-          text="Allez plus loin que les chiffres clés : comprenez où vos acheteurs décrochent et quand publier."
-          items={['Entonnoir de conversion', 'Performances par annonce', 'Rentabilité des boosts', 'Conseils de publication', 'Prix du marché par annonce', 'Historique 90 jours et export']}
+          title={t('lock.title')}
+          text={t('lock.text')}
+          items={[t('lock.funnel'), t('lock.perListing'), t('lock.roi'), t('lock.advice'), t('lock.market'), t('lock.history')]}
           onUpgrade={upgrade}
         />
         )}
