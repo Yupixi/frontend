@@ -2,14 +2,15 @@ import { interestCategories } from '../lib/interests'
 import { requestOpenHelp, requestOpenLocation } from '../lib/navigation'
 import CityPagesBlock from '../components/CityPagesBlock'
 import EmptyState from '../components/EmptyState'
-import { Fragment, useState, useEffect, useMemo } from 'react'
-import { useQuery } from '@apollo/client/react'
+import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
+import { useMutation, useQuery } from '@apollo/client/react'
+import { UPDATE_PREFERENCES_JSON_MUTATION } from '../graphql/sellerTools'
+import { useHomeSearchInView, useHomeStrip } from '../lib/homeHeader'
 import {
   ArrowLeft, ArrowRight, ChevronRight, Search, Flame,
   MapPin, Wallet, Smartphone, BadgeCheck, Shirt,
 } from '../components/icons'
 import Icon, { CategoryIcon } from '../components/Icon'
-import Flag from '../components/Flag'
 import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { rotationSeed } from '../lib/rotationSeed'
@@ -297,10 +298,18 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     return stop < 0 ? order : order.slice(0, stop + 1)
   }
   const zone = location?.city ?? market?.name ?? t('allCountries')
-  // Phones: a long country name (« Côte d'Ivoire ») cut in the « Zone
-  // active » pill becomes its code next to the flag (« CI »).
-  const zoneCode = !location?.city && !!market && market.name.length > 9 ? market.code : null
-  const zoneShort = zoneCode ?? zone
+
+  // Phones: the header's magnifier stays hidden while this search bar shows.
+  const searchBar = useRef<HTMLDivElement>(null)
+  useHomeSearchInView(searchBar, !isDesktop)
+  // The « 100% P2P » strip: shown unless the BO turned it off (« Page
+  // d'accueil › Bandeau de confiance ») or the visitor closed it.
+  const strip = useHomeStrip(home.mobileStrip.title, (currentUser?.notificationPreferences as Record<string, unknown> | undefined)?.homeStripClosed)
+  const [savePrefs] = useMutation(UPDATE_PREFERENCES_JSON_MUTATION)
+  const closeStrip = () => {
+    strip.close()
+    if (currentUser && !currentUser.isGuest) void savePrefs({ variables: { preferences: { homeStripClosed: home.mobileStrip.title } } }).catch(() => undefined)
+  }
 
   const loadMore = !!feedData && <InfiniteLoader key={feedKey} list={nextFeedPage} pageSize={pageSize} endLabel={latest.length > pageSize ? t('seenAll') : null} />
 
@@ -495,19 +504,21 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   }
   const mobileSections: Partial<Record<HomeSectionKey, React.ReactNode>> = isDesktop ? {} : {
     reels: <ReelRail countryCode={location?.countryCode} city={location?.city} signedIn={!!currentUser && !currentUser.isGuest} />,
-    reassurance: <>
-        {/* Looks like a button: it opens « Comment ça marche ». */}
-        <button type="button" onClick={() => trust.open(trustTopicOf('verified_user', home.mobileStrip.title))} aria-haspopup="dialog" className="mb-6 flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border-none bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-high p-3 text-left shadow-sm">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
-            <span className="block min-w-0 leading-tight">
-              <span className="block truncate text-label-sm font-bold text-on-surface">{home.mobileStrip.title}</span>
-              <span className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={methods.slice(0, 3)} className="shrink-0" /> {t('orCash')}</span>
-            </span>
-          </span>
-          <span className="flex shrink-0 items-center gap-0.5 text-label-sm text-primary"><span className="max-[400px]:hidden">{t('how')}</span> <Icon name="chevron_right" size={18} /></span>
-        </button>
-    </>,
+    // One line: the claim (it opens « Comment ça marche »), the payment
+    // logos, a cross that closes it for good.
+    reassurance: home.mobileStrip.visible !== false && !strip.hidden && (
+        <div className="mb-5 flex h-11 items-center gap-1 rounded-full bg-surface-container pl-1.5 pr-0.5">
+          <button type="button" onClick={() => trust.open(trustTopicOf('verified_user', home.mobileStrip.title))} aria-haspopup="dialog" className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={15} /></span>
+            <span className="min-w-0 truncate text-label-md font-bold text-on-surface">{home.mobileStrip.title}</span>
+            {home.mobileStrip.text && <span className="hidden shrink-0 text-body-sm text-on-surface-variant min-[430px]:inline">{home.mobileStrip.text}</span>}
+            <PaymentLogos size={16} methods={methods.slice(0, 3)} className="shrink-0 max-[340px]:hidden" />
+          </button>
+          <button type="button" onClick={closeStrip} aria-label={t('strip.close')} title={t('strip.close')} className="tap-44 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container-high">
+            <Icon name="close" size={18} />
+          </button>
+        </div>
+    ),
     categories: <>
         {!settled.categories && <CategoryRailSkeleton />}
         {categories.length > 0 && (
@@ -596,6 +607,19 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               </Select>
             }
           />
+          {/* The feed's city (it was in the « Zone active » row above the search). */}
+          {cities.length > 1 && (
+            <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-8 md:px-8">
+              {[null, ...cities.filter(c => c !== location?.city).slice(0, 8)].map(c => {
+                const active = feedCity === c
+                return (
+                  <button key={c ?? 'all'} type="button" onClick={() => setFeedCity(c)} aria-pressed={active} className={`shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none px-3 py-1.5 text-label-md ${active ? 'bg-on-surface font-semibold text-surface' : 'bg-surface-container text-on-surface-variant'}`}>
+                    {c ?? (location?.city ? t('zoneAllCity', { city: location.city }) : t('latest.allCities'))}
+                  </button>
+                )
+              })}
+            </div>
+          )}
           {settled.latest ? <ImpressionScope placement="HOME_LATEST" promoted={feed?.promoted}><div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div></ImpressionScope> : <GridSkeleton count={4} />}
           {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title={t('empty.title')} text={t('empty.text')} action={{ label: t('empty.action'), onClick: () => onNavigate('seller-post') }} />}
           {loadMore}
@@ -701,34 +725,10 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
 
       {/* ================= MOBILE ================= */}
       {!isDesktop && <div className="px-4 pb-4 pt-3 md:px-8 md:pt-6">
-        <div className="mb-4 flex flex-col gap-3">
-          {/* "Zone active": scopes the latest-listings feed, like the desktop city chips */}
-          {/* Always there (its room is kept while the cities load). « Zone
-              active » opens the country / city picker of the header; the
-              list next to it narrows the feed below to one city. */}
-          <div className="flex min-h-8 items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <button type="button" onClick={requestOpenLocation} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant"><Icon name="my_location" size={15} className="text-tertiary" /> {t('zoneActive')}</button>
-                <span className="relative flex min-w-0 items-center rounded-full bg-surface-container shadow-sm">
-                  <span className="pointer-events-none absolute left-2.5 h-2 w-2 animate-pulse rounded-full bg-tertiary" />
-                  {cities.length > 0 ? (
-                    <>
-                    {zoneCode && !feedCity && <Flag code={zoneCode} size={14} className="pointer-events-none absolute left-[22px]" />}
-                    <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label={t('zoneCityAria')} className={`min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pr-1.5 text-label-md text-on-surface outline-none ${zoneCode && !feedCity ? 'pl-[48px]' : 'pl-6'}`}>
-                      <option value="">{location?.city ? t('zoneAllCity', { city: location.city }) : zoneShort}</option>
-                      {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
-                    </Select>
-                    </>
-                  ) : (
-                    <button type="button" onClick={requestOpenLocation} className="cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pl-6 pr-2.5 text-label-md text-on-surface" aria-label={zone}>{zoneCode && <Flag code={zoneCode} size={14} className="mr-1 inline-block align-[-2px]" />}{zoneShort}</button>
-                  )}
-                </span>
-              </div>
-              {/* Always there: every item on sale right now. */}
-              <button onClick={() => onSearch?.('', { promo: true })} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary-fixed/50 px-2 py-1 text-label-sm text-primary">
-                <Icon name="percent" size={16} /> {t('promos')}
-              </button>
-          </div>
+        {/* The country / city is chosen in the header (its flag, LocationPill);
+            the city of the feed below sits in « Dernières annonces ». While
+            this bar is on screen the header hides its magnifier (useHomeSearchInView). */}
+        <div ref={searchBar} data-tour="search" className="mb-4">
           <div className="flex h-12 w-full items-center rounded-xl bg-surface-lowest px-3 shadow-sm">
             <button onClick={() => onNavigate('search')} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-body-md text-outline">
               <Search size={22} className="ml-1 shrink-0 text-primary" />

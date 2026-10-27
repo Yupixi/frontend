@@ -66,8 +66,6 @@
   "allCountries": "Tous les pays",
   "seenAll": "Vous avez tout vu",
   "zoneActiveColon": "Zone active :",
-  "zoneActive": "Zone active",
-  "zoneCityAria": "Ville des dernières annonces",
   "zoneAllCity": "Tout {{city}}",
   "categories.kicker": "Univers d'achats",
   "categories.title": "Parcourez par catégorie",
@@ -94,8 +92,6 @@
   "empty.title": "Aucune annonce dans cette zone",
   "empty.text": "Changez de zone ou soyez le premier à publier ici.",
   "empty.action": "Vendre un article",
-  "orCash": "ou espèces",
-  "how": "Comment ?",
   "seeAll": "Tout voir",
   "hero.prev": "Diapositive précédente",
   "hero.goTo": "Aller au slide {{n}}",
@@ -106,7 +102,7 @@
   "hero.under": "Moins de {{n}} {{unit}}",
   "hero.findNearby": "Trouver à proximité",
   "hero.trends": "Tendances :",
-  "promos": "Promos",
   "searchPrompt": "Que recherchez-vous aujourd'hui ?",
-  "advancedFilters": "Filtres avancés"
+  "advancedFilters": "Filtres avancés",
+  "strip.close": "Masquer ce bandeau"
 }

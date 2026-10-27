@@ -66,8 +66,6 @@
   "allCountries": "All countries",
   "seenAll": "You’ve seen everything",
   "zoneActiveColon": "Active area:",
-  "zoneActive": "Active area",
-  "zoneCityAria": "City of the latest listings",
   "zoneAllCity": "All of {{city}}",
   "categories.kicker": "Shopping worlds",
   "categories.title": "Browse by category",
@@ -94,8 +92,6 @@
   "empty.title": "No listings in this area",
   "empty.text": "Change area or be the first to post here.",
   "empty.action": "Sell an item",
-  "orCash": "or cash",
-  "how": "How?",
   "seeAll": "See all",
   "hero.prev": "Previous slide",
   "hero.goTo": "Go to slide {{n}}",
@@ -106,7 +102,7 @@
   "hero.under": "Under {{n}} {{unit}}",
   "hero.findNearby": "Find nearby",
   "hero.trends": "Trending:",
-  "promos": "Deals",
   "searchPrompt": "What are you looking for today?",
-  "advancedFilters": "Advanced filters"
+  "advancedFilters": "Advanced filters",
+  "strip.close": "Hide this banner"
 }

@@ -18,7 +18,8 @@ export type HomeConfig = {
   hero: { intervalSec: number, slides: HomeSlide[] }
   trends: { label: string, term: string, maxPrice: number | null }[]
   reassurance: { icon: string, title: string, text: string }[]
-  mobileStrip: { title: string, text: string }
+  // visible: the phone strip (« Bandeau de confiance » block of the BO); absent = shown.
+  mobileStrip: { title: string, text: string, visible?: boolean }
   flashFallback: { title: string, subtitle: string, text: string }
   sellCta: { badge: string, title: string, text: string, button: string, link: string }
   howItWorks: { kicker: string, title: string, text: string, steps: { title: string, text: string }[], badges: string[] }
@@ -73,7 +74,7 @@ export const defaultHome = (): HomeConfig => {
       { icon: 'shield_with_heart', title: t('defaults.reassurance.handover.title'), text: t('defaults.reassurance.handover.text') },
       { icon: 'contactless', title: t('defaults.reassurance.direct.title'), text: t('defaults.reassurance.direct.text') },
     ],
-    mobileStrip: { title: t('defaults.mobileStrip.title'), text: t('defaults.mobileStrip.text') },
+    mobileStrip: { title: t('defaults.mobileStrip.title'), text: t('defaults.mobileStrip.text'), visible: true },
     flashFallback: { title: t('defaults.flash.title'), subtitle: t('defaults.flash.subtitle'), text: t('defaults.flash.text') },
     sellCta: {
       badge: t('defaults.sellCta.badge'),
