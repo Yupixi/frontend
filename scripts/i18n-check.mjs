@@ -115,6 +115,8 @@ const readsFrench = (s) => {
 
 function scanFile(file) {
   const text = fs.readFileSync(file, 'utf8')
+  // A data file of proper nouns (cities, districts…): « i18n-ignore-file ».
+  if (/i18n-ignore-file/.test(text.slice(0, 2000))) return []
   const lines = text.split('\n')
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   const found = []

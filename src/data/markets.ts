@@ -2,6 +2,9 @@
 // of the backend facts (Backend src/common/countries.ts): forms and the
 // country picker work with it until the `countries` query answers, and the
 // query's values (edited in the Backoffice « Pays ») always win.
+// i18n-ignore-file: cities, districts and meet-up spots are proper nouns or
+// BO data (the API answers in the visitor's language); country names and
+// tax id labels are localized by lib/countries localizeCountry.
 
 export type PaymentMethodCode = 'WAVE' | 'ORANGE_MONEY' | 'MTN_MOMO' | 'MOOV_MONEY' | 'FREE_MONEY' | 'T_MONEY' | 'AIRTEL_MONEY' | 'CASH'
 export type ShopTaxId = 'NCC' | 'NINEA' | 'IFU' | 'NIF'
