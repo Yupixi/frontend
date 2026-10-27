@@ -1,3 +1,5 @@
+import campaign from '../i18n/ns/campaign'
+
 // One formula for every « -X % » of a campaign entry, the same as the API's
 // (backend promotions/campaign-discount.ts): a fixed sale price wins over
 // the entry's percent — the card prints the sale price first, so its badge
@@ -20,5 +22,5 @@ export const campaignBestDiscount = (c: { maxDiscountPercent: number | null }) =
 
 export const upToLabel = (c: { maxDiscountPercent: number | null }) => {
   const best = campaignBestDiscount(c)
-  return best ? `Jusqu’à -${best} %` : null
+  return best ? campaign.t('upTo', { n: best }) : null
 }

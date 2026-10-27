@@ -1,12 +1,13 @@
 import { gql } from '@apollo/client'
+import badges from '../i18n/ns/badges'
 
 // Paid badges: "Compte vérifié" (blue) and "Vendeur certifié" (green). The
 // identity check (KYC) is only the prerequisite.
 export type BadgeTier = 'VERIFIED' | 'CERTIFIED'
 
 export const BADGE_LABEL: Record<BadgeTier, string> = {
-  VERIFIED: 'Compte vérifié',
-  CERTIFIED: 'Vendeur certifié',
+  get VERIFIED() { return badges.t('tier.VERIFIED') },
+  get CERTIFIED() { return badges.t('tier.CERTIFIED') },
 }
 
 export type BadgePlan = { product: string; tier: BadgeTier; period: 'MONTHLY' | 'YEARLY'; days: number; price: number }

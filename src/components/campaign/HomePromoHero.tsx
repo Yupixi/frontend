@@ -12,6 +12,8 @@ import { useMarketCode, useMarketVars } from '../../lib/countries'
 import {
   CAMPAIGN_HERO_BADGE, HERO_DEALS_QUERY, LIVE_CAMPAIGNS_QUERY, isLive, type HeroDeal, type LiveCampaign,
 } from '../../graphql/campaigns'
+import { fmtNumber, useT } from '../../i18n'
+import campaignNs from '../../i18n/ns/campaign'
 
 // The home hero taken over by the live campaigns the team put there (BO
 // « Visibilité » › « Prendre tout le hero de l'accueil »): the campaign's
@@ -102,6 +104,7 @@ const saleOf = (d: HeroDeal) => {
 // One deal: the old price gets struck, the new one counts down to its
 // value, the -X % badge pops then beats.
 function DealCard({ d, index, animate, desktop, onSelect }: { d: HeroDeal; index: number; animate: boolean; desktop: boolean; onSelect: (id: string) => void }) {
+  const t = useT(campaignNs)
   const card = useRef<HTMLButtonElement>(null)
   const figure = useRef<HTMLSpanElement>(null)
   const sale = saleOf(d)!
@@ -131,12 +134,12 @@ function DealCard({ d, index, animate, desktop, onSelect }: { d: HeroDeal; index
       type="button"
       onClick={() => onSelect(d.id)}
       data-wait={animate ? '' : undefined}
-      aria-label={`${d.title} : ${finalText} ${currencySymbol(d.currency)} au lieu de ${oldText} ${currencySymbol(d.currency)}, -${pct} %`}
+      aria-label={t('heroDeal.aria', { title: d.title, price: `${finalText} ${currencySymbol(d.currency)}`, old: `${oldText} ${currencySymbol(d.currency)}`, pct })}
       className={`ph-deal flex shrink-0 cursor-pointer snap-start flex-col overflow-hidden rounded-xl border-none bg-surface-lowest p-1.5 text-left text-on-surface shadow-lg ${desktop ? 'w-[168px]' : 'w-[136px]'}`}
     >
       <span className={`relative block w-full overflow-hidden rounded-lg bg-surface-container ${desktop ? 'aspect-[4/3]' : 'aspect-square'}`}>
         {photo && <img src={photo} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />}
-        <span className="ph-deal-badge absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-label-sm font-extrabold text-white shadow">-{pct} %</span>
+        <span className="ph-deal-badge absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-label-sm font-extrabold text-white shadow">{t('percent', { n: pct })}</span>
       </span>
       <span aria-hidden className="block px-1 pb-1 pt-1.5">
         <span className="block truncate text-label-sm text-on-surface-variant">{d.title}</span>
@@ -154,6 +157,7 @@ function DealCard({ d, index, animate, desktop, onSelect }: { d: HeroDeal; index
 }
 
 function Deals({ c, desktop, animate, dark, onSelect }: { c: LiveCampaign; desktop: boolean; animate: boolean; dark: boolean; onSelect: (id: string) => void }) {
+  const t = useT(campaignNs)
   const market = useMarketCode()
   const n = c.homeHeroListings ?? 6
   const { data } = useQuery<{ listings: { items: HeroDeal[] } }>(HERO_DEALS_QUERY, {
@@ -165,7 +169,7 @@ function Deals({ c, desktop, animate, dark, onSelect }: { c: LiveCampaign; deskt
   return (
     <div className={desktop ? 'relative z-10 px-10 pb-8' : 'relative z-10 pb-4'}>
       <p className={`m-0 mb-2 flex items-center gap-1.5 text-label-sm font-bold uppercase tracking-wider ${desktop ? '' : 'px-4'} ${dark ? 'text-on-surface-variant' : 'text-white/80'}`}>
-        <Icon name="trending_down" size={16} /> Les plus fortes remises
+        <Icon name="trending_down" size={16} /> {t('heroDeal.title')}
       </p>
       {/* Room kept while the deals load (no jump under the hero). */}
       <div className={`flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] ${desktop ? 'min-h-[196px]' : 'min-h-[200px] scroll-px-4 px-4'}`}>
@@ -177,11 +181,12 @@ function Deals({ c, desktop, animate, dark, onSelect }: { c: LiveCampaign; deskt
 
 // Days / hours / minutes / seconds; a digit that changes drops in.
 function Countdown({ endsAt, paused, animate, dark, compact }: { endsAt: string; paused: boolean; animate: boolean; dark: boolean; compact: boolean }) {
+  const t = useT(campaignNs)
   const c = useCountdown(endsAt, 1000, paused)
   if (!c || c.ended) return null
-  const cells: [string, number][] = [['j', c.days], ['h', c.hours], ['min', c.minutes], ['s', c.seconds]]
+  const cells: [string, number][] = [[t('countdown.d'), c.days], [t('countdown.h'), c.hours], [t('countdown.m'), c.minutes], [t('countdown.s'), c.seconds]]
   return (
-    <div className="flex items-center gap-1.5" role="timer" aria-label={`Fin dans ${c.days} jours ${c.hours} heures ${c.minutes} minutes`}>
+    <div className="flex items-center gap-1.5" role="timer" aria-label={t('countdown.aria', { d: c.days, h: c.hours, m: c.minutes })}>
       {cells.map(([unit, v]) => (
         <span key={unit} aria-hidden className={`flex items-baseline gap-0.5 overflow-hidden rounded-lg px-2 py-1 ${compact ? 'min-w-[48px]' : 'min-w-[58px] py-1.5'} justify-center ${dark ? 'bg-white/75 text-on-surface' : 'bg-black/25 text-white'}`}>
           <span key={animate ? v : undefined} className={`${compact ? 'text-headline-sm' : 'text-headline-md'} font-extrabold tabular-nums ${animate ? 'ph-flip' : ''}`}>{pad2(v)}</span>
@@ -194,6 +199,7 @@ function Countdown({ endsAt, paused, animate, dark, compact }: { endsAt: string;
 
 // "-60 %" counting up from 0 once seen, with a burst of sparks.
 function BigDiscount({ pct, animate, size }: { pct: number; animate: boolean; size: 'lg' | 'sm' }) {
+  const t = useT(campaignNs)
   const fig = useRef<HTMLSpanElement>(null)
   useEffect(() => {
     const el = fig.current
@@ -209,12 +215,13 @@ function BigDiscount({ pct, animate, size }: { pct: number; animate: boolean; si
     <span className="relative inline-flex items-baseline gap-1 tabular-nums">
       {sparks.map((s, i) => <span key={i} aria-hidden className="ph-spark" style={s} />)}
       {/* Hidden until it counts (no « -0 % » before the first frame of it). */}
-      <span className="font-extrabold">-<span ref={fig} style={animate ? { opacity: 0 } : undefined}>{pct}</span> %</span>
+      <span className="font-extrabold">{t.rich('percent', { n: <span ref={fig} style={animate ? { opacity: 0 } : undefined}>{pct}</span> })}</span>
     </span>
   )
 }
 
 function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign; desktop: boolean; animate: boolean; paused: boolean; onSelect: (id: string) => void; nav: React.ReactNode }) {
+  const t = useT(campaignNs)
   const v = c.visuals ?? {}
   const hero = v.hero
   const bgVisual = hero && (v.heroMode ?? 'background') === 'background'
@@ -255,14 +262,14 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
       <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-sm font-extrabold uppercase tracking-wider ${dark ? 'bg-white/80 text-primary' : 'bg-white text-primary'}`}>
         <Icon name="bolt" size={15} fill /> {tagline}
       </span>
-      {c.listingsCount > 0 && <span className={chip}><Icon name="inventory_2" size={16} /> {c.listingsCount.toLocaleString('fr-FR')} annonce{c.listingsCount > 1 ? 's' : ''}</span>}
-      {desktop && c.sellersCount > 0 && <span className={chip}><Icon name="workspace_premium" size={16} /> {c.sellersCount} vendeur{c.sellersCount > 1 ? 's' : ''}</span>}
+      {c.listingsCount > 0 && <span className={chip}><Icon name="inventory_2" size={16} /> {t('listings', { count: c.listingsCount, n: fmtNumber(c.listingsCount) })}</span>}
+      {desktop && c.sellersCount > 0 && <span className={chip}><Icon name="workspace_premium" size={16} /> {t('sellers', { count: c.sellersCount, n: String(c.sellersCount) })}</span>}
     </div>
   )
 
   const cta = (
     <button type="button" onClick={open} className={`ph-cta inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-label-lg font-bold shadow-lg ${dark ? 'bg-primary text-white' : 'bg-white text-primary'} ${desktop ? '' : 'w-full'}`}>
-      Voir les offres <Icon name="arrow_forward" size={20} />
+      {t('heroDeal.cta')} <Icon name="arrow_forward" size={20} />
     </button>
   )
 
@@ -275,9 +282,9 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
           <h1 className={`m-0 text-[52px] font-extrabold leading-[1.05] tracking-tight xl:text-[60px] ${a('ph-rise-solid')}`} style={delay(60)}>{c.name}</h1>
           {description && <p className={`m-0 line-clamp-2 max-w-xl text-body-lg ${muted} ${a('ph-rise')}`} style={delay(140)}>{description}</p>}
           <div className={`flex flex-wrap items-center gap-x-6 gap-y-3 ${a('ph-rise')}`} style={delay(220)}>
-            {best && bgVisual ? <span className="ph-beat rounded-2xl bg-primary px-4 py-2 text-headline-md text-white shadow-lg"><span className="mr-1 text-label-md font-bold uppercase">Jusqu’à</span><BigDiscount pct={best} animate={animate} size="sm" /></span> : null}
+            {best && bgVisual ? <span className="ph-beat rounded-2xl bg-primary px-4 py-2 text-headline-md text-white shadow-lg"><span className="mr-1 text-label-md font-bold uppercase">{t('heroDeal.upTo')}</span><BigDiscount pct={best} animate={animate} size="sm" /></span> : null}
             <div>
-              <p className={`m-0 mb-1 text-label-sm font-bold uppercase tracking-wider ${muted}`}>Fin des offres dans</p>
+              <p className={`m-0 mb-1 text-label-sm font-bold uppercase tracking-wider ${muted}`}>{t('hero.endsIn')}</p>
               <Countdown endsAt={c.endsAt} paused={paused} animate={animate} dark={dark} compact={false} />
             </div>
           </div>
@@ -293,9 +300,9 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
             <div className={`relative flex h-[260px] w-[260px] items-center justify-center ${a('ph-pop')}`} style={delay(180)}>
               <span aria-hidden className={`absolute inset-0 rounded-full border-[3px] border-dashed border-white/40 ${a('ph-ring')}`} />
               <span className={`relative flex h-[218px] w-[218px] flex-col items-center justify-center rounded-full bg-white text-primary shadow-2xl ${a('ph-beat')}`}>
-                <span className="text-label-md font-extrabold uppercase tracking-widest text-on-surface-variant">Jusqu’à</span>
+                <span className="text-label-md font-extrabold uppercase tracking-widest text-on-surface-variant">{t('heroDeal.upTo')}</span>
                 <span className="text-[64px] leading-none"><BigDiscount pct={best} animate={animate} size="lg" /></span>
-                <span className="mt-1 text-label-md font-bold text-on-surface-variant">de remise</span>
+                <span className="mt-1 text-label-md font-bold text-on-surface-variant">{t('heroDeal.off')}</span>
               </span>
             </div>
           </div>
@@ -320,12 +327,12 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
         <div className={`flex w-full flex-wrap items-end justify-between gap-3 ${a('ph-rise')}`} style={delay(180)}>
           {best ? (
             <span className={`rounded-2xl px-3 py-1.5 shadow-lg ${dark ? 'bg-primary text-white' : 'bg-white text-primary'} ${a('ph-beat')}`}>
-              <span className="block text-[10px] font-extrabold uppercase tracking-widest opacity-80">Jusqu’à</span>
+              <span className="block text-[10px] font-extrabold uppercase tracking-widest opacity-80">{t('heroDeal.upTo')}</span>
               <span className="text-[30px] leading-none"><BigDiscount pct={best} animate={animate} size="sm" /></span>
             </span>
           ) : <span />}
           <div>
-            <p className={`m-0 mb-1 text-[10px] font-bold uppercase tracking-wider ${muted}`}>Fin des offres dans</p>
+            <p className={`m-0 mb-1 text-[10px] font-bold uppercase tracking-wider ${muted}`}>{t('hero.endsIn')}</p>
             <Countdown endsAt={c.endsAt} paused={paused} animate={animate} dark={dark} compact />
           </div>
         </div>
@@ -341,6 +348,7 @@ function Slide({ c, desktop, animate, paused, onSelect, nav }: { c: LiveCampaign
 // (CSS, BO « Page d'accueil » interval) ends; paused off screen, while the
 // tab is hidden and while the pointer or focus is inside.
 export default function HomePromoHero({ campaigns, desktop, intervalMs, onSelectListing }: { campaigns: LiveCampaign[]; desktop: boolean; intervalMs: number; onSelectListing: (id: string) => void }) {
+  const t = useT(campaignNs)
   const root = useRef<HTMLElement>(null)
   const [index, setIndex] = useState(0)
   const [onScreen, setOnScreen] = useState(true)
@@ -367,19 +375,19 @@ export default function HomePromoHero({ campaigns, desktop, intervalMs, onSelect
 
   const nav = count > 1 && (
     <div className={`flex items-center gap-1.5 rounded-full px-2 py-1.5 ${dark ? 'bg-white/75' : 'bg-black/30'}`}>
-      <button type="button" onClick={() => go(index - 1)} aria-label="Campagne précédente" className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent ${dark ? 'text-on-surface' : 'text-white'}`}><Icon name="arrow_back" size={18} /></button>
+      <button type="button" onClick={() => go(index - 1)} aria-label={t('heroNav.prev')} className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent ${dark ? 'text-on-surface' : 'text-white'}`}><Icon name="arrow_back" size={18} /></button>
       {campaigns.map((x, i) => (
-        <button key={x.id} type="button" onClick={() => go(i)} aria-label={`Voir ${x.name}`} aria-current={i === index % count} className={`h-2 cursor-pointer rounded-full border-none p-0 transition-[width] duration-300 ${i === index % count ? `w-6 ${dark ? 'bg-primary' : 'bg-white'}` : `w-2 ${dark ? 'bg-on-surface/30' : 'bg-white/45'}`}`} />
+        <button key={x.id} type="button" onClick={() => go(i)} aria-label={t('heroNav.see', { name: x.name })} aria-current={i === index % count} className={`h-2 cursor-pointer rounded-full border-none p-0 transition-[width] duration-300 ${i === index % count ? `w-6 ${dark ? 'bg-primary' : 'bg-white'}` : `w-2 ${dark ? 'bg-on-surface/30' : 'bg-white/45'}`}`} />
       ))}
-      <button type="button" onClick={() => go(index + 1)} aria-label="Campagne suivante" className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent ${dark ? 'text-on-surface' : 'text-white'}`}><Icon name="arrow_forward" size={18} /></button>
+      <button type="button" onClick={() => go(index + 1)} aria-label={t('heroNav.next')} className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent ${dark ? 'text-on-surface' : 'text-white'}`}><Icon name="arrow_forward" size={18} /></button>
     </div>
   )
 
   return (
     <section
       ref={root}
-      aria-roledescription="carrousel"
-      aria-label="Promotions en cours"
+      aria-roledescription={t('heroNav.carousel')}
+      aria-label={t('home.title')}
       onMouseEnter={() => setHold(true)}
       onMouseLeave={() => setHold(false)}
       onFocus={() => setHold(true)}

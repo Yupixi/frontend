@@ -29,6 +29,9 @@ import { useLists } from '../lib/lists'
 import { usePageTitle } from '../lib/site'
 import { rememberHandle } from '../lib/routes'
 import InfiniteLoader from '../components/InfiniteLoader'
+import { fmtCfa, fmtDate, useT } from '../i18n'
+import common from '../i18n/ns/common'
+import sellerNs from '../i18n/ns/seller'
 
 
 type SellerProfileProps = {
@@ -52,27 +55,31 @@ function Stars({ rating, size = 14 }: { rating: number, size?: number }) {
   )
 }
 
-const memberSince = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+const memberSince = (iso: string) => fmtDate(iso, { month: 'short', year: 'numeric' })
 
 // dilchap.com/@handle: the member's id first, then their profile.
 export default function SellerProfile(props: SellerProfileProps) {
+  const t = useT(sellerNs)
+  const tc = useT(common)
   const byHandle = props.sellerId.startsWith('@')
   const { data, loading, error } = useQuery<{ sellerIdByHandle: string | null }>(SELLER_ID_BY_HANDLE_QUERY, { variables: { handle: props.sellerId }, skip: !byHandle })
   if (!byHandle) return <SellerProfileView {...props} />
-  if (loading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
+  if (loading) return <div className="p-12 text-center text-on-surface-variant">{tc('loading')}</div>
   // Too many lookups from this connection (rate limit): not « unknown ».
-  if (error) return <div className="p-12 text-center text-on-surface-variant">Trop de pages ouvertes d’un coup : réessayez dans une minute.</div>
+  if (error) return <div className="p-12 text-center text-on-surface-variant">{t('rateLimited')}</div>
   const id = data?.sellerIdByHandle
   if (!id) return (
     <div className="p-12 text-center">
-      <p className="mb-4 text-on-surface-variant">Aucun vendeur à l’adresse {props.sellerId}.</p>
-      <button onClick={() => props.onNavigate('home')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour à l'accueil</button>
+      <p className="mb-4 text-on-surface-variant">{t('noHandle', { handle: props.sellerId })}</p>
+      <button onClick={() => props.onNavigate('home')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">{t('backHome')}</button>
     </div>
   )
   return <SellerProfileView {...props} sellerId={id} />
 }
 
 function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId }: SellerProfileProps) {
+  const t = useT(sellerNs)
+  const tc = useT(common)
   const [tab, setTab] = useState<'listings' | 'reels' | 'reviews' | 'terms'>('listings')
   // « Reels »: a tab when the seller has some.
   const sellerReels = useSellerReels(sellerId)
@@ -132,12 +139,12 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
   if (shopData?.shop?.isOfficial) {
     return <ShopPage shopKey={shopData.shop.slug} preloaded={shopData.shop} onNavigate={onNavigate} onSelectListing={onSelectListing} onContactSeller={onContactSeller} isLoggedIn={isLoggedIn} favorites={favorites} onToggleFavorite={onToggleFavorite} currentUserId={currentUserId} />
   }
-  if (loading || shopLoading) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
+  if (loading || shopLoading) return <div className="p-12 text-center text-on-surface-variant">{tc('loading')}</div>
   if (!seller) {
     return (
       <div className="p-12 text-center">
-        <p className="mb-4 text-on-surface-variant">Ce profil vendeur n'existe pas.</p>
-        <button onClick={() => onNavigate('home')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">Retour à l'accueil</button>
+        <p className="mb-4 text-on-surface-variant">{t('notFound')}</p>
+        <button onClick={() => onNavigate('home')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">{t('backHome')}</button>
       </div>
     )
   }
@@ -172,23 +179,23 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
       setReviewSubmitted(true); setReviewComment('')
       void refetchReviews(); void refetchProfile()
     } catch (err) {
-      setReviewError(err instanceof Error ? err.message : "Impossible d'envoyer l'avis.")
+      setReviewError(err instanceof Error ? err.message : t('review.error'))
     }
   }
 
   const stats = [
-    { value: seller.reviewsCount ? <>{seller.averageRating.toFixed(1)} <Star size={15} fill="#F59E0B" color="#F59E0B" /></> : '—', label: `${seller.reviewsCount} avis vérifié${seller.reviewsCount > 1 ? 's' : ''}` },
-    { value: seller.salesCount, label: `Vente${seller.salesCount > 1 ? 's' : ''} confirmée${seller.salesCount > 1 ? 's' : ''}` },
-    ...(responseTime ? [{ value: responseTime, label: 'Réponse' }] : []),
-    { value: seller.followersCount, label: `Abonné${seller.followersCount > 1 ? 's' : ''}` },
+    { value: seller.reviewsCount ? <>{seller.averageRating.toFixed(1)} <Star size={15} fill="#F59E0B" color="#F59E0B" /></> : '—', label: t('stats.reviews', { count: seller.reviewsCount, n: String(seller.reviewsCount) }) },
+    { value: seller.salesCount, label: t('stats.sales', { count: seller.salesCount }) },
+    ...(responseTime ? [{ value: responseTime, label: t('stats.response') }] : []),
+    { value: seller.followersCount, label: t('stats.followers', { count: seller.followersCount }) },
   ]
 
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-8 pt-4 md:px-8 lg:px-12">
       <nav className="mb-3 hidden items-center md:flex gap-1 text-label-md text-on-surface-variant">
-        <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> Accueil</button>
+        <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Home size={14} /> {t('home')}</button>
         <ChevronRight size={14} className="text-outline-variant" />
-        <span>{seller.badge === 'CERTIFIED' ? 'Vendeurs certifiés Dilchap' : seller.badge ? 'Comptes vérifiés Dilchap' : 'Vendeurs'}</span>
+        <span>{seller.badge === 'CERTIFIED' ? t('crumb.certified') : seller.badge ? t('crumb.verified') : t('crumb.sellers')}</span>
         <ChevronRight size={14} className="text-outline-variant" />
         <span className="font-semibold text-on-surface">{seller.fullName}</span>
       </nav>
@@ -198,8 +205,8 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
         <div className="relative h-36 bg-surface-container md:h-56">
           <img src={seller.coverUrl || '/stitch/hero-0.webp'} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-          <button onClick={() => void share()} className="absolute right-3 top-3 flex h-9 cursor-pointer items-center gap-1 rounded-full border-none bg-surface-lowest/90 px-3 text-label-md text-on-surface" aria-label="Partager">
-            <Share2 size={17} /> {copied && 'Lien copié'}
+          <button onClick={() => void share()} className="absolute right-3 top-3 flex h-9 cursor-pointer items-center gap-1 rounded-full border-none bg-surface-lowest/90 px-3 text-label-md text-on-surface" aria-label={tc('share')}>
+            <Share2 size={17} /> {copied && t('linkCopied')}
           </button>
         </div>
         <div className="px-4 pb-5 md:px-6">
@@ -219,20 +226,20 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
                   <h1 className="m-0 text-headline-md text-on-surface md:text-headline-lg">{seller.fullName}</h1>
                   <SellerBadge tier={seller.badge} variant="pill" size={15} />
                 </div>
-                {seller.handle && <button type="button" onClick={() => void share()} title="Copier le lien de la page" className="mt-0.5 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="link" size={15} /> {window.location.host}/@{seller.handle}</button>}
+                {seller.handle && <button type="button" onClick={() => void share()} title={t('copyLink')} className="mt-0.5 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="link" size={15} /> {window.location.host}/@{seller.handle}</button>}
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-on-surface-variant">
                   {seller.city && <span className="flex items-center gap-1"><MapPin size={14} /> {seller.city}</span>}
-                  <span className="flex items-center gap-1"><Calendar size={14} /> Membre depuis {memberSince(seller.createdAt)}</span>
-                  <Claim><span className="flex items-center gap-1 font-semibold text-tertiary"><Percent size={14} /> 0 F de commission</span></Claim>
+                  <span className="flex items-center gap-1"><Calendar size={14} /> {t('memberSince', { date: memberSince(seller.createdAt) })}</span>
+                  <Claim><span className="flex items-center gap-1 font-semibold text-tertiary"><Percent size={14} /> {t('noCommission', { amount: fmtCfa(0) })}</span></Claim>
                 </div>
               </div>
             </div>
             {currentUserId !== seller.id && (
               <div className="flex flex-wrap gap-2 md:pt-3">
-                <button onClick={contact} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-4 py-2.5 text-label-lg text-white hover:bg-primary-dark"><MessageSquare size={18} /> Contacter en direct</button>
-                <button onClick={contact} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-surface-container-high px-4 py-2.5 text-label-lg text-on-surface hover:bg-surface-container-highest"><Calendar size={18} /> Proposer un RDV</button>
+                <button onClick={contact} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-4 py-2.5 text-label-lg text-white hover:bg-primary-dark"><MessageSquare size={18} /> {t('contactDirect')}</button>
+                <button onClick={contact} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-surface-container-high px-4 py-2.5 text-label-lg text-on-surface hover:bg-surface-container-highest"><Calendar size={18} /> {t('proposeMeetup')}</button>
                 <button onClick={toggleFollow} className={`flex cursor-pointer items-center gap-1.5 rounded-lg border-none px-3 py-2.5 text-label-md ${seller.isFollowedByMe ? 'bg-tertiary-soft text-tertiary' : 'bg-primary-fixed text-primary'}`}>
-                  {seller.isFollowedByMe ? <><UserCheck size={17} /> Suivi</> : <><UserPlus size={17} /> Suivre</>}
+                  {seller.isFollowedByMe ? <><UserCheck size={17} /> {t('followed')}</> : <><UserPlus size={17} /> {t('follow')}</>}
                 </button>
               </div>
             )}
@@ -240,18 +247,18 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
 
           <div className="mt-5 grid gap-5 md:grid-cols-[1.4fr_1fr]">
             <div>
-              <p className="m-0 text-body-md text-on-surface">{seller.bio || `${seller.fullName} vend sur Dilchap en direct, sans intermédiaire. Contactez-le pour poser vos questions et convenir d'une remise en main propre.`}</p>
-              {([['website', 'language', 'Site web'], ['facebook', 'thumb_up', 'Facebook'], ['instagram', 'photo_camera', 'Instagram'], ['tiktok', 'music_note', 'TikTok']] as const).some(([k]) => seller[k]) && (
+              <p className="m-0 text-body-md text-on-surface">{seller.bio || t('bioFallback', { name: seller.fullName })}</p>
+              {([['website', 'language', t('website')], ['facebook', 'thumb_up', 'Facebook'], ['instagram', 'photo_camera', 'Instagram'], ['tiktok', 'music_note', 'TikTok']] as const).some(([k]) => seller[k]) && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {([['website', 'language', 'Site web'], ['facebook', 'thumb_up', 'Facebook'], ['instagram', 'photo_camera', 'Instagram'], ['tiktok', 'music_note', 'TikTok']] as const).filter(([k]) => seller[k]).map(([k, icon, label]) => (
+                  {([['website', 'language', t('website')], ['facebook', 'thumb_up', 'Facebook'], ['instagram', 'photo_camera', 'Instagram'], ['tiktok', 'music_note', 'TikTok']] as const).filter(([k]) => seller[k]).map(([k, icon, label]) => (
                     <a key={k} href={seller[k]!} target="_blank" rel="noopener noreferrer nofollow" className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-container-low px-3 text-label-md text-on-surface no-underline hover:bg-surface-container"><Icon name={icon} size={16} className="text-primary" /> {label}</a>
                   ))}
                 </div>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
-                <span className="flex items-center gap-1 rounded-lg bg-tertiary-soft px-2 py-1 text-label-sm text-tertiary"><Handshake size={13} /> Remise en main propre privilégiée{meetupSpots[0] ? ` (${meetupSpots[0]})` : seller.city ? ` (${seller.city})` : ''}</span>
+                <span className="flex items-center gap-1 rounded-lg bg-tertiary-soft px-2 py-1 text-label-sm text-tertiary"><Handshake size={13} /> {meetupSpots[0] || seller.city ? t('handoverPreferredAt', { place: meetupSpots[0] || seller.city }) : t('handoverPreferred')}</span>
                 {paymentMethods.length > 0 && (
-                  <span className="flex items-center gap-1 rounded-lg bg-primary-fixed px-2 py-1 text-label-sm text-primary"><Wallet size={13} /> Règlement {paymentMethods.map(p => PAYMENT_LABELS[p] ?? p).join(', ')} sur place</span>
+                  <span className="flex items-center gap-1 rounded-lg bg-primary-fixed px-2 py-1 text-label-sm text-primary"><Wallet size={13} /> {t('payOnSite', { methods: paymentMethods.map(p => PAYMENT_LABELS[p] ?? p).join(', ') })}</span>
                 )}
               </div>
             </div>
@@ -270,14 +277,14 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
       {/* Trust tiles */}
       <section className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
         {[
-          { icon: <ShieldCheck size={20} />, box: 'bg-tertiary-soft text-tertiary', title: seller.badge ? BADGE_LABEL[seller.badge] : 'Profil public', text: seller.badge ? 'Identité contrôlée par Dilchap' : 'Avis et historique visibles de tous' },
-          { icon: <MessageSquare size={20} />, box: 'bg-surface-container text-on-surface', title: 'Chat & négociation', text: responseTime ? `Répond en ${responseTime}` : 'Messagerie intégrée' },
-          { icon: <Handshake size={20} />, box: 'bg-surface-container text-on-surface', title: 'Remise en main propre', text: 'Testez l’article avant tout paiement' },
-          ...(noCommission ? [{ icon: <Percent size={20} />, box: 'bg-primary-fixed text-primary', title: '0 F de commission', text: '100% de la somme revient au vendeur' }] : []),
-        ].map(t => (
-          <div key={t.title} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-2.5 sm:p-3">
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 ${t.box}`}>{t.icon}</span>
-            <div className="min-w-0"><div className="text-label-md text-on-surface">{t.title}</div><div className="truncate text-body-sm text-on-surface-variant sm:whitespace-normal">{t.text}</div></div>
+          { icon: <ShieldCheck size={20} />, box: 'bg-tertiary-soft text-tertiary', title: seller.badge ? BADGE_LABEL[seller.badge] : t('trust.public'), text: seller.badge ? t('trust.identity') : t('trust.publicText') },
+          { icon: <MessageSquare size={20} />, box: 'bg-surface-container text-on-surface', title: t('trust.chat'), text: responseTime ? t('trust.repliesIn', { time: responseTime }) : t('trust.messaging') },
+          { icon: <Handshake size={20} />, box: 'bg-surface-container text-on-surface', title: t('trust.handover'), text: t('trust.handoverText') },
+          ...(noCommission ? [{ icon: <Percent size={20} />, box: 'bg-primary-fixed text-primary', title: t('noCommission', { amount: fmtCfa(0) }), text: t('trust.commissionText') }] : []),
+        ].map(tile => (
+          <div key={tile.title} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-lowest p-2.5 sm:p-3">
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 ${tile.box}`}>{tile.icon}</span>
+            <div className="min-w-0"><div className="text-label-md text-on-surface">{tile.title}</div><div className="truncate text-body-sm text-on-surface-variant sm:whitespace-normal">{tile.text}</div></div>
           </div>
         ))}
       </section>
@@ -285,7 +292,7 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
       {/* Tabs — the fade hints that the row scrolls on phones */}
       <div className="relative mt-6">
       <div className="flex gap-2 overflow-x-auto pb-1 pr-8 [scrollbar-width:none] md:pr-0">
-        {([['listings', 'En vente', all.length], ...(sellerReels.items.length ? [['reels', 'Reels', sellerReels.items.length + (sellerReels.nextCursor ? '+' : '')] as const] : []), ['reviews', 'Avis & Évaluations', seller.reviewsCount], ['terms', 'Conditions d’échange & RDV', null]] as const).map(([key, label, count]) => (
+        {([['listings', t('tab.listings'), all.length], ...(sellerReels.items.length ? [['reels', 'Reels', sellerReels.items.length + (sellerReels.nextCursor ? '+' : '')] as const] : []), ['reviews', t('tab.reviews'), seller.reviewsCount], ['terms', t('tab.terms'), null]] as const).map(([key, label, count]) => (
           <button key={key} onClick={() => setTab(key)} className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-full border-none px-4 py-2 text-label-md ${tab === key ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface hover:bg-surface-container-low'}`}>
             {label}{count != null && <span className={`rounded-full px-1.5 text-label-sm ${tab === key ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'}`}>{count}</span>}
           </button>
@@ -305,18 +312,18 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-lg bg-surface-lowest px-3 py-2 md:max-w-sm">
               <Search size={18} className="text-outline" />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder={`Chercher parmi les ${all.length} pièces…`} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('searchPlaceholder', { n: String(all.length) })} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
             </label>
-            {[{ slug: null, name: 'Tous', count: all.length }, ...categories].map(c => (
+            {[{ slug: null, name: t('all'), count: all.length }, ...categories].map(c => (
               <button key={c.slug ?? 'all'} onClick={() => setCat(c.slug)} className={`cursor-pointer rounded-lg border-none px-3 py-1.5 text-label-md ${cat === c.slug ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
                 {c.name} ({c.count})
               </button>
             ))}
             <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="ml-auto cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none">
-              <option value="RECENT">Plus récents</option>
-              <option value="PRICE_ASC">Prix croissant</option>
-              <option value="PRICE_DESC">Prix décroissant</option>
-              <option value="POPULAR">Plus populaires</option>
+              <option value="RECENT">{t('sort.RECENT')}</option>
+              <option value="PRICE_ASC">{t('sort.PRICE_ASC')}</option>
+              <option value="PRICE_DESC">{t('sort.PRICE_DESC')}</option>
+              <option value="POPULAR">{t('sort.POPULAR')}</option>
             </Select>
           </div>
           <ImpressionScope placement="SELLER" promoted={promotedOf(listingsData?.listings)}>
@@ -326,9 +333,9 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
             ))}
           </div>
           </ImpressionScope>
-          {filtered.length === 0 && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune pièce ne correspond" />}
+          {filtered.length === 0 && <EmptyState icon="empty-search" fallback="search" tone="neutral" title={t('noMatch')} />}
           {/* The seller's listings are all here: the next ones show as the visitor scrolls. */}
-          <InfiniteLoader key={`${cat}|${q}|${sort}`} list={{ hasMore: filtered.length > shown, loading: false, error: false, loadMore: () => setShown(s => s + PAGE) }} pageSize={PAGE} label="Afficher plus de pièces" />
+          <InfiniteLoader key={`${cat}|${q}|${sort}`} list={{ hasMore: filtered.length > shown, loading: false, error: false, loadMore: () => setShown(s => s + PAGE) }} pageSize={PAGE} label={t('showMore')} />
         </section>
       )}
 
@@ -338,27 +345,27 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
             <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-5 text-center">
               <div className="text-display font-extrabold text-on-surface">{seller.reviewsCount ? seller.averageRating.toFixed(1) : '—'}</div>
               <div className="flex justify-center"><Stars rating={seller.averageRating} size={18} /></div>
-              <div className="mt-1 text-body-sm text-on-surface-variant">{seller.reviewsCount} avis</div>
+              <div className="mt-1 text-body-sm text-on-surface-variant">{t('reviews', { count: seller.reviewsCount, n: String(seller.reviewsCount) })}</div>
             </div>
             {seller.canReview && !reviewSubmitted && (
               <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
-                <div className="mb-2 text-label-lg text-on-surface">Laisser un avis</div>
+                <div className="mb-2 text-label-lg text-on-surface">{t('review.leave')}</div>
                 <div className="mb-2 flex gap-1">
                   {[1, 2, 3, 4, 5].map(s => (
-                    <button key={s} onClick={() => setReviewRating(s)} className="cursor-pointer border-none bg-transparent p-0" aria-label={`${s} étoiles`}>
+                    <button key={s} onClick={() => setReviewRating(s)} className="cursor-pointer border-none bg-transparent p-0" aria-label={t('review.stars', { count: s })}>
                       <Star size={24} fill={s <= reviewRating ? '#F59E0B' : 'none'} color={s <= reviewRating ? '#F59E0B' : 'var(--border)'} />
                     </button>
                   ))}
                 </div>
-                <textarea className="input mb-2" rows={3} placeholder="Comment s'est passée la remise ?" value={reviewComment} onChange={e => setReviewComment(e.target.value)} />
+                <textarea className="input mb-2" rows={3} placeholder={t('review.placeholder')} value={reviewComment} onChange={e => setReviewComment(e.target.value)} />
                 {reviewError && <p className="m-0 mb-2 text-body-sm text-primary">{reviewError}</p>}
-                <button disabled={submittingReview} onClick={() => void submitReview()} className="w-full cursor-pointer rounded-lg border-none bg-primary py-2.5 text-label-md text-white">{submittingReview ? 'Envoi…' : 'Publier mon avis'}</button>
+                <button disabled={submittingReview} onClick={() => void submitReview()} className="w-full cursor-pointer rounded-lg border-none bg-primary py-2.5 text-label-md text-white">{submittingReview ? t('sending') : t('review.publish')}</button>
               </div>
             )}
-            {reviewSubmitted && <p className="m-0 flex items-center gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} /> Merci pour votre avis !</p>}
+            {reviewSubmitted && <p className="m-0 flex items-center gap-2 rounded-xl bg-tertiary-soft p-3 text-body-sm text-tertiary"><CheckCircle2 size={16} /> {t('review.thanks')}</p>}
           </div>
           <div className="flex flex-col gap-3">
-            {reviews.length === 0 && <EmptyState icon="empty-star" fallback="star" title="Aucun avis pour le moment" />}
+            {reviews.length === 0 && <EmptyState icon="empty-star" fallback="star" title={t('noReviews')} />}
             {reviews.map(r => (
               <div key={r.id} className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
                 <div className="flex items-center gap-3">
@@ -368,11 +375,11 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
                   <div className="flex-1"><div className="text-label-md text-on-surface">{r.author.fullName}</div><Stars rating={r.rating} size={13} /></div>
                   <span className="text-body-sm text-outline">{formatRelativeDate(r.createdAt)}</span>
                 </div>
-                {r.comment && <p className="m-0 mt-2 text-body-md italic text-on-surface">« {r.comment} »</p>}
+                {r.comment && <p className="m-0 mt-2 text-body-md italic text-on-surface">{t('quote', { text: r.comment })}</p>}
                 {r.reply && (
                   <div className="mt-2 rounded-xl border-l-4 border-solid border-l-outline-variant bg-surface-container-low p-3 text-body-sm">
-                    <div className="font-semibold text-on-surface">Réponse de {seller.fullName}</div>
-                    <p className="m-0 mt-0.5 italic text-on-surface-variant">« {r.reply} »</p>
+                    <div className="font-semibold text-on-surface">{t('replyFrom', { name: seller.fullName })}</div>
+                    <p className="m-0 mt-0.5 italic text-on-surface-variant">{t('quote', { text: r.reply })}</p>
                   </div>
                 )}
               </div>
@@ -384,16 +391,16 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
       {tab === 'terms' && (
         <section className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
-            <div className="mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><MapPin size={20} className="text-primary" /> Lieux de rendez-vous</div>
+            <div className="mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><MapPin size={20} className="text-primary" /> {t('terms.spots')}</div>
             {meetupSpots.length ? (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">{meetupSpots.map(s => <li key={s} className="flex items-center gap-2 text-body-md text-on-surface"><CheckCircle2 size={16} className="text-tertiary" /> {s}</li>)}</ul>
-            ) : <p className="m-0 text-body-md text-on-surface-variant">À convenir dans le chat{seller.city ? `, à ${seller.city}` : ''}.</p>}
+            ) : <p className="m-0 text-body-md text-on-surface-variant">{seller.city ? t('terms.toAgreeIn', { city: seller.city }) : t('terms.toAgree')}</p>}
           </div>
           <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-5">
-            <div className="mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Wallet size={20} className="text-primary" /> Règlement accepté</div>
+            <div className="mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Wallet size={20} className="text-primary" /> {t('terms.payment')}</div>
             {paymentMethods.length ? (
               <div className="flex flex-wrap gap-2">{paymentMethods.map(p => <span key={p} className="rounded-lg bg-surface-container px-3 py-1.5 text-label-md text-on-surface">{PAYMENT_LABELS[p] ?? p}</span>)}</div>
-            ) : <p className="m-0 text-body-md text-on-surface-variant">À convenir dans le chat.</p>}
+            ) : <p className="m-0 text-body-md text-on-surface-variant">{t('terms.toAgree')}</p>}
           </div>
         </section>
       )}
@@ -403,32 +410,32 @@ function SellerProfileView({ sellerId, onNavigate, onSelectListing, onContactSel
         <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-tertiary text-white"><ShieldCheck size={28} /></span>
         <div className="flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <span className="rounded bg-tertiary px-2 py-0.5 text-label-sm uppercase text-white">Sécurité & confiance Dilchap</span>
-            <span className="text-label-sm text-tertiary">100% direct{noCommission && ' & gratuit'}</span>
+            <span className="rounded bg-tertiary px-2 py-0.5 text-label-sm uppercase text-white">{t('safety.kicker')}</span>
+            <span className="text-label-sm text-tertiary">{noCommission ? t('safety.directFree') : t('safety.direct')}</span>
           </div>
-          <h3 className="m-0 text-headline-sm text-on-surface">Les 3 règles d'or pour acheter en toute sérénité</h3>
+          <h3 className="m-0 text-headline-sm text-on-surface">{t('safety.title')}</h3>
           <ol className="m-0 mt-1 list-decimal pl-5 text-body-sm text-on-surface-variant">
-            <li>Convenez toujours d'un rendez-vous dans un lieu public et fréquenté.</li>
-            <li>Inspectez et essayez le produit (écoute, essayage, test) avant tout règlement.</li>
-            <li>Effectuez le paiement direct de la somme convenue<Claim> (0 F de frais)</Claim> par Mobile Money ou espèces.</li>
+            <li>{t('safety.rule1')}</li>
+            <li>{t('safety.rule2')}</li>
+            <li>{t.rich('safety.rule3', { claim: c => <Claim>{c}</Claim>, amount: fmtCfa(0) })}</li>
           </ol>
         </div>
         {reportDone ? (
-          <span className="flex shrink-0 items-center gap-1 self-start text-label-md text-tertiary md:self-center"><CheckCircle2 size={15} /> Signalement envoyé</span>
+          <span className="flex shrink-0 items-center gap-1 self-start text-label-md text-tertiary md:self-center"><CheckCircle2 size={15} /> {t('report.sent')}</span>
         ) : currentUserId !== seller.id && (
-          <button onClick={requireAuth(() => setReportOpen(true), 'report')} className="flex shrink-0 cursor-pointer items-center gap-1 self-start rounded-full border border-outline-variant bg-surface-lowest px-4 py-2 text-label-md text-on-surface md:self-center"><Flag size={15} className="text-primary" /> Signaler ce vendeur</button>
+          <button onClick={requireAuth(() => setReportOpen(true), 'report')} className="flex shrink-0 cursor-pointer items-center gap-1 self-start rounded-full border border-outline-variant bg-surface-lowest px-4 py-2 text-label-md text-on-surface md:self-center"><Flag size={15} className="text-primary" /> {t('report.button')}</button>
         )}
       </section>
 
-      <ConfirmSheet open={reportOpen} title={`Signaler ${seller.fullName}`} confirmLabel={reporting ? 'Envoi…' : 'Envoyer le signalement'} onConfirm={sendReport} onClose={() => setReportOpen(false)} loading={reporting}>
-        <p className="m-0 mb-3 text-body-sm text-on-surface-variant">L'équipe de modération examine chaque signalement. Le vendeur ne voit pas qui l'a signalé.</p>
-        <label className="text-label-md text-on-surface">Motif
+      <ConfirmSheet open={reportOpen} title={t('report.title', { name: seller.fullName })} confirmLabel={reporting ? t('sending') : t('report.send')} onConfirm={sendReport} onClose={() => setReportOpen(false)} loading={reporting}>
+        <p className="m-0 mb-3 text-body-sm text-on-surface-variant">{t('report.intro')}</p>
+        <label className="text-label-md text-on-surface">{t('report.reason')}
           <Select value={reportReason} onChange={e => setReportReason(e.target.value)} className="input mt-1.5 cursor-pointer">
             {reportReasons.map(r => <option key={r} value={r}>{r}</option>)}
           </Select>
         </label>
-        <label className="mt-3 block text-label-md text-on-surface">Détails (facultatif)
-          <textarea className="input mt-1.5" rows={3} value={reportMessage} onChange={e => setReportMessage(e.target.value)} placeholder="Que s'est-il passé ?" />
+        <label className="mt-3 block text-label-md text-on-surface">{t('report.details')}
+          <textarea className="input mt-1.5" rows={3} value={reportMessage} onChange={e => setReportMessage(e.target.value)} placeholder={t('report.placeholder')} />
         </label>
       </ConfirmSheet>
     </div>

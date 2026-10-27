@@ -1,5 +1,7 @@
 import Icon from './Icon'
 import { BADGE_LABEL, type BadgeTier } from '../graphql/badges'
+import { useT } from '../i18n'
+import badges from '../i18n/ns/badges'
 
 const TONE: Record<BadgeTier, { text: string, pill: string }> = {
   VERIFIED: { text: 'text-verified', pill: 'bg-verified-soft text-verified' },
@@ -16,12 +18,13 @@ export default function SellerBadge({ tier, variant = 'icon', size = 16, short, 
   short?: boolean
   className?: string
 }) {
+  const t = useT(badges)
   if (!tier) return null
   const label = BADGE_LABEL[tier]
   if (variant === 'icon') return <Icon name="verified" size={size} fill className={`shrink-0 ${TONE[tier].text} ${className}`} title={label} />
   return (
     <span className={`inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full px-1.5 py-0.5 text-label-sm ${TONE[tier].pill} ${className}`} title={label}>
-      <Icon name="verified" size={size - 2} fill /> {short ? (tier === 'VERIFIED' ? 'Vérifié' : 'Certifié') : label}
+      <Icon name="verified" size={size - 2} fill /> {short ? (tier === 'VERIFIED' ? t('short.VERIFIED') : t('short.CERTIFIED')) : label}
     </span>
   )
 }

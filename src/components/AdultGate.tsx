@@ -4,6 +4,8 @@ import Icon from './Icon'
 import { ADULT_ACCESS_QUERY, CONFIRM_ADULT_MUTATION, useAdultAccess, type AdultStatus } from '../lib/adult'
 import { useMarketCode } from '../lib/countries'
 import { setAuthReason } from '../lib/authReason'
+import { useT } from '../i18n'
+import adultNs from '../i18n/ns/adult'
 
 type Props = {
   // The server's reason when it refused the data (else the visitor's
@@ -25,6 +27,7 @@ type Props = {
 // « Section Adultes (18+) »: what the visitor sees instead of its listings
 // until they are logged in and confirmed their age.
 export default function AdultGate({ reason, onNavigate, onConfirmed, compact, countryCode: country, confirmTitle, confirmText, confirmLabel }: Props) {
+  const t = useT(adultNs)
   const access = useAdultAccess(false, country)
   const market = useMarketCode()
   const countryCode = country || market
@@ -47,22 +50,22 @@ export default function AdultGate({ reason, onNavigate, onConfirmed, compact, co
   const head = (icon: string, title: string, text: string) => (
     <>
       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name={icon} size={28} /></span>
-      <p className="m-0 mt-3 text-label-sm uppercase tracking-wide text-on-surface-variant">Section Adultes (18+)</p>
+      <p className="m-0 mt-3 text-label-sm uppercase tracking-wide text-on-surface-variant">{t('sectionLabel')}</p>
       <h2 className="m-0 mt-1 text-headline-sm text-on-surface">{title}</h2>
       <p className="m-0 mx-auto mt-2 max-w-sm text-body-sm text-on-surface-variant">{text}</p>
     </>
   )
 
   if (status === 'DISABLED')
-    return <div className={box} data-testid="adult-gate">{head('block', 'Section indisponible', 'Cette section n’est pas disponible dans votre pays.')}</div>
+    return <div className={box} data-testid="adult-gate">{head('block', t('gate.disabled.title'), t('gate.disabled.text'))}</div>
   if (status === 'UNDERAGE')
-    return <div className={box} data-testid="adult-gate">{head('block', 'Accès réservé aux majeurs', 'Cette section est réservée aux personnes de 18 ans et plus.')}</div>
+    return <div className={box} data-testid="adult-gate">{head('block', t('gate.underage.title'), t('gate.underage.text'))}</div>
   if (status === 'LOGIN')
     return (
       <div className={box} data-testid="adult-gate">
-        {head('lock', 'Connectez-vous pour accéder à cette section', 'Ces articles sont réservés aux membres majeurs connectés.')}
+        {head('lock', t('gate.login.title'), t('gate.login.text'))}
         <button type="button" onClick={() => { setAuthReason('adult'); onNavigate('auth') }} className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-5 py-2.5 text-label-md text-white">
-          <Icon name="login" size={18} /> Se connecter
+          <Icon name="login" size={18} /> {t('gate.login.button')}
         </button>
       </div>
     )
@@ -73,19 +76,19 @@ export default function AdultGate({ reason, onNavigate, onConfirmed, compact, co
       setDone(true)
       onConfirmed?.()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Confirmation impossible pour le moment.')
+      setError(e instanceof Error ? e.message : t('gate.confirmError'))
     }
   }
   return (
     <div className={box} data-testid="adult-gate">
-      {head('verified_user', confirmTitle ?? 'Confirmez votre âge', confirmText ?? 'Une seule fois : votre réponse est gardée sur votre compte.')}
+      {head('verified_user', confirmTitle ?? t('gate.confirm.title'), confirmText ?? t('gate.confirm.text'))}
       {access?.notice && <p className="m-0 mt-4 rounded-xl bg-surface-container-low p-3 text-left text-body-sm text-on-surface-variant">{access.notice}</p>}
       <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 text-label-lg text-on-surface">
         <input type="checkbox" checked={ticked} onChange={e => setTicked(e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
-        J’ai 18 ans ou plus
+        {t('gate.confirm.check')}
       </label>
       <button type="button" disabled={!ticked || loading} onClick={submit} className="mt-4 cursor-pointer rounded-xl border-none bg-primary px-5 py-2.5 text-label-md text-white disabled:cursor-not-allowed disabled:opacity-50">
-        {loading ? 'Confirmation…' : confirmLabel ?? 'Accéder à la section'}
+        {loading ? t('gate.confirm.loading') : confirmLabel ?? t('gate.confirm.button')}
       </button>
       {error && <p role="alert" className="m-0 mt-3 text-body-sm text-primary">{error}</p>}
     </div>

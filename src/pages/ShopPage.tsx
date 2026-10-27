@@ -21,6 +21,9 @@ import { useLists } from '../lib/lists'
 import { useRules } from '../lib/rules'
 import { usePageTitle } from '../lib/site'
 import { richHtml } from '../lib/richText'
+import { fmtDate, getLocale, useT } from '../i18n'
+import common from '../i18n/ns/common'
+import shopPublic from '../i18n/ns/shopPublic'
 
 type Props = {
   shopKey: string
@@ -36,7 +39,9 @@ type Props = {
 }
 
 type Tab = 'home' | 'all' | 'reels' | 'news' | 'reviews' | 'infos'
-const since = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : null)
+const since = (iso: string | null) => (iso ? fmtDate(iso, { month: 'long', year: 'numeric' }) : null)
+// « 9h30 » in French, « 09:30 » in English.
+const hm = (v: string) => (getLocale() === 'fr' ? v.replace(':', 'h') : v)
 const socialUrl = (kind: 'facebook' | 'instagram' | 'tiktok', v: string) => {
   if (/^https?:\/\//.test(v)) return v
   const handle = v.replace(/^@/, '').replace(/^(www\.)?(facebook|instagram|tiktok)\.com\/@?/, '')
@@ -53,12 +58,14 @@ function Stars({ rating }: { rating: number }) {
 }
 
 export function OfficialPill({ className = '' }: { className?: string }) {
-  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary ${className}`}><Icon name="verified" size={14} fill /> Boutique officielle</span>
+  const t = useT(shopPublic)
+  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary ${className}`}><Icon name="verified" size={14} fill /> {t('official')}</span>
 }
 
 // Opening hours, contacts, legal transparency: the side column on desktop,
 // the "Infos" tab on phones.
 function ShopInfos({ shop, onReport, canReport }: { shop: Shop, onReport: () => void, canReport: boolean }) {
+  const t = useT(shopPublic)
   const now = openNow(shop.openingHours, marketForCountry(shop.countryCode)?.timeZone)
   const today = now.day
   const place = [shop.address, shop.commune, shop.city].filter(Boolean).join(', ')
@@ -68,21 +75,21 @@ function ShopInfos({ shop, onReport, canReport }: { shop: Shop, onReport: () => 
     <div className="flex flex-col gap-4">
       <section className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="storefront" size={20} className="text-primary" /> Établissement</h3>
+          <h3 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="storefront" size={20} className="text-primary" /> {t('infos.place')}</h3>
           {shop.openingHours.length > 0 && (
-            <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${now.open ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{now.open ? 'Ouvert' : 'Fermé'}</span>
+            <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${now.open ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{now.open ? t('open') : t('closed')}</span>
           )}
         </div>
         {place && (
           <>
-            <p className="m-0 mt-4 text-label-sm uppercase text-on-surface-variant">Adresse</p>
+            <p className="m-0 mt-4 text-label-sm uppercase text-on-surface-variant">{t('infos.address')}</p>
             <p className="m-0 mt-1 text-body-md text-on-surface">{place}</p>
             <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place}, ${marketForCountry(shop.countryCode)?.name ?? ''}`)}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-label-md text-primary no-underline">
-              <Icon name="directions" size={16} /> Itinéraire
+              <Icon name="directions" size={16} /> {t('infos.directions')}
             </a>
           </>
         )}
-        <p className="m-0 mt-4 text-label-sm uppercase text-on-surface-variant">Horaires</p>
+        <p className="m-0 mt-4 text-label-sm uppercase text-on-surface-variant">{t('infos.hours')}</p>
         {shop.openingHours.length ? (
           <ul className="m-0 mt-1 list-none p-0">
             {DAYS.map((d, i) => {
@@ -90,35 +97,35 @@ function ShopInfos({ shop, onReport, canReport }: { shop: Shop, onReport: () => 
               return (
                 <li key={d} className={`flex justify-between gap-3 py-1 text-body-sm ${i === today ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}`}>
                   <span>{d}</span>
-                  <span className={h ? '' : 'text-primary'}>{h ? `${h.open.replace(':', 'h')} – ${h.close.replace(':', 'h')}` : 'Fermé'}</span>
+                  <span className={h ? '' : 'text-primary'}>{h ? `${hm(h.open)} – ${hm(h.close)}` : t('closed')}</span>
                 </li>
               )
             })}
           </ul>
-        ) : <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Non communiqués.</p>}
+        ) : <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('infos.hoursNone')}</p>}
         {(shop.phone || shop.whatsapp || shop.email || shop.website || socials.length > 0) && (
           <>
-            <p className="m-0 mt-4 text-label-sm uppercase text-on-surface-variant">Contacts directs</p>
+            <p className="m-0 mt-4 text-label-sm uppercase text-on-surface-variant">{t('infos.contacts')}</p>
             <div className="mt-2 flex flex-col gap-2">
-              {shop.phone && <ContactRow href={`tel:${tel(shop.phone)}`} icon="call" label="Téléphone" value={shop.phone} />}
+              {shop.phone && <ContactRow href={`tel:${tel(shop.phone)}`} icon="call" label={t('infos.phone')} value={shop.phone} />}
               {shop.whatsapp && <ContactRow href={`https://wa.me/${tel(shop.whatsapp).replace(/^\+/, '')}`} icon="chat" label="WhatsApp" value={shop.whatsapp} />}
-              {shop.email && <ContactRow href={`mailto:${shop.email}`} icon="mail" label="E-mail" value={shop.email} />}
-              {shop.website && <ContactRow href={/^https?:/.test(shop.website) ? shop.website : `https://${shop.website}`} icon="language" label="Site web" value={shop.website.replace(/^https?:\/\//, '')} />}
+              {shop.email && <ContactRow href={`mailto:${shop.email}`} icon="mail" label={t('infos.email')} value={shop.email} />}
+              {shop.website && <ContactRow href={/^https?:/.test(shop.website) ? shop.website : `https://${shop.website}`} icon="language" label={t('infos.website')} value={shop.website.replace(/^https?:\/\//, '')} />}
               {socials.map(([k, icon, label]) => <ContactRow key={k} href={socialUrl(k, shop[k]!)} icon={icon} label={label} value={shop[k]!.replace(/^https?:\/\/(www\.)?/, '')} />)}
             </div>
           </>
         )}
       </section>
       <section className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
-        <h3 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="gavel" size={20} className="text-primary" /> Transparence légale</h3>
+        <h3 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="gavel" size={20} className="text-primary" /> {t('infos.legal')}</h3>
         <div className="mt-3 rounded-xl bg-surface-container-low p-3">
-          <p className="m-0 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="verified" size={16} className="text-tertiary" fill /> Entreprise vérifiée par Dilchap</p>
-          <p className="m-0 mt-1 break-all text-body-sm text-on-surface-variant">{shop.legalIdType} : {shop.legalIdMasked}</p>
-          {shop.approvedAt && <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Boutique officielle depuis {since(shop.approvedAt)}</p>}
+          <p className="m-0 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="verified" size={16} className="text-tertiary" fill /> {t('infos.verified')}</p>
+          <p className="m-0 mt-1 break-all text-body-sm text-on-surface-variant">{t('infos.legalId', { type: shop.legalIdType, id: shop.legalIdMasked })}</p>
+          {shop.approvedAt && <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">{t('officialSince', { date: since(shop.approvedAt) })}</p>}
         </div>
-        <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Ventes en direct<Claim>, sans commission Dilchap</Claim> : vérifiez l’article et réglez sur place (espèces ou Mobile Money).</p>
+        <p className="m-0 mt-3 text-body-sm text-on-surface-variant">{t.rich('infos.direct', { claim: c => <Claim>{c}</Claim> })}</p>
         {canReport && (
-          <button onClick={onReport} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="flag" size={16} /> Signaler un problème</button>
+          <button onClick={onReport} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="flag" size={16} /> {t('infos.report')}</button>
         )}
       </section>
     </div>
@@ -136,6 +143,8 @@ function ContactRow({ href, icon, label, value }: { href: string, icon: string, 
 }
 
 export default function ShopPage({ shopKey, onNavigate, onSelectListing, onContactSeller, isLoggedIn, favorites = [], onToggleFavorite, currentUserId, preloaded }: Props) {
+  const t = useT(shopPublic)
+  const tc = useT(common)
   const [tab, setTab] = useState<Tab>('home')
   const [aisle, setAisle] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -193,12 +202,12 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   const items = useMemo(() => all?.listings.items ?? [], [all])
   const filtered = items.filter(l => (!aisle || l.aisleId === aisle) && (!q || l.title.toLowerCase().includes(q.toLowerCase())))
 
-  if (loading && !shop) return <div className="p-12 text-center text-on-surface-variant">Chargement…</div>
+  if (loading && !shop) return <div className="p-12 text-center text-on-surface-variant">{tc('loading')}</div>
   if (!shop) {
     return (
       <div className="p-12 text-center">
-        <p className="mb-4 text-on-surface-variant">Cette boutique n’existe pas ou n’est plus en ligne.</p>
-        <button onClick={() => onNavigate('shops')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">Voir les boutiques officielles</button>
+        <p className="mb-4 text-on-surface-variant">{t('notFound')}</p>
+        <button onClick={() => onNavigate('shops')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-2.5 text-label-lg text-white">{t('seeShops')}</button>
       </div>
     )
   }
@@ -233,16 +242,16 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   )
   const aisleChips = shop.aisles.filter(a => a.listingsCount > 0)
   const stats = [
-    { icon: 'inventory_2', value: formatNumber(shop.listingsCount), label: 'Articles en ligne' },
-    { icon: 'handshake', value: formatNumber(shop.salesCount), label: 'Ventes confirmées' },
-    { icon: 'group', value: formatNumber(shop.followersCount), label: 'Abonnés' },
-    { icon: 'star', value: shop.reviewsCount ? shop.averageRating.toFixed(1) : '—', label: `${shop.reviewsCount} avis` },
+    { icon: 'inventory_2', value: formatNumber(shop.listingsCount), label: t('stats.items') },
+    { icon: 'handshake', value: formatNumber(shop.salesCount), label: t('stats.sales') },
+    { icon: 'group', value: formatNumber(shop.followersCount), label: t('stats.followers') },
+    { icon: 'star', value: shop.reviewsCount ? shop.averageRating.toFixed(1) : '—', label: t('reviews', { count: shop.reviewsCount, n: String(shop.reviewsCount) }) },
   ]
   const tabs: [Tab, string, number | null][] = [
-    ['home', 'Accueil', null], ['all', 'Tous les articles', shop.listingsCount],
+    ['home', t('tab.home'), null], ['all', t('tab.all'), shop.listingsCount],
     ...(shopReels.items.length ? [['reels', 'Reels', shopReels.items.length] as [Tab, string, number]] : []),
-    ...(posts.length ? [['news', 'Actualités', posts.length] as [Tab, string, number]] : []),
-    ['reviews', 'Avis', shop.reviewsCount], ['infos', 'Infos & horaires', null],
+    ...(posts.length ? [['news', t('tab.news'), posts.length] as [Tab, string, number]] : []),
+    ['reviews', t('tab.reviews'), shop.reviewsCount], ['infos', t('tab.infos'), null],
   ]
   const promoItems = promoData?.listings.items ?? []
   const featuredItems = featured?.listings.items ?? []
@@ -252,12 +261,12 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
   const grid = (list: RemoteListing[], wide = false) => (
     list.length
       ? <div className={`grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 ${wide ? 'xl:grid-cols-4' : ''}`}>{list.map(card)}</div>
-      : <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucun article ici pour le moment" />
+      : <EmptyState icon="empty-search" fallback="search" tone="neutral" title={t('emptyItems')} />
   )
   const aisleBar = aisleChips.length > 0 && (
     <div className="relative">
       <div className="flex gap-2 overflow-x-auto pb-1 pr-8 [scrollbar-width:none] md:flex-wrap md:pr-0">
-        {[{ id: null, name: 'Tous les rayons', listingsCount: shop.listingsCount }, ...aisleChips].map(a => (
+        {[{ id: null, name: t('allAisles'), listingsCount: shop.listingsCount }, ...aisleChips].map(a => (
           <button key={a.id ?? 'all'} onClick={() => setAisle(a.id)} className={`shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none px-3.5 py-1.5 text-label-md ${aisle === a.id ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm hover:bg-surface-container-low'}`}>
             {a.name} ({a.listingsCount})
           </button>
@@ -277,11 +286,11 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
           {shop.openingHours.length > 0 && (
             <span className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-lowest/95 px-3 py-1.5 text-label-sm text-on-surface">
               <span className={`h-2 w-2 rounded-full ${now.open ? 'bg-tertiary' : 'bg-outline'}`} />
-              {now.open ? `Ouvert · jusqu’à ${now.until!.replace(':', 'h')}` : 'Fermé actuellement'}
+              {now.open ? t('openUntil', { time: hm(now.until!) }) : t('closedNow')}
             </span>
           )}
-          <button onClick={() => void share()} className="flex h-9 cursor-pointer items-center gap-1 rounded-full border-none bg-surface-lowest/95 px-3 text-label-md text-on-surface" aria-label="Partager">
-            <Icon name="share" size={17} /> {copied && 'Lien copié'}
+          <button onClick={() => void share()} className="flex h-9 cursor-pointer items-center gap-1 rounded-full border-none bg-surface-lowest/95 px-3 text-label-md text-on-surface" aria-label={tc('share')}>
+            <Icon name="share" size={17} /> {copied && t('linkCopied')}
           </button>
         </div>
       </div>
@@ -298,13 +307,13 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
               <div className="min-w-0 sm:pt-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="m-0 break-words text-headline-md text-on-surface md:text-headline-lg">{shop.name}</h1>
-                  {shop.isOfficial ? <OfficialPill /> : <span className="whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">Aperçu — non publiée</span>}
+                  {shop.isOfficial ? <OfficialPill /> : <span className="whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{t('previewUnpublished')}</span>}
                 </div>
                 {shop.category && <p className="m-0 mt-1 text-body-md text-on-surface-variant">{shop.category.name}</p>}
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-on-surface-variant">
                   <span className="flex items-center gap-1"><Icon name="location_on" size={15} /> {[shop.commune, shop.city].filter(Boolean).join(', ')}</span>
-                  {shop.reviewsCount > 0 && <span className="flex items-center gap-1"><Icon name="star" size={15} fill className="text-[#F59E0B]" /> {shop.averageRating.toFixed(1)} ({shop.reviewsCount} avis)</span>}
-                  {shop.approvedAt && <span className="flex items-center gap-1"><Icon name="calendar_month" size={15} /> Boutique officielle depuis {since(shop.approvedAt)}</span>}
+                  {shop.reviewsCount > 0 && <span className="flex items-center gap-1"><Icon name="star" size={15} fill className="text-[#F59E0B]" /> {shop.averageRating.toFixed(1)} ({t('reviews', { count: shop.reviewsCount, n: String(shop.reviewsCount) })})</span>}
+                  {shop.approvedAt && <span className="flex items-center gap-1"><Icon name="calendar_month" size={15} /> {t('officialSince', { date: since(shop.approvedAt) })}</span>}
                 </div>
               </div>
             </div>
@@ -312,18 +321,18 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
               <div className="flex flex-col gap-1.5 lg:items-end">
                 <div className="flex gap-2">
                   <button onClick={toggleFollow} className={`flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none px-4 text-label-lg lg:flex-none ${shop.isFollowedByMe ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}>
-                    <Icon name={shop.isFollowedByMe ? 'how_to_reg' : 'person_add'} size={18} /> {shop.isFollowedByMe ? 'Suivie' : 'Suivre'}
+                    <Icon name={shop.isFollowedByMe ? 'how_to_reg' : 'person_add'} size={18} /> {shop.isFollowedByMe ? t('followed') : t('follow')}
                     <span className="text-label-sm text-on-surface-variant">{formatNumber(shop.followersCount)}</span>
                   </button>
                   <button onClick={contact} className="flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-lg text-white hover:bg-primary-dark lg:flex-none">
-                    <Icon name="chat" size={18} /> Contacter
+                    <Icon name="chat" size={18} /> {t('contact')}
                   </button>
                 </div>
-                {responseTime && <span className="text-body-sm text-on-surface-variant">Répond généralement en {responseTime}</span>}
+                {responseTime && <span className="text-body-sm text-on-surface-variant">{t('responseTime', { time: responseTime })}</span>}
               </div>
             ) : (
               <button onClick={() => onNavigate('seller-shop')} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-inverse-surface px-4 text-label-lg text-white">
-                <Icon name="tune" size={18} /> Gérer ma boutique
+                <Icon name="tune" size={18} /> {t('manage')}
               </button>
             )}
           </div>
@@ -351,7 +360,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
             {tab === 'all' && (
               <label className="mb-1.5 ml-auto hidden min-w-[240px] items-center gap-2 rounded-lg bg-surface-lowest px-3 py-2 shadow-sm lg:flex">
                 <Icon name="search" size={18} className="text-outline" />
-                <input value={q} onChange={e => setQ(e.target.value)} placeholder={`Rechercher chez ${shop.name}…`} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
+                <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('searchIn', { name: shop.name })} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
               </label>
             )}
           </div>
@@ -363,26 +372,26 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
             <div className="flex min-w-0 flex-col gap-7">
               {promoItems.length > 0 && (
                 <section>
-                  <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="sell" size={20} className="text-primary" /> En promotion</h2>
+                  <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="sell" size={20} className="text-primary" /> {t('home.promo')}</h2>
                   <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4">{promoItems.slice(0, 6).map(card)}</div>
                 </section>
               )}
               {featuredItems.length > 0 && (
                 <section>
-                  <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="push_pin" size={20} className="text-primary" /> Articles phares</h2>
+                  <h2 className="m-0 mb-3 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="push_pin" size={20} className="text-primary" /> {t('home.featured')}</h2>
                   <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4">{featuredItems.slice(0, 6).map(card)}</div>
                 </section>
               )}
               <section>
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <h2 className="m-0 text-headline-sm text-on-surface">{aisleChips.length ? 'Explorer les rayons' : 'Articles récents'}</h2>
-                  <span className="whitespace-nowrap text-body-sm text-on-surface-variant">{shop.listingsCount} article{shop.listingsCount > 1 ? 's' : ''}</span>
+                  <h2 className="m-0 text-headline-sm text-on-surface">{aisleChips.length ? t('home.aisles') : t('home.recent')}</h2>
+                  <span className="whitespace-nowrap text-body-sm text-on-surface-variant">{t('items', { count: shop.listingsCount, n: String(shop.listingsCount) })}</span>
                 </div>
                 {aisleBar && <div className="mb-3">{aisleBar}</div>}
                 {grid(filtered.slice(0, 8))}
                 {filtered.length > 8 && (
                   <button onClick={() => setTab('all')} className="mx-auto mt-4 flex cursor-pointer items-center gap-1 rounded-full border-none bg-surface-lowest px-5 py-2.5 text-label-md text-on-surface shadow-sm">
-                    Voir les {filtered.length} articles <Icon name="expand_more" size={18} />
+                    {t('seeAllItems', { n: String(filtered.length) })} <Icon name="expand_more" size={18} />
                   </button>
                 )}
               </section>
@@ -396,14 +405,14 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
               <label className="flex items-center gap-2 rounded-lg bg-surface-lowest px-3 py-2 shadow-sm lg:hidden">
                 <Icon name="search" size={18} className="text-outline" />
-                <input value={q} onChange={e => setQ(e.target.value)} placeholder={`Rechercher chez ${shop.name}…`} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
+                <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('searchIn', { name: shop.name })} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
               </label>
               <div className="min-w-0 flex-1">{aisleBar}</div>
               <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="shrink-0 cursor-pointer rounded-lg border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm outline-none">
-                <option value="RECENT">Plus récents</option>
-                <option value="PRICE_ASC">Prix croissant</option>
-                <option value="PRICE_DESC">Prix décroissant</option>
-                <option value="POPULAR">Plus populaires</option>
+                <option value="RECENT">{t('sort.RECENT')}</option>
+                <option value="PRICE_ASC">{t('sort.PRICE_ASC')}</option>
+                <option value="PRICE_DESC">{t('sort.PRICE_DESC')}</option>
+                <option value="POPULAR">{t('sort.POPULAR')}</option>
               </Select>
             </div>
             {grid(filtered, true)}
@@ -429,7 +438,7 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {p.listings.map(l => (
                         <button key={l.id} onClick={() => onSelectListing(l.id)} className="min-w-0 cursor-pointer overflow-hidden rounded-xl border-none bg-surface-container-low p-0 text-left">
-                          <span className="block aspect-square overflow-hidden bg-surface-container">{l.coverUrl && <img src={l.coverUrl} alt={`${l.title} — photo 1`} loading="lazy" className="h-full w-full object-cover" />}</span>
+                          <span className="block aspect-square overflow-hidden bg-surface-container">{l.coverUrl && <img src={l.coverUrl} alt={t('photoAlt', { title: l.title, n: 1 })} loading="lazy" className="h-full w-full object-cover" />}</span>
                           <span className="block truncate px-2 pt-1 text-label-sm text-on-surface">{l.title}</span>
                           <span className="block px-2 pb-1.5 text-label-md text-primary"><Price amount={l.price} /></span>
                         </button>
@@ -447,11 +456,11 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
             <div className="h-fit rounded-2xl bg-surface-lowest p-5 text-center shadow-sm">
               <div className="text-display font-extrabold text-on-surface">{shop.reviewsCount ? shop.averageRating.toFixed(1) : '—'}</div>
               <div className="flex justify-center"><Stars rating={shop.averageRating} /></div>
-              <div className="mt-1 text-body-sm text-on-surface-variant">{shop.reviewsCount} avis vérifié{shop.reviewsCount > 1 ? 's' : ''}</div>
-              <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Seuls les acheteurs ayant conclu une vente peuvent laisser un avis.</p>
+              <div className="mt-1 text-body-sm text-on-surface-variant">{t('verifiedReviews', { count: shop.reviewsCount, n: String(shop.reviewsCount) })}</div>
+              <p className="m-0 mt-3 text-body-sm text-on-surface-variant">{t('reviewsOnlyBuyers')}</p>
             </div>
             <div className="flex flex-col gap-3">
-              {(reviewsData?.sellerReviews ?? []).length === 0 && <EmptyState icon="empty-star" fallback="star" title="Aucun avis pour le moment" />}
+              {(reviewsData?.sellerReviews ?? []).length === 0 && <EmptyState icon="empty-star" fallback="star" title={t('noReviews')} />}
               {(reviewsData?.sellerReviews ?? []).map(r => (
                 <div key={r.id} className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -461,11 +470,11 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
                     <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{r.author.fullName}</div><Stars rating={r.rating} /></div>
                     <span className="shrink-0 text-body-sm text-outline">{formatRelativeDate(r.createdAt)}</span>
                   </div>
-                  {r.comment && <p className="m-0 mt-2 text-body-md text-on-surface">« {r.comment} »</p>}
+                  {r.comment && <p className="m-0 mt-2 text-body-md text-on-surface">{t('quote', { text: r.comment })}</p>}
                   {r.reply && (
                     <div className="mt-2 rounded-xl bg-surface-container-low p-3 text-body-sm">
-                      <div className="font-semibold text-on-surface">Réponse de {shop.name}</div>
-                      <p className="m-0 mt-0.5 text-on-surface-variant">« {r.reply} »</p>
+                      <div className="font-semibold text-on-surface">{t('replyFrom', { name: shop.name })}</div>
+                      <p className="m-0 mt-0.5 text-on-surface-variant">{t('quote', { text: r.reply })}</p>
                     </div>
                   )}
                 </div>
@@ -479,18 +488,18 @@ export default function ShopPage({ shopKey, onNavigate, onSelectListing, onConta
         {/* Phones: practical info under the home tab too */}
         {tab === 'home' && <div className="mt-6 lg:hidden">{infos}</div>}
 
-        {reportDone && <p className="m-0 mt-4 flex items-center gap-1.5 text-label-md text-tertiary"><Icon name="check_circle" size={16} /> Signalement envoyé à l’équipe de modération.</p>}
+        {reportDone && <p className="m-0 mt-4 flex items-center gap-1.5 text-label-md text-tertiary"><Icon name="check_circle" size={16} /> {t('report.done')}</p>}
       </div>
 
-      <ConfirmSheet open={reportOpen} title={`Signaler ${shop.name}`} confirmLabel={reporting ? 'Envoi…' : 'Envoyer le signalement'} onConfirm={sendReport} onClose={() => setReportOpen(false)} loading={reporting}>
-        <p className="m-0 mb-3 text-body-sm text-on-surface-variant">L’équipe de modération examine chaque signalement. La boutique ne voit pas qui l’a signalée.</p>
-        <label className="text-label-md text-on-surface">Motif
+      <ConfirmSheet open={reportOpen} title={t('report.title', { name: shop.name })} confirmLabel={reporting ? t('report.sending') : t('report.send')} onConfirm={sendReport} onClose={() => setReportOpen(false)} loading={reporting}>
+        <p className="m-0 mb-3 text-body-sm text-on-surface-variant">{t('report.intro')}</p>
+        <label className="text-label-md text-on-surface">{t('report.reason')}
           <Select value={reportReason} onChange={e => setReportReason(e.target.value)} className="input mt-1.5 cursor-pointer">
             {reportReasons.map(r => <option key={r} value={r}>{r}</option>)}
           </Select>
         </label>
-        <label className="mt-3 block text-label-md text-on-surface">Détails (facultatif)
-          <textarea className="input mt-1.5" rows={3} value={reportMessage} onChange={e => setReportMessage(e.target.value)} placeholder="Que s’est-il passé ?" />
+        <label className="mt-3 block text-label-md text-on-surface">{t('report.details')}
+          <textarea className="input mt-1.5" rows={3} value={reportMessage} onChange={e => setReportMessage(e.target.value)} placeholder={t('report.placeholder')} />
         </label>
       </ConfirmSheet>
     </div>

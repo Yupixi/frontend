@@ -1,4 +1,5 @@
 import { creditsLabel } from '../components/Credits'
+import campaign from '../i18n/ns/campaign'
 
 // Participation fees of a Dilchap campaign, in credits: a flat fee per
 // seller (« frais de participation ») and/or a price per accepted item.
@@ -9,20 +10,20 @@ export type FeeTierStatus = 'KYC' | 'BADGE_VERIFIED' | 'BADGE_CERTIFIED' | 'OFFI
 export type FeeTier = Fees & { status: FeeTierStatus }
 
 export const TIER_LABEL: Record<FeeTierStatus, string> = {
-  KYC: 'Identité vérifiée',
-  BADGE_VERIFIED: 'Compte vérifié',
-  BADGE_CERTIFIED: 'Vendeur certifié',
-  OFFICIAL_SHOP: 'Boutique officielle',
+  get KYC() { return campaign.t('tier.KYC') },
+  get BADGE_VERIFIED() { return campaign.t('tier.BADGE_VERIFIED') },
+  get BADGE_CERTIFIED() { return campaign.t('tier.BADGE_CERTIFIED') },
+  get OFFICIAL_SHOP() { return campaign.t('tier.OFFICIAL_SHOP') },
 }
 
 // "Participation gratuite", "20 crédits de participation + 5 crédits par
 // article accepté"…
 export const feeText = (c: Fees) => {
   const f = creditsLabel
-  if (c.entryFee && c.listingFee) return `${f(c.entryFee)} de participation + ${f(c.listingFee)} par article accepté`
-  if (c.entryFee) return `${f(c.entryFee)} de participation (forfait)`
-  if (c.listingFee) return `${f(c.listingFee)} par article accepté`
-  return 'Participation gratuite'
+  if (c.entryFee && c.listingFee) return campaign.t('fee.both', { entry: f(c.entryFee), item: f(c.listingFee) })
+  if (c.entryFee) return campaign.t('fee.entry', { entry: f(c.entryFee) })
+  if (c.listingFee) return campaign.t('fee.item', { item: f(c.listingFee) })
+  return campaign.t('fee.free')
 }
 
 const total = (f: Fees) => f.entryFee + f.listingFee
@@ -38,7 +39,7 @@ export function feeOptions(base: Fees, tiers: FeeTier[] | null | undefined) {
     single: lower.length === 0,
     cheapest,
     lines: [
-      { label: 'Tarif de base', text: feeText(base) },
+      { label: campaign.t('fee.base'), text: feeText(base) },
       ...lower.map((t) => ({ label: TIER_LABEL[t.status], text: feeText(t) })),
     ],
     anyPaid: !free(base) || lower.some((t) => !free(t)),

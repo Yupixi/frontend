@@ -13,6 +13,8 @@ import { useLists } from '../lib/lists'
 import { useMarketCode, useMarketVars } from '../lib/countries'
 import InfiniteLoader from '../components/InfiniteLoader'
 import { useLoadMore } from '../lib/useLoadMore'
+import { useT } from '../i18n'
+import shopPublic from '../i18n/ns/shopPublic'
 
 type Props = {
   onNavigate: (page: any) => void
@@ -21,11 +23,12 @@ type Props = {
 }
 
 type Sort = 'POPULAR' | 'TOP_RATED' | 'RECENT'
-const SORTS: [Sort, string][] = [['POPULAR', 'Plus suivies'], ['TOP_RATED', 'Mieux notées'], ['RECENT', 'Plus récentes']]
+const SORTS: [Sort, 'dir.sort.POPULAR' | 'dir.sort.TOP_RATED' | 'dir.sort.RECENT'][] = [['POPULAR', 'dir.sort.POPULAR'], ['TOP_RATED', 'dir.sort.TOP_RATED'], ['RECENT', 'dir.sort.RECENT']]
 const PAGE_SIZE = 12
 
 // "Annuaire des Boutiques officielles".
 export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: Props) {
+  const t = useT(shopPublic)
   const lists = useLists()
   // Shops of the visitor's country (all for « Tous les pays »).
   const countryCode = useMarketCode()
@@ -65,20 +68,20 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
   return (
     <div className="mx-auto max-w-[1320px] px-4 pb-10 pt-4 md:px-8 lg:px-12">
       <nav className="mb-3 hidden items-center gap-1 text-label-md text-on-surface-variant md:flex">
-        <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="home" size={15} /> Accueil</button>
+        <button onClick={() => onNavigate('home')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="home" size={15} /> {t('dir.home')}</button>
         <Icon name="chevron_right" size={15} className="text-outline-variant" />
-        <span className="font-semibold text-on-surface">Boutiques officielles</span>
+        <span className="font-semibold text-on-surface">{t('dir.title')}</span>
       </nav>
 
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
-          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified" size={14} fill /> Entreprises vérifiées</span>
-          <h1 className="m-0 mt-2 text-headline-lg text-on-surface md:text-display">Boutiques officielles</h1>
-          <p className="m-0 mt-1 max-w-2xl text-body-md text-on-surface-variant">Des entreprises et marques dont le registre de commerce (RCCM) ou l’identifiant fiscal (NCC, NINEA, IFU, NIF) et l’identité du gérant ont été vérifiés par Dilchap.</p>
+          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified" size={14} fill /> {t('dir.kicker')}</span>
+          <h1 className="m-0 mt-2 text-headline-lg text-on-surface md:text-display">{t('dir.title')}</h1>
+          <p className="m-0 mt-1 max-w-2xl text-body-md text-on-surface-variant">{t('dir.intro')}</p>
         </div>
         <div className="flex shrink-0 items-center gap-3 rounded-xl bg-surface-lowest px-4 py-3 shadow-sm">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="storefront" size={20} /></span>
-          <div><div className="text-headline-sm font-extrabold text-on-surface">{formatNumber(total)}</div><div className="whitespace-nowrap text-body-sm text-on-surface-variant">boutique{total > 1 ? 's' : ''} officielle{total > 1 ? 's' : ''}</div></div>
+          <div><div className="text-headline-sm font-extrabold text-on-surface">{formatNumber(total)}</div><div className="whitespace-nowrap text-body-sm text-on-surface-variant">{t('dir.count', { count: total })}</div></div>
         </div>
       </header>
 
@@ -86,24 +89,24 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
       <section className="mt-5 flex flex-col gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm md:flex-row md:items-center md:p-4">
         <form onSubmit={e => { e.preventDefault(); setTerm(search.trim()) }} className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-container-low px-3">
           <Icon name="search" size={19} className="shrink-0 text-outline" />
-          <input value={search} onChange={e => setSearch(e.target.value)} onBlur={() => setTerm(search.trim())} placeholder="Rechercher une boutique par nom…" aria-label="Rechercher une boutique par nom" className="h-11 w-full min-w-0 border-none bg-transparent text-body-md text-on-surface outline-none" />
+          <input value={search} onChange={e => setSearch(e.target.value)} onBlur={() => setTerm(search.trim())} placeholder={t('dir.searchPlaceholder')} aria-label={t('dir.searchAria')} className="h-11 w-full min-w-0 border-none bg-transparent text-body-md text-on-surface outline-none" />
         </form>
         <div className="grid grid-cols-2 gap-2 md:flex">
           <Select value={category} onChange={e => setCategory(e.target.value)} className="h-11 min-w-0 cursor-pointer rounded-xl border-none bg-surface-container-low px-3 text-label-md text-on-surface outline-none md:w-48">
-            <option value="">Tous les secteurs</option>
+            <option value="">{t('dir.allSectors')}</option>
             {(cats?.categories ?? []).map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
           </Select>
           <Select value={city} onChange={e => setCity(e.target.value)} className="h-11 min-w-0 cursor-pointer rounded-xl border-none bg-surface-container-low px-3 text-label-md text-on-surface outline-none md:w-40">
-            <option value="">Toutes les villes</option>
+            <option value="">{t('dir.allCities')}</option>
             {lists.cities.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
         </div>
       </section>
       <div className="relative mt-3">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 pr-8 [scrollbar-width:none] md:pr-0">
-          <span className="shrink-0 text-label-sm uppercase text-on-surface-variant">Trier par</span>
+          <span className="shrink-0 text-label-sm uppercase text-on-surface-variant">{t('dir.sortBy')}</span>
           {SORTS.map(([k, label]) => (
-            <button key={k} onClick={() => setSort(k)} className={`shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none px-3.5 py-1.5 text-label-md ${sort === k ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm'}`}>{label}</button>
+            <button key={k} onClick={() => setSort(k)} className={`shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none px-3.5 py-1.5 text-label-md ${sort === k ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm'}`}>{t(label)}</button>
           ))}
         </div>
       </div>
@@ -115,24 +118,24 @@ export default function ShopsDirectory({ onNavigate, onOpenShop, isLoggedIn }: P
             {Array.from({ length: 6 }, (_, i) => <div key={i} className="h-80 animate-pulse rounded-2xl bg-surface-container-low" />)}
           </div>
         ) : shops.length === 0 ? (
-          <EmptyState icon="empty-search" fallback="storefront" tone="neutral" title={term || category || city ? 'Aucune boutique ne correspond' : 'Aucune boutique officielle pour le moment'} text={term || category || city ? 'Essayez un autre nom, secteur ou ville.' : 'Les premières boutiques vérifiées apparaîtront ici.'} />
+          <EmptyState icon="empty-search" fallback="storefront" tone="neutral" title={term || category || city ? t('dir.noMatch') : t('dir.none')} text={term || category || city ? t('dir.noMatchText') : t('dir.noneText')} />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {shops.map(s => <ShopCard key={s.id} shop={s} onOpen={() => onOpenShop(s.slug)} onFollow={() => toggleFollow(s)} />)}
           </div>
         )}
-        {data && <InfiniteLoader key={listKey} list={nextShops} pageSize={PAGE_SIZE} label="Charger plus de boutiques" endLabel={shops.length > PAGE_SIZE ? 'Vous avez tout vu' : null} />}
+        {data && <InfiniteLoader key={listKey} list={nextShops} pageSize={PAGE_SIZE} label={t('dir.loadMore')} endLabel={shops.length > PAGE_SIZE ? t('dir.allSeen') : null} />}
       </section>
 
       {/* Acquisition */}
       <section className="mt-8 flex flex-col gap-4 rounded-2xl bg-surface-container-low p-5 md:flex-row md:items-center md:p-6">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-white"><Icon name="storefront" size={24} /></span>
         <div className="min-w-0 flex-1">
-          <h2 className="m-0 text-headline-sm text-on-surface">Vous êtes une entreprise ou une marque déclarée ?</h2>
-          <p className="m-0 mt-1 text-body-md text-on-surface-variant">Obtenez le badge Boutique officielle, votre page vitrine avec rayons et articles phares, et votre place dans cet annuaire.</p>
+          <h2 className="m-0 text-headline-sm text-on-surface">{t('dir.cta.title')}</h2>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('dir.cta.text')}</p>
         </div>
         <button onClick={() => onNavigate('seller-shop')} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-inverse-surface px-5 text-label-lg text-white">
-          Ouvrir ma boutique officielle <Icon name="arrow_forward" size={18} />
+          {t('dir.cta.button')} <Icon name="arrow_forward" size={18} />
         </button>
       </section>
     </div>
