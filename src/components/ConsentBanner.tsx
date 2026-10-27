@@ -7,6 +7,8 @@ import {
 } from '../lib/analytics'
 import { countryVars, useMarketCode } from '../lib/countries'
 import BottomSheet from './BottomSheet'
+import { useT } from '../i18n'
+import consentNs from '../i18n/ns/consent'
 
 // Both choices look the same: refusing is as easy as accepting.
 const choiceBtn = 'min-h-10 cursor-pointer whitespace-nowrap rounded-xl border border-solid border-outline-variant bg-surface-lowest px-4 py-2 text-label-md text-on-surface hover:bg-surface-container-low'
@@ -34,6 +36,7 @@ export function useConsentOpen() {
 //   « Paramétrer » (the consent window, to refuse or choose).
 // The tools are named by the policy and the window, not here.
 export default function ConsentBanner({ onOpenLegal }: { onOpenLegal: (slug: string) => void }) {
+  useT(consentNs) // re-renders the default texts (bannerTexts) on a language change
   const market = useMarketCode()
   const { data } = useQuery<{ analyticsConfig: AnalyticsConfig }>(ANALYTICS_CONFIG_QUERY, { variables: countryVars(market), fetchPolicy: 'cache-first' })
   const config = data?.analyticsConfig
@@ -84,6 +87,7 @@ export default function ConsentBanner({ onOpenLegal }: { onOpenLegal: (slug: str
 // until the visitor turns it on (never pre-ticked); « Refuser » and
 // « Accepter » stay one tap away.
 function ConsentWindow({ config, onOpenLegal }: { config: AnalyticsConfig; onOpenLegal: (slug: string) => void }) {
+  const tr = useT(consentNs)
   const b = config.banner
   const legal = /^\/legal\/([\w-]+)$/.exec(config.policyPath)?.[1]
   const openPolicy = (e: MouseEvent) => {
@@ -113,7 +117,7 @@ function ConsentWindow({ config, onOpenLegal }: { config: AnalyticsConfig; onOpe
       )}
     >
       <p className="m-0 text-body-sm text-on-surface-variant">
-        Choisissez ce que vous acceptez. Ni votre nom, ni votre e-mail, ni votre téléphone ne sont transmis.{' '}
+        {tr('window.intro')}{' '}
         <a href={config.policyPath} onClick={openPolicy} className="font-semibold text-on-surface underline underline-offset-2">{b.policyLabel}</a>
       </p>
       <ul className="m-0 mt-3 list-none space-y-2 p-0">

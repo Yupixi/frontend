@@ -1,4 +1,5 @@
 import { COUNTRIES } from '../data/markets'
+import authPhone from '../i18n/ns/authPhone'
 
 // Per-country phone helpers for forms (sign-up, sign-in, guest contact).
 // Kept apart from lib/phone so these pages don't load libphonenumber.
@@ -30,7 +31,7 @@ export function localNumberError(raw: string, country: Dialing & { phoneExample:
   const t = raw.trim()
   if (!t || t.startsWith('+') || t.startsWith('00')) return null
   const d = t.replace(/\D/g, '')
-  return dropTrunk(d, country).length === country.localDigits || intlDigits(d) ? null : `Numéro incomplet : ${country.localDigits} chiffres (ex : ${country.phoneExample}), avec ou sans +${country.dialCode}.`
+  return dropTrunk(d, country).length === country.localDigits || intlDigits(d) ? null : authPhone.t('phone.incomplete', { digits: country.localDigits, example: country.phoneExample, dial: country.dialCode })
 }
 
 // UEMOA country of an international number (+225…), by its dial code.

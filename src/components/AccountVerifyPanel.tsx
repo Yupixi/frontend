@@ -9,6 +9,8 @@ import { RESEND_VERIFICATION_MUTATION } from '../graphql/auth'
 import {
   PHONE_CHANNEL_QUERY, REQUEST_PHONE_CODE_MUTATION, VERIFY_PHONE_MUTATION, codeVia, type PhoneChannelData,
 } from '../graphql/phoneVerification'
+import { useT } from '../i18n'
+import verifyNs from '../i18n/ns/verify'
 
 // « Confirmez votre compte », SMS first: a 6-digit code to the member's
 // number (primary), the confirmation e-mail again (secondary). Shown on the
@@ -24,6 +26,7 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
   // false: inside a sheet that already says « Confirmez votre compte ».
   heading?: boolean
 }) {
+  const t = useT(verifyNs)
   const { data, refetch } = useQuery<PhoneChannelData>(PHONE_CHANNEL_QUERY, { fetchPolicy: 'cache-and-network' })
   const [request, { loading: sending }] = useMutation<{ requestPhoneVerification: { alreadyVerified: boolean; phoneHint: string; expiresAt?: string | null; channel?: 'SMS' | 'WHATSAPP' } }>(REQUEST_PHONE_CODE_MUTATION)
   const [verify, { loading: checking }] = useMutation(VERIFY_PHONE_MUTATION)
@@ -57,7 +60,7 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
     return (
       <div role="status" className={`${tone === 'card' ? 'rounded-2xl bg-tertiary-soft p-4' : 'rounded-xl bg-tertiary-soft p-3'} flex items-center gap-3`}>
         <Icon name="verified_user" size={22} className="shrink-0 text-tertiary" />
-        <span className="min-w-0 text-body-md text-on-surface"><b>Compte confirmé.</b> Vous pouvez publier, contacter les vendeurs et payer.</span>
+        <span className="min-w-0 text-body-md text-on-surface">{t.rich('panel.done', { b: c => <b>{c}</b> })}</span>
       </div>
     )
 
@@ -92,9 +95,9 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white"><Icon name="sms" size={21} /></span>
           <div className="min-w-0 flex-1">
-            <h2 id="account-verify-title" className="m-0 text-label-lg text-on-surface">Confirmez votre compte <HelpLink article="confirmer-mon-compte" className="ml-1 align-middle" /></h2>
+            <h2 id="account-verify-title" className="m-0 text-label-lg text-on-surface">{t('panel.title')} <HelpLink article="confirmer-mon-compte" className="ml-1 align-middle" /></h2>
             <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">
-              {intro ?? 'Pour publier une annonce, contacter les vendeurs et payer, confirmez votre compte. Par SMS, c’est immédiat.'}
+              {intro ?? t('panel.intro')}
             </p>
           </div>
         </div>
@@ -106,18 +109,18 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
         <button type="button" disabled={sending} onClick={send}
           className="mt-3 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-2 text-center text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
           <Icon name="sms" size={19} className="shrink-0" />
-          <span className="min-w-0 break-words">{sending ? 'Envoi du code…' : <>Recevoir un code par SMS au <span className="whitespace-nowrap">{formatIntl(me.phone)}</span></>}</span>
+          <span className="min-w-0 break-words">{sending ? t('sendingCode') : t.rich('panel.sendTo', { phone: formatIntl(me.phone), nowrap: c => <span className="whitespace-nowrap">{c}</span> })}</span>
         </button>
       )}
       {sms && sentTo != null && (
         <form onSubmit={e => { e.preventDefault(); if (code.length === 6) submit() }} className="mt-3">
-          <p className="m-0 text-body-sm text-on-surface">Code envoyé par {via.by} au <b className="whitespace-nowrap">{formatIntl(me.phone)}</b>. Il expire dans {via.ttl} minutes.</p>
+          <p className="m-0 text-body-sm text-on-surface">{t.rich('panel.codeSent', { by: via.by, phone: formatIntl(me.phone), count: via.ttl, b: c => <b className="whitespace-nowrap">{c}</b> })}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" aria-label="Code reçu par SMS" autoFocus
+            <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" aria-label={t('codeAria')} autoFocus
               className="h-12 w-36 rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-center font-mono text-body-lg tracking-[0.3em] text-on-surface outline-none focus:border-primary" />
-            <button type="submit" disabled={checking || code.length !== 6} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-lg text-white disabled:opacity-60 sm:flex-none">{checking ? 'Vérification…' : 'Valider'}</button>
+            <button type="submit" disabled={checking || code.length !== 6} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-lg text-white disabled:opacity-60 sm:flex-none">{checking ? t('checking') : t('validate')}</button>
             <button type="button" disabled={sending || wait > 0} onClick={send} className="h-12 cursor-pointer rounded-xl border-none bg-transparent px-2 text-label-md text-primary disabled:cursor-default disabled:text-on-surface-variant">
-              {wait > 0 ? `Renvoyer (${wait} s)` : 'Renvoyer un code'}
+              {wait > 0 ? t('resendWait', { wait }) : t('resendCode')}
             </button>
           </div>
         </form>
@@ -125,23 +128,23 @@ export default function AccountVerifyPanel({ onVerified, onAddPhone, tone = 'car
       {data.phoneVerificationAvailable && !me.phone && (
         <p className="m-0 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-surface-lowest p-3 text-body-sm text-on-surface">
           <Icon name="phone_android" size={18} className="shrink-0 text-on-surface-variant" />
-          <span className="min-w-0 flex-1">Ajoutez votre numéro dans <b>Paramètres › Profil</b> pour recevoir un code par SMS.</span>
-          {onAddPhone && <button type="button" onClick={onAddPhone} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline underline-offset-2">Ajouter mon numéro</button>}
+          <span className="min-w-0 flex-1">{t.rich('panel.addPhone', { b: c => <b>{c}</b> })}</span>
+          {onAddPhone && <button type="button" onClick={onAddPhone} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline underline-offset-2">{t('panel.addPhoneBtn')}</button>}
         </p>
       )}
 
       {email && (
         <div className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-on-surface-variant ${sms ? '' : 'rounded-xl bg-surface-lowest p-3'}`}>
           {mailSent
-            ? <span className="min-w-0 break-words"><Icon name="mark_email_read" size={16} className="mr-1 align-[-3px] text-tertiary" />E-mail envoyé à <b className="font-semibold text-on-surface">{email}</b> : pensez à regarder dans les spams.</span>
+            ? <span className="min-w-0 break-words"><Icon name="mark_email_read" size={16} className="mr-1 align-[-3px] text-tertiary" />{t.rich('panel.mailSent', { email, b: c => <b className="font-semibold text-on-surface">{c}</b> })}</span>
             : <>
-                <span className="min-w-0 break-words">{sms ? 'Ou confirmez votre adresse e-mail :' : <>Ouvrez le lien envoyé à <b className="font-semibold text-on-surface">{email}</b> (regardez aussi dans les spams).</>}</span>
-                <button type="button" disabled={mailing} onClick={mail} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline underline-offset-2 disabled:opacity-60">{mailing ? 'Envoi…' : 'Renvoyer l’e-mail de confirmation'}</button>
+                <span className="min-w-0 break-words">{sms ? t('panel.orEmail') : t.rich('panel.openLink', { email, b: c => <b className="font-semibold text-on-surface">{c}</b> })}</span>
+                <button type="button" disabled={mailing} onClick={mail} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline underline-offset-2 disabled:opacity-60">{mailing ? t('sending') : t('panel.resendEmail')}</button>
               </>}
         </div>
       )}
       {!sms && !email && !(data.phoneVerificationAvailable && !me.phone) && (
-        <p className="m-0 mt-3 text-body-sm text-on-surface-variant">La confirmation par SMS est momentanément indisponible. Réessayez un peu plus tard.</p>
+        <p className="m-0 mt-3 text-body-sm text-on-surface-variant">{t('panel.smsDown')}</p>
       )}
       {error && <p role="alert" className="m-0 mt-2 text-body-sm font-semibold text-primary">{error}</p>}
     </section>

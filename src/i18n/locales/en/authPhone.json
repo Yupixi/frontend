@@ -1,0 +1,8 @@
+{
+  "phone.incomplete": "Incomplete number: {{digits}} digits (e.g. {{example}}), with or without +{{dial}}.",
+  "momo.invalid": "Invalid Ivorian mobile number (10 digits, e.g. 07 00 00 00 00).",
+  "momo.wrongNetwork": "This isn’t a {{label}} number (it must start with {{prefix}}).",
+  "facebook.cancelled": "Facebook sign-in cancelled.",
+  "facebook.denied": "Facebook didn’t allow the sign-in. Try again.",
+  "facebook.expired": "The Facebook sign-in has expired. Try again."
+}

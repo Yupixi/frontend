@@ -1,5 +1,6 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js/mobile'
 import type { PaymentProvider } from '../graphql/payments'
+import authPhone from '../i18n/ns/authPhone'
 
 // Per-country helpers (dial code, national length) live in lib/dialing.
 export { localNumberError, toIntl } from './dialing'
@@ -15,8 +16,8 @@ export const NETWORK_PREFIX: Partial<Record<PaymentProvider, string>> = { orange
 // Returns the error to show, or null when the number is usable.
 export function momoNumberError(raw: string, provider: PaymentProvider, label: string): string | null {
   const phone = parsePhoneNumberFromString(raw, COUNTRY)
-  if (!phone || phone.country !== COUNTRY || !phone.isValid()) return 'Numéro mobile ivoirien invalide (10 chiffres, ex : 07 00 00 00 00).'
+  if (!phone || phone.country !== COUNTRY || !phone.isValid()) return authPhone.t('momo.invalid')
   const prefix = NETWORK_PREFIX[provider]
-  if (prefix && !phone.nationalNumber.startsWith(prefix)) return `Ce numéro n’est pas un numéro ${label} (il doit commencer par ${prefix}).`
+  if (prefix && !phone.nationalNumber.startsWith(prefix)) return authPhone.t('momo.wrongNetwork', { label, prefix })
   return null
 }
