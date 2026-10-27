@@ -1,6 +1,8 @@
 import { useQuery } from '@apollo/client/react'
 import Icon from './Icon'
 import Price from './Price'
+import { useT } from '../i18n'
+import offersNs from '../i18n/ns/offers'
 import { PRICE_SUGGESTION_QUERY, type RemotePriceSuggestion } from '../graphql/offers'
 
 type PriceSuggestionHintProps = {
@@ -13,24 +15,23 @@ type PriceSuggestionHintProps = {
 // OffersService.getPriceSuggestion's MIN_SAMPLE) rather than showing a
 // number built on 1-2 data points.
 export default function PriceSuggestionHint({ listingId, onUseAmount }: PriceSuggestionHintProps) {
+  const t = useT(offersNs)
   const { data } = useQuery<{ priceSuggestion: RemotePriceSuggestion }>(PRICE_SUGGESTION_QUERY, {
     variables: { listingId: listingId as string },
     skip: !listingId,
   })
   const suggestion = data?.priceSuggestion
   if (!suggestion || suggestion.suggestedAmount == null) return null
-  const plural = suggestion.sampleSize > 1 ? 's' : ''
 
   return (
     <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-lg bg-tertiary-soft px-2.5 py-1.5 text-label-sm text-on-surface-variant">
       <Icon name="lightbulb" size={15} className="shrink-0 text-tertiary" />
       <span>
-        Prix suggéré : <b className="text-on-surface"><Price amount={suggestion.suggestedAmount} currency={suggestion.currency} /></b>
-        {' '}(basé sur {suggestion.sampleSize} offre{plural} similaire{plural} accepté{plural})
+        {t.rich('hint.text', { count: suggestion.sampleSize, n: String(suggestion.sampleSize), b: c => <b className="text-on-surface">{c}</b>, price: <Price amount={suggestion.suggestedAmount} currency={suggestion.currency} /> })}
       </span>
       {onUseAmount && (
         <button type="button" onClick={() => onUseAmount(suggestion.suggestedAmount!)} className="cursor-pointer rounded-md border-none bg-surface-lowest px-2 py-0.5 text-label-sm text-primary">
-          Utiliser
+          {t('hint.use')}
         </button>
       )}
     </div>

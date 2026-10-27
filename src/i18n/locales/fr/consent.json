@@ -1,0 +1,12 @@
+{
+  "banner.customize": "Personnaliser",
+  "banner.analyticsLabel": "Mesure d’audience",
+  "banner.analyticsText": "Savoir quelles pages sont consultées et comment le site est utilisé, pour l’améliorer.",
+  "banner.adsLabel": "Publicité personnalisée",
+  "banner.adsText": "Mesurer l’efficacité des publicités Dilchap et vous en montrer sur d’autres sites et applications selon les pages consultées (reciblage).",
+  "banner.save": "Enregistrer mes choix",
+  "banner.ok": "OK",
+  "banner.settings": "Paramétrer",
+  "window.intro": "Choisissez ce que vous acceptez. Ni votre nom, ni votre e-mail, ni votre téléphone ne sont transmis.",
+  "tool.meta": "Pixel Meta"
+}

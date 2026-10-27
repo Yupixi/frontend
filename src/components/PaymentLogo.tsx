@@ -1,5 +1,6 @@
 import Icon from './Icon'
 import { useMethods } from '../lib/countries'
+import common from '../i18n/ns/common'
 
 // Official Mobile Money brand marks (public/payments): Orange Money and MTN
 // from Wikimedia Commons (orange-money-mark.svg = the two arrows of the
@@ -13,7 +14,7 @@ export const PAYMENT_BRANDS: Record<string, { label: string; src?: string; mark?
   FREE_MONEY: { label: 'Free Money', mark: 'FM', tile: 'bg-surface-container text-on-surface', fit: '' },
   T_MONEY: { label: 'T-Money', mark: 'T', tile: 'bg-surface-container text-on-surface', fit: '' },
   AIRTEL_MONEY: { label: 'Airtel Money', mark: 'AM', tile: 'bg-surface-container text-on-surface', fit: '' },
-  CASH: { label: 'Espèces', tile: 'bg-tertiary-soft text-tertiary', fit: '' },
+  CASH: { get label() { return common.t('cash') }, tile: 'bg-tertiary-soft text-tertiary', fit: '' },
 }
 
 export const paymentLabel = (method: string) => PAYMENT_BRANDS[method]?.label ?? method

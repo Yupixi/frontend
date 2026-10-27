@@ -13,10 +13,9 @@ import Flag from '../components/Flag'
 import { ListingCard, listingImage } from '../components/ListingCard'
 import { CATEGORIES_QUERY, type RemoteCategory } from '../graphql/categories'
 import { rotationSeed } from '../lib/rotationSeed'
-import { formatNumber } from '../lib/format'
 import { LISTINGS_QUERY, LISTING_FACETS_QUERY, RECOMMENDED_LISTINGS_QUERY, RECOMMENDED_RAIL_QUERY, type ListingFacets, type ListingSort, type PromotedPlace, type RemoteListing } from '../graphql/listings'
 import { ImpressionScope } from '../lib/impressions'
-import { DEFAULT_HOME, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
+import { defaultHome, HOME_CONFIG_QUERY, SLIDE_TONE, type HomeConfig, type HomeSectionKey } from '../lib/homeConfig'
 import ReelRail from '../components/reels/ReelRail'
 import { DESKTOP_QUERY, useMediaQuery } from '../lib/useMediaQuery'
 import type { StoredLocation } from '../lib/location'
@@ -32,6 +31,8 @@ import { CategoryRailSkeleton, GridSkeleton, RailSkeleton } from '../components/
 import InfiniteLoader from '../components/InfiniteLoader'
 import { useLoadMore } from '../lib/useLoadMore'
 import { trustTopicOf, useTrustSheet } from '../components/TrustSheet'
+import { cfaUnit, fmtNumber, useLocale, useT } from '../i18n'
+import homeNs from '../i18n/ns/home'
 
 // promo: only items on sale (shop sales and Dilchap campaigns).
 export type SearchPreset = { city?: string, maxPrice?: number, promo?: boolean }
@@ -56,12 +57,7 @@ type HomeProps = {
 const PAGE_SIZE = 12
 const MOBILE_PAGE_SIZE = 6
 
-const SORTS: { value: ListingSort, label: string }[] = [
-  { value: 'RECENT', label: 'Récents' },
-  { value: 'PRICE_ASC', label: 'Prix croissant' },
-  { value: 'PRICE_DESC', label: 'Prix décroissant' },
-  { value: 'POPULAR', label: 'Populaires' },
-]
+const SORTS = ['RECENT', 'PRICE_ASC', 'PRICE_DESC', 'POPULAR'] as const satisfies readonly ListingSort[]
 
 // A name typed in capitals (« COSMÉTIQUES ») reads as a word in a tile
 // (« Cosmétiques »): two lines at most, cut between syllables.
@@ -122,6 +118,8 @@ const feedMemory: { city: string | null } = { city: null }
 const railMemory: { key: string, recommended?: RemoteListing[], promoted?: PromotedPlace[], forYou?: RemoteListing[] } = { key: '' }
 
 export default function Home({ onOpenShop, onNavigate, onSelectListing, favorites, onToggleFavorite, onCategorySelect, currentUser, location, locationPending, onContactSeller, onSearch }: HomeProps) {
+  const t = useT(homeNs)
+  const locale = useLocale()
   const [pageSize] = useState(() => (window.innerWidth < 1024 ? MOBILE_PAGE_SIZE : PAGE_SIZE))
   const [sort, setSort] = useState<ListingSort>('RECENT')
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
@@ -136,7 +134,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   // {{ville}} / {{pays}} in the texts: the visitor's country.
   const market = useMarket()
   const methods = useMethods().filter(m => m !== 'CASH')
-  const rawHome = homeData?.homeConfig ?? DEFAULT_HOME
+  // The defaults (shown while the query loads) in the visitor's language.
+  const fallbackHome = useMemo(() => defaultHome(), [locale]) // eslint-disable-line react-hooks/exhaustive-deps
+  const rawHome = homeData?.homeConfig ?? fallbackHome
   const home = useMemo(() => fillPlacesDeep(rawHome, market), [rawHome, market])
   const SLIDES = home.hero.slides
   const SLIDE_MS = Math.max(3, home.hero.intervalSec) * 1000
@@ -194,7 +194,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   useEffect(() => {
     if (forYouData && railMemory.key === railKey) railMemory.forYou = forYouData.recommendedListings
   }, [forYouData, railKey])
-  const forYouHint = currentUser ? 'D’après les annonces que vous consultez, aimez et recherchez.' : 'D’après les catégories consultées sur cet appareil.'
+  const forYouHint = currentUser ? t('forYou.hintMember') : t('forYou.hintDevice')
 
   // Cities (desktop quick filters + hero select) — real cities facet.
   const marketFilter = location?.countryCode ? { countryCode: location.countryCode } : undefined
@@ -242,8 +242,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
   const [slide, setSlide] = useState(0)
   useEffect(() => {
     if (!sliderOn) return
-    const t = setTimeout(() => setSlide(s => (s + 1) % SLIDES.length), SLIDE_MS)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setSlide(s => (s + 1) % SLIDES.length), SLIDE_MS)
+    return () => clearTimeout(timer)
   }, [slide, SLIDES.length, SLIDE_MS, sliderOn])
   // A config with fewer slides than the current index (BO edit).
   const current = SLIDES[slide % SLIDES.length] ?? SLIDES[0]
@@ -296,13 +296,13 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     const stop = order.findIndex(k => !settled[k])
     return stop < 0 ? order : order.slice(0, stop + 1)
   }
-  const zone = location?.city ?? market?.name ?? 'Tous les pays'
+  const zone = location?.city ?? market?.name ?? t('allCountries')
   // Phones: a long country name (« Côte d'Ivoire ») cut in the « Zone
   // active » pill becomes its code next to the flag (« CI »).
   const zoneCode = !location?.city && !!market && market.name.length > 9 ? market.code : null
   const zoneShort = zoneCode ?? zone
 
-  const loadMore = !!feedData && <InfiniteLoader key={feedKey} list={nextFeedPage} pageSize={pageSize} endLabel={latest.length > pageSize ? 'Vous avez tout vu' : null} />
+  const loadMore = !!feedData && <InfiniteLoader key={feedKey} list={nextFeedPage} pageSize={pageSize} endLabel={latest.length > pageSize ? t('seenAll') : null} />
 
   const visibleOrder = home.sections.filter(x => x.visible).map(x => x.key)
   // Desktop: the reassurance band sits full width under the header when it
@@ -326,7 +326,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 ))}
                 <button type="button" onClick={requestOpenLocation} className="hidden cursor-pointer items-center gap-2 rounded-xl border-none bg-surface-container-low px-4 py-2 hover:bg-surface-container 2xl:flex">
                   <Icon name="my_location" size={20} className="text-tertiary" />
-                  <span className="text-label-sm font-extrabold uppercase tracking-wider text-tertiary">Zone active :</span>
+                  <span className="text-label-sm font-extrabold uppercase tracking-wider text-tertiary">{t('zoneActiveColon')}</span>
                   <span className="text-label-md text-on-surface">{zone}</span>
                 </button>
               </div>
@@ -342,11 +342,11 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             <section className="mt-10">
               <div className="mb-4 flex items-end justify-between">
                 <div>
-                  <Kicker>Univers d'achats</Kicker>
-                  <h3 className="m-0 mt-1 text-headline-lg text-on-surface">Parcourez par catégorie</h3>
+                  <Kicker>{t('categories.kicker')}</Kicker>
+                  <h3 className="m-0 mt-1 text-headline-lg text-on-surface">{t('categories.title')}</h3>
                 </div>
                 <button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">
-                  Voir tout le catalogue <ChevronRight size={18} />
+                  {t('categories.seeCatalogue')} <ChevronRight size={18} />
                 </button>
               </div>
               <div className="grid grid-cols-7 gap-3">
@@ -356,7 +356,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                       <CategoryIcon icon={cat.icon} size={28} delay={200 + i * 110} />
                     </span>
                     <span className="text-label-md font-bold leading-snug text-on-surface">{cat.name}</span>
-                    <span className="mt-1 text-body-sm text-on-surface-variant">{formatNumber(cat.listingsCount ?? 0, 0)} annonce{(cat.listingsCount ?? 0) > 1 ? 's' : ''}</span>
+                    <span className="mt-1 text-body-sm text-on-surface-variant">{t('listings', { count: cat.listingsCount ?? 0 })}</span>
                   </button>
                 ))}
               </div>
@@ -372,9 +372,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                     <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
                   </span>
-                  <h3 className="m-0 text-headline-lg text-on-surface">Pépites à la Une{hasBoosted && ' & Annonces en vedette'}</h3>
+                  <h3 className="m-0 text-headline-lg text-on-surface">{hasBoosted ? t('pepites.titleBoosted') : t('pepites.title')}</h3>
                 </div>
-                <button type="button" onClick={() => requestOpenHelp('badges-des-annonces')} className="cursor-pointer rounded-full border-none bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary hover:bg-primary/15">Priorité visibilité</button>
+                <button type="button" onClick={() => requestOpenHelp('badges-des-annonces')} className="cursor-pointer rounded-full border-none bg-primary/10 px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-primary hover:bg-primary/15">{t('pepites.priority')}</button>
               </div>
               <ImpressionScope placement="HOME_FEATURED" promoted={pepitesPromoted}><div className="grid grid-cols-4 items-start gap-6">{pepites.slice(0, 4).map(l => card(l))}</div></ImpressionScope>
             </section>
@@ -383,10 +383,10 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             <section data-tour="home-for-you" className="mt-10">
               <div className="mb-4 flex items-end justify-between gap-4">
                 <div>
-                  <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="auto_awesome" size={24} className="text-primary" /> Pour vous</h3>
+                  <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="auto_awesome" size={24} className="text-primary" /> {t('forYou.title')}</h3>
                   <p className="m-0 mt-1 text-body-md text-on-surface-variant">{forYouHint}</p>
                 </div>
-                <button onClick={() => requestOpenHelp('accueil-personnalise')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Pourquoi ces annonces ?</button>
+                <button onClick={() => requestOpenHelp('accueil-personnalise')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">{t('forYou.why')}</button>
               </div>
               <ImpressionScope placement="HOME_FOR_YOU"><div className="grid grid-cols-4 items-start gap-6">{forYou.slice(0, 8).map(l => card(l))}</div></ImpressionScope>
             </section>
@@ -396,8 +396,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           {shops.length > 0 && (
             <section className="mt-10">
               <div className="mb-4 flex items-center justify-between gap-4">
-                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Boutiques officielles</h3>
-                <button onClick={() => onNavigate('shops')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Voir toutes les boutiques <Icon name="arrow_forward" size={18} /></button>
+                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> {t('shops.title')}</h3>
+                <button onClick={() => onNavigate('shops')} className="flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">{t('shops.seeAll')} <Icon name="arrow_forward" size={18} /></button>
               </div>
               <div className="grid grid-cols-4 gap-6">{shops.slice(0, 4).map(s => <ShopCard key={s.id} shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />)}</div>
             </section>
@@ -407,8 +407,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           {certified.length > 0 && (
             <section className="mt-10">
               <div className="mb-4 flex items-center justify-between gap-4">
-                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> Vendeurs certifiés</h3>
-                <button type="button" onClick={() => requestOpenHelp('badges-payants')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">Historique vérifié</button>
+                <h3 className="m-0 flex items-center gap-2 text-headline-lg text-on-surface"><Icon name="verified" size={26} fill className="text-tertiary" /> {t('certified.title')}</h3>
+                <button type="button" onClick={() => requestOpenHelp('badges-payants')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-3 py-1 text-label-sm font-bold uppercase tracking-wider text-tertiary">{t('certified.history')}</button>
               </div>
               <ImpressionScope placement="HOME_OTHER"><div className="grid grid-cols-4 items-start gap-6">{certified.slice(0, 4).map(l => card(l))}</div></ImpressionScope>
             </section>
@@ -435,9 +435,9 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 <div><div className="mb-1 h-3 w-24 rounded bg-surface-container" /><div className="h-4 w-32 rounded bg-primary/20" /></div>
               </div>
               <div className="flex h-80 w-60 -rotate-3 flex-col justify-between rounded-2xl bg-surface-lowest p-4 shadow-2xl">
-                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-tertiary" /><span className="text-label-sm font-bold text-tertiary">Vendu en 45 min</span></div>
+                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-tertiary" /><span className="text-label-sm font-bold text-tertiary">{t('sellMock.sold')}</span></div>
                 <div className="flex h-44 w-full items-center justify-center rounded-xl bg-surface-container text-outline"><Shirt size={56} /></div>
-                <div className="flex items-center justify-between"><span className="text-headline-sm font-bold text-on-surface">18 000 F</span><span className="text-label-sm font-bold text-tertiary">0% com.</span></div>
+                <div className="flex items-center justify-between"><span className="text-headline-sm font-bold text-on-surface">{t('sellMock.price')}</span><span className="text-label-sm font-bold text-tertiary">{t('sellMock.commission')}</span></div>
               </div>
             </div>
           </section>
@@ -446,8 +446,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
           <section className="mt-10">
             <div className="mb-6 flex items-end justify-between gap-4">
               <div>
-                <Kicker className="text-tertiary">Fraîchement arrivées</Kicker>
-                <h3 className="m-0 mt-1 text-headline-lg text-on-surface">Dernières annonces publiées</h3>
+                <Kicker className="text-tertiary">{t('latest.kicker')}</Kicker>
+                <h3 className="m-0 mt-1 text-headline-lg text-on-surface">{t('latest.titleDesktop')}</h3>
               </div>
               {cities.length > 1 && (
                 <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -455,7 +455,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                     const active = feedCity === c
                     return (
                       <button key={c ?? 'all'} onClick={() => setFeedCity(c)} className={`cursor-pointer whitespace-nowrap rounded-lg border-none px-3 py-1.5 text-label-md ${active ? 'bg-on-surface font-semibold text-white' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}`}>
-                        {c ?? 'Toutes'}
+                        {c ?? t('latest.allCities')}
                       </button>
                     )
                   })}
@@ -463,7 +463,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               )}
             </div>
             <ImpressionScope placement="HOME_LATEST" promoted={feed?.promoted}><div className="grid grid-cols-4 items-start gap-6">{latest.map(l => card(l))}</div></ImpressionScope>
-            {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
+            {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title={t('empty.title')} text={t('empty.text')} action={{ label: t('empty.action'), onClick: () => onNavigate('seller-post') }} />}
             {loadMore}
           </section>
     </>,
@@ -502,10 +502,10 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary text-white"><Icon name="verified_user" size={18} /></span>
             <span className="block min-w-0 leading-tight">
               <span className="block truncate text-label-sm font-bold text-on-surface">{home.mobileStrip.title}</span>
-              <span className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={methods.slice(0, 3)} className="shrink-0" /> ou espèces</span>
+              <span className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-body-sm text-on-surface-variant">{home.mobileStrip.text} <PaymentLogos size={16} methods={methods.slice(0, 3)} className="shrink-0" /> {t('orCash')}</span>
             </span>
           </span>
-          <span className="flex shrink-0 items-center gap-0.5 text-label-sm text-primary"><span className="max-[400px]:hidden">Comment ?</span> <Icon name="chevron_right" size={18} /></span>
+          <span className="flex shrink-0 items-center gap-0.5 text-label-sm text-primary"><span className="max-[400px]:hidden">{t('how')}</span> <Icon name="chevron_right" size={18} /></span>
         </button>
     </>,
     categories: <>
@@ -513,8 +513,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         {categories.length > 0 && (
           <section data-tour="categories" className="mb-8">
             <SectionHeading
-              title="Explorer par rayon"
-              action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">Tout voir <ChevronRight size={16} /></button>}
+              title={t('categories.mobileTitle')}
+              action={<button onClick={() => onNavigate('categories')} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary">{t('seeAll')} <ChevronRight size={16} /></button>}
             />
             <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none] md:-mx-8 md:px-8">
               {categories.map((cat, i) => (
@@ -538,8 +538,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         {pepites.length > 0 && (
           <section className="mb-8">
             <SectionHeading
-              title={<><Flame size={22} className="text-primary" /> Pépites à la Une</>}
-              action={hasBoosted ? <button type="button" onClick={() => requestOpenHelp('badges-des-annonces')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">En vedette</button> : undefined}
+              title={<><Flame size={22} className="text-primary" /> {t('pepites.title')}</>}
+              action={hasBoosted ? <button type="button" onClick={() => requestOpenHelp('badges-des-annonces')} className="cursor-pointer rounded-full border-none bg-tertiary-soft px-2 py-0.5 text-label-sm font-bold text-tertiary">{t('pepites.featured')}</button> : undefined}
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {/* The first cards are what a phone shows biggest at load: their photos come first. */}
@@ -551,8 +551,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         {forYou.length > 0 && (
           <section className="mb-8">
             <SectionHeading
-              title={<><Icon name="auto_awesome" size={22} className="text-primary" /> Pour vous</>}
-              action={<button onClick={() => requestOpenHelp('accueil-personnalise')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">Pourquoi ?</button>}
+              title={<><Icon name="auto_awesome" size={22} className="text-primary" /> {t('forYou.title')}</>}
+              action={<button onClick={() => requestOpenHelp('accueil-personnalise')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">{t('forYou.whyShort')}</button>}
             />
             <p className="m-0 -mt-1 mb-2 text-body-sm text-on-surface-variant">{forYouHint}</p>
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
@@ -566,8 +566,8 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         {shops.length > 0 && (
           <section className="mb-8">
             <SectionHeading
-              title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Boutiques officielles</>}
-              action={<button onClick={() => onNavigate('shops')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">Tout voir</button>}
+              title={<><Icon name="verified" size={22} fill className="text-tertiary" /> {t('shops.title')}</>}
+              action={<button onClick={() => onNavigate('shops')} className="cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">{t('seeAll')}</button>}
             />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               {shops.map(s => <div key={s.id} className="flex w-[250px] shrink-0 snap-start">{<ShopCard shop={s} compact onOpen={() => onOpenShop?.(s.slug)} />}</div>)}
@@ -579,7 +579,7 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
         {!settled.certified && <RailSkeleton featured />}
         {certified.length > 0 && (
           <section className="mb-8">
-            <SectionHeading title={<><Icon name="verified" size={22} fill className="text-tertiary" /> Vendeurs certifiés</>} />
+            <SectionHeading title={<><Icon name="verified" size={22} fill className="text-tertiary" /> {t('certified.title')}</>} />
             <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8">
               <ImpressionScope placement="HOME_OTHER">{certified.map(l => <div key={l.id} className="w-[260px] shrink-0 snap-start">{card(l, true)}</div>)}</ImpressionScope>
             </div>
@@ -589,15 +589,15 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
     latest: <>
         <section>
           <SectionHeading
-            title={<>Dernières annonces <span className="h-2 w-2 rounded-full bg-primary" /></>}
+            title={<>{t('latest.title')} <span className="h-2 w-2 rounded-full bg-primary" /></>}
             action={
-              <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} aria-label="Trier les annonces" className="cursor-pointer whitespace-nowrap border-none bg-transparent px-1 py-1 text-label-md text-on-surface-variant outline-none">
-                {SORTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} aria-label={t('latest.sortAria')} className="cursor-pointer whitespace-nowrap border-none bg-transparent px-1 py-1 text-label-md text-on-surface-variant outline-none">
+                {SORTS.map(o => <option key={o} value={o}>{t(`sort.${o}`)}</option>)}
               </Select>
             }
           />
           {settled.latest ? <ImpressionScope placement="HOME_LATEST" promoted={feed?.promoted}><div className="grid grid-cols-2 items-start gap-3 sm:grid-cols-3">{latest.map(l => card(l))}</div></ImpressionScope> : <GridSkeleton count={4} />}
-          {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce dans cette zone" text="Changez de zone ou soyez le premier à publier ici." action={{ label: 'Vendre un article', onClick: () => onNavigate('seller-post') }} />}
+          {latest.length === 0 && !feedLoading && !locationPending && <EmptyState icon="empty-search" fallback="search" tone="neutral" title={t('empty.title')} text={t('empty.text')} action={{ label: t('empty.action'), onClick: () => onNavigate('seller-post') }} />}
           {loadMore}
         </section>
     </>,
@@ -635,21 +635,21 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                     </span>
                   ) : <span />}
                   <div className="flex items-center gap-2 rounded-full border border-solid border-white/10 bg-black/40 px-2.5 py-1.5 backdrop-blur-md">
-                    <button onClick={() => goSlide(slide - 1)} aria-label="Diapositive précédente" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-white/80 hover:bg-white/10 hover:text-white"><ArrowLeft size={18} /></button>
+                    <button onClick={() => goSlide(slide - 1)} aria-label={t('hero.prev')} className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-white/80 hover:bg-white/10 hover:text-white"><ArrowLeft size={18} /></button>
                     <div className="flex items-center gap-1.5 px-1">
                       {SLIDES.map((_, i) => (
-                        <button key={i} onClick={() => goSlide(i)} aria-label={`Aller au slide ${i + 1}`} className={`h-2 cursor-pointer rounded-full border-none p-0 transition-all duration-300 ${i === slide % SLIDES.length ? 'w-6 bg-primary' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
+                        <button key={i} onClick={() => goSlide(i)} aria-label={t('hero.goTo', { n: i + 1 })} className={`h-2 cursor-pointer rounded-full border-none p-0 transition-all duration-300 ${i === slide % SLIDES.length ? 'w-6 bg-primary' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
                       ))}
                     </div>
-                    <button onClick={() => goSlide(slide + 1)} aria-label="Diapositive suivante" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-white/80 hover:bg-white/10 hover:text-white"><ArrowRight size={18} /></button>
+                    <button onClick={() => goSlide(slide + 1)} aria-label={t('hero.next')} className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-white/80 hover:bg-white/10 hover:text-white"><ArrowRight size={18} /></button>
                   </div>
                 </div>
                 <div className="min-h-[155px]">
                   <h1 className="m-0 max-w-2xl text-display font-extrabold leading-tight tracking-tight text-white"><Title text={current.title} /></h1>
                   {current.text && <p className="m-0 mt-2 max-w-xl text-body-lg text-white/90">{current.text}</p>}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {current.tags.map(t => (
-                      <span key={t} className="rounded-full border border-solid border-white/20 bg-white/15 px-2.5 py-0.5 text-label-sm text-white backdrop-blur-sm">{t}</span>
+                    {current.tags.map(tag => (
+                      <span key={tag} className="rounded-full border border-solid border-white/20 bg-white/15 px-2.5 py-0.5 text-label-sm text-white backdrop-blur-sm">{tag}</span>
                     ))}
                   </div>
                 </div>
@@ -659,31 +659,31 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
                 <form className="flex flex-wrap gap-2" onSubmit={submitSearch}>
                   <label className="flex min-w-0 basis-full items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2 focus-within:border-primary focus-within:bg-surface-lowest">
                     <Search size={22} className="mr-2 text-outline" />
-                    <input value={q} onChange={e => setQ(e.target.value)} placeholder="Que cherchez-vous ? (iPhone, robe, frigo…)" className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none placeholder:text-outline" />
+                    <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('hero.placeholder')} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none placeholder:text-outline" />
                   </label>
                   <label className="flex min-w-[200px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
                     <MapPin size={20} className="mr-2 text-tertiary" />
                     <Select value={heroCity} onChange={e => setHeroCity(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
-                      <option value="">Toutes les villes</option>
+                      <option value="">{t('hero.allCities')}</option>
                       {cities.map(c => <option key={c} value={c}>{c}</option>)}
                     </Select>
                   </label>
                   <label className="flex min-w-[190px] flex-1 items-center rounded-xl border border-solid border-outline-variant/60 bg-surface-container-low/90 px-3 py-2">
                     <Wallet size={20} className="mr-2 text-outline" />
                     <Select value={heroMax} onChange={e => setHeroMax(e.target.value)} className="w-full cursor-pointer border-none bg-transparent text-label-md text-on-surface outline-none">
-                      <option value="">Prix max</option>
-                      {MAX_PRICES.map(p => <option key={p} value={p}>Moins de {p.toLocaleString('fr-FR')} F</option>)}
+                      <option value="">{t('hero.maxPrice')}</option>
+                      {MAX_PRICES.map(p => <option key={p} value={p}>{t('hero.under', { n: fmtNumber(p), unit: cfaUnit() })}</option>)}
                     </Select>
                   </label>
-                  <button type="submit" aria-label="Trouver à proximité" className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-6 py-3 text-label-lg font-bold text-white shadow-sm hover:bg-primary-container">
-                    <Icon name="near_me" size={20} /> <span className="hidden xl:inline">Trouver à proximité</span>
+                  <button type="submit" aria-label={t('hero.findNearby')} className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-6 py-3 text-label-lg font-bold text-white shadow-sm hover:bg-primary-container">
+                    <Icon name="near_me" size={20} /> <span className="hidden xl:inline">{t('hero.findNearby')}</span>
                   </button>
                 </form>
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-0 border-t border-solid border-surface-container-high px-2 pt-2">
-                  <span className="text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">Tendances :</span>
-                  {home.trends.map(t => (
-                    <button key={t.label} onClick={() => onSearch?.(t.term ?? '', t.maxPrice ? { maxPrice: t.maxPrice } : undefined)} className="cursor-pointer rounded-full border-none bg-surface-container-low px-2.5 py-1 text-label-sm text-on-surface-variant shadow-sm transition-all hover:bg-primary hover:text-white">
-                      {t.label}
+                  <span className="text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">{t('hero.trends')}</span>
+                  {home.trends.map(trend => (
+                    <button key={trend.label} onClick={() => onSearch?.(trend.term ?? '', trend.maxPrice ? { maxPrice: trend.maxPrice } : undefined)} className="cursor-pointer rounded-full border-none bg-surface-container-low px-2.5 py-1 text-label-sm text-on-surface-variant shadow-sm transition-all hover:bg-primary hover:text-white">
+                      {trend.label}
                     </button>
                   ))}
                 </div>
@@ -708,14 +708,14 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               list next to it narrows the feed below to one city. */}
           <div className="flex min-h-8 items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-1.5">
-                <button type="button" onClick={requestOpenLocation} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant"><Icon name="my_location" size={15} className="text-tertiary" /> Zone active</button>
+                <button type="button" onClick={requestOpenLocation} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant"><Icon name="my_location" size={15} className="text-tertiary" /> {t('zoneActive')}</button>
                 <span className="relative flex min-w-0 items-center rounded-full bg-surface-container shadow-sm">
                   <span className="pointer-events-none absolute left-2.5 h-2 w-2 animate-pulse rounded-full bg-tertiary" />
                   {cities.length > 0 ? (
                     <>
                     {zoneCode && !feedCity && <Flag code={zoneCode} size={14} className="pointer-events-none absolute left-[22px]" />}
-                    <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label="Ville des dernières annonces" className={`min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pr-1.5 text-label-md text-on-surface outline-none ${zoneCode && !feedCity ? 'pl-[48px]' : 'pl-6'}`}>
-                      <option value="">{location?.city ? `Tout ${location.city}` : zoneShort}</option>
+                    <Select value={feedCity ?? ''} onChange={e => setFeedCity(e.target.value || null)} aria-label={t('zoneCityAria')} className={`min-w-0 cursor-pointer whitespace-nowrap border-none bg-transparent py-1 pr-1.5 text-label-md text-on-surface outline-none ${zoneCode && !feedCity ? 'pl-[48px]' : 'pl-6'}`}>
+                      <option value="">{location?.city ? t('zoneAllCity', { city: location.city }) : zoneShort}</option>
                       {cities.filter(c => c !== location?.city).map(c => <option key={c} value={c}>{c}</option>)}
                     </Select>
                     </>
@@ -726,15 +726,15 @@ export default function Home({ onOpenShop, onNavigate, onSelectListing, favorite
               </div>
               {/* Always there: every item on sale right now. */}
               <button onClick={() => onSearch?.('', { promo: true })} className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-primary-fixed/50 px-2 py-1 text-label-sm text-primary">
-                <Icon name="percent" size={16} /> Promos
+                <Icon name="percent" size={16} /> {t('promos')}
               </button>
           </div>
           <div className="flex h-12 w-full items-center rounded-xl bg-surface-lowest px-3 shadow-sm">
             <button onClick={() => onNavigate('search')} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-body-md text-outline">
               <Search size={22} className="ml-1 shrink-0 text-primary" />
-              <span className="truncate">Que recherchez-vous aujourd'hui ?</span>
+              <span className="truncate">{t('searchPrompt')}</span>
             </button>
-            <button onClick={() => onNavigate('search')} aria-label="Filtres avancés" className="tap-44 relative flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container p-1 text-on-surface-variant">
+            <button onClick={() => onNavigate('search')} aria-label={t('advancedFilters')} className="tap-44 relative flex shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container p-1 text-on-surface-variant">
               <Icon name="tune" size={20} />
             </button>
           </div>

@@ -1,7 +1,8 @@
 import { gql } from '@apollo/client'
+import home from '../i18n/ns/home'
 
 // Home page content set in the back-office (« Page d'accueil », Backend
-// content/home-config.ts). DEFAULT_HOME mirrors the backend defaults: the
+// content/home-config.ts). defaultHome mirrors the backend defaults: the
 // page renders with it until the query answers (no layout jump). Texts may
 // contain {{ville}} / {{pays}}, filled with the visitor's country (fillPlaces).
 // The BO can keep one version per country: `country` is the visitor's
@@ -31,60 +32,66 @@ export const SLIDE_TONE: Record<HomeSlide['tone'], { badge: string, icon: string
   dark: { badge: 'bg-black/40 border-white/20', icon: 'text-white' },
 }
 
-export const DEFAULT_HOME: HomeConfig = {
-  sections: (['reassurance', 'categories', 'campaign', 'pepites', 'reels', 'shops', 'certified', 'sellCta', 'latest', 'howItWorks'] as const).map(key => ({ key, visible: true })),
-  hero: {
-    intervalSec: 6,
-    slides: [
-      {
-        image: '/stitch/hero-0.webp', badge: 'Plateforme N°1 à {{ville}}', badgeIcon: 'local_fire_department', tone: 'red',
-        title: 'Achetez et vendez vos *pépites mode & sneakers* à {{ville}}',
-        text: 'Zéro frais, zéro commission. Des milliers de pièces uniques entre particuliers à {{ville}} et partout {{pays}}.',
-        tags: ['✨ #ModeVintage', '👟 #SneakersRares', '👗 #WaxContemporain', '⚡ #VenteFlash'],
-      },
-      {
-        image: '/stitch/hero-1.webp', badge: 'High-Tech & Bons Plans', badgeIcon: 'smartphone', tone: 'blue',
-        title: 'Donnez une seconde vie à votre *High-Tech & Audio* au meilleur prix',
-        text: 'Smartphones, casques, consoles et accessoires sans intermédiaire. Négociez directement sur le chat.',
-        tags: ['🎧 #CasquesSansFil', '📱 #iPhonesReconditionnés', '💻 #LaptopsPro', '🎮 #Gaming'],
-      },
-      {
-        image: '/stitch/hero-2.webp', badge: 'Affaires en or', badgeIcon: 'diamond', tone: 'green',
-        title: 'Trouvez les *meilleures affaires directes* 100% P2P',
-        text: 'Échangez en direct en lieu sécurisé par Mobile Money ou en espèces. Remise en main propre sans surprise.',
-        tags: ['📍 #RemiseSécurisée', '🤝 #0Commission', '📲 #PaiementWave', '🛡️ #VendeursVérifiés'],
-      },
+// Built at each call, in the visitor's language. The {{ville}} / {{pays}}
+// markers are the BO's (filled by fillPlaces), not i18n variables: no
+// `ville` / `pays` value is ever passed to t, so they come out untouched.
+export const defaultHome = (): HomeConfig => {
+  const t = home.t
+  return {
+    sections: (['reassurance', 'categories', 'campaign', 'pepites', 'reels', 'shops', 'certified', 'sellCta', 'latest', 'howItWorks'] as const).map(key => ({ key, visible: true })),
+    hero: {
+      intervalSec: 6,
+      slides: [
+        {
+          image: '/stitch/hero-0.webp', badge: t('defaults.slide0.badge'), badgeIcon: 'local_fire_department', tone: 'red',
+          title: t('defaults.slide0.title'),
+          text: t('defaults.slide0.text'),
+          tags: [t('defaults.slide0.tag1'), t('defaults.slide0.tag2'), t('defaults.slide0.tag3'), t('defaults.slide0.tag4')],
+        },
+        {
+          image: '/stitch/hero-1.webp', badge: t('defaults.slide1.badge'), badgeIcon: 'smartphone', tone: 'blue',
+          title: t('defaults.slide1.title'),
+          text: t('defaults.slide1.text'),
+          tags: [t('defaults.slide1.tag1'), t('defaults.slide1.tag2'), t('defaults.slide1.tag3'), t('defaults.slide1.tag4')],
+        },
+        {
+          image: '/stitch/hero-2.webp', badge: t('defaults.slide2.badge'), badgeIcon: 'diamond', tone: 'green',
+          title: t('defaults.slide2.title'),
+          text: t('defaults.slide2.text'),
+          tags: [t('defaults.slide2.tag1'), t('defaults.slide2.tag2'), t('defaults.slide2.tag3'), t('defaults.slide2.tag4')],
+        },
+      ],
+    },
+    trends: [
+      { label: t('defaults.trend.sneakers'), term: 'sneakers', maxPrice: null },
+      { label: t('defaults.trend.highTech'), term: 'iphone', maxPrice: null },
+      { label: t('defaults.trend.dressing'), term: 'robe', maxPrice: null },
+      { label: t('defaults.trend.under'), term: '', maxPrice: 20000 },
     ],
-  },
-  trends: [
-    { label: 'Sneakers authentiques', term: 'sneakers', maxPrice: null },
-    { label: 'High-Tech', term: 'iphone', maxPrice: null },
-    { label: 'Dressing', term: 'robe', maxPrice: null },
-    { label: 'Moins de 20 000 F', term: '', maxPrice: 20000 },
-  ],
-  reassurance: [
-    { icon: 'percent', title: '100% P2P & Gratuit', text: '0% de commission sur toutes vos ventes' },
-    { icon: 'shield_with_heart', title: 'Remise en main propre', text: 'Vérifiez le produit avant paiement en lieu sécurisé' },
-    { icon: 'contactless', title: 'Paiements directs acceptés', text: 'Mobile Money ou espèces, sans intermédiaire' },
-  ],
-  mobileStrip: { title: '100% P2P • 0% Commission', text: 'Remise directe' },
-  flashFallback: { title: 'Bons plans du moment', subtitle: 'Prix doux entre particuliers', text: 'Ventes flash et fins de dressing express, en direct des particuliers.' },
-  sellCta: {
-    badge: 'Vente éclair',
-    title: 'Vendez en 2 minutes chrono et gardez 100% de votre argent',
-    text: "Prenez une photo, fixez votre prix en F, et convenez d'un lieu de rendez-vous sécurisé (centres commerciaux, stations-service…).",
-    button: 'Publier une annonce gratuite',
-    link: 'Découvrir nos options de boost',
-  },
-  howItWorks: {
-    kicker: 'Simplicité & Sécurité',
-    title: 'Comment fonctionne Dilchap ?',
-    text: 'Le circuit court : sans intermédiaire coûteux, en toute confiance.',
-    steps: [
-      { title: 'Dénichez votre pépite', text: 'Parcourez des centaines de pièces uniques publiées chaque jour à proximité de votre commune ou de votre lieu de travail.' },
-      { title: 'Négociez en direct sur le chat', text: 'Échangez avec le vendeur via la messagerie instantanée, posez vos questions et fixez un prix équitable sans intermédiaire.' },
-      { title: 'Payez en main propre sécurisé', text: "Rendez-vous dans un lieu public. Testez l'article puis payez directement par Mobile Money ou en espèces." },
+    reassurance: [
+      { icon: 'percent', title: t('defaults.reassurance.p2p.title'), text: t('defaults.reassurance.p2p.text') },
+      { icon: 'shield_with_heart', title: t('defaults.reassurance.handover.title'), text: t('defaults.reassurance.handover.text') },
+      { icon: 'contactless', title: t('defaults.reassurance.direct.title'), text: t('defaults.reassurance.direct.text') },
     ],
-    badges: ['Profils et avis certifiés', '0 F de frais de plateforme', 'Équipe de modération active 7j/7'],
-  },
+    mobileStrip: { title: t('defaults.mobileStrip.title'), text: t('defaults.mobileStrip.text') },
+    flashFallback: { title: t('defaults.flash.title'), subtitle: t('defaults.flash.subtitle'), text: t('defaults.flash.text') },
+    sellCta: {
+      badge: t('defaults.sellCta.badge'),
+      title: t('defaults.sellCta.title'),
+      text: t('defaults.sellCta.text'),
+      button: t('defaults.sellCta.button'),
+      link: t('defaults.sellCta.link'),
+    },
+    howItWorks: {
+      kicker: t('defaults.how.kicker'),
+      title: t('defaults.how.title'),
+      text: t('defaults.how.text'),
+      steps: [
+        { title: t('defaults.how.step1.title'), text: t('defaults.how.step1.text') },
+        { title: t('defaults.how.step2.title'), text: t('defaults.how.step2.text') },
+        { title: t('defaults.how.step3.title'), text: t('defaults.how.step3.text') },
+      ],
+      badges: [t('defaults.how.badge1'), t('defaults.how.badge2'), t('defaults.how.badge3')],
+    },
+  }
 }

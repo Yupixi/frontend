@@ -1,3 +1,4 @@
+import LanguagePicker from '../../components/LanguagePicker'
 import AnimatedIcon, { useIncreaseCounter } from '../../components/AnimatedIcon'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@apollo/client/react'
@@ -17,131 +18,107 @@ import { BADGE_LABEL } from '../../graphql/badges'
 import { Claim } from '../../lib/site'
 import OfferBanner from '../../components/OfferBanner'
 import AdultModeBar from '../../components/AdultModeBar'
+import { fmtCfa, useT } from '../../i18n'
+import common from '../../i18n/ns/common'
+import account from '../../i18n/ns/account'
+// French titles: the ids folded sections are remembered under (unchanged
+// whatever the language).
+import frAccount from '../../i18n/locales/fr/account.json'
 
 // Every member is both a buyer and a seller — one account, one space. This
 // shell is the "Espace vendeur" of the Stitch mockups (Booster / Déposer une
 // annonce): grouped sidebar, compact header with the publish CTA.
 type NavLeaf = { key: string; icon: typeof Home; label: string }
 // A sub-group folds a few related links under one collapsible entry.
-type NavGroup = { label: string; icon: typeof Home; items: NavLeaf[] }
+type NavGroup = { id: string; label: string; icon: typeof Home; items: NavLeaf[] }
 type NavEntry = NavLeaf | NavGroup
 const isGroup = (e: NavEntry): e is NavGroup => 'items' in e
 const leaves = (entries: NavEntry[]) => entries.flatMap(e => (isGroup(e) ? e.items : [e]))
 
-const SECTIONS: { title: string; items: NavEntry[] }[] = [
-  {
-    title: 'Gestion & Ventes',
-    items: [
-      { key: 'buyer-dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-      {
-        label: 'Annonces', icon: Package, items: [
-          { key: 'seller-listings', icon: Package, label: 'Mes annonces' },
-          { key: 'seller-reels', icon: Video, label: 'Mes Reels' },
-          { key: 'seller-premium', icon: Rocket, label: 'Booster & Visibilité' },
-          { key: 'seller-stats', icon: BarChart2, label: 'Statistiques' },
-        ],
-      },
-      {
-        label: 'Boutique', icon: Store, items: [
-          { key: 'seller-shop', icon: Store, label: 'Ma Boutique officielle' },
-          { key: 'seller-shop-promos', icon: Tag, label: 'Promotions & Soldes' },
-          { key: 'seller-campaigns', icon: Megaphone, label: 'Campagnes Dilchap' },
-        ],
-      },
-      {
-        label: 'Ventes', icon: Truck, items: [
-          { key: 'seller-orders', icon: Truck, label: 'Mes ventes' },
-          { key: 'seller-disputes', icon: Gavel, label: 'Sécurité & Litiges' },
-          { key: 'seller-wallet', icon: Wallet, label: 'Porte-monnaie' },
-        ],
-      },
-      {
-        label: 'Réputation', icon: Star, items: [
-          { key: 'seller-reviews', icon: Star, label: 'Avis & Réputation' },
-          { key: 'seller-badge', icon: BadgeCheck, label: 'Mon badge' },
-          { key: 'seller-qr', icon: QrCode, label: 'Mon QR code' },
-        ],
-      },
-      { key: 'buyer-messages', icon: MessageSquare, label: 'Messagerie' },
-    ],
-  },
-  {
-    title: 'Acheter & Explorer',
-    items: [
-      { key: 'buyer-purchases', icon: Handshake, label: 'Mes achats & remises' },
-      { key: 'buyer-disputes', icon: Gavel, label: 'Mes litiges' },
-      { key: 'buyer-favorites', icon: Heart, label: 'Mes favoris' },
-      { key: 'buyer-notifications', icon: Bell, label: 'Notifications' },
-      { key: 'buyer-history', icon: History, label: 'Historique' },
-      { key: 'support', icon: Headset, label: 'Aide & support' },
-    ],
-  },
+// Labels are getters: read at each render, in the page's language.
+const tAny = (key: string) => (account.t as unknown as (k: string) => string)(key)
+const navLeaf = (key: string, icon: typeof Home): NavLeaf => ({ key, icon, get label() { return tAny(`nav.${key}`) } })
+type GroupKey = 'group.listings' | 'group.shop' | 'group.sales' | 'group.reputation'
+const navGroup = (k: GroupKey, icon: typeof Home, items: NavLeaf[]): NavGroup => ({ id: frAccount[k], icon, items, get label() { return account.t(k) } })
+type SectionKey = 'section.sales' | 'section.buy'
+const navSection = (k: SectionKey, items: NavEntry[]) => ({ id: frAccount[k], items, get title() { return account.t(k) } })
+
+const SECTIONS: { id: string; title: string; items: NavEntry[] }[] = [
+  navSection('section.sales', [
+    navLeaf('buyer-dashboard', LayoutDashboard),
+    navGroup('group.listings', Package, [
+      navLeaf('seller-listings', Package),
+      navLeaf('seller-reels', Video),
+      navLeaf('seller-premium', Rocket),
+      navLeaf('seller-stats', BarChart2),
+    ]),
+    navGroup('group.shop', Store, [
+      navLeaf('seller-shop', Store),
+      navLeaf('seller-shop-promos', Tag),
+      navLeaf('seller-campaigns', Megaphone),
+    ]),
+    navGroup('group.sales', Truck, [
+      navLeaf('seller-orders', Truck),
+      navLeaf('seller-disputes', Gavel),
+      navLeaf('seller-wallet', Wallet),
+    ]),
+    navGroup('group.reputation', Star, [
+      navLeaf('seller-reviews', Star),
+      navLeaf('seller-badge', BadgeCheck),
+      navLeaf('seller-qr', QrCode),
+    ]),
+    navLeaf('buyer-messages', MessageSquare),
+  ]),
+  navSection('section.buy', [
+    navLeaf('buyer-purchases', Handshake),
+    navLeaf('buyer-disputes', Gavel),
+    navLeaf('buyer-favorites', Heart),
+    navLeaf('buyer-notifications', Bell),
+    navLeaf('buyer-history', History),
+    navLeaf('support', Headset),
+  ]),
 ]
 
-// Folded sections / sub-groups, remembered per browser (keys: titles, labels).
+// Folded sections / sub-groups, remembered per browser (keys: French titles, labels).
 const FOLDED_KEY = 'dilchap_sidebar_folded'
 const readFolded = (): string[] => { try { return JSON.parse(localStorage.getItem(FOLDED_KEY) ?? '[]') as string[] } catch { return [] } }
 
-export const ACCOUNT_PAGE_LABELS: Record<string, string> = {
-  'buyer-dashboard': 'Tableau de bord',
-  'seller-kyc': 'Vérification d’identité',
-  'seller-badge': 'Mon badge',
-  'seller-qr': 'Mon QR code',
-  'seller-campaigns': 'Campagnes Dilchap',
-  support: 'Aide & support',
-  'seller-shop': 'Ma Boutique officielle',
-  'seller-shop-stats': 'Statistiques boutique',
-  'seller-shop-promos': 'Promotions & Soldes',
-  'seller-post': 'Déposer une annonce',
-  'seller-edit': "Modifier l'annonce",
-  'seller-listings': 'Mes annonces',
-  'buyer-favorites': 'Mes favoris',
-  'buyer-messages': 'Messagerie',
-  'seller-stats': 'Statistiques',
-  'buyer-notifications': 'Notifications',
-  'buyer-history': 'Historique',
-  'seller-premium': 'Booster & Visibilité',
-  'seller-orders': 'Mes ventes',
-  'seller-wallet': 'Porte-monnaie',
-  'seller-reviews': 'Avis & Réputation',
-  'buyer-settings': 'Paramètres',
-  'seller-disputes': 'Sécurité & Litiges',
-  'seller-handover': 'Confirmation de remise',
-  'buyer-purchases': 'Mes achats',
-  'buyer-receipts': 'Reçus & Clôtures',
-  'buyer-handover': 'Mon code de remise',
-  'buyer-receipt': 'Reçu de remise',
-  'buyer-dispute-new': 'Déclaration de litige',
-  'buyer-disputes': 'Suivi des litiges',
-}
+// Page titles by route (« page.<route> » keys), read in the page's language.
+const PAGE_ROUTES = Object.keys(frAccount).filter(k => k.startsWith('page.')).map(k => k.slice(5))
+export const ACCOUNT_PAGE_LABELS: Record<string, string> = Object.defineProperties({} as Record<string, string>,
+  Object.fromEntries(PAGE_ROUTES.map(r => [r, { get: () => tAny(`page.${r}`), enumerable: true }])))
 
 // Mobile bottom bars — three variants, as in the Stitch mobile mockups:
 // the member bar (dashboard, favourites, messages, history, settings…), the
 // Seller Hub bar (listings, sales, wallet, boosts) and the hand-over bar
 // (code de remise, reçu, litiges). Every bar keeps a way back to the account.
 type MobileTab = { key: string; icon: string; label: string; match: string[]; primary?: boolean }
+type TabKey = 'tab.home' | 'tab.favorites' | 'tab.sell' | 'tab.messages' | 'tab.account' | 'tab.listings' | 'tab.sales' | 'tab.handovers' | 'tab.receipts' | 'tab.disputes'
+const mobileTab = (key: string, icon: string, label: TabKey, match: string[], primary?: boolean): MobileTab => ({
+  key, icon, match, ...(primary ? { primary } : {}), get label() { return account.t(label) },
+})
 
 const MEMBER_TABS: MobileTab[] = [
-  { key: 'home', icon: 'home', label: 'Accueil', match: [] },
-  { key: 'buyer-favorites', icon: 'favorite', label: 'Favoris', match: ['buyer-favorites'] },
-  { key: 'seller-post', icon: 'add', label: 'Vendre', match: [], primary: true },
-  { key: 'buyer-messages', icon: 'chat', label: 'Messages', match: ['buyer-messages'] },
-  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews', 'seller-badge', 'seller-qr', 'support'] },
+  mobileTab('home', 'home', 'tab.home', []),
+  mobileTab('buyer-favorites', 'favorite', 'tab.favorites', ['buyer-favorites']),
+  mobileTab('seller-post', 'add', 'tab.sell', [], true),
+  mobileTab('buyer-messages', 'chat', 'tab.messages', ['buyer-messages']),
+  mobileTab('buyer-dashboard', 'person', 'tab.account', ['buyer-dashboard', 'seller-dashboard', 'buyer-notifications', 'buyer-history', 'buyer-settings', 'buyer-purchases', 'seller-stats', 'seller-reviews', 'seller-badge', 'seller-qr', 'support']),
 ]
 
 const SELLER_TABS: MobileTab[] = [
-  { key: 'home', icon: 'storefront', label: 'Accueil', match: [] },
-  { key: 'seller-listings', icon: 'sell', label: 'Annonces', match: ['seller-listings', 'seller-reels', 'seller-premium', 'seller-shop', 'seller-shop-stats', 'seller-shop-promos', 'seller-campaigns'] },
-  { key: 'buyer-messages', icon: 'chat_bubble', label: 'Messages', match: [] },
-  { key: 'seller-orders', icon: 'account_balance_wallet', label: 'Ventes', match: ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-disputes'] },
-  { key: 'buyer-dashboard', icon: 'person', label: 'Compte', match: [] },
+  mobileTab('home', 'storefront', 'tab.home', []),
+  mobileTab('seller-listings', 'sell', 'tab.listings', ['seller-listings', 'seller-reels', 'seller-premium', 'seller-shop', 'seller-shop-stats', 'seller-shop-promos', 'seller-campaigns']),
+  mobileTab('buyer-messages', 'chat_bubble', 'tab.messages', []),
+  mobileTab('seller-orders', 'account_balance_wallet', 'tab.sales', ['seller-orders', 'seller-handover', 'seller-wallet', 'seller-disputes']),
+  mobileTab('buyer-dashboard', 'person', 'tab.account', []),
 ]
 
 const HANDOVER_TABS: MobileTab[] = [
-  { key: 'buyer-dashboard', icon: 'storefront', label: 'Compte', match: [] },
-  { key: 'buyer-purchases', icon: 'qr_code_scanner', label: 'Remises', match: ['buyer-handover'] },
-  { key: 'buyer-receipts', icon: 'receipt_long', label: 'Reçus', match: ['buyer-receipts', 'buyer-receipt'] },
-  { key: 'buyer-disputes', icon: 'gavel', label: 'Litiges', match: ['buyer-disputes'] },
+  mobileTab('buyer-dashboard', 'storefront', 'tab.account', []),
+  mobileTab('buyer-purchases', 'qr_code_scanner', 'tab.handovers', ['buyer-handover']),
+  mobileTab('buyer-receipts', 'receipt_long', 'tab.receipts', ['buyer-receipts', 'buyer-receipt']),
+  mobileTab('buyer-disputes', 'gavel', 'tab.disputes', ['buyer-disputes']),
 ]
 
 // Iconsax animation per tab icon (src/assets/lottie); the Material name
@@ -199,10 +176,11 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
   // Desktop only: icons-only rail (switched from the header).
   collapsed?: boolean
 }) {
+  const t = useT(account)
   // A guest identity only exists to hold a conversation open — there's no
   // account behind it, so every other area stays hidden.
   const sections = isGuest
-    ? [{ title: 'Messagerie', items: leaves(SECTIONS[0].items).filter(i => i.key === 'buyer-messages') as NavEntry[] }]
+    ? [{ id: frAccount.messages, title: t('messages'), items: leaves(SECTIONS[0].items).filter(i => i.key === 'buyer-messages') as NavEntry[] }]
     : SECTIONS
   const [folded, setFolded] = useState<string[]>(readFolded)
   const setAndSave = (next: string[]) => { try { localStorage.setItem(FOLDED_KEY, JSON.stringify(next)) } catch { /* private mode */ } return next }
@@ -211,17 +189,17 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
   // hand stays possible while on it).
   useEffect(() => {
     const keys = SECTIONS.flatMap(sec => sec.items.flatMap(e => (
-      isGroup(e) ? (e.items.some(i => i.key === active) ? [sec.title, `${sec.title}›${e.label}`] : []) : e.key === active ? [sec.title] : []
+      isGroup(e) ? (e.items.some(i => i.key === active) ? [sec.id, `${sec.id}›${e.id}`] : []) : e.key === active ? [sec.id] : []
     )))
     if (keys.length) setFolded(f => (f.some(k => keys.includes(k)) ? setAndSave(f.filter(k => !keys.includes(k))) : f))
   }, [active])
 
   const badgeOf = (key: string) => key === 'buyer-messages' && unreadMessages
-    ? <span className={`rounded-full px-2 text-label-sm ${active === key ? 'bg-white text-primary' : 'bg-primary-fixed text-primary'}`}>{unreadMessages} non lu{unreadMessages > 1 ? 's' : ''}</span>
+    ? <span className={`rounded-full px-2 text-label-sm ${active === key ? 'bg-white text-primary' : 'bg-primary-fixed text-primary'}`}>{t('unread', { count: unreadMessages })}</span>
     : key === 'seller-listings' && listingsCount
       ? <span className={`rounded-full px-2 text-label-sm ${active === key ? 'bg-white/25 text-white' : 'bg-surface-container text-on-surface-variant'}`}>{listingsCount}</span>
       : key === 'seller-disputes' && activeDisputes
-        ? <span className={`h-2 w-2 rounded-full ${active === key ? 'bg-white' : 'bg-primary'}`} aria-label={`${activeDisputes} litige(s) en cours`} />
+        ? <span className={`h-2 w-2 rounded-full ${active === key ? 'bg-white' : 'bg-primary'}`} aria-label={t('disputesAria', { n: activeDisputes })} />
         : undefined
   const dotOf = (key: string) => key === 'buyer-messages' && unreadMessages ? unreadMessages
     : key === 'seller-disputes' && activeDisputes ? activeDisputes : undefined
@@ -238,16 +216,16 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
         {sections.map((section, i) => {
           // Icons-only rail: every link, no folding.
           if (collapsed) return (
-            <div key={section.title} className="mb-3">
+            <div key={section.id} className="mb-3">
               {i > 0 && <div className="mx-2 mb-3 border-0 border-t border-solid border-outline-variant" />}
               {leaves(section.items).map(item => leaf(item))}
             </div>
           )
-          const open = !folded.includes(section.title)
+          const open = !folded.includes(section.id)
           return (
-            <div key={section.title} className="mb-4">
+            <div key={section.id} className="mb-4">
               {section.items.length > 1 ? (
-                <button type="button" onClick={() => toggle(section.title)} aria-expanded={open}
+                <button type="button" onClick={() => toggle(section.id)} aria-expanded={open}
                   className="mb-1 flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-1.5 text-left text-label-sm uppercase text-on-surface-variant hover:text-on-surface">
                   <span className="min-w-0 flex-1 truncate">{section.title}</span>
                   {!open && chip(pending(leaves(section.items)))}
@@ -256,7 +234,7 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
               ) : <div className="mb-2 whitespace-nowrap px-3 text-label-sm uppercase text-on-surface-variant">{section.title}</div>}
               {open && section.items.map(e => {
                 if (!isGroup(e)) return leaf(e)
-                const key = `${section.title}›${e.label}`
+                const key = `${section.id}›${e.id}`
                 const here = e.items.some(it => it.key === active)
                 const groupOpen = !folded.includes(key)
                 const GroupIcon = e.icon
@@ -282,14 +260,14 @@ function SidebarContent({ active, onNavigate, listingsCount, unreadMessages, act
         })}
         {!isGuest && !collapsed && (
           <div className="mx-1 mt-2 rounded-xl bg-tertiary-soft p-3">
-            <div className="mb-1 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={15} /> Sécurité Dilchap</div>
-            <p className="m-0 text-body-sm text-on-surface-variant">Vos ventes se règlent de la main à la main, après vérification de l'article.<Claim> 0 F de commission.</Claim></p>
+            <div className="mb-1 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={15} /> {t('safety.title')}</div>
+            <p className="m-0 text-body-sm text-on-surface-variant">{t.rich('safety.text', { price: fmtCfa(0), claim: c => <Claim>{c}</Claim> })}</p>
           </div>
         )}
       </div>
       <div className={`border-0 border-t border-solid border-outline-variant py-3 ${collapsed ? 'px-2' : 'px-3'}`}>
-        <NavItem collapsed={collapsed} icon={Store} label="Retour à la boutique" onClick={() => onNavigate('home')} muted />
-        {!isGuest && <NavItem collapsed={collapsed} active={active === 'buyer-settings'} icon={Settings} label="Paramètres" onClick={() => onNavigate('buyer-settings')} muted />}
+        <NavItem collapsed={collapsed} icon={Store} label={t('backToShop')} onClick={() => onNavigate('home')} muted />
+        {!isGuest && <NavItem collapsed={collapsed} active={active === 'buyer-settings'} icon={Settings} label={t('settings')} onClick={() => onNavigate('buyer-settings')} muted />}
       </div>
     </div>
   )
@@ -300,24 +278,26 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
   /** Desktop: the sidebar is reduced to icons, and the button switching it. */
   collapsed?: boolean; onToggleCollapsed?: () => void
 }) {
+  const t = useT(account)
+  const tc = useT(common)
   const [menuOpen, setMenuOpen] = useState(false)
   const bellRings = useIncreaseCounter(unreadNotifications ?? 0)
   const isGuest = !!currentUser?.isGuest
-  const displayName = currentUser?.fullName || 'Mon compte'
+  const displayName = currentUser?.fullName || t('myAccount')
   const iconBtn = 'relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container-low'
   return (
     <header className="flex h-16 shrink-0 items-center gap-3 border-0 border-b border-solid border-outline-variant bg-surface-lowest px-4 lg:px-6">
       {/* Mobile: the account home opens the menu ("Dilchap · Mon compte"),
           every other page gets a back arrow + its title, as in the mockups. */}
       {isHome
-        ? <button onClick={onToggleSidebar} className={`${iconBtn} -ml-2 lg:hidden`} aria-label="Menu"><Menu size={22} /></button>
-        : <button onClick={onBack} className={`${iconBtn} -ml-2 text-on-surface lg:hidden`} aria-label="Retour"><Icon name="arrow_back" size={24} /></button>}
-      <button onClick={() => onNavigate('home')} className={`${isHome ? 'block' : 'hidden'} cursor-pointer border-none bg-transparent p-0 lg:block`} aria-label="Accueil"><Logo size="sm" /></button>
+        ? <button onClick={onToggleSidebar} className={`${iconBtn} -ml-2 lg:hidden`} aria-label={t('menu')}><Menu size={22} /></button>
+        : <button onClick={onBack} className={`${iconBtn} -ml-2 text-on-surface lg:hidden`} aria-label={tc('back')}><Icon name="arrow_back" size={24} /></button>}
+      <button onClick={() => onNavigate('home')} className={`${isHome ? 'block' : 'hidden'} cursor-pointer border-none bg-transparent p-0 lg:block`} aria-label={t('home')}><Logo size="sm" /></button>
       {/* Desktop: collapse / expand the sidebar, after a separator. */}
       {!isGuest && onToggleCollapsed && (
         <>
           <span aria-hidden className="hidden h-6 w-px bg-outline-variant lg:block" />
-          <button onClick={onToggleCollapsed} title={collapsed ? 'Agrandir le menu' : 'Réduire le menu'} aria-label={collapsed ? 'Agrandir le menu' : 'Réduire le menu'} aria-expanded={!collapsed} className={`${iconBtn} hidden lg:flex`}>
+          <button onClick={onToggleCollapsed} title={collapsed ? t('expandMenu') : t('collapseMenu')} aria-label={collapsed ? t('expandMenu') : t('collapseMenu')} aria-expanded={!collapsed} className={`${iconBtn} hidden lg:flex`}>
             <Icon name={collapsed ? 'left_panel_open' : 'left_panel_close'} size={22} />
           </button>
         </>
@@ -327,26 +307,26 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
           <BadgeCheck size={14} /> {BADGE_LABEL[currentUser.badge]}
         </span>
       )}
-      <h1 className={`m-0 min-w-0 truncate lg:hidden ${isHome ? 'text-label-md text-on-surface-variant' : 'text-headline-sm text-on-surface'}`}>{isHome ? 'Mon compte' : activeLabel}</h1>
+      <h1 className={`m-0 min-w-0 truncate lg:hidden ${isHome ? 'text-label-md text-on-surface-variant' : 'text-headline-sm text-on-surface'}`}>{isHome ? t('myAccount') : activeLabel}</h1>
       <div className="flex-1" />
-      <button onClick={() => onNavigate('buyer-messages')} className={`${iconBtn} hidden lg:flex`} aria-label="Messagerie">
+      <button onClick={() => onNavigate('buyer-messages')} className={`${iconBtn} hidden lg:flex`} aria-label={t('messages')}>
         <MessageSquare size={22} />
         {!!unreadMessages && <span className="notif-dot">{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
       </button>
       {!isGuest && (
         <>
-          <button onClick={() => onNavigate('buyer-notifications')} className={iconBtn} aria-label="Notifications">
+          <button onClick={() => onNavigate('buyer-notifications')} className={iconBtn} aria-label={t('notifications')}>
             <AnimatedIcon name="bell" fallback="notifications" size={22} trigger={bellRings} />
             {!!unreadNotifications && <span className="notif-dot">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
           </button>
           <button onClick={() => onNavigate('seller-post')} className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark sm:flex">
-            <PlusCircle size={18} /> Nouvel article
+            <PlusCircle size={18} /> {t('newItem')}
           </button>
         </>
       )}
       {/* Sub-pages on a phone: back + title + bell only, so titles fit */}
       <div className={`relative ${isHome ? '' : 'max-lg:hidden'}`}>
-        <button onClick={() => setMenuOpen(o => !o)} aria-label="Menu du compte" aria-expanded={menuOpen} className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent p-1 hover:bg-surface-container-low">
+        <button onClick={() => setMenuOpen(o => !o)} aria-label={t('accountMenu')} aria-expanded={menuOpen} className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent p-1 hover:bg-surface-container-low">
           <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">
             {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : displayName.charAt(0).toUpperCase()}
           </span>
@@ -359,9 +339,9 @@ function AccountHeader({ activeLabel, isHome, currentUser, onToggleSidebar, onBa
               <div className="truncate text-label-md text-on-surface">{displayName}</div>
               <div className="truncate text-body-sm text-on-surface-variant">{currentUser?.email ?? currentUser?.phone ?? ''}</div>
             </div>
-            {!isGuest && <NavItem icon={Settings} label="Paramètres du compte" onClick={() => { setMenuOpen(false); onNavigate('buyer-settings') }} />}
+            {!isGuest && <NavItem icon={Settings} label={t('accountSettings')} onClick={() => { setMenuOpen(false); onNavigate('buyer-settings') }} />}
             <button onClick={() => { setMenuOpen(false); onLogout() }} className="flex w-full cursor-pointer items-center gap-3 rounded-lg border-none bg-transparent px-3 py-2.5 text-label-md text-primary hover:bg-primary-fixed/50">
-              <LogOut size={20} /> Se déconnecter
+              <LogOut size={20} /> {t('signOut')}
             </button>
           </div>
         )}
@@ -387,6 +367,8 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
       height follows the visual viewport (iOS keyboard) via --chat-vh. */
   immersive?: boolean
 }) {
+  const t = useT(account)
+  const tc = useT(common)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Desktop sidebar reduced to icons (remembered).
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(SIDEBAR_KEY) === '1' } catch { return false } })
@@ -409,11 +391,12 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
           <aside className="safe-pt relative flex h-full w-72 flex-col bg-surface-lowest">
             <div className="flex items-center justify-between border-0 border-b border-solid border-outline-variant px-4 py-3">
               <Logo size="sm" />
-              <button onClick={() => setSidebarOpen(false)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant" aria-label="Fermer"><X size={22} /></button>
+              <button onClick={() => setSidebarOpen(false)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant" aria-label={tc('close')}><X size={22} /></button>
             </div>
             <div className="min-h-0 flex-1">
               <SidebarContent active={active} onNavigate={go} listingsCount={listingsCount} unreadMessages={unreadMessages} activeDisputes={activeDisputes} isGuest={isGuest} />
             </div>
+            <LanguagePicker variant="menu" className="border-0 border-t border-solid border-outline-variant" />
           </aside>
         </div>
       )}
@@ -429,25 +412,25 @@ export function AccountLayout({ active, onNavigate, children, currentUser, onLog
           {children}
         </main>
         {!isGuest && tabs && (
-          <nav aria-label="Navigation du compte" className={`${fill ? 'relative shrink-0' : 'fixed inset-x-0 bottom-0'} z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest pb-[env(safe-area-inset-bottom)] lg:hidden`}>
-            {tabs.map(t => {
-              const on = t.match.includes(active)
-              if (t.primary) {
+          <nav aria-label={t('accountNav')} className={`${fill ? 'relative shrink-0' : 'fixed inset-x-0 bottom-0'} z-50 flex border-0 border-t border-solid border-outline-variant bg-surface-lowest pb-[env(safe-area-inset-bottom)] lg:hidden`}>
+            {tabs.map(tab => {
+              const on = tab.match.includes(active)
+              if (tab.primary) {
                 return (
-                  <button key={t.key} onClick={() => go(t.key)} className="flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 text-label-sm text-primary">
+                  <button key={tab.key} onClick={() => go(tab.key)} className="flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 text-label-sm text-primary">
                     <span className="-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid border-surface-lowest bg-primary text-white shadow-[0_4px_14px_rgba(254,0,0,0.35)]">
-                      <AnimatedIcon name={TAB_ANIM[t.icon] ?? t.icon} fallback={t.icon} size={30} playOnInteract preload />
+                      <AnimatedIcon name={TAB_ANIM[tab.icon] ?? tab.icon} fallback={tab.icon} size={30} playOnInteract preload />
                     </span>
-                    {t.label}
+                    {tab.label}
                   </button>
                 )
               }
               return (
-                <button key={t.key} onClick={() => go(t.key)} className={`relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-label-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>
+                <button key={tab.key} onClick={() => go(tab.key)} className={`relative flex flex-1 cursor-pointer flex-col items-center gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-label-sm ${on ? 'text-primary' : 'text-on-surface-variant'}`}>
                   {/* Active tab plays when its page opens; any tab plays on press. */}
-                  <AnimatedIcon name={TAB_ANIM[t.icon] ?? t.icon} fallback={t.icon} size={24} fill={on} playOnMount={on} playOnInteract preload />
-                  {t.label}
-                  {t.key === 'buyer-messages' && !!unreadMessages && <span className="notif-dot" style={{ top: 2, right: 'calc(50% - 22px)' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
+                  <AnimatedIcon name={TAB_ANIM[tab.icon] ?? tab.icon} fallback={tab.icon} size={24} fill={on} playOnMount={on} playOnInteract preload />
+                  {tab.label}
+                  {tab.key === 'buyer-messages' && !!unreadMessages && <span className="notif-dot" style={{ top: 2, right: 'calc(50% - 22px)' }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>}
                 </button>
               )
             })}

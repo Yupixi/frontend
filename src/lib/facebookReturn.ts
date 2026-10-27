@@ -1,6 +1,8 @@
 // Coming back from Facebook's OAuth dialog (/connexion/facebook?code=…):
 // read at start-up (main.tsx), before the app rewrites the address, and
 // handed once to the sign-in screen or « Paramètres › Connexion ».
+import authPhone from '../i18n/ns/authPhone'
+
 export const FACEBOOK_GRAPH_VERSION = 'v21.0'
 export const FACEBOOK_CALLBACK_PATH = '/connexion/facebook'
 
@@ -31,9 +33,14 @@ function readFacebookReturn(): { code: string; intent: FacebookIntent } | { erro
   try { sessionStorage.removeItem(FB_STATE_KEY) } catch { /* ignore */ }
   // The code never stays in the address bar (nor in a recording).
   window.history.replaceState(window.history.state, '', intent?.mode === 'link' ? '/compte' : '/connexion')
-  if (q.get('error')) return { error: q.get('error_reason') === 'user_denied' ? 'Connexion Facebook annulée.' : 'Facebook n’a pas autorisé la connexion. Réessayez.' }
+  // Read at start-up, before English may be loaded: the message is a getter,
+  // translated when shown.
+  if (q.get('error')) {
+    const key = q.get('error_reason') === 'user_denied' ? 'facebook.cancelled' : 'facebook.denied'
+    return { get error() { return authPhone.t(key) } }
+  }
   const code = q.get('code')
-  if (!code || !intent || q.get('state') !== intent.state) return { error: 'La connexion Facebook a expiré. Réessayez.' }
+  if (!code || !intent || q.get('state') !== intent.state) return { get error() { return authPhone.t('facebook.expired') } }
   return { code, intent }
 }
 

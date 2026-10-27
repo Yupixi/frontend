@@ -9,6 +9,8 @@ import { useSite } from '../lib/site'
 import { marketForCountry } from '../data/markets'
 import { setStoredLocation } from '../lib/location'
 import { setMarketState, useCountries, useMarketCode } from '../lib/countries'
+import { fmtDate, useT } from '../i18n'
+import appShell from '../i18n/ns/appShell'
 
 // Before the launch date (BO › Contenu › Lancement) visitors see the launch
 // page; the team's secret link shows the site with a reminder banner. If
@@ -16,6 +18,7 @@ import { setMarketState, useCountries, useMarketCode } from '../lib/countries'
 // The launch can differ per country: the status follows the visitor's
 // market (useLaunch), so switching country shows or lifts the page.
 export default function LaunchGate({ children }: { children: ReactNode }) {
+  const t = useT(appShell)
   const { status, loading, refetch } = useLaunch()
   // Microsoft Clarity never records the launch page. The team preview is
   // recorded: the key leaves the address bar at once and the manifest
@@ -28,7 +31,7 @@ export default function LaunchGate({ children }: { children: ReactNode }) {
       {status?.active && status.preview && (
         // Above the mobile bottom bar (z-300, ~62px), bottom-left from md.
         <div role="status" className="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-1/2 z-[400] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1.5 rounded-full bg-on-surface/90 px-3 py-1.5 text-label-sm text-surface-lowest shadow-lg md:bottom-4 md:left-4 md:translate-x-0">
-          <Icon name="visibility" size={14} /> <span className="truncate">Aperçu équipe : site pas encore ouvert au public</span>
+          <Icon name="visibility" size={14} /> <span className="truncate">{t('launch.previewBanner')}</span>
         </div>
       )}
       {children}
@@ -58,6 +61,7 @@ function useCountdown(target: string | null) {
 
 // `notice`: a line above the title — a printed QR code's shop (QrLandingPage).
 export function LaunchPage({ status, onOpen, notice }: { status: LaunchStatus, onOpen: () => void, notice?: ReactNode }) {
+  const t = useT(appShell)
   const site = useSite()
   const market = useMarketCode()
   const countries = useCountries()
@@ -65,7 +69,7 @@ export function LaunchPage({ status, onOpen, notice }: { status: LaunchStatus, o
   // The date is reached: ask again, the site opens.
   useEffect(() => { if (c && c.left === 0) onOpen() }, [c?.left === 0]) // eslint-disable-line react-hooks/exhaustive-deps
   const date = status.launchAt
-    ? new Date(status.launchAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: marketForCountry(market)?.timeZone ?? 'Africa/Abidjan' })
+    ? fmtDate(status.launchAt, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: marketForCountry(market)?.timeZone ?? 'Africa/Abidjan' })
     : null
   const socials = (['facebook', 'instagram', 'tiktok', 'youtube', 'whatsapp'] as const).filter(k => site.socials[k])
   // Another country may already be open: the choice is kept as the
@@ -95,20 +99,20 @@ export function LaunchPage({ status, onOpen, notice }: { status: LaunchStatus, o
         {status.text && <p className="m-0 mt-4 max-w-xl text-body-lg text-white/80">{status.text}</p>}
 
         {c && (
-          <div className="mt-10 grid w-full max-w-md grid-cols-4 gap-2 sm:gap-3" aria-live="off" aria-label="Compte à rebours avant le lancement">
-            {[['Jours', c.days], ['Heures', c.hours], ['Minutes', c.minutes], ['Secondes', c.seconds]].map(([label, v]) => (
-              <div key={label} className="rounded-2xl bg-white/10 px-1 py-3 ring-1 ring-white/15 backdrop-blur">
-                <div className="text-[clamp(1.6rem,7vw,2.6rem)] font-extrabold tabular-nums leading-none">{label === 'Jours' ? v : pad(v as number)}</div>
-                <div className="mt-1.5 text-label-sm uppercase tracking-wide text-white/65">{label}</div>
+          <div className="mt-10 grid w-full max-w-md grid-cols-4 gap-2 sm:gap-3" aria-live="off" aria-label={t('launch.countdownAria')}>
+            {([['days', c.days], ['hours', c.hours], ['minutes', c.minutes], ['seconds', c.seconds]] as const).map(([unit, v]) => (
+              <div key={unit} className="rounded-2xl bg-white/10 px-1 py-3 ring-1 ring-white/15 backdrop-blur">
+                <div className="text-[clamp(1.6rem,7vw,2.6rem)] font-extrabold tabular-nums leading-none">{unit === 'days' ? v : pad(v)}</div>
+                <div className="mt-1.5 text-label-sm uppercase tracking-wide text-white/65">{t(`launch.${unit}`)}</div>
               </div>
             ))}
           </div>
         )}
-        {date && <p className="m-0 mt-4 text-label-md text-white/70">Ouverture le {date}</p>}
+        {date && <p className="m-0 mt-4 text-label-md text-white/70">{t('launch.opensOn', { date })}</p>}
 
         {socials.length > 0 && (
           <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
-            <span className="w-full text-label-sm text-white/60">Suivez-nous en attendant</span>
+            <span className="w-full text-label-sm text-white/60">{t('launch.follow')}</span>
             {socials.map(k => (
               <a key={k} href={site.socials[k]} target="_blank" rel="noopener noreferrer" aria-label={k}
                 className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white no-underline ring-1 ring-white/15 hover:bg-[#FE0000]">
@@ -122,9 +126,9 @@ export function LaunchPage({ status, onOpen, notice }: { status: LaunchStatus, o
       {countries.length > 1 && !notice && (
         <div className="relative z-10 mt-10 flex items-center gap-2 text-label-sm text-white/60">
           {market ? <Flag code={market} size={16} /> : <Icon name="public" size={16} />}
-          <Select value={market ?? ''} onChange={e => pickCountry(e.target.value)} aria-label="Pays"
+          <Select value={market ?? ''} onChange={e => pickCountry(e.target.value)} aria-label={t('launch.countryAria')}
             className="h-9 max-w-[220px] rounded-full border-none bg-white/10 px-3.5 text-label-md text-white ring-1 ring-white/15">
-            <option value="">Tous les pays</option>
+            <option value="">{t('launch.allCountries')}</option>
             {countries.map(ct => <option key={ct.code} value={ct.code}>{ct.name}</option>)}
           </Select>
         </div>

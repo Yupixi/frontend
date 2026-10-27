@@ -1,6 +1,8 @@
 import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 import { CHECKIN_FIELDS, type RemoteCheckin } from './deals'
+import common from '../i18n/ns/common'
+import messagesNs from '../i18n/ns/messagesCore'
 
 const MESSAGE_FIELDS = `
   id
@@ -203,7 +205,7 @@ export function handoverRefusal(e: unknown): HandoverRefusal {
     return { reason: 'OTHER', message: first.message }
   }
   // No GraphQL answer: the network (offline, server unreachable).
-  return { reason: 'OFFLINE', message: 'Connexion impossible. Vérifiez votre réseau puis réessayez.' }
+  return { reason: 'OFFLINE', message: common.t('errorNetwork') }
 }
 
 export const START_CONVERSATION_MUTATION = gql`
@@ -407,7 +409,7 @@ export const RESPOND_TO_MEETUP_MUTATION = gql`
 
 // Inbox preview of a message: its text, or what it carries.
 export const messagePreview = (m: { body: string; attachments?: string[]; audioUrl?: string | null; system?: SystemCard | null } | null | undefined) =>
-  !m ? '' : m.system ? `Dilchap : ${m.system.title}` : m.body || (m.audioUrl ? 'Message vocal' : m.attachments?.length ? (m.attachments.length > 1 ? `${m.attachments.length} photos` : 'Photo') : '')
+  !m ? '' : m.system ? messagesNs.t('inbox.preview.system', { title: m.system.title }) : m.body || (m.audioUrl ? messagesNs.t('inbox.preview.voice') : m.attachments?.length ? messagesNs.t('inbox.preview.photos', { count: m.attachments.length }) : '')
 
 // Inbox order: latest message first, conversations without messages last.
 export const byLatestMessage = (a: { lastMessageAt: string | null }, b: { lastMessageAt: string | null }) =>

@@ -1,0 +1,14 @@
+{
+  "open": "Ouvert",
+  "closed": "Fermé",
+  "legalIdVerified": "{{id}} vérifié",
+  "card.items_one": "<b>{{n}}</b> articles",
+  "card.items_other": "<b>{{n}}</b> articles",
+  "card.followers_one": "<b>{{n}}</b> abonnés",
+  "card.followers_other": "<b>{{n}}</b> abonnés",
+  "card.highlights": "Articles vedettes",
+  "photoAlt": "{{title}} — photo {{n}}",
+  "followed": "Suivie",
+  "follow": "Suivre",
+  "card.see": "Voir la boutique"
+}

@@ -1,5 +1,6 @@
 import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
+import reviewsNs from '../i18n/ns/reviews'
 
 export const SELLER_PROFILE_QUERY = gql`
   query SellerProfile($sellerId: String!) {
@@ -109,7 +110,7 @@ export function formatResponseTime(minutes: number | null | undefined): string |
   if (minutes == null) return null
   if (minutes < 60) return `< ${Math.max(5, Math.ceil(minutes / 5) * 5)} min`
   if (minutes < 24 * 60) return `< ${Math.ceil(minutes / 60)} h`
-  return `${Math.ceil(minutes / 1440)} j`
+  return reviewsNs.t('responseDays', { n: Math.ceil(minutes / 1440) })
 }
 
 // dilchap.com/@handle → the member's id (null: unknown or not active).

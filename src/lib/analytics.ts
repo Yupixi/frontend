@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { CLARITY_ID, cleanForClarity, setClarity } from './clarity'
 import { META_PIXEL_ID, metaPixelOn, metaTrack, onAdultCategory, setMetaPixel } from './metaPixel'
 import { takeGaCampaign } from './campaignParams'
+import consent from '../i18n/ns/consent'
 
 // « Mesure d'audience » (Google Analytics 4), set in the Backoffice per
 // country (Backend content/analytics-settings.ts, query analyticsConfig).
@@ -71,20 +72,20 @@ export type AnalyticsConfig = {
 export type Tool = 'ga' | 'clarity' | 'meta' | 'gads'
 export type Purpose = 'analytics' | 'ads'
 export const PURPOSE_OF: Record<Tool, Purpose> = { ga: 'analytics', clarity: 'analytics', meta: 'ads', gads: 'ads' }
-export const TOOL_NAMES: Record<Tool, string> = { ga: 'Google Analytics', clarity: 'Microsoft Clarity', meta: 'Pixel Meta', gads: 'Google Ads' }
+export const TOOL_NAMES: Record<Tool, string> = { ga: 'Google Analytics', clarity: 'Microsoft Clarity', get meta() { return consent.t('tool.meta') }, gads: 'Google Ads' }
 const ALL_TOOLS: Tool[] = ['ga', 'clarity', 'meta', 'gads']
 const isTool = (t: unknown): t is Tool => typeof t === 'string' && (ALL_TOOLS as string[]).includes(t)
 
 /** Texts of the consent window, with their defaults. */
 export const bannerTexts = (b: AnalyticsBanner) => ({
-  customize: b.customize || 'Personnaliser',
-  analyticsLabel: b.analyticsLabel || 'Mesure d’audience',
-  analyticsText: b.analyticsText || 'Savoir quelles pages sont consultées et comment le site est utilisé, pour l’améliorer.',
-  adsLabel: b.adsLabel || 'Publicité personnalisée',
-  adsText: b.adsText || 'Mesurer l’efficacité des publicités Dilchap et vous en montrer sur d’autres sites et applications selon les pages consultées (reciblage).',
-  save: b.save || 'Enregistrer mes choix',
-  ok: b.ok || 'OK',
-  settings: b.settings || 'Paramétrer',
+  customize: b.customize || consent.t('banner.customize'),
+  analyticsLabel: b.analyticsLabel || consent.t('banner.analyticsLabel'),
+  analyticsText: b.analyticsText || consent.t('banner.analyticsText'),
+  adsLabel: b.adsLabel || consent.t('banner.adsLabel'),
+  adsText: b.adsText || consent.t('banner.adsText'),
+  save: b.save || consent.t('banner.save'),
+  ok: b.ok || consent.t('banner.ok'),
+  settings: b.settings || consent.t('banner.settings'),
 })
 
 const STORAGE_KEY = 'dilchap_analytics_consent'
@@ -726,23 +727,23 @@ export function track(name: EventName, params: Params = {}, opts: { defer?: bool
 }
 
 // page_title of each page: its kind, never its content (a listing's or a
-// shop's name is written by members).
+// shop's name is written by members). Sent to Google Analytics: stays French.
 const PAGE_TITLES: Record<string, string> = {
-  home: 'Accueil', search: 'Recherche', 'flash-offers': 'Bonnes affaires', 'listing-detail': 'Annonce', 'seller-profile': 'Profil vendeur',
-  categories: 'Catégories', auth: 'Connexion', legal: 'Page légale', shop: 'Boutique', shops: 'Boutiques', help: 'Centre d’aide',
-  'buyer-dashboard': 'Compte — Tableau de bord', 'buyer-favorites': 'Compte — Favoris', 'buyer-messages': 'Compte — Messages',
-  'buyer-notifications': 'Compte — Notifications', 'buyer-history': 'Compte — Historique', 'buyer-settings': 'Compte — Paramètres',
-  'buyer-purchases': 'Compte — Achats', 'buyer-receipts': 'Compte — Reçus', 'buyer-receipt': 'Compte — Reçu', 'buyer-handover': 'Compte — Remise',
-  'buyer-dispute-new': 'Compte — Nouveau litige', 'buyer-disputes': 'Compte — Litiges',
-  'seller-dashboard': 'Compte — Vendeur', 'seller-post': 'Compte — Publier une annonce', 'seller-edit': 'Compte — Modifier une annonce',
-  'seller-listings': 'Compte — Mes annonces', 'seller-stats': 'Compte — Statistiques', 'seller-premium': 'Compte — Booster',
-  'seller-orders': 'Compte — Ventes', 'seller-wallet': 'Compte — Crédits', 'seller-reviews': 'Compte — Avis', 'seller-disputes': 'Compte — Litiges',
-  'seller-handover': 'Compte — Remise', 'seller-kyc': 'Compte — Vérification', 'seller-shop': 'Compte — Ma boutique',
-  'seller-shop-stats': 'Compte — Statistiques boutique', 'seller-shop-promos': 'Compte — Promotions boutique', 'seller-badge': 'Compte — Badge',
-  'seller-campaigns': 'Compte — Campagnes', support: 'Compte — Support',
+  home: 'Accueil', search: 'Recherche', 'flash-offers': 'Bonnes affaires', 'listing-detail': 'Annonce', 'seller-profile': 'Profil vendeur', // i18n-ignore
+  categories: 'Catégories', auth: 'Connexion', legal: 'Page légale', shop: 'Boutique', shops: 'Boutiques', help: 'Centre d’aide', // i18n-ignore
+  'buyer-dashboard': 'Compte — Tableau de bord', 'buyer-favorites': 'Compte — Favoris', 'buyer-messages': 'Compte — Messages', // i18n-ignore
+  'buyer-notifications': 'Compte — Notifications', 'buyer-history': 'Compte — Historique', 'buyer-settings': 'Compte — Paramètres', // i18n-ignore
+  'buyer-purchases': 'Compte — Achats', 'buyer-receipts': 'Compte — Reçus', 'buyer-receipt': 'Compte — Reçu', 'buyer-handover': 'Compte — Remise', // i18n-ignore
+  'buyer-dispute-new': 'Compte — Nouveau litige', 'buyer-disputes': 'Compte — Litiges', // i18n-ignore
+  'seller-dashboard': 'Compte — Vendeur', 'seller-post': 'Compte — Publier une annonce', 'seller-edit': 'Compte — Modifier une annonce', // i18n-ignore
+  'seller-listings': 'Compte — Mes annonces', 'seller-stats': 'Compte — Statistiques', 'seller-premium': 'Compte — Booster', // i18n-ignore
+  'seller-orders': 'Compte — Ventes', 'seller-wallet': 'Compte — Crédits', 'seller-reviews': 'Compte — Avis', 'seller-disputes': 'Compte — Litiges', // i18n-ignore
+  'seller-handover': 'Compte — Remise', 'seller-kyc': 'Compte — Vérification', 'seller-shop': 'Compte — Ma boutique', // i18n-ignore
+  'seller-shop-stats': 'Compte — Statistiques boutique', 'seller-shop-promos': 'Compte — Promotions boutique', 'seller-badge': 'Compte — Badge', // i18n-ignore
+  'seller-campaigns': 'Compte — Campagnes', support: 'Compte — Support', // i18n-ignore
 }
 export const pageTitle = (page: string, category?: string) =>
-  page === 'search' && category ? `Catégorie ${category}` : (PAGE_TITLES[page] ?? 'Compte')
+  page === 'search' && category ? `Catégorie ${category}` : (PAGE_TITLES[page] ?? 'Compte') // i18n-ignore
 
 // Credit purchases already counted (ids stay on this device, never sent).
 const PURCHASES_KEY = 'dilchap_analytics_purchases'
@@ -755,8 +756,8 @@ export function trackCreditPurchase(p: { id: string; kind: string; status: strin
   try { sessionStorage.setItem(PURCHASES_KEY, JSON.stringify([...seen.slice(-19), p.id])) } catch { /* ignore */ }
   track('purchase', {
     currency: p.currency, value: p.amount,
-    items: [{ item_id: p.kind === 'CREDIT_PACK' ? 'pack_credits' : 'credits', item_name: 'Crédits Dilchap', quantity: p.credits ?? undefined, price: p.amount }],
+    items: [{ item_id: p.kind === 'CREDIT_PACK' ? 'pack_credits' : 'credits', item_name: 'Crédits Dilchap', quantity: p.credits ?? undefined, price: p.amount }], // i18n-ignore
   })
   // Meta: credits are not catalogue items, so no content_ids.
-  metaTrack('Purchase', { value: p.amount, currency: p.currency, content_name: 'Crédits Dilchap', content_category: p.kind === 'CREDIT_PACK' ? 'pack_credits' : 'credits', num_items: p.credits ?? undefined })
+  metaTrack('Purchase', { value: p.amount, currency: p.currency, content_name: 'Crédits Dilchap', content_category: p.kind === 'CREDIT_PACK' ? 'pack_credits' : 'credits', num_items: p.credits ?? undefined }) // i18n-ignore
 }

@@ -9,7 +9,7 @@ import PromoPill from './PromoPill'
 import { useImpressionRef } from '../lib/impressions'
 import { useAdultSpace } from '../lib/adultMode'
 import { entryDiscountPercent as discountPct } from '../lib/campaignDiscount'
-import { formatRelativeDate, placeLabel, plainText, sizeLabel } from '../lib/format'
+import { formatRelativeDate, placeLabel, plainText, sizeLabel, conditionLabel } from '../lib/format'
 import { agoLabel } from '../lib/bumps'
 import { prefetchOnIntent } from '../lib/prefetchListing'
 import { thumbnailUrl } from '../lib/media'
@@ -26,12 +26,16 @@ import {
 } from '../lib/listingArchetype'
 import SellerBadge from '../components/SellerBadge'
 import { ADULT_BLUR_CLASS, useAdultBlur } from '../lib/adult'
+import { useT } from '../i18n'
+import listingNs from '../i18n/ns/listing'
+import adultNs from '../i18n/ns/adult'
 
 // « Section Adultes »: the card's tag outside its space (favorites,
 // history…); inside it, every card is the section's.
 function AdultBadge() {
+  const t = useT(adultNs)
   if (useAdultSpace()) return null
-  return <span className="inline-flex items-center gap-1 rounded-md bg-inverse-surface px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"><Icon name="lock" size={11} /> Section Adultes</span>
+  return <span className="inline-flex items-center gap-1 rounded-md bg-inverse-surface px-1.5 py-0.5 text-[10px] font-bold uppercase text-white md:px-2 md:text-label-sm"><Icon name="lock" size={11} /> {t('section')}</span>
 }
 
 // The boost sheet (credits, prices, payment) only loads for a seller who
@@ -111,6 +115,7 @@ function isActivelyBoosted(listing: RemoteListing): boolean {
 // just from "Mes annonces". Self-contained (own open/done state) since a
 // feed renders many of these side by side.
 function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
+  const t = useT(listingNs)
   const [open, setOpen] = useState(false)
   // Mounted on the first opening, then kept (its closing animation).
   const [used, setUsed] = useState(false)
@@ -119,7 +124,7 @@ function OwnListingBoostCta({ listing }: { listing: RemoteListing }) {
   return (
     <div className="mt-2" onClick={e => e.stopPropagation()}>
       <button onClick={() => { setUsed(true); setOpen(true) }} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary px-2 py-2 text-label-md text-white hover:bg-primary-dark">
-        <Icon name="rocket_launch" size={16} /> <span className="whitespace-nowrap">Booster<span className="hidden md:inline"> cette annonce</span></span>
+        <Icon name="rocket_launch" size={16} /> <span className="whitespace-nowrap">{t.rich('card.boost', { md: c => <span className="hidden md:inline">{c}</span> })}</span>
       </button>
       {used && <Suspense fallback={null}><BoostSheet open={open} onClose={() => setOpen(false)} listing={listing} onBumped={() => setDone(true)} /></Suspense>}
     </div>
@@ -137,8 +142,8 @@ export function cardPill(listing: RemoteListing, inAdultSpace: boolean): PromoBa
   const bought = listing.boostBadges?.[0]
   if (bought) return bought
   const d = listing.activeCampaignDiscount
-  if (d) return { kind: 'PROMO', label: 'Promo', percent: discountPct(d, listing.price) || null }
-  if (listing.bumpedAt) return { kind: 'BUMP', label: 'Remontée', at: listing.bumpedAt }
+  if (d) return { kind: 'PROMO', label: listingNs.t('card.promo'), percent: discountPct(d, listing.price) || null }
+  if (listing.bumpedAt) return { kind: 'BUMP', label: listingNs.t('card.bump'), at: listing.bumpedAt }
   return null
 }
 
@@ -174,6 +179,7 @@ export function ListingCard(props: ListingCardProps) {
 }
 
 const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav, currentUserId, onContact, featured, priority }: Omit<ListingCardProps, 'onContact'> & { onContact: () => void }) {
+  const t = useT(listingNs)
   const image = useCardImage(listing)
   const blur = useAdultBlur()(listing)
   const salePrice = discountedPrice(listing)
@@ -184,7 +190,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
   // Campaign price wins; otherwise the seller's "prix neuf" is struck through.
   const struck = salePrice != null ? listing.price : (listing.originalPrice && listing.price != null && listing.originalPrice > listing.price ? listing.originalPrice : null)
   const rating = listing.seller.reviewsCount ? listing.seller.averageRating ?? 0 : null
-  const condition = listing.condition && listing.condition !== 'N/A' ? listing.condition : null
+  const condition = listing.condition && listing.condition !== 'N/A' ? conditionLabel(listing.condition) : null
   const pill = cardPill(listing, useAdultSpace())
   const seenRef = useImpressionRef(listing.id, listing.seller.id, currentUserId)
   const intents = useListingIntents()
@@ -205,7 +211,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
   const tier = listing.bundleOffer?.tiers[0]
   const bundleLine = tier && (
     <p className="m-0 mt-0.5 flex min-w-0 items-center gap-1 text-[11px] font-semibold text-tertiary md:text-label-sm">
-      <Icon name="inventory_2" size={13} className="shrink-0" /> <span className="truncate">Dès {tier.minQty} achetés : -{tier.percent} %</span>
+      <Icon name="inventory_2" size={13} className="shrink-0" /> <span className="truncate">{t('card.bundle', { qty: tier.minQty, n: tier.percent })}</span>
     </p>
   )
   const place = isRoute
@@ -240,7 +246,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
           {image.src ? (
             <img
               src={image.src}
-              alt={`${listing.title} — photo 1`}
+              alt={t('photoAlt', { title: listing.title, n: 1 })}
               loading={priority ? 'eager' : 'lazy'}
               fetchPriority={priority ? 'high' : undefined}
               decoding={priority ? 'sync' : 'async'}
@@ -269,7 +275,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
           <button
             onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
             className={`tap-44 absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/90 transition-colors hover:text-primary md:right-3 md:top-3 md:h-8 md:w-8 ${isFav ? 'text-primary' : 'text-on-surface'}`}
-            aria-label={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            aria-label={isFav ? t('fav.remove') : t('fav.add')}
           >
             <AnimatedIcon name="heart" fallback="favorite" size={17} fill={isFav} trigger={isFav} />
           </button>
@@ -289,9 +295,9 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
         {/* Desktop body */}
         <div className="hidden p-4 md:block">
           <div className="mb-1 flex items-center justify-between gap-2 text-body-sm text-on-surface-variant">
-            <span className="truncate">{category}{listing.size && ` • T. ${listing.size}`}</span>
+            <span className="truncate">{category}{listing.size && ` • ${t('card.size', { size: listing.size })}`}</span>
             {shop ? (
-              <span className="flex shrink-0 items-center text-tertiary" title="Boutique officielle"><Icon name="verified" size={16} fill /></span>
+              <span className="flex shrink-0 items-center text-tertiary" title={t('officialShop')}><Icon name="verified" size={16} fill /></span>
             ) : badge ? (
               <SellerBadge tier={badge} variant="pill" short />
             ) : rating != null && (
@@ -316,30 +322,30 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
             {featured ? (
               <div className="flex gap-2">
                 <button onClick={contact} className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[8px] border-none bg-primary shadow-sm text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
-                  <Icon name="chat" size={16} /> Discuter
+                  <Icon name="chat" size={16} /> {t('card.chat')}
                 </button>
-                <button onClick={e => { e.stopPropagation(); intents.call(listing.id); setCallInfo(true) }} aria-label="Appeler le vendeur" className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border-none bg-surface-container text-on-surface">
+                <button onClick={e => { e.stopPropagation(); intents.call(listing.id); setCallInfo(true) }} aria-label={t('card.callAria')} className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border-none bg-surface-container text-on-surface">
                   <Icon name="call" size={18} />
                 </button>
                 <div onClick={e => e.stopPropagation()}>
-                  <BottomSheet open={callInfo} onClose={() => setCallInfo(false)} title={`Appeler ${listing.seller.fullName.split(' ')[0]}`}>
-                    <p className="m-0 text-body-md text-on-surface-variant">Pour votre sécurité, le numéro du vendeur est partagé dans la discussion, une fois le rendez-vous convenu.</p>
+                  <BottomSheet open={callInfo} onClose={() => setCallInfo(false)} title={t('card.callTitle', { name: listing.seller.fullName.split(' ')[0] })}>
+                    <p className="m-0 text-body-md text-on-surface-variant">{t('card.callText')}</p>
                     <button onClick={e => { setCallInfo(false); contact(e) }} className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white">
-                      <Icon name="chat" size={18} /> Discuter avec le vendeur
+                      <Icon name="chat" size={18} /> {t('card.chatWithSeller')}
                     </button>
                   </BottomSheet>
                 </div>
               </div>
             ) : (
               <button onClick={contact} className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-[8px] border-none bg-surface-container py-1.5 text-label-sm font-bold text-on-surface transition-colors hover:bg-primary hover:text-white">
-                <Icon name="chat_bubble" size={14} /> Contacter
+                <Icon name="chat_bubble" size={14} /> {t('card.contact')}
               </button>
             )}
           </div>
           <div className="hidden gap-2 px-4 pb-4 md:flex">
-            <button onClick={e => { e.stopPropagation(); onSelect() }} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-low py-2 text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container">Détails</button>
+            <button onClick={e => { e.stopPropagation(); onSelect() }} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-low py-2 text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container">{t('card.details')}</button>
             <button onClick={contact} className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl border-none bg-primary py-2 text-label-md font-bold text-white transition-colors hover:bg-primary-dark">
-              <Icon name="chat" size={16} /> Discuter
+              <Icon name="chat" size={16} /> {t('card.chat')}
             </button>
           </div>
         </>
@@ -351,6 +357,7 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
 export function ListingListCard({ listing, onSelect, onToggleFav, isFav, currentUserId }: {
   listing: RemoteListing, onSelect: () => void, onToggleFav: () => void, isFav: boolean, currentUserId?: string | null
 }) {
+  const t = useT(listingNs)
   const image = useCardImage(listing)
   const blur = useAdultBlur()(listing)
   const salePrice = discountedPrice(listing)
@@ -368,7 +375,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
     <div ref={seenRef} onClick={onSelect} {...prefetchOnIntent(listing.id)} className="flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-surface-lowest shadow-sm transition-shadow hover:shadow-card-hover sm:flex-row sm:gap-4 sm:p-3">
       <div className="aspect-video w-full shrink-0 overflow-hidden bg-surface-container sm:aspect-auto sm:h-28 sm:w-28 sm:rounded-xl md:h-32 md:w-40">
         {image.src
-          ? <img loading="lazy" decoding="async" src={image.src} alt={`${listing.title} — photo 1`} onError={image.onError} className={`h-full w-full object-cover ${blur ? ADULT_BLUR_CLASS : ''}`} />
+          ? <img loading="lazy" decoding="async" src={image.src} alt={t('photoAlt', { title: listing.title, n: 1 })} onError={image.onError} className={`h-full w-full object-cover ${blur ? ADULT_BLUR_CLASS : ''}`} />
           : <span className="flex h-full items-center justify-center text-on-surface-variant"><Tag size={28} /></span>}
       </div>
 
@@ -379,7 +386,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
               <div className="mb-1 flex flex-wrap gap-1.5">
                 {listing.isAdult && <AdultBadge />}
                 {pill && <PromoPill badge={pill} />}
-                {listing.negotiable && <span className="rounded bg-primary-fixed/60 px-1.5 text-label-sm text-primary">Négociable</span>}
+                {listing.negotiable && <span className="rounded bg-primary-fixed/60 px-1.5 text-label-sm text-primary">{t('negotiable')}</span>}
               </div>
             )}
             <h3 className="m-0 truncate text-label-lg text-on-surface">{listing.title}</h3>
@@ -393,8 +400,8 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
           </div>
           <button
             onClick={e => { e.stopPropagation(); favWithReason(onToggleFav) }}
-            title="Ajouter aux favoris"
-            aria-label="Ajouter aux favoris"
+            title={t('fav.add')}
+            aria-label={t('fav.add')}
             className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-low ${isFav ? 'text-primary' : 'text-on-surface-variant'}`}
           >
             <AnimatedIcon name="heart" fallback="favorite" size={18} fill={isFav} trigger={isFav} />
@@ -408,7 +415,7 @@ export function ListingListCard({ listing, onSelect, onToggleFav, isFav, current
           {!isRoute && <span className="flex items-center gap-1"><MapPin size={13} />{listingLocation(listing)}</span>}
           {/* « Remontée il y a … » while the BO setting shows it (BUMP_HINT_HOURS). */}
           {listing.bumpedAt
-            ? <span className="flex items-center gap-0.5 text-tertiary"><Icon name="arrow_upward" size={12} />Remontée {agoLabel(listing.bumpedAt)}</span>
+            ? <span className="flex items-center gap-0.5 text-tertiary"><Icon name="arrow_upward" size={12} />{t('card.bumpedAgo', { ago: agoLabel(listing.bumpedAt) })}</span>
             : <span>{formatRelativeDate(listing.publishedAt ?? listing.createdAt)}</span>}
           <span className="flex items-center gap-1"><Eye size={13} />{listing.viewsCount}</span>
         </div>

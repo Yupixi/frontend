@@ -12,28 +12,30 @@ import { delayText, useRules } from '../lib/rules'
 import { useMemberCountryCode } from '../lib/countries'
 import type { AuthUser } from '../graphql/auth'
 import {
-  ATTACH_SUPPORT_OBJECTS_MUTATION, CATEGORY_LABEL, CLOSE_SUPPORT_TICKET_MUTATION, CREATE_SUPPORT_TICKET_MUTATION, IMPORTANCE_CHOICES, IMPORTANCE_LABEL,
-  MARK_SUPPORT_READ_MUTATION, MY_SUPPORT_ATTACHABLE_QUERY, MY_SUPPORT_TICKETS_QUERY, MY_SUPPORT_UNREAD_QUERY, REPLY_SUPPORT_TICKET_MUTATION, SUPPORT_CATEGORIES,
+  ATTACH_SUPPORT_OBJECTS_MUTATION, CATEGORY_LABEL, CLOSE_SUPPORT_TICKET_MUTATION, CREATE_SUPPORT_TICKET_MUTATION, IMPORTANCE_LABEL, importanceChoices,
+  MARK_SUPPORT_READ_MUTATION, MY_SUPPORT_ATTACHABLE_QUERY, MY_SUPPORT_TICKETS_QUERY, MY_SUPPORT_UNREAD_QUERY, REPLY_SUPPORT_TICKET_MUTATION, supportCategories,
   SUPPORT_ASSISTANT_QUERY, SUPPORT_TICKET_UPDATED_SUBSCRIPTION,
   type AssistantState, type SupportCategory, type SupportImportance, type SupportObjectCard as ObjectCard, type SupportObjectKind, type SupportTicket,
 } from '../graphql/support'
 import type { SupportAbout } from '../lib/navigation'
 import { SupportAttachPicker, SupportObjectCard } from './SupportObjects'
 import SupportAssistant from './SupportAssistant'
+import { useT, fmtDate, fmtTime } from '../i18n'
+import supportNs from '../i18n/ns/support'
 
 // 'new': the assistant when it is on, else the form; 'agent': the form.
 type View = { kind: 'list' } | { kind: 'new' } | { kind: 'agent' } | { kind: 'thread'; id: string }
 
-const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const time = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const when = (iso: string) => fmtDate(iso, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const time = (iso: string) => fmtTime(iso)
 
-const STATUS: Record<SupportTicket['status'], [string, string]> = {
-  OPEN: ['bg-amber-100 text-amber-800', 'En attente'],
-  ANSWERED: ['bg-verified-soft text-verified', 'Répondu'],
-  RESOLVED: ['bg-tertiary-soft text-tertiary', 'Résolu'],
+const STATUS: Record<SupportTicket['status'], [string, 'status.OPEN' | 'status.ANSWERED' | 'status.RESOLVED']> = {
+  OPEN: ['bg-amber-100 text-amber-800', 'status.OPEN'],
+  ANSWERED: ['bg-verified-soft text-verified', 'status.ANSWERED'],
+  RESOLVED: ['bg-tertiary-soft text-tertiary', 'status.RESOLVED'],
 }
 // The account-access category is for the logged-out recovery form.
-const TOPICS = SUPPORT_CATEGORIES.filter(([k]) => k !== 'ACCOUNT_RECOVERY')
+const topics = () => supportCategories().filter(([k]) => k !== 'ACCOUNT_RECOVERY')
 const REFETCH = [{ query: MY_SUPPORT_TICKETS_QUERY }, { query: MY_SUPPORT_UNREAD_QUERY }]
 
 type Props = {
@@ -52,6 +54,7 @@ type Props = {
 // status). Used by the floating « Support » tab and the "Aide & support"
 // account page.
 export default function SupportCenter({ currentUser, focusTicketId, onClose, about }: Props) {
+  const tr = useT(supportNs)
   const { data, refetch } = useQuery<{ mySupportTickets: SupportTicket[] }>(MY_SUPPORT_TICKETS_QUERY, { fetchPolicy: 'cache-and-network' })
   // Staff replies arrive live.
   useSubscription(SUPPORT_TICKET_UPDATED_SUBSCRIPTION, { onData: () => void refetch() })
@@ -73,20 +76,20 @@ export default function SupportCenter({ currentUser, focusTicketId, onClose, abo
   const hours = badge === 'CERTIFIED' ? rules.SUPPORT_SLA_URGENT_HOURS : badge ? rules.SUPPORT_SLA_HIGH_HOURS : rules.SUPPORT_SLA_NORMAL_HOURS
   const sla = (
     <span className="flex flex-wrap items-center gap-1.5 text-body-sm text-on-surface-variant">
-      <Icon name="schedule" size={15} /> Réponse en {delayText(hours)}
+      <Icon name="schedule" size={15} /> {tr('center.sla', { delay: delayText(hours) })}
       {badge && <SellerBadge tier={badge} variant="pill" short />}
     </span>
   )
 
   const header = (title: React.ReactNode, sub: React.ReactNode, back?: () => void, extra?: React.ReactNode) => (
     <div className="flex shrink-0 items-start gap-2 border-0 border-b border-solid border-outline-variant/60 px-4 py-3">
-      {back && <button type="button" onClick={back} aria-label="Retour aux conversations" className="-ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface hover:bg-surface-container"><Icon name="arrow_back" size={21} /></button>}
+      {back && <button type="button" onClick={back} aria-label={tr('center.backAria')} className="-ml-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface hover:bg-surface-container"><Icon name="arrow_back" size={21} /></button>}
       <div className="min-w-0 flex-1">
         <div className="truncate text-label-lg text-on-surface">{title}</div>
         <div className="mt-0.5">{sub}</div>
       </div>
       {extra}
-      {onClose && <button type="button" onClick={onClose} aria-label="Fermer le support" className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:text-on-surface"><Icon name="close" size={19} /></button>}
+      {onClose && <button type="button" onClick={onClose} aria-label={tr('center.closeAria')} className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container text-on-surface-variant hover:text-on-surface"><Icon name="close" size={19} /></button>}
     </div>
   )
 
@@ -112,21 +115,22 @@ export default function SupportCenter({ currentUser, focusTicketId, onClose, abo
       />
     )
   if (shown.kind === 'new' || shown.kind === 'agent')
-    return <NewConversation key={about?.nonce ?? 0} about={about ?? null} header={header(<span className="flex items-center gap-1.5"><Icon name="support_agent" size={20} className="text-primary" /> {assistant ? 'Écrire à un agent' : 'Nouvelle conversation'}</span>, sla, assistant ? () => setView({ kind: 'new' }) : toList)} firstName={currentUser?.fullName?.split(' ')[0]} onCreated={id => { void refetch(); setView({ kind: 'thread', id }) }} />
+    return <NewConversation key={about?.nonce ?? 0} about={about ?? null} header={header(<span className="flex items-center gap-1.5"><Icon name="support_agent" size={20} className="text-primary" /> {assistant ? tr('center.writeAgent') : tr('center.newConversation')}</span>, sla, assistant ? () => setView({ kind: 'new' }) : toList)} firstName={currentUser?.fullName?.split(' ')[0]} onCreated={id => { void refetch(); setView({ kind: 'thread', id }) }} />
 
   const list = tickets ?? []
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {header(<span className="flex items-center gap-1.5"><Icon name="support_agent" size={20} className="text-primary" /> Support Dilchap</span>, sla)}
+      {header(<span className="flex items-center gap-1.5"><Icon name="support_agent" size={20} className="text-primary" /> {tr('center.title')}</span>, sla)}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
         <button type="button" onClick={() => setView({ kind: 'new' })} className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white shadow-sm hover:bg-primary-dark">
-          <Icon name={assistant ? 'auto_awesome' : 'edit_square'} size={19} /> {assistant?.conversation ? 'Reprendre avec l’assistant' : 'Nouvelle conversation'}
+          <Icon name={assistant ? 'auto_awesome' : 'edit_square'} size={19} /> {assistant?.conversation ? tr('center.resumeAssistant') : tr('center.newConversation')}
         </button>
-        {!tickets && <p className="m-0 mt-6 text-center text-body-sm text-on-surface-variant">Chargement…</p>}
+        {!tickets && <p className="m-0 mt-6 text-center text-body-sm text-on-surface-variant">{tr('center.loading')}</p>}
         <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
           {list.map(t => {
             const last = t.messages[t.messages.length - 1]
-            const [cls, label] = STATUS[t.status]
+            const [cls, labelKey] = STATUS[t.status]
+            const label = tr(labelKey)
             return (
               <li key={t.id}>
                 <button type="button" onClick={() => setView({ kind: 'thread', id: t.id })} className={`flex w-full cursor-pointer items-start gap-3 rounded-xl border border-solid p-3 text-left ${t.unread ? 'border-primary/40 bg-primary-fixed/30' : 'border-outline-variant/60 bg-surface-lowest hover:bg-surface-container-low'}`}>
@@ -136,12 +140,12 @@ export default function SupportCenter({ currentUser, focusTicketId, onClose, abo
                       <span className={`truncate text-label-lg text-on-surface ${t.unread ? 'font-bold' : ''}`}>{t.subject}</span>
                       <span className="shrink-0 text-label-sm text-on-surface-variant">{when(t.updatedAt)}</span>
                     </span>
-                    <span className="mt-0.5 block truncate text-body-sm text-on-surface-variant">{last ? `${last.adminId ? 'Équipe : ' : 'Vous : '}${last.body || 'Photo'}` : ''}</span>
+                    <span className="mt-0.5 block truncate text-body-sm text-on-surface-variant">{last ? tr(last.adminId ? 'center.lastFromTeam' : 'center.lastFromMe', { text: last.body || tr('center.photo') }) : ''}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-1.5">
                       <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${cls}`}>{label}</span>
                       <span className="whitespace-nowrap text-label-sm text-on-surface-variant">{t.reference}</span>
-                      {!!t.objects?.length && <span className="flex items-center gap-0.5 whitespace-nowrap text-label-sm text-on-surface-variant" aria-label={`${t.objects.length} élément(s) joint(s)`}><Icon name="attach_file" size={14} />{t.objects.length}</span>}
-                      {t.unread > 0 && <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-label-sm text-white">{t.unread} nouveau{t.unread > 1 ? 'x' : ''}</span>}
+                      {!!t.objects?.length && <span className="flex items-center gap-0.5 whitespace-nowrap text-label-sm text-on-surface-variant" aria-label={tr('center.objectsAria', { n: t.objects.length })}><Icon name="attach_file" size={14} />{t.objects.length}</span>}
+                      {t.unread > 0 && <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-label-sm text-white">{tr('center.unread', { count: t.unread })}</span>}
                     </span>
                   </span>
                 </button>
@@ -162,6 +166,7 @@ const refOf = (o: ObjectCard) => ({ kind: o.kind, id: o.id })
 const same = (a: { kind: string; id: string }, b: { kind: string; id: string }) => a.kind === b.kind && a.id === b.id
 
 function NewConversation({ header, firstName, onCreated, about }: { header: React.ReactNode; firstName?: string; onCreated: (id: string) => void; about: SupportAbout | null }) {
+  const tr = useT(supportNs)
   // Photos per message: a « Règles » value of the member's country.
   const maxPhotos = useRules(useMemberCountryCode()).SUPPORT_MEMBER_PHOTOS_MAX
   const [category, setCategory] = useState<SupportCategory | null>(about ? CATEGORY_OF[about.kind] ?? null : null)
@@ -200,15 +205,15 @@ function NewConversation({ header, firstName, onCreated, about }: { header: Reac
     <div className="relative flex h-full min-h-0 flex-col">
       {header}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-        <p className="m-0 text-headline-sm text-on-surface">Bonjour{firstName ? ` ${firstName}` : ''} 👋</p>
-        <p className="m-0 mt-1 text-body-md text-on-surface-variant">Écrivez-nous : l’équipe Dilchap vous répond ici, et vous recevez une notification.</p>
-        <p className="m-0 mt-4 text-label-md text-on-surface">C’est à propos de…</p>
+        <p className="m-0 text-headline-sm text-on-surface">{firstName ? tr('new.helloName', { name: firstName }) : tr('new.hello')}</p>
+        <p className="m-0 mt-1 text-body-md text-on-surface-variant">{tr('new.intro')}</p>
+        <p className="m-0 mt-4 text-label-md text-on-surface">{tr('new.about')}</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {TOPICS.map(([k, l]) => <button key={k} type="button" aria-pressed={category === k} onClick={() => setCategory(c => c === k ? null : k)} className={chip(category === k)}>{l}</button>)}
+          {topics().map(([k, l]) => <button key={k} type="button" aria-pressed={category === k} onClick={() => setCategory(c => c === k ? null : k)} className={chip(category === k)}>{l}</button>)}
         </div>
-        <p className="m-0 mt-4 text-label-md text-on-surface">Importance</p>
-        <div role="radiogroup" aria-label="Importance" className="mt-2 grid grid-cols-3 gap-1.5">
-          {IMPORTANCE_CHOICES.map(([k, l, icon, hint]) => (
+        <p className="m-0 mt-4 text-label-md text-on-surface">{tr('new.importance')}</p>
+        <div role="radiogroup" aria-label={tr('new.importance')} className="mt-2 grid grid-cols-3 gap-1.5">
+          {importanceChoices().map(([k, l, icon, hint]) => (
             <button key={k} type="button" role="radio" aria-checked={importance === k} onClick={() => setImportance(k)} className={`flex cursor-pointer flex-col items-center gap-0.5 rounded-xl border border-solid px-1.5 py-2 text-center ${importance === k ? (k === 'HIGH' ? 'border-primary bg-primary-fixed/60 text-primary' : 'border-primary bg-primary-fixed/40 text-on-surface') : 'border-outline-variant bg-surface-lowest text-on-surface hover:bg-surface-container-low'}`}>
               <Icon name={icon} size={20} className={importance === k ? 'text-primary' : 'text-on-surface-variant'} />
               <span className="text-label-md">{l}</span>
@@ -219,8 +224,8 @@ function NewConversation({ header, firstName, onCreated, about }: { header: Reac
         {error && <p className="m-0 mt-3 text-body-sm text-primary">{error}</p>}
       </div>
       <div className="shrink-0 border-0 border-t border-solid border-outline-variant/60 bg-surface-lowest px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-        <AttachRow cards={attached} onAdd={() => setPicking(true)} onRemove={o => (auto && same(o, auto) ? setAutoRemoved(true) : setPicked(p => p.filter(x => !same(x, o))))} note={about && aboutError ? 'L’élément de la page n’a pas pu être joint.' : null} />
-        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={attached.length ? 'Expliquez-nous le problème…' : 'Décrivez votre problème…'} noVoice maxPhotos={maxPhotos} />
+        <AttachRow cards={attached} onAdd={() => setPicking(true)} onRemove={o => (auto && same(o, auto) ? setAutoRemoved(true) : setPicked(p => p.filter(x => !same(x, o))))} note={about && aboutError ? tr('new.aboutFailed') : null} />
+        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={attached.length ? tr('new.placeholderAttached') : tr('new.placeholder')} noVoice maxPhotos={maxPhotos} />
       </div>
       {picking && <SupportAttachPicker already={attached.map(refOf)} onClose={() => setPicking(false)} onPick={cards => { setPicked(p => [...p, ...cards]); setPicking(false) }} />}
     </div>
@@ -229,18 +234,20 @@ function NewConversation({ header, firstName, onCreated, about }: { header: Reac
 
 // Objects about to be sent (new conversation) and the « Joindre » button.
 function AttachRow({ cards, onAdd, onRemove, note, busy }: { cards: ObjectCard[]; onAdd: () => void; onRemove?: (o: ObjectCard) => void; note?: string | null; busy?: boolean }) {
+  const tr = useT(supportNs)
   return (
     <div className="mb-2 space-y-1.5">
       {cards.length > 0 && <div className="flex max-h-40 flex-col gap-1.5 overflow-y-auto">{cards.map(o => <SupportObjectCard key={`${o.kind}-${o.id}`} o={o} onRemove={onRemove ? () => onRemove(o) : undefined} />)}</div>}
       {note && <p className="m-0 text-body-sm text-primary">{note}</p>}
       <button type="button" disabled={busy || cards.length >= 10} onClick={onAdd} className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-solid border-outline-variant bg-surface-lowest px-3 text-label-md text-on-surface hover:bg-surface-container-low disabled:opacity-50">
-        <Icon name="attach_file" size={17} className="text-primary" /> Joindre <span className="text-label-sm font-normal normal-case tracking-normal text-on-surface-variant max-[360px]:hidden">une annonce, un achat, un paiement…</span>
+        <Icon name="attach_file" size={17} className="text-primary" /> {tr.rich('attach.button', { hint: c => <span className="text-label-sm font-normal normal-case tracking-normal text-on-surface-variant max-[360px]:hidden">{c}</span> })}
       </button>
     </div>
   )
 }
 
 function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: SupportTicket; loading: boolean; header: Header; onBack: () => void; onChanged: () => void }) {
+  const tr = useT(supportNs)
   // Photos per message: a « Règles » value of the member's country.
   const maxPhotos = useRules(useMemberCountryCode()).SUPPORT_MEMBER_PHOTOS_MAX
   const [text, setText] = useState('')
@@ -261,11 +268,12 @@ function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: Su
 
   if (!t) return (
     <div className="flex h-full min-h-0 flex-col">
-      {header('Conversation', null, onBack)}
-      <p className="m-0 p-6 text-center text-body-sm text-on-surface-variant">{loading ? 'Chargement…' : 'Conversation introuvable.'}</p>
+      {header(tr('thread.title'), null, onBack)}
+      <p className="m-0 p-6 text-center text-body-sm text-on-surface-variant">{loading ? tr('center.loading') : tr('thread.notFound')}</p>
     </div>
   )
-  const [cls, label] = STATUS[t.status]
+  const [cls, labelKey] = STATUS[t.status]
+  const label = tr(labelKey)
   const lastMine = [...t.messages].reverse().find(m => !m.adminId)
   const send = async ({ body, attachments }: { body: string; attachments: string[] }) => {
     await reply({ variables: { id: t.id, input: { message: body, attachments } } })
@@ -288,18 +296,18 @@ function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: Su
         t.subject,
         <span className="flex flex-wrap items-center gap-1.5"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${cls}`}>{label}</span><span className="text-label-sm text-on-surface-variant">{t.reference} • {IMPORTANCE_LABEL[t.importance]}</span></span>,
         onBack,
-        t.status !== 'RESOLVED' && <button type="button" disabled={closing} onClick={() => void close({ variables: { id: t.id } }).then(onChanged)} title="Marquer comme résolu" aria-label="Marquer comme résolu" className="flex h-9 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-tertiary-soft px-3 text-label-md text-tertiary disabled:opacity-50"><Icon name="task_alt" size={17} /> <span className="max-[380px]:hidden">C’est réglé</span></button>,
+        t.status !== 'RESOLVED' && <button type="button" disabled={closing} onClick={() => void close({ variables: { id: t.id } }).then(onChanged)} title={tr('thread.markResolved')} aria-label={tr('thread.markResolved')} className="flex h-9 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-none bg-tertiary-soft px-3 text-label-md text-tertiary disabled:opacity-50"><Icon name="task_alt" size={17} /> <span className="max-[380px]:hidden">{tr('thread.resolvedButton')}</span></button>,
       )}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-surface px-3 py-3">
         <p className="m-0 mx-auto mb-3 max-w-[90%] rounded-xl bg-surface-container-low px-3 py-2 text-center text-label-sm font-normal text-on-surface-variant">
-          {CATEGORY_LABEL[t.category]} • ouverte le {when(t.createdAt)}
-          {t.status === 'OPEN' && !t.firstResponseAt && <><br />Réponse attendue avant {when(t.dueAt)}</>}
+          {tr('thread.openedOn', { category: CATEGORY_LABEL[t.category], date: when(t.createdAt) })}
+          {t.status === 'OPEN' && !t.firstResponseAt && <><br />{tr('thread.dueBy', { date: when(t.dueAt) })}</>}
         </p>
         <div className="flex flex-col gap-2">
           {timeline.map(({ m, o }) => {
             if (o) return (
               <div key={`o-${o.id}`} className="flex w-[85%] max-w-sm flex-col items-end self-end">
-                <span className="mb-0.5 mr-1 flex items-center gap-1 text-label-sm normal-case tracking-normal text-on-surface-variant"><Icon name="attach_file" size={13} /> {o.auto ? 'Joint depuis la page' : 'Vous avez joint'}</span>
+                <span className="mb-0.5 mr-1 flex items-center gap-1 text-label-sm normal-case tracking-normal text-on-surface-variant"><Icon name="attach_file" size={13} /> {o.auto ? tr('thread.autoAttached') : tr('thread.youAttached')}</span>
                 <span className="w-full"><SupportObjectCard o={o.snapshot} tone="mine" /></span>
                 <span className="mx-1 mt-0.5 text-[11px] text-on-surface-variant">{time(o.createdAt)}</span>
               </div>
@@ -308,7 +316,7 @@ function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: Su
             const mine = !m.adminId
             return (
               <div key={m.id} className={`flex max-w-[85%] flex-col ${mine ? 'items-end self-end' : 'items-start self-start'}`}>
-                {!mine && <span className="mb-0.5 ml-1 flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="support_agent" size={14} className="text-primary" /> {m.admin?.fullName ? `${m.admin.fullName.split(' ')[0]} • ` : ''}Équipe Dilchap</span>}
+                {!mine && <span className="mb-0.5 ml-1 flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="support_agent" size={14} className="text-primary" /> {m.admin?.fullName ? tr('thread.teamWithName', { name: m.admin.fullName.split(' ')[0] }) : tr('thread.team')}</span>}
                 <div className={`rounded-2xl px-3 py-2 text-body-md ${mine ? 'rounded-br-md bg-primary text-white' : 'rounded-bl-md bg-surface-lowest text-on-surface shadow-sm'}`}>
                   {(() => {
                     // Photos open in the lightbox; the team may also join PDF documents.
@@ -317,13 +325,13 @@ function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: Su
                     return <>
                       {images.length > 0 && (
                         <span className={`mb-1 grid gap-1 ${images.length > 1 ? 'grid-cols-2' : ''}`}>
-                          {images.map((src, i) => <button key={src} type="button" onClick={() => setPhotos({ images, start: i })} aria-label={`Voir la photo ${i + 1}`} className="block h-28 w-28 cursor-zoom-in overflow-hidden rounded-lg border-none bg-surface-container p-0"><img src={thumbnailUrl(src)} alt="" loading="lazy" className="h-full w-full object-cover" /></button>)}
+                          {images.map((src, i) => <button key={src} type="button" onClick={() => setPhotos({ images, start: i })} aria-label={tr('thread.viewPhoto', { n: i + 1 })} className="block h-28 w-28 cursor-zoom-in overflow-hidden rounded-lg border-none bg-surface-container p-0"><img src={thumbnailUrl(src)} alt="" loading="lazy" className="h-full w-full object-cover" /></button>)}
                         </span>
                       )}
                       {docs.map((src, i) => (
                         <a key={src} href={src} target="_blank" rel="noopener noreferrer" className={`mb-1 flex min-h-11 items-center gap-2 rounded-lg px-2.5 py-1.5 text-label-md no-underline ${mine ? 'bg-white/15 text-white' : 'bg-surface-container text-on-surface'}`}>
                           <Icon name="picture_as_pdf" size={20} className={mine ? '' : 'text-primary'} />
-                          <span className="min-w-0 flex-1 truncate">Document PDF{docs.length > 1 ? ` ${i + 1}` : ''}</span>
+                          <span className="min-w-0 flex-1 truncate">{docs.length > 1 ? tr('thread.pdfN', { n: i + 1 }) : tr('thread.pdf')}</span>
                           <Icon name="open_in_new" size={16} className="opacity-70" />
                         </a>
                       ))}
@@ -331,20 +339,20 @@ function Thread({ ticket: t, loading, header, onBack, onChanged }: { ticket?: Su
                   })()}
                   {m.body && <p className="selectable m-0 whitespace-pre-line break-words">{m.body}</p>}
                 </div>
-                <span className="mx-1 mt-0.5 text-[11px] text-on-surface-variant">{time(m.createdAt)}{mine && m.id === lastMine?.id && m.readAt ? ' • Lu par l’équipe' : ''}</span>
+                <span className="mx-1 mt-0.5 text-[11px] text-on-surface-variant">{time(m.createdAt)}{mine && m.id === lastMine?.id && m.readAt ? tr('thread.readByTeam') : ''}</span>
               </div>
             )
           })}
         </div>
-        {t.status === 'RESOLVED' && <p className="m-0 mt-3 flex items-center justify-center gap-1.5 text-center text-body-sm text-tertiary"><Icon name="task_alt" size={16} /> Conversation résolue. Écrire la rouvre.</p>}
+        {t.status === 'RESOLVED' && <p className="m-0 mt-3 flex items-center justify-center gap-1.5 text-center text-body-sm text-tertiary"><Icon name="task_alt" size={16} /> {tr('thread.resolved')}</p>}
         <div ref={end} />
       </div>
       <div className="shrink-0 border-0 border-t border-solid border-outline-variant/60 bg-surface-lowest px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <AttachRow cards={[]} onAdd={() => setPicking(true)} busy={attaching || (t.objects?.length ?? 0) >= 10} note={attachError || null} />
-        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={t.status === 'RESOLVED' ? 'Écrire rouvre la conversation…' : 'Votre message…'} noVoice maxPhotos={maxPhotos} />
+        <ChatComposer value={text} onChange={setText} onSend={send} placeholder={t.status === 'RESOLVED' ? tr('thread.placeholderResolved') : tr('thread.placeholder')} noVoice maxPhotos={maxPhotos} />
       </div>
       {picking && <SupportAttachPicker already={(t.objects ?? []).map(o => ({ kind: o.kind, id: o.targetId }))} onClose={() => setPicking(false)} onPick={pick} />}
-      {photos && <ImageLightbox images={photos.images} start={photos.start} alt="Photo jointe" onClose={() => setPhotos(null)} />}
+      {photos && <ImageLightbox images={photos.images} start={photos.start} alt={tr('thread.photoAlt')} onClose={() => setPhotos(null)} />}
     </div>
   )
 }

@@ -23,4 +23,9 @@ jobs:
       # Note: tsc --noEmit is not run as a gate yet — the scaffold has a
       # backlog of pre-existing type errors unrelated to any single change.
       # vite build (esbuild transform) still catches syntax/import breakage.
+      # Translations: same keys in fr and en, no French left hard-coded in
+      # the code (scripts/i18n-check.mjs), i18n runtime tests.
+      - run: pnpm i18n:check
+      - run: pnpm test:i18n
+
       - run: pnpm build

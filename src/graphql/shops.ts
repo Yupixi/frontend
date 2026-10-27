@@ -1,6 +1,8 @@
 import type { BadgeTier } from './badges'
 import { gql } from '@apollo/client'
 import { dateFormat } from '../lib/intl'
+import { fmtDate } from '../i18n/format'
+import labels from '../i18n/ns/myShopLabels'
 
 // Official shops ("Boutiques officielles").
 
@@ -176,18 +178,27 @@ export type ShopStats = {
   lowStock: { id: string; title: string; quantity: number }[]
 }
 
+// Getters: read in the current language at each use.
 export const REJECT_LABELS: Record<ShopRejectReason, string> = {
-  DOC_UNREADABLE: 'Document illisible',
-  DOC_INVALID: 'Document non valable',
-  NAME_MISMATCH: 'Nom commercial différent du document',
-  NUMBER_MISMATCH: 'Numéro RCCM / fiscal différent du document',
-  OWNER_MISMATCH: 'Gérant non rattaché à l’entreprise',
-  BRAND_MISUSE: 'Utilisation d’une marque sans autorisation',
-  INCOMPLETE: 'Demande incomplète',
-  OTHER: 'Autre motif',
+  get DOC_UNREADABLE() { return labels.t('reject.DOC_UNREADABLE') },
+  get DOC_INVALID() { return labels.t('reject.DOC_INVALID') },
+  get NAME_MISMATCH() { return labels.t('reject.NAME_MISMATCH') },
+  get NUMBER_MISMATCH() { return labels.t('reject.NUMBER_MISMATCH') },
+  get OWNER_MISMATCH() { return labels.t('reject.OWNER_MISMATCH') },
+  get BRAND_MISUSE() { return labels.t('reject.BRAND_MISUSE') },
+  get INCOMPLETE() { return labels.t('reject.INCOMPLETE') },
+  get OTHER() { return labels.t('reject.OTHER') },
 }
 
-export const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+// Day `i` (0 = Monday) in the current language, capitalised: « Lundi » /
+// « Monday » (1 January 2024 was a Monday).
+export const dayName = (i: number) => {
+  const s = fmtDate(Date.UTC(2024, 0, 1 + i), { weekday: 'long', timeZone: 'UTC' })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+// Monday → Sunday, each read in the current language when used (index getters).
+export const DAYS: readonly string[] = Object.defineProperties(new Array<string>(7),
+  Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, { get: () => dayName(i), enumerable: true }])))
 
 // "Open now" from the opening hours, at the shop's local time (Bénin and
 // Niger are UTC+1, the other UEMOA countries UTC all year).
@@ -206,6 +217,7 @@ export function openNow(hours: OpeningHours[], timeZone = 'Africa/Abidjan', now 
   return { open: false, until: null as string | null, day }
 }
 
+// i18n-ignore (URL path)
 export const shopUrl = (slug: string) => `${window.location.origin}/boutique/${encodeURIComponent(slug)}`
 
 // The owner's online listings, for aisles / pinned items / stock.
@@ -299,4 +311,8 @@ export type ShopPromos = {
   myShopPosts: ShopPost[]
   myShopPostQuota: { limit: number; used: number; nextAt: string | null; followers: number }
 }
-export const PROMO_STATE_LABEL: Record<PromoState, string> = { SCHEDULED: 'Programmée', LIVE: 'En cours', ENDED: 'Terminée' }
+export const PROMO_STATE_LABEL: Record<PromoState, string> = {
+  get SCHEDULED() { return labels.t('promoState.SCHEDULED') },
+  get LIVE() { return labels.t('promoState.LIVE') },
+  get ENDED() { return labels.t('promoState.ENDED') },
+}

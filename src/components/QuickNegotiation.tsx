@@ -10,6 +10,8 @@ import type { BadgeTier } from '../graphql/badges'
 import { Claim } from '../lib/site'
 import AccountVerifyPanel from './AccountVerifyPanel'
 import { isNotVerifiedError } from '../lib/accountVerify'
+import { cfaUnit, useT } from '../i18n'
+import offersNs from '../i18n/ns/offers'
 
 type Props = {
   listing: {
@@ -24,26 +26,29 @@ type Props = {
 }
 
 const round = (n: number, step: number) => Math.max(step, Math.round(n / step) * step)
+// « 12 500 F » / « 12,500 CFA F ».
+const cfa = (n: number) => `${formatNumber(n)} ${cfaUnit()}`
 
 // "Faire une offre & Contacter" (Stitch mobile "Négociation rapide"): price
 // chips, custom amount, 1-click messages, then one button sends everything
 // and opens the chat.
 export default function QuickNegotiation({ listing, sellerRating, responseTime, onSent }: Props) {
+  const t = useT(offersNs)
   const price = listing.price ?? 0
   const step = price >= 100_000 ? 5000 : price >= 10_000 ? 1000 : 500
   const floor = listing.minOfferPrice ?? 0
   const chips = listing.negotiable && price > 0
     ? [
-        { key: 'direct', label: 'Prix direct', amount: price, sub: 'Sans remise' },
-        { key: 'reco', label: 'Recommandé', amount: Math.max(floor, round(price * 0.93, step)), sub: '' },
-        { key: 'low', label: 'Offre basse', amount: Math.max(floor, round(price * 0.9, step)), sub: '' },
-      ].map(c => ({ ...c, sub: c.sub || `-${formatNumber(price - c.amount)} F` }))
+        { key: 'direct', label: t('quick.chip.direct'), amount: price, sub: t('quick.chip.noDiscount') },
+        { key: 'reco', label: t('quick.chip.reco'), amount: Math.max(floor, round(price * 0.93, step)), sub: '' },
+        { key: 'low', label: t('quick.chip.low'), amount: Math.max(floor, round(price * 0.9, step)), sub: '' },
+      ].map(c => ({ ...c, sub: c.sub || `-${cfa(price - c.amount)}` }))
     : []
   const place = listing.meetupSpot || listing.locationLabel || listing.city
   const presets = [
-    `Bonjour, l'article est-il toujours disponible à ${place} ?`,
-    "Possible de faire un test physique aujourd'hui ?",
-    'Je suis preneur à votre prix, quel est votre point de rencontre ?',
+    t('quick.preset.available', { place }),
+    t('quick.preset.test'),
+    t('quick.preset.take'),
   ]
   const [amount, setAmount] = useState<number | null>(chips[1]?.amount ?? null)
   const [custom, setCustom] = useState(chips[1] ? String(chips[1].amount) : '')
@@ -60,7 +65,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
   const pick = (a: number) => { setAmount(a); setCustom(String(a)) }
   const submit = async () => {
     setError(null)
-    if (offer && floor && offer < floor) { setError(`Le vendeur n'accepte pas d'offre sous ${formatNumber(floor)} F.`); return }
+    if (offer && floor && offer < floor) { setError(t('quick.belowFloor', { amount: cfa(floor) })); return }
     try {
       const { data } = await startConversation({ variables: { recipientId: listing.seller.id, listingId: listing.id } })
       const conversationId = data!.startConversation.id
@@ -69,14 +74,14 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
       onSent(listing.seller.id, listing.id)
     } catch (e) {
       if (isNotVerifiedError(e)) { setNeedsVerify(true); return }
-      setError(e instanceof Error ? e.message : "Impossible d'envoyer votre message.")
+      setError(e instanceof Error ? e.message : t('quick.sendError'))
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-surface-container-low p-3">
-        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container">{listing.coverImageUrl && <img src={listing.coverImageUrl} alt={`${listing.title} — photo 1`} className="h-full w-full object-cover" />}</span>
+        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container">{listing.coverImageUrl && <img src={listing.coverImageUrl} alt={t('quick.photoAlt', { title: listing.title })} className="h-full w-full object-cover" />}</span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-label-md text-on-surface">{listing.title}</div>
           <div className="text-body-sm text-on-surface-variant"><Price amount={listing.price} currency={listing.currency} /> • {place}</div>
@@ -90,8 +95,8 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
       {chips.length > 0 && (
         <div>
           <div className="flex items-center justify-between">
-            <span className="text-label-sm uppercase text-on-surface-variant">Votre proposition de prix</span>
-            <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">Économie : {formatNumber(Math.max(0, price - (amount ?? price)))} F</span>
+            <span className="text-label-sm uppercase text-on-surface-variant">{t('quick.yourOffer')}</span>
+            <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{t('quick.saving', { amount: cfa(Math.max(0, price - (amount ?? price))) })}</span>
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {chips.map(c => {
@@ -99,7 +104,7 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
               return (
                 <button key={c.key} onClick={() => pick(c.amount)} className={`cursor-pointer rounded-xl border-none p-2.5 text-left ${on ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface'}`}>
                   <span className="block text-label-sm">{c.label}</span>
-                  <span className="block text-label-md font-extrabold">{formatNumber(c.amount)} F</span>
+                  <span className="block text-label-md font-extrabold">{cfa(c.amount)}</span>
                   <span className={`block text-label-sm ${on ? 'text-white/80' : 'text-on-surface-variant'}`}>{c.sub}</span>
                 </button>
               )
@@ -108,16 +113,16 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
           <label className="mt-2 flex items-center gap-3 rounded-xl bg-surface-container-low px-3 py-2">
             <Icon name="edit_note" size={20} className="text-on-surface-variant" />
             <span className="min-w-0 flex-1">
-              <span className="block text-label-sm text-on-surface-variant">Ou montant personnalisé</span>
+              <span className="block text-label-sm text-on-surface-variant">{t('quick.custom')}</span>
               <input inputMode="numeric" value={custom} onChange={e => { const v = e.target.value.replace(/\D/g, ''); setCustom(v); setAmount(v ? Number(v) : null) }} className="w-full border-none bg-transparent text-headline-sm text-on-surface outline-none" />
             </span>
-            <span className="text-headline-sm text-on-surface">F CFA</span>
+            <span className="text-headline-sm text-on-surface">{t('quick.unit')}</span>
           </label>
         </div>
       )}
 
       <div>
-        <div className="text-label-sm uppercase text-on-surface-variant">Message rapide en 1 clic</div>
+        <div className="text-label-sm uppercase text-on-surface-variant">{t('quick.presets')}</div>
         <div className="mt-2 flex flex-col gap-1.5">
           {presets.map(p => (
             <button key={p} onClick={() => setMessage(p)} className={`flex cursor-pointer items-center gap-2 rounded-xl border-none px-3 py-2.5 text-left text-body-sm ${message === p ? 'bg-surface-container-high text-on-surface' : 'bg-surface-container-low text-on-surface-variant'}`}>
@@ -131,15 +136,15 @@ export default function QuickNegotiation({ listing, sellerRating, responseTime, 
 
       <div className="flex gap-3 rounded-xl bg-tertiary-soft p-3">
         <Icon name="shield" size={20} className="shrink-0 text-tertiary" />
-        <p className="m-0 text-body-sm text-on-surface"><b className="text-tertiary">Sécurité Dilchap</b><br />Pas de paiement à l'avance<Claim> ni de commission</Claim>. Échangez en main propre dans un lieu public.</p>
+        <p className="m-0 text-body-sm text-on-surface">{t.rich('quick.safety', { b: c => <b className="text-tertiary">{c}</b>, br: () => <br />, claim: c => <Claim>{c}</Claim> })}</p>
       </div>
 
       {error && <p className="m-0 text-body-sm text-primary">{error}</p>}
-      {needsVerify && <AccountVerifyPanel tone="plain" intro="Pour contacter le vendeur, confirmez votre compte : par SMS, c’est immédiat, et votre message part aussitôt." onVerified={() => { setNeedsVerify(false); void submit() }} />}
+      {needsVerify && <AccountVerifyPanel tone="plain" intro={t('quick.verifyIntro')} onVerified={() => { setNeedsVerify(false); void submit() }} />}
       <button onClick={() => void submit()} disabled={busy || (!message.trim() && !offer)} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
-        <Icon name="send" size={19} /> {busy ? 'Envoi…' : offer ? `Envoyer l'offre de ${formatNumber(offer)} F & Ouvrir le chat` : 'Envoyer & Ouvrir le chat'}
+        <Icon name="send" size={19} /> {busy ? t('quick.sending') : offer ? t('quick.sendOffer', { amount: cfa(offer) }) : t('quick.send')}
       </button>
-      {responseTime && <p className="m-0 -mt-2 text-center text-label-sm text-on-surface-variant">Réponse moyenne de {listing.seller.fullName} en {responseTime}</p>}
+      {responseTime && <p className="m-0 -mt-2 text-center text-label-sm text-on-surface-variant">{t('quick.responseTime', { name: listing.seller.fullName, time: responseTime })}</p>}
     </div>
   )
 }

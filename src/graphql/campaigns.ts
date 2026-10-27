@@ -1,5 +1,6 @@
 import { gql } from '@apollo/client'
 import type { FeeTier } from '../lib/campaignFees'
+import campaignNs from '../i18n/ns/campaign'
 
 // A live Dilchap campaign as the home promotions module and the campaign
 // page show it: identity, window, figures, and a few items for the photos
@@ -80,12 +81,14 @@ export type CampaignPage = LiveCampaign & {
 }
 
 export const CAMPAIGN_TYPE_LABEL: Record<CampaignType, string> = {
-  SALE: 'Soldes', FLASH: 'Vente flash', SEASONAL: 'Saisonnière', CUSTOM: 'Campagne',
+  get SALE() { return campaignNs.t('type.SALE') }, get FLASH() { return campaignNs.t('type.FLASH') },
+  get SEASONAL() { return campaignNs.t('type.SEASONAL') }, get CUSTOM() { return campaignNs.t('type.CUSTOM') },
 }
 
 // The badge over a campaign's title (campaign page, home hero).
 export const CAMPAIGN_HERO_BADGE: Record<CampaignType, string> = {
-  SALE: 'Soldes officielles', FLASH: 'Vente flash officielle', SEASONAL: 'Campagne saisonnière', CUSTOM: 'Campagne officielle Dilchap',
+  get SALE() { return campaignNs.t('heroBadge.SALE') }, get FLASH() { return campaignNs.t('heroBadge.FLASH') },
+  get SEASONAL() { return campaignNs.t('heroBadge.SEASONAL') }, get CUSTOM() { return campaignNs.t('heroBadge.CUSTOM') },
 }
 
 // Live = what the storefront may show (campaign(slug) also returns drafts

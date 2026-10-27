@@ -5,6 +5,8 @@ import { Shell } from './EmailLinkPage'
 import { CONFIRM_ACCOUNT_LINK_MUTATION } from '../graphql/phoneVerification'
 import { announceAccountVerified } from '../lib/accountVerify'
 import { previewKey } from '../lib/launch'
+import { useT } from '../i18n'
+import verifyNs from '../i18n/ns/verify'
 
 // /v/<code>: the one-click link sent by SMS (« Dilchap : confirmez votre
 // compte en 1 clic »). A page of its own, outside the app and the launch
@@ -27,6 +29,7 @@ function useNoIndex(title: string) {
 }
 
 export default function VerifyLinkPage() {
+  const t = useT(verifyNs)
   const code = codeOf(window.location.pathname)
   const [confirm, { data, error }] = useMutation<{ confirmAccountLink: { state: 'CONFIRMED' | 'INVALID' } }>(CONFIRM_ACCOUNT_LINK_MUTATION)
   const sent = useRef(false)
@@ -38,29 +41,29 @@ export default function VerifyLinkPage() {
     void confirm({ variables: { code } }).then(r => { if (r.data?.confirmAccountLink.state === 'CONFIRMED') announceAccountVerified() }).catch(() => undefined)
   }, [code, confirm])
   const state = data?.confirmAccountLink.state
-  useNoIndex(state === 'CONFIRMED' ? 'Compte confirmé | Dilchap' : 'Confirmation du compte | Dilchap')
+  useNoIndex(state === 'CONFIRMED' ? t('link.titleConfirmed') : t('link.titlePending'))
   // The real site for testers who hold the preview key on this browser
   // (LaunchGate reads it), the launch page for everyone else.
   const go = (to: string) => { previewKey(); window.location.assign(to) }
 
   if (!data && !error)
     return (
-      <Shell icon="hourglass_top" tone="info" title="Confirmation…">
-        <p className="m-0">Un instant, nous confirmons votre compte.</p>
+      <Shell icon="hourglass_top" tone="info" title={t('link.confirming')}>
+        <p className="m-0">{t('link.confirmingText')}</p>
       </Shell>
     )
   if (state === 'CONFIRMED')
     return (
-      <Shell icon="verified_user" tone="ok" title="Compte confirmé">
-        <p className="m-0">Merci ! Votre numéro est vérifié : vous pouvez publier des annonces, contacter les vendeurs et acheter des crédits.</p>
-        <button onClick={() => go('/')} className={`${btn} mt-6`}>Continuer sur Dilchap <Icon name="arrow_forward" size={19} /></button>
+      <Shell icon="verified_user" tone="ok" title={t('link.confirmed')}>
+        <p className="m-0">{t('link.confirmedText')}</p>
+        <button onClick={() => go('/')} className={`${btn} mt-6`}>{t('continueOnDilchap')} <Icon name="arrow_forward" size={19} /></button>
       </Shell>
     )
   return (
-    <Shell icon="link_off" tone="err" title="Lien expiré ou déjà utilisé">
-      <p className="m-0">{error ? 'Impossible de vérifier ce lien pour le moment. Réessayez dans un instant.' : 'Ce lien de confirmation n’est plus valable : il a expiré, a déjà servi, ou votre numéro a changé.'}</p>
-      <p className="m-0 mt-2">Connectez-vous : dans <b>Mon compte</b>, touchez <b>Recevoir un code par SMS</b> pour confirmer votre compte.</p>
-      <button onClick={() => go('/compte')} className={`${btn} mt-6`}><Icon name="sms" size={19} /> Recevoir un code par SMS</button>
+    <Shell icon="link_off" tone="err" title={t('link.expired')}>
+      <p className="m-0">{error ? t('link.error') : t('link.invalid')}</p>
+      <p className="m-0 mt-2">{t.rich('link.howTo', { b: c => <b>{c}</b> })}</p>
+      <button onClick={() => go('/compte')} className={`${btn} mt-6`}><Icon name="sms" size={19} /> {t('getSmsCode')}</button>
     </Shell>
   )
 }

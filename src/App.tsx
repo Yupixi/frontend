@@ -28,6 +28,8 @@ import { subscribeToPush, unsubscribeFromPush, type PushSubscriptionResult } fro
 import Home, { type SearchPreset } from './pages/Home'
 import { lazyPage, preloadPages } from './lib/lazyPage'
 import { useSeo } from './lib/site'
+import common from './i18n/ns/common'
+import { updateAlternates, useLocaleSync, withLangParam } from './i18n/LocaleSync'
 import { ACCOUNT_COUNTRY_KEY, rememberedAccountCountry, setMarketState, useCountries } from './lib/countries'
 import Onboarding from './components/Onboarding'
 import { noteTourPage } from './lib/tourControl'
@@ -358,6 +360,8 @@ export default function App() {
   useLayoutEffect(() => {
     setMarketState({ market: marketLocation?.countryCode ?? null, account: accountCountry, signedIn: isLoggedIn })
   }, [marketLocation?.countryCode, accountCountry, isLoggedIn])
+  // Language: country's languages, the member's choice, <html lang>, hreflang.
+  useLocaleSync(isLoggedIn)
 
   useEffect(() => {
     const onUpdateAvailable = () => setShowUpdateBanner(true)
@@ -615,7 +619,8 @@ export default function App() {
   // The address bar follows the page: public pages have their own URL
   // (shareable, indexed), account pages sit under /compte.
   useEffect(() => {
-    const path = pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, categoryCity, searchTerm, helpSlug, space, reelId })
+    // ?lang= (a link in another language) stays in the address.
+    const path = withLangParam(pathFor(page, { listingId: selectedListingId, sellerId: selectedSellerId, shopKey, legalSlug, campaignSlug, category: categoryFilter, categoryCity, searchTerm, helpSlug, space, reelId }))
     const here = window.location.pathname + window.location.search
     // The entry keeps the marketplace and the filters it shows now (Back
     // brings them back as they were left).
@@ -624,6 +629,7 @@ export default function App() {
     const state = keep ? { ...st, space, category: categoryFilter, categoryCity, searchTerm } : window.history.state
     if (page === 'search' ? here !== path : !samePlace(here, path)) window.history.replaceState(state, '', path)
     else if (keep) window.history.replaceState(state, '')
+    updateAlternates()
   }, [page, selectedListingId, selectedSellerId, shopKey, legalSlug, campaignSlug, categoryFilter, categoryCity, searchTerm, helpSlug, space, reelId])
 
   // « Mesure d'audience »: one page_view per page or item (after the
@@ -1029,8 +1035,8 @@ export default function App() {
           {lostAddress && (
             <div role="status" className="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-solid border-outline-variant bg-surface-lowest p-3 lg:mx-auto lg:max-w-[1280px]">
               <Icon name="search_off" size={20} className="mt-0.5 shrink-0 text-primary" />
-              <p className="m-0 min-w-0 flex-1 text-body-sm text-on-surface"><b>Page introuvable.</b> Ce lien n’existe pas ou plus : voici l’accueil de Dilchap.</p>
-              <button type="button" onClick={() => setLostAddress(false)} aria-label="Fermer" className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant"><Icon name="close" size={18} /></button>
+              <p className="m-0 min-w-0 flex-1 text-body-sm text-on-surface"><b>{common.t('pageNotFound')}</b> {common.t('pageNotFoundText')}</p>
+              <button type="button" onClick={() => setLostAddress(false)} aria-label={common.t('close')} className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant"><Icon name="close" size={18} /></button>
             </div>
           )}
           <Home onOpenShop={openShop} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onCategorySelect={navigateToCategory} currentUser={currentUser} location={marketLocation} locationPending={locationPending} onContactSeller={contactSellerFrom} onSearch={searchFromHome} />
@@ -1254,7 +1260,7 @@ export default function App() {
 
 function PageFallback({ fullScreen }: { fullScreen?: boolean }) {
   return (
-    <div className={`flex items-center justify-center ${fullScreen ? 'min-h-screen' : 'min-h-[60vh]'}`} role="status" aria-label="Chargement">
+    <div className={`flex items-center justify-center ${fullScreen ? 'min-h-screen' : 'min-h-[60vh]'}`} role="status" aria-label={common.t('loading')}>
       <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-surface-container-high border-t-primary" />
     </div>
   )

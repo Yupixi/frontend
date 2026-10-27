@@ -1,3 +1,4 @@
+import LanguagePicker from './LanguagePicker'
 import AnimatedIcon, { useIncreaseCounter } from './AnimatedIcon'
 import Icon from './Icon'
 import { useState, useEffect, useRef } from 'react'
@@ -48,6 +49,9 @@ import OfferBanner from './OfferBanner'
 import ManageCookies from './ManageCookies'
 import { spaceCategories, useAdultModeOn, useAdultSpace } from '../lib/adultMode'
 import AdultModeBar from './AdultModeBar'
+import { useT } from '../i18n'
+import common from '../i18n/ns/common'
+import layout from '../i18n/ns/layout'
 
 type Page =
   | 'home' | 'search' | 'flash-offers' | 'listing-detail' | 'seller-profile' | 'categories' | 'auth'
@@ -101,7 +105,9 @@ export default function Layout({
   onOpenSection,
   onLeaveSection,
 }: LayoutProps) {
-  const displayName = currentUser?.fullName || 'Mon compte'
+  const t = useT(layout)
+  const tc = useT(common)
+  const displayName = currentUser?.fullName || t('account.myAccount')
   const displayInitial = displayName.charAt(0).toUpperCase()
   const [search, setSearch] = useState('')
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false)
@@ -241,12 +247,12 @@ export default function Layout({
   }
 
   const accountLinks = currentUser?.isGuest ? [] : [
-    { icon: Home, label: 'Tableau de bord', page: 'buyer-dashboard' as Page },
-    { icon: Package, label: 'Mes annonces', page: 'seller-listings' as Page },
-    { icon: Rocket, label: 'Booster mes annonces', page: 'seller-premium' as Page },
-    { icon: Heart, label: 'Mes favoris', page: 'buyer-favorites' as Page },
-    { icon: BarChart2, label: 'Statistiques', page: 'seller-stats' as Page },
-    { icon: Settings, label: 'Paramètres du compte', page: 'buyer-settings' as Page },
+    { icon: Home, label: t('account.dashboard'), page: 'buyer-dashboard' as Page },
+    { icon: Package, label: t('account.listings'), page: 'seller-listings' as Page },
+    { icon: Rocket, label: t('account.boost'), page: 'seller-premium' as Page },
+    { icon: Heart, label: t('account.favourites'), page: 'buyer-favorites' as Page },
+    { icon: BarChart2, label: t('account.stats'), page: 'seller-stats' as Page },
+    { icon: Settings, label: t('account.settings'), page: 'buyer-settings' as Page },
   ]
 
   const iconBtn = 'relative flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface'
@@ -283,7 +289,7 @@ export default function Layout({
             )}
           </span>
           {daysRemaining > 0 && (
-            <span className="shrink-0 opacity-85">· se termine dans {daysRemaining}j</span>
+            <span className="shrink-0 opacity-85">{t('campaign.endsIn', { n: daysRemaining })}</span>
           )}
         </button>
       )}
@@ -298,28 +304,28 @@ export default function Layout({
         {/* Reassurance strip — desktop only */}
         <div className="hidden h-9 items-center justify-between bg-surface-container-low px-4 text-label-sm text-on-surface-variant lg:flex lg:px-12">
           <div className="flex items-center gap-6">
-            {site.claims.noCommission && <span className="flex items-center gap-1 text-tertiary"><BadgeCheck size={15} /> Mise en relation directe 100% gratuite</span>}
-            <span className="hidden items-center gap-1 lg:flex"><MessageCircle size={15} /> Chat direct &amp; négociation instantanée</span>
-            <span className="hidden items-center gap-1 xl:flex"><Handshake size={15} /> Remise en mains propres</span>
+            {site.claims.noCommission && <span className="flex items-center gap-1 text-tertiary"><BadgeCheck size={15} /> {t('strip.free')}</span>}
+            <span className="hidden items-center gap-1 lg:flex"><MessageCircle size={15} /> {t('strip.chat')}</span>
+            <span className="hidden items-center gap-1 xl:flex"><Handshake size={15} /> {t('strip.handover')}</span>
           </div>
           <div className="flex items-center gap-4">
             {reels && <>
-            <button onClick={() => requestOpenReels()} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm font-semibold text-primary hover:underline"><Icon name="smart_display" size={15} /> Reels</button>
+            <button onClick={() => requestOpenReels()} className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm font-semibold text-primary hover:underline"><Icon name="smart_display" size={15} /> {t('nav.reels')}</button>
             <span className="text-outline-variant">•</span>
             </>}
-            <button onClick={() => onNavigate('categories')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Toutes les catégories</button>
+            <button onClick={() => onNavigate('categories')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">{t('strip.allCategories')}</button>
             {!adultSpace && <>
             <span className="text-outline-variant">•</span>
-            <button onClick={() => requestOpenCampaign('')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">Bonnes affaires</button>
+            <button onClick={() => requestOpenCampaign('')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-on-surface">{t('strip.deals')}</button>
             </>}
             <span className="text-outline-variant">•</span>
-            <a href="/aide" data-tour="help" onClick={openHelp('')} className="flex items-center gap-1 text-label-sm text-on-surface-variant no-underline hover:text-on-surface"><Icon name="help" size={15} /> Aide</a>
+            <a href="/aide" data-tour="help" onClick={openHelp('')} className="flex items-center gap-1 text-label-sm text-on-surface-variant no-underline hover:text-on-surface"><Icon name="help" size={15} /> {t('strip.help')}</a>
           </div>
         </div>
 
         {/* Main row */}
         <div className="flex h-16 items-center gap-3 px-4 lg:h-20 lg:gap-6 lg:px-12">
-          <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label={adultSpace ? 'Accueil de la Section Adultes' : 'Accueil Dilchap'}>
+          <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label={adultSpace ? t('header.homeAdult') : t('header.home')}>
             <Logo size={isMobile ? 'sm' : 'md'} />
           </button>
 
@@ -336,12 +342,12 @@ export default function Layout({
               onClick={openSearchOverlay}
               className="flex min-w-0 flex-1 cursor-text items-center border-none bg-transparent px-3 py-2 text-left text-body-md text-on-surface-variant/70"
             >
-              <span className="truncate">{adultSpace ? 'Rechercher dans la Section Adultes…' : 'Rechercher un iPhone, une moto, un appartement…'}</span>
+              <span className="truncate">{adultSpace ? t('header.searchAdult') : t('header.search')}</span>
             </button>
-            <button onClick={() => onNavigate('search')} className="cursor-pointer border-none bg-transparent p-2 text-on-surface-variant hover:text-on-surface" title="Filtres">
+            <button onClick={() => onNavigate('search')} className="cursor-pointer border-none bg-transparent p-2 text-on-surface-variant hover:text-on-surface" title={t('header.filters')}>
               <SlidersHorizontal size={19} />
             </button>
-            <button onClick={openSearchOverlay} className="ml-1 flex cursor-pointer items-center justify-center rounded-lg border-none bg-primary p-2 text-white transition-colors hover:bg-primary-dark" title="Rechercher">
+            <button onClick={openSearchOverlay} className="ml-1 flex cursor-pointer items-center justify-center rounded-lg border-none bg-primary p-2 text-white transition-colors hover:bg-primary-dark" title={tc('search')}>
               <Search size={20} />
             </button>
           </div>
@@ -351,24 +357,24 @@ export default function Layout({
             {onLocationChange && isMobile && (
               <LocationPill location={location} onChange={onLocationChange} compact />
             )}
-            <button onClick={openSearchOverlay} data-tour="search" className={`${iconBtn} lg:hidden`} title="Rechercher">
+            <button onClick={openSearchOverlay} data-tour="search" className={`${iconBtn} lg:hidden`} title={tc('search')}>
               <Search size={21} />
             </button>
 
             {reels && (
-              <button onClick={() => requestOpenReels()} title="Reels : les articles en vidéo" className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-container-low px-3 py-2.5 text-label-lg text-on-surface transition-colors hover:bg-surface-container lg:flex">
+              <button onClick={() => requestOpenReels()} title={t('header.reelsTitle')} className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-container-low px-3 py-2.5 text-label-lg text-on-surface transition-colors hover:bg-surface-container lg:flex">
                 <Icon name="smart_display" size={19} className="text-primary" />
-                <span>Reels</span>
+                <span>{t('nav.reels')}</span>
               </button>
             )}
             {!currentUser?.isGuest && (
               <button
-                onClick={() => { onNavigate('seller-post'); triggerToast('Création d\'une nouvelle annonce') }}
+                onClick={() => { onNavigate('seller-post'); triggerToast(t('header.newListingToast')) }}
                 data-tour="sell"
                 className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-primary px-4 py-2.5 text-label-lg text-white transition-all hover:bg-primary-dark active:scale-95 lg:flex"
               >
                 <PlusCircle size={19} />
-                <span>Vendre un article</span>
+                <span>{t('header.sell')}</span>
               </button>
             )}
 
@@ -376,23 +382,23 @@ export default function Layout({
               <>
                 <div className="hidden items-center gap-1 lg:flex">
                   {!currentUser?.isGuest && (
-                    <button onClick={() => onNavigate('buyer-favorites')} className={iconBtn} title="Favoris">
+                    <button onClick={() => onNavigate('buyer-favorites')} className={iconBtn} title={t('header.favourites')}>
                       <Heart size={22} />
                     </button>
                   )}
 
                   {/* Messages — short preview dropdown */}
                   <div ref={msgMenuRef} className="relative">
-                    <button onClick={() => { setMsgMenuOpen(o => !o); setNotifMenuOpen(false); setUserMenuOpen(false) }} data-tour="messages" className={iconBtn} title="Messages">
+                    <button onClick={() => { setMsgMenuOpen(o => !o); setNotifMenuOpen(false); setUserMenuOpen(false) }} data-tour="messages" className={iconBtn} title={t('header.messages')}>
                       <MessageCircle size={22} />
                       {unreadMsgCount > 0 && <span className="notif-dot" style={{ background: 'var(--tertiary)' }}>{unreadMsgCount > 9 ? '9+' : unreadMsgCount}</span>}
                     </button>
                     {msgMenuOpen && (
                       <div className={`${dropdown} w-80 max-w-[90vw]`}>
-                        <div className="border-b border-outline-variant px-4 py-3 text-label-lg">Messages</div>
+                        <div className="border-b border-outline-variant px-4 py-3 text-label-lg">{t('header.messages')}</div>
                         <div className="max-h-[360px] overflow-y-auto">
                           {conversations.length === 0 && (
-                            <p className="m-0 p-5 text-center text-body-sm text-on-surface-variant">Aucune conversation.</p>
+                            <p className="m-0 p-5 text-center text-body-sm text-on-surface-variant">{t('header.noConversation')}</p>
                           )}
                           {conversations.slice(0, 5).map(c => (
                             <button
@@ -410,13 +416,13 @@ export default function Layout({
                                   <span className={`truncate text-label-md ${c.unreadCount > 0 ? 'font-extrabold' : ''}`}>{c.otherParticipant.fullName}</span>
                                   <span className="shrink-0 text-[11px] text-outline">{c.lastMessageAt ? formatRelativeDate(c.lastMessageAt) : ''}</span>
                                 </div>
-                                <p className="m-0 truncate text-body-sm text-on-surface-variant">{messagePreview(c.lastMessage) || 'Nouvelle conversation'}</p>
+                                <p className="m-0 truncate text-body-sm text-on-surface-variant">{messagePreview(c.lastMessage) || t('header.newConversation')}</p>
                               </div>
                             </button>
                           ))}
                         </div>
                         <button onClick={() => { setMsgMenuOpen(false); onNavigate('buyer-messages') }} className="block w-full cursor-pointer border-0 border-t border-solid border-outline-variant bg-transparent px-4 py-2.5 text-center text-label-md text-primary">
-                          Voir tout
+                          {t('header.seeAll')}
                         </button>
                       </div>
                     )}
@@ -425,26 +431,26 @@ export default function Layout({
                   {/* Notifications — preview before committing to leave the page */}
                   {!currentUser?.isGuest && (
                     <div ref={notifMenuRef} className="relative">
-                      <button onClick={() => { setNotifMenuOpen(o => !o); setMsgMenuOpen(false); setUserMenuOpen(false) }} className={iconBtn} title="Notifications">
+                      <button onClick={() => { setNotifMenuOpen(o => !o); setMsgMenuOpen(false); setUserMenuOpen(false) }} className={iconBtn} title={t('header.notifications')}>
                         <AnimatedIcon name="bell" fallback="notifications" size={22} trigger={bellRings} />
                         {unreadNotifCount > 0 && <span className="notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
                       </button>
                       {notifMenuOpen && (
                         <div className={`${dropdown} w-[340px] max-w-[90vw]`}>
                           <div className="flex items-center gap-2 border-b border-outline-variant px-4 py-3">
-                            <span className="text-label-lg">Notifications</span>
+                            <span className="text-label-lg">{t('header.notifications')}</span>
                             {unreadNotifCount > 0 && (
                               <span className="rounded-full bg-primary-fixed px-2 text-[11px] font-bold text-primary">{unreadNotifCount}</span>
                             )}
                             {unreadNotifCount > 0 && (
                               <button onClick={markAllRead} className="ml-auto flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-[12px] font-bold text-on-surface-variant">
-                                <CheckCheck size={13} /> Tout marquer lu
+                                <CheckCheck size={13} /> {t('header.markAllRead')}
                               </button>
                             )}
                           </div>
                           <div className="max-h-[380px] overflow-y-auto p-1.5">
                             {notifications.length === 0 && (
-                              <p className="m-0 px-4 py-6 text-center text-body-sm text-on-surface-variant">Aucune notification pour l'instant.</p>
+                              <p className="m-0 px-4 py-6 text-center text-body-sm text-on-surface-variant">{t('header.noNotification')}</p>
                             )}
                             {notifications.slice(0, 5).map(n => {
                               const meta = NOTIFICATION_META[n.type] ?? NOTIFICATION_META.LISTING_STATUS_CHANGED
@@ -470,7 +476,7 @@ export default function Layout({
                             })}
                           </div>
                           <button onClick={() => { setNotifMenuOpen(false); onNavigate('buyer-notifications') }} className="block w-full cursor-pointer border-0 border-t border-solid border-outline-variant bg-transparent px-4 py-2.5 text-center text-label-md text-primary">
-                            Voir tout
+                            {t('header.seeAll')}
                           </button>
                         </div>
                       )}
@@ -480,7 +486,7 @@ export default function Layout({
 
                 {/* Mobile bell — straight to the page, no dropdown */}
                 {!currentUser?.isGuest && (
-                  <button onClick={() => onNavigate('buyer-notifications')} className={`${iconBtn} lg:hidden`} title="Notifications">
+                  <button onClick={() => onNavigate('buyer-notifications')} className={`${iconBtn} lg:hidden`} title={t('header.notifications')}>
                     <AnimatedIcon name="bell" fallback="notifications" size={21} trigger={bellRings} />
                     {unreadNotifCount > 0 && <span className="notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
                   </button>
@@ -492,7 +498,7 @@ export default function Layout({
                 <div ref={userMenuRef} className="relative">
                   <button
                     onClick={() => { setUserMenuOpen(o => !o); setNotifMenuOpen(false); setMsgMenuOpen(false) }}
-                    aria-label="Mon compte" aria-haspopup="menu" aria-expanded={userMenuOpen}
+                    aria-label={t('account.myAccount')} aria-haspopup="menu" aria-expanded={userMenuOpen}
                     // Phones: the tour points at the « Compte » tab instead.
                     data-tour={isMobile ? undefined : 'account'}
                     className="flex cursor-pointer items-center gap-2 rounded-full border-none bg-transparent py-1 pl-1 pr-1 transition-colors hover:bg-surface-container-low lg:pr-2"
@@ -503,7 +509,7 @@ export default function Layout({
                         : displayInitial}
                     </div>
                     <div className="hidden flex-col text-left lg:flex">
-                      <span className="text-label-md leading-tight text-on-surface">Mon compte</span>
+                      <span className="text-label-md leading-tight text-on-surface">{t('account.myAccount')}</span>
                       <span className="max-w-[120px] truncate text-label-sm leading-tight text-tertiary">{displayName.split(' ')[0]}</span>
                     </div>
                     <span className="hidden lg:inline-flex"><ChevronDown size={15} className="text-on-surface-variant" /></span>
@@ -544,14 +550,14 @@ export default function Layout({
                             className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-label-md text-on-surface no-underline hover:bg-surface-container-low"
                           >
                             <Icon name="help" size={17} className="text-on-surface-variant" />
-                            Centre d’aide
+                            {t('account.helpCentre')}
                           </a>
                           <button
                             onClick={() => { setUserMenuOpen(false); void replayTours() }}
                             className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
                           >
                             <Icon name="replay" size={17} className="text-on-surface-variant" />
-                            Visite guidée
+                            {t('account.tour')}
                           </button>
                         </>
                       )}
@@ -561,7 +567,7 @@ export default function Layout({
                         className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-on-surface hover:bg-surface-container-low"
                       >
                         {dark ? <Sun size={17} className="text-amber-600" /> : <Moon size={17} className="text-on-surface-variant" />}
-                        {dark ? 'Mode clair' : 'Mode sombre'}
+                        {dark ? t('account.lightMode') : t('account.darkMode')}
                       </button>
 
                       <div className="mt-1.5 border-t border-outline-variant pt-1.5">
@@ -570,7 +576,7 @@ export default function Layout({
                           className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md text-primary hover:bg-primary-fixed/40"
                         >
                           <LogOut size={17} />
-                          Se déconnecter
+                          {t('account.signOut')}
                         </button>
                       </div>
                     </div>
@@ -582,7 +588,7 @@ export default function Layout({
                 onClick={() => onNavigate('auth')}
                 className="cursor-pointer whitespace-nowrap rounded-lg border-[1.5px] border-solid border-on-surface bg-surface-lowest px-3 py-2 text-label-md text-on-surface transition-colors hover:bg-surface-container-low lg:px-4 lg:py-2.5"
               >
-                <span className="max-[380px]:hidden">Se connecter</span><span className="min-[380px]:hidden">Connexion</span>
+                <span className="max-[380px]:hidden">{t('account.signIn')}</span><span className="min-[380px]:hidden">{t('account.signInShort')}</span>
               </button>
             )}
           </div>
@@ -592,19 +598,19 @@ export default function Layout({
             them from the home rail and the search page). */}
         <nav data-tour="categories" className="hidden h-11 items-center gap-8 overflow-x-auto whitespace-nowrap px-4 [scrollbar-width:none] lg:flex lg:px-12">
           {(adultSpace ? [
-            { key: 'home', label: 'Accueil de la section', active: currentPage === 'adult-home', onClick: () => onNavigate('home') },
+            { key: 'home', label: t('nav.sectionHome'), active: currentPage === 'adult-home', onClick: () => onNavigate('home') },
             ...navCategories.map(c => ({
               key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
             })),
-            { key: 'all', label: 'Toute la section', active: currentPage === 'search' && !navCategories.some(c => c.slug === activeCategory), onClick: () => { onClearCategoryFilter?.(); onNavigate('search') } },
+            { key: 'all', label: t('nav.wholeSection'), active: currentPage === 'search' && !navCategories.some(c => c.slug === activeCategory), onClick: () => { onClearCategoryFilter?.(); onNavigate('search') } },
           ] : [
-            { key: 'home', label: 'Nouveautés', active: currentPage === 'home', onClick: () => onNavigate('home') },
+            { key: 'home', label: t('nav.new'), active: currentPage === 'home', onClick: () => onNavigate('home') },
             ...navCategories.map(c => ({
               key: c.slug, label: c.name, active: currentPage === 'search' && activeCategory === c.slug, onClick: () => onNavigateCategory(c.slug),
             })),
-            { key: 'flash', label: 'Bonnes affaires', active: currentPage === 'flash-offers', onClick: () => requestOpenCampaign('') },
-            { key: 'shops', label: 'Boutiques officielles', icon: 'verified' as const, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
-            ...(adultSection ? [{ key: 'adult', label: 'Adultes 18+', icon: 'lock' as const, active: false, onClick: () => (onOpenSection ? onOpenSection() : onNavigateCategory(adultSection.slug)) }] : []),
+            { key: 'flash', label: t('strip.deals'), active: currentPage === 'flash-offers', onClick: () => requestOpenCampaign('') },
+            { key: 'shops', label: t('nav.shops'), icon: 'verified' as const, active: currentPage === 'shops' || currentPage === 'shop', onClick: () => onNavigate('shops') },
+            ...(adultSection ? [{ key: 'adult', label: t('nav.adult'), icon: 'lock' as const, active: false, onClick: () => (onOpenSection ? onOpenSection() : onNavigateCategory(adultSection.slug)) }] : []),
           ]).map((item: { key: string, label: string, active: boolean, onClick: () => void, icon?: 'verified' | 'lock' }) => (
             <button
               key={item.key}
@@ -637,12 +643,12 @@ export default function Layout({
       <section className="mt-16 hidden bg-surface-container px-4 py-8 lg:block lg:px-12">
         <div className={`mx-auto grid max-w-[1320px] grid-cols-1 gap-6 sm:grid-cols-2 ${site.claims.noCommission ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {[
-            ...(site.claims.noCommission ? [{ icon: Percent, title: '0% Commission', text: 'Publiez et achetez librement, sans frais cachés ni commission prélevée.', accent: true }] : []),
-            { icon: MessageCircle, title: 'Négociation par chat', text: 'Discutez directement avec le vendeur et convenez du meilleur prix.' },
-            { icon: Handshake, title: 'Remise en main propre', text: 'Inspectez l\'article en personne avant de payer, dans un lieu public.' },
-            { icon: ShieldCheck, title: 'Profils vérifiés', text: 'Vendeurs notés par la communauté pour échanger en toute confiance.' },
+            ...(site.claims.noCommission ? [{ id: 'commission', icon: Percent, title: t('band.commission.title'), text: t('band.commission.text'), accent: true }] : []),
+            { id: 'chat', icon: MessageCircle, title: t('band.chat.title'), text: t('band.chat.text') },
+            { id: 'handover', icon: Handshake, title: t('band.handover.title'), text: t('band.handover.text') },
+            { id: 'verified', icon: ShieldCheck, title: t('band.verified.title'), text: t('band.verified.text') },
           ].map(item => (
-            <div key={item.title} className="flex items-start gap-3">
+            <div key={item.id} className="flex items-start gap-3">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${item.accent ? 'bg-tertiary text-white' : 'bg-surface-container-highest text-on-surface'}`}>
                 <item.icon size={20} />
               </div>
@@ -663,35 +669,36 @@ export default function Layout({
               <Logo size="lg" />
               <p className="mt-4 max-w-md text-body-md text-on-surface-variant">
                 {footer?.tagline ||
-                  `${site.brand.name} rend l’achat et la vente entre particuliers simples, fluides et sécurisés ${market?.inName ?? 'en Afrique de l’Ouest'}.`}
+                  t('footer.tagline', { brand: site.brand.name, where: market?.inName ?? tc('inWestAfrica') })}
               </p>
               {socials.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {socials.map(([key, url, label]) => (
                     <a key={key} href={url} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}
                       className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface no-underline hover:bg-primary hover:text-white">
-                      {key === 'x' ? <span className="text-label-lg font-black">X</span> : key === 'linkedin' ? <span className="text-label-md font-black">in</span> : <Icon name={`brand_${key}`} size={20} />}
+                      {key === 'x' ? <span className="text-label-lg font-black">X</span> : key === 'linkedin' ? <span className="text-label-md font-black">in</span> /* i18n-ignore */ : <Icon name={`brand_${key}`} size={20} />}
                     </a>
                   ))}
                 </div>
               )}
               {(site.apps.android || site.apps.ios) && (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {site.apps.android && <a href={site.apps.android} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl bg-on-surface px-3 py-2 text-label-md text-surface-lowest no-underline"><Icon name="brand_googleplay" size={20} /> Google Play</a>}
-                  {site.apps.ios && <a href={site.apps.ios} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl bg-on-surface px-3 py-2 text-label-md text-surface-lowest no-underline"><Icon name="brand_apple" size={20} /> App Store</a>}
+                  {site.apps.android && <a href={site.apps.android} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl bg-on-surface px-3 py-2 text-label-md text-surface-lowest no-underline"><Icon name="brand_googleplay" size={20} /> Google Play{/* i18n-ignore */}</a>}
+                  {site.apps.ios && <a href={site.apps.ios} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-xl bg-on-surface px-3 py-2 text-label-md text-surface-lowest no-underline"><Icon name="brand_apple" size={20} /> App Store{/* i18n-ignore */}</a>}
                 </div>
               )}
             </div>
 
             <div>
-              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Recherches rapides</h4>
+              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">{t('footer.quickSearches')}</h4>
               <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
                 {(footer?.quickLinks?.length ? footer.quickLinks : [
-                  { label: 'Appartements à louer', query: 'appartement' },
-                  { label: 'iPhone 15 Pro Max', query: 'iPhone 15' },
-                  { label: 'Toyota RAV4 & Hilux', query: 'Toyota' },
-                  { label: 'Robes & sacs de marque', query: 'robe' },
-                  { label: 'Services de déménagement', query: 'déménagement' },
+                  // Search words stay as listings are written (French).
+                  { label: t('footer.quick.flats'), query: 'appartement' },
+                  { label: t('footer.quick.iphone'), query: 'iPhone 15' },
+                  { label: t('footer.quick.toyota'), query: 'Toyota' },
+                  { label: t('footer.quick.dresses'), query: 'robe' },
+                  { label: t('footer.quick.moving'), query: 'déménagement' }, // i18n-ignore
                 ]).map(item => (
                   <li key={item.label}>
                     <button onClick={() => { onClearCategoryFilter?.(); onSetSearchTerm?.(item.query); onNavigate('search') }} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">
@@ -703,16 +710,16 @@ export default function Layout({
             </div>
 
             <div>
-              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Espace membre</h4>
+              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">{t('footer.member')}</h4>
               <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
                 {(currentUser?.isGuest ? [] : [
-                  { label: 'Vendre un article', page: 'seller-post' as Page },
-                  { label: 'Mes favoris', page: 'buyer-favorites' as Page },
-                  { label: 'Mon tableau de bord', page: 'buyer-dashboard' as Page },
-                  { label: 'Booster mes annonces', page: 'seller-premium' as Page },
-                  { label: 'Paramètres & sécurité', page: 'buyer-settings' as Page },
+                  { label: t('header.sell'), page: 'seller-post' as Page },
+                  { label: t('account.favourites'), page: 'buyer-favorites' as Page },
+                  { label: t('footer.dashboard'), page: 'buyer-dashboard' as Page },
+                  { label: t('account.boost'), page: 'seller-premium' as Page },
+                  { label: t('footer.settings'), page: 'buyer-settings' as Page },
                 ]).map(item => (
-                  <li key={item.label}>
+                  <li key={item.page}>
                     <button onClick={() => onNavigate(isLoggedIn ? item.page : 'auth')} className="cursor-pointer border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">
                       {item.label}
                     </button>
@@ -722,17 +729,17 @@ export default function Layout({
             </div>
 
             <div>
-              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">Assistance</h4>
+              <h4 className="mb-4 mt-0 text-label-lg text-on-surface">{t('footer.assistance')}</h4>
               <p className="m-0 text-body-sm text-on-surface-variant">
                 {footer?.supportCities || (market ? market.cities.slice(0, 6) : countries.map(c => c.mainCity)).join(' • ')}
               </p>
-              {(market?.supportPhone || footer?.supportPhone) && <p className="mb-0 mt-3 text-label-md text-primary">Support{site.contact.hours ? '' : ' 7j/7'} : {market?.supportPhone || footer?.supportPhone}</p>}
+              {(market?.supportPhone || footer?.supportPhone) && <p className="mb-0 mt-3 text-label-md text-primary">{t(site.contact.hours ? 'footer.support' : 'footer.support247', { phone: market?.supportPhone || footer?.supportPhone })}</p>}
               {site.contact.hours && <p className="mb-0 mt-1 text-body-sm text-on-surface-variant">{site.contact.hours}</p>}
               {site.contact.email && <a href={`mailto:${site.contact.email}`} className="mt-1 block text-body-sm text-primary no-underline hover:underline">{site.contact.email}</a>}
               {site.contact.address && <p className="mb-0 mt-1 text-body-sm text-on-surface-variant">{site.contact.address}</p>}
               <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
                 <li>
-                  <a href="/aide" onClick={openHelp('')} className="text-body-sm text-on-surface-variant no-underline hover:text-primary">Aide &amp; FAQ</a>
+                  <a href="/aide" onClick={openHelp('')} className="text-body-sm text-on-surface-variant no-underline hover:text-primary">{t('footer.helpFaq')}</a>
                 </li>
                 {LEGAL_PAGES.map(p => (
                   <li key={p.slug}>
@@ -752,9 +759,10 @@ export default function Layout({
 
           <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant pt-6 text-label-sm text-on-surface-variant">
             <p className="m-0">
-              {footer?.copyrightText || `© ${new Date().getFullYear()} ${site.brand.name}. Tous droits réservés.`}
+              {footer?.copyrightText || t('footer.copyright', { year: String(new Date().getFullYear()), brand: site.brand.name })}
             </p>
-            <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> Mise en relation sécurisée · Fait en Afrique de l’Ouest</span>
+            <LanguagePicker />
+            <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> {t('footer.secure')}</span>
           </div>
         </div>
       </footer>
@@ -777,7 +785,7 @@ export default function Layout({
           own contextual "Contacter" bar in the same fixed bottom slot. */}
       {isMobile && currentPage !== 'listing-detail' && (
         <nav
-          aria-label="Navigation principale"
+          aria-label={t('nav.mainAria')}
           className={`fixed inset-x-0 bottom-0 z-[300] grid grid-cols-5 border-0 border-t border-solid ${currentPage === 'reels' ? 'reels-nav border-white/10 bg-black' : 'border-outline-variant bg-surface-lowest'}`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
@@ -785,21 +793,22 @@ export default function Layout({
             // anim: Iconsax Lottie (src/assets/lottie) — plays when the tab
             // becomes active and on press; ms: Material fallback.
             // tour: data-tour anchor of the guided tours (lib/tours).
-            { label: 'Accueil', anim: 'nav-home', ms: 'home', page: 'home' as Page },
+            // id: stable React key (the label changes with the language).
+            { id: 'home', label: t('nav.home'), anim: 'nav-home', ms: 'home', page: 'home' as Page },
             // « Reels » when the market has them (search stays in the header).
             reels
-              ? { label: 'Reels', anim: 'nav-reels', ms: 'smart_display', page: 'reels' as Page, tour: 'reels' }
-              : { label: 'Recherche', anim: 'empty-search', ms: 'search', page: 'search' as Page },
-            { label: 'Vendre', anim: 'nav-add', ms: 'add', page: 'seller-post' as Page, primary: true, tour: 'sell' },
-            { label: 'Messages', anim: 'empty-messages', ms: 'chat', page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount, tour: 'messages' },
-            { label: 'Compte', anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page, tour: 'account' },
+              ? { id: 'reels', label: t('nav.reels'), anim: 'nav-reels', ms: 'smart_display', page: 'reels' as Page, tour: 'reels' }
+              : { id: 'search', label: t('nav.search'), anim: 'empty-search', ms: 'search', page: 'search' as Page },
+            { id: 'sell', label: t('nav.sell'), anim: 'nav-add', ms: 'add', page: 'seller-post' as Page, primary: true, tour: 'sell' },
+            { id: 'messages', label: t('nav.messages'), anim: 'empty-messages', ms: 'chat', page: (isLoggedIn ? 'buyer-messages' : 'auth') as Page, badge: unreadMsgCount, tour: 'messages' },
+            { id: 'account', label: t('nav.account'), anim: 'nav-profile', ms: 'person', page: (currentUser?.isGuest ? 'buyer-messages' : isLoggedIn ? 'buyer-dashboard' : 'auth') as Page, tour: 'account' },
           ].map(item => {
             // In the section's space « Accueil » is its page.
             const isActive = adultSpace && item.page === 'home' ? currentPage === 'adult-home' : currentPage === item.page
 
             if (item.primary) {
               return (
-                <button key={item.label} onClick={() => onNavigate(item.page)} data-tour={item.tour} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
+                <button key={item.id} onClick={() => onNavigate(item.page)} data-tour={item.tour} className="flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 text-[11px] font-bold text-primary">
                   <span className={`-mt-5 flex h-[52px] w-[52px] items-center justify-center rounded-full border-[3px] border-solid ${currentPage === 'reels' ? 'border-black' : 'border-surface-lowest'} bg-primary shadow-[0_4px_14px_rgba(254, 0, 0,0.4)]`}>
                     <AnimatedIcon name={item.anim} fallback={item.ms} size={28} className="text-white" playOnInteract preload />
                   </span>
@@ -810,7 +819,7 @@ export default function Layout({
 
             return (
               <button
-                key={item.label}
+                key={item.id}
                 onClick={() => (item.page === 'reels' ? requestOpenReels() : onNavigate(item.page))}
                 data-tour={item.tour}
                 className={`relative flex cursor-pointer flex-col items-center justify-end gap-0.5 border-none bg-transparent pb-1.5 pt-2 text-[11px] ${isActive ? 'font-bold text-primary' : currentPage === 'reels' ? 'font-medium text-white/75' : 'font-medium text-on-surface-variant'}`}

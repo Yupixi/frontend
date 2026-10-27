@@ -8,6 +8,8 @@ import PaymentLogo from './PaymentLogo'
 import { trackCreditPurchase } from '../lib/analytics'
 import { OPEN_PAYMENT, PAYMENT_QUERY, PENDING_PAYMENT_KEY, PROVIDERS, VERIFYING_PAYMENT, type PaymentIntent } from '../graphql/payments'
 import PaymentVerifying from './PaymentVerifying'
+import { useT } from '../i18n'
+import payment from '../i18n/ns/paymentCore'
 
 // Back from the Wave checkout (…/?payment=<id>): show the outcome while
 // the server confirms the payment with Paytic. Wave sends the payer to the
@@ -15,6 +17,7 @@ import PaymentVerifying from './PaymentVerifying'
 // (Paytic's confirmation) is shown, never the way back.
 const POLL_TRIES = 60
 export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const t = useT(payment)
   const client = useApolloClient()
   const [id] = useState(() => {
     const fromUrl = new URLSearchParams(window.location.search).get('payment')
@@ -81,22 +84,22 @@ export default function PaymentReturn({ isLoggedIn }: { isLoggedIn: boolean }) {
   const waiting = !verifying && (!intent || OPEN_PAYMENT.includes(intent.status))
 
   return (
-    <BottomSheet open={open} onClose={close} title="Paiement Mobile Money" footer={
+    <BottomSheet open={open} onClose={close} title={t('return.title')} footer={
       <div className="border-0 border-t border-solid border-outline-variant px-4 py-3">
-        <button onClick={close} className="h-12 w-full cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white">{waiting || verifying ? 'Continuer (vérification en cours)' : 'Terminer'}</button>
+        <button onClick={close} className="h-12 w-full cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white">{waiting || verifying ? t('return.continueVerifying') : t('return.done')}</button>
       </div>
     }>
       {/* Microsoft Clarity: masked, and stopped while open (lib/clarity). */}
       <div data-clarity-mask="True" className="contents">
       <div className="flex flex-col items-center gap-3 py-4 text-center">
         <PaymentLogo method={method} size={56} />
-        {waiting && unreachable && <><Icon name="wifi_off" size={32} className="text-on-surface-variant" /><p className="m-0 text-headline-sm text-on-surface">Vérification impossible</p><p className="m-0 text-body-sm text-on-surface-variant">Nous n’arrivons pas à joindre Dilchap. Votre solde sera mis à jour dès la confirmation de l’opérateur.</p></>}
-        {waiting && !unreachable && <><Icon name="progress_activity" size={32} className="animate-spin text-primary" /><p className="m-0 text-headline-sm text-on-surface">Confirmation du paiement…</p><p className="m-0 text-body-sm text-on-surface-variant">Nous attendons la confirmation de l’opérateur.</p></>}
+        {waiting && unreachable && <><Icon name="wifi_off" size={32} className="text-on-surface-variant" /><p className="m-0 text-headline-sm text-on-surface">{t('return.unreachable.title')}</p><p className="m-0 text-body-sm text-on-surface-variant">{t('return.unreachable.text')}</p></>}
+        {waiting && !unreachable && <><Icon name="progress_activity" size={32} className="animate-spin text-primary" /><p className="m-0 text-headline-sm text-on-surface">{t('return.waiting.title')}</p><p className="m-0 text-body-sm text-on-surface-variant">{t('return.waiting.text')}</p></>}
         {verifying && <PaymentVerifying intent={intent} method={method} compact />}
-        {intent?.status === 'SUCCESS' && <><span className="flex h-14 w-14 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={36} fill /></span><p className="m-0 text-headline-sm text-on-surface">Paiement confirmé</p><p className="m-0 text-body-sm text-on-surface-variant">{intent.credits ? `${intent.credits} crédits ajoutés à votre solde.` : 'Vos crédits sont ajoutés à votre solde.'} Réf. {intent.reference}</p></>}
-        {intent?.status === 'FAILED' && <><span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={36} /></span><p className="m-0 text-headline-sm text-on-surface">Paiement non abouti</p><p className="m-0 text-body-sm text-on-surface-variant">{intent.failedReason ?? 'Aucun montant n’a été débité.'}</p></>}
-        {intent && !waiting && intent.status !== 'SUCCESS' && <SupportAboutButton about={{ kind: 'PAYMENT', id: intent.id }} what="ce paiement" className="order-last mt-1" onBefore={close} />}
-        {intent?.status === 'FULFILMENT_FAILED' && <><Icon name="support_agent" size={36} className="text-primary" /><p className="m-0 text-headline-sm text-on-surface">Paiement reçu</p><p className="m-0 text-body-sm text-on-surface-variant">L’activation a échoué ; notre équipe s’en occupe. Réf. {intent.reference}</p></>}
+        {intent?.status === 'SUCCESS' && <><span className="flex h-14 w-14 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name="check_circle" size={36} fill /></span><p className="m-0 text-headline-sm text-on-surface">{t('return.success.title')}</p><p className="m-0 text-body-sm text-on-surface-variant">{intent.credits ? t('return.success.credits', { n: String(intent.credits), ref: intent.reference }) : t('return.success.noCount', { ref: intent.reference })}</p></>}
+        {intent?.status === 'FAILED' && <><span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name="error" size={36} /></span><p className="m-0 text-headline-sm text-on-surface">{t('return.failed.title')}</p><p className="m-0 text-body-sm text-on-surface-variant">{intent.failedReason ?? t('return.failed.text')}</p></>}
+        {intent && !waiting && intent.status !== 'SUCCESS' && <SupportAboutButton about={{ kind: 'PAYMENT', id: intent.id }} what={t('return.supportWhat')} className="order-last mt-1" onBefore={close} />}
+        {intent?.status === 'FULFILMENT_FAILED' && <><Icon name="support_agent" size={36} className="text-primary" /><p className="m-0 text-headline-sm text-on-surface">{t('return.fulfilmentFailed.title')}</p><p className="m-0 text-body-sm text-on-surface-variant">{t('return.fulfilmentFailed.text', { ref: intent.reference })}</p></>}
       </div>
       </div>
     </BottomSheet>

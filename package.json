@@ -8,7 +8,10 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "typecheck": "tsc --noEmit -p .",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "test:i18n": "node --test tests/i18n.test.cjs"
   },
   "dependencies": {
     "@apollo/client": "^4.2.10",

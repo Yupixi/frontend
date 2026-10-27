@@ -1,6 +1,8 @@
 import Icon from './Icon'
 import { agoLabel } from '../lib/bumps'
 import type { PromoBadge, PromoBadgeKind } from '../graphql/listings'
+import { useT } from '../i18n'
+import listingNs from '../i18n/ns/listing'
 
 // The one pill of a listing card / page: why the listing is placed where it
 // is (« Badges des annonces », BO › Classement). The API sends it only while
@@ -16,12 +18,13 @@ const LOOK: Record<PromoBadgeKind, { icon: string; fill?: boolean; cls: string }
 }
 
 export function pillText(b: PromoBadge) {
-  if (b.kind === 'PROMO') return b.percent ? `${b.label} -${b.percent} %` : b.label
+  if (b.kind === 'PROMO') return b.percent ? `${b.label} ${listingNs.t('pill.percent', { n: b.percent })}` : b.label
   if (b.kind === 'BUMP') return b.at ? `${b.label} ${agoLabel(b.at)}` : b.label
   return b.label
 }
 
 export default function PromoPill({ badge, size = 'card', className = '' }: { badge: PromoBadge; size?: 'card' | 'page'; className?: string }) {
+  const t = useT(listingNs)
   const look = LOOK[badge.kind] ?? LOOK.FEATURED
   const text = pillText(badge)
   const big = size === 'page'
@@ -34,7 +37,7 @@ export default function PromoPill({ badge, size = 'card', className = '' }: { ba
       {/* A narrow card cuts the label, never the discount; under 360 px
           only the icon and the discount (« PROMO -12 % » no longer fits). */}
       {badge.kind === 'PROMO' && badge.percent
-        ? <><span className={`min-w-0 truncate ${big ? '' : 'max-[359px]:hidden'}`}>{badge.label}</span><span className="shrink-0">-{badge.percent} %</span></>
+        ? <><span className={`min-w-0 truncate ${big ? '' : 'max-[359px]:hidden'}`}>{badge.label}</span><span className="shrink-0">{t('pill.percent', { n: badge.percent })}</span></>
         : <span className="truncate">{text}</span>}
     </span>
   )

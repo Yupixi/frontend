@@ -4,6 +4,8 @@ import { HELP_ARTICLES_QUERY, helpKeyOf, helpSlugOf, type HelpArticle } from '..
 import { countryVars, useMarketCode } from '../lib/countries'
 import { requestOpenHelp } from '../lib/navigation'
 import { pathFor } from '../lib/routes'
+import { useT } from '../i18n'
+import helpNs from '../i18n/ns/help'
 
 // The help centre's articles for the visitor's market (one request per
 // country, shared by the help centre and every « En savoir plus » link).
@@ -18,7 +20,8 @@ export function useHelpArticles() {
 // « ? En savoir plus »: small link to a help article, shown only when the
 // article is published (for this country). A real link (/aide/…), opened
 // in the app.
-export default function HelpLink({ article, label = 'En savoir plus', className = '' }: { article: string, label?: string, className?: string }) {
+export default function HelpLink({ article, label, className = '' }: { article: string, label?: string, className?: string }) {
+  const t = useT(helpNs)
   const { articles } = useHelpArticles()
   const key = helpKeyOf(article)
   if (!articles?.some(a => a.key === key)) return null
@@ -33,7 +36,7 @@ export default function HelpLink({ article, label = 'En savoir plus', className 
       }}
       className={`inline-flex items-center gap-1 whitespace-nowrap text-label-sm text-on-surface-variant no-underline hover:text-primary ${className}`}
     >
-      <Icon name="help" size={15} /> {label}
+      <Icon name="help" size={15} /> {label ?? t('learnMore')}
     </a>
   )
 }

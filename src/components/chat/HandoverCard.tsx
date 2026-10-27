@@ -7,29 +7,33 @@ import {
   CONFIRM_SALE_MUTATION, REVIEW_DEAL_MUTATION, handoverRefusal,
   type HandoverRefusal, type RemoteHandover,
 } from '../../graphql/messaging'
+import { useT, fmtDate, fmtTime } from '../../i18n'
+import common from '../../i18n/ns/common'
+import chatNs from '../../i18n/ns/chat'
 
 // What the buyer checks before giving the code (same as the former
 // « Mon code de remise » page).
 const CHECKS = [
-  { title: 'Allumage et fonctionnalités', text: 'Testez l’article devant le vendeur (allumage, boutons, connexions).', icon: 'power_settings_new' },
-  { title: 'État conforme aux photos', text: 'Comparez l’aspect avec les photos et la description de l’annonce.', icon: 'photo_camera' },
-  { title: 'Accessoires et boîte d’origine', text: 'Vérifiez que tous les éléments annoncés sont bien remis.', icon: 'inventory_2' },
-]
+  { key: 'power', icon: 'power_settings_new' },
+  { key: 'photos', icon: 'photo_camera' },
+  { key: 'box', icon: 'inventory_2' },
+] as const
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const clock = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  fmtDate(iso, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const clock = (iso: string) => fmtTime(iso)
 
 // A private Dilchap card of the thread (only this member sees it).
 export function Shell({ title, icon = 'handshake', children, onHide, id = 'remise-card' }: { title: string; icon?: string; children: React.ReactNode; onHide?: () => void; id?: string }) {
+  const t = useT(chatNs)
   return (
-    <section id={id} aria-label={`Dilchap : ${title}`} className="chat-in mx-auto mt-3 w-full max-w-md scroll-mt-24 overflow-hidden rounded-2xl border border-solid border-primary/25 bg-surface-lowest shadow-sm">
+    <section id={id} aria-label={t('card.aria', { title })} className="chat-in mx-auto mt-3 w-full max-w-md scroll-mt-24 overflow-hidden rounded-2xl border border-solid border-primary/25 bg-surface-lowest shadow-sm">
       <div className="flex items-center gap-2 px-3.5 pb-1 pt-3">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white"><Icon name={icon} size={16} /></span>
         <span className="min-w-0 flex-1 text-label-lg text-on-surface">{title}</span>
-        <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant"><Icon name="lock" size={12} /> Privé</span>
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant"><Icon name="lock" size={12} /> {t('handover.private')}</span>
         {onHide && (
-          <button type="button" onClick={onHide} aria-label="Masquer la carte Remise" className="-mr-1 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container">
+          <button type="button" onClick={onHide} aria-label={t('handover.hideAria')} className="-mr-1 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface-variant hover:bg-surface-container">
             <Icon name="close" size={18} />
           </button>
         )}
@@ -40,15 +44,16 @@ export function Shell({ title, icon = 'handshake', children, onHide, id = 'remis
 }
 
 function Frozen({ h, onOpenDispute }: { h: RemoteHandover; onOpenDispute?: (id: string) => void }) {
+  const t = useT(chatNs)
   return (
     <div role="status" className="flex flex-col gap-2 rounded-xl bg-primary-fixed/50 p-3">
       <p className="m-0 flex items-start gap-2 text-body-sm text-on-surface">
         <Icon name="lock" size={18} className="mt-0.5 shrink-0 text-primary" />
-        <span><b className="text-primary">Code gelé</b> : un litige est en cours sur cette vente. {h.role === 'BUYER' ? 'Ne donnez pas votre code et ne payez pas avant la décision.' : 'La vente pourra être confirmée une fois le litige résolu.'}</span>
+        <span>{t.rich(h.role === 'BUYER' ? 'handover.frozenBuyer' : 'handover.frozenSeller', { b: c => <b className="text-primary">{c}</b> })}</span>
       </p>
       {h.disputeId && onOpenDispute && (
         <button type="button" onClick={() => onOpenDispute(h.disputeId!)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-lowest px-3 py-2 text-label-md text-primary">
-          <Icon name="gavel" size={17} /> Voir le litige
+          <Icon name="gavel" size={17} /> {t('handover.viewDispute')}
         </button>
       )}
     </div>
@@ -57,6 +62,7 @@ function Frozen({ h, onOpenDispute }: { h: RemoteHandover; onOpenDispute?: (id: 
 
 // Buyer: the secret code, large and copyable, one rule, the checks.
 function BuyerView({ h, onOpenDispute }: { h: RemoteHandover; onOpenDispute?: (id: string) => void }) {
+  const t = useT(chatNs)
   const [copied, setCopied] = useState(false)
   if (h.frozen) return <Frozen h={h} onOpenDispute={onOpenDispute} />
   const code = h.code ?? ''
@@ -67,28 +73,28 @@ function BuyerView({ h, onOpenDispute }: { h: RemoteHandover; onOpenDispute?: (i
   return (
     <>
       <div>
-        <div className="text-body-sm text-on-surface-variant">Votre code de remise</div>
+        <div className="text-body-sm text-on-surface-variant">{t('handover.yourCode')}</div>
         <div className="mt-1.5 flex items-center gap-3">
-          <span className="select-all font-mono text-[40px] font-extrabold leading-none tracking-[0.18em] text-on-surface" aria-label={`Code ${code.split('').join(' ')}`}>{code || '••••'}</span>
+          <span className="select-all font-mono text-[40px] font-extrabold leading-none tracking-[0.18em] text-on-surface" aria-label={t('handover.codeAria', { digits: code.split('').join(' ') })}>{code || '••••'}</span>
           <button type="button" onClick={copy} disabled={!code} className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-none bg-surface-container px-3 py-2 text-label-sm font-semibold text-on-surface hover:bg-surface-container-high">
-            <Icon name={copied ? 'check' : 'content_copy'} size={16} /> {copied ? 'Copié' : 'Copier'}
+            <Icon name={copied ? 'check' : 'content_copy'} size={16} /> {copied ? common.t('copied') : common.t('copy')}
           </button>
         </div>
       </div>
       <p className="m-0 flex items-start gap-2 rounded-xl bg-primary-fixed/40 p-2.5 text-body-sm text-on-surface">
         <Icon name="verified_user" size={18} className="mt-0.5 shrink-0 text-primary" />
-        <span>Donnez-le au vendeur seulement après avoir vérifié l’article et payé.</span>
+        <span>{t('handover.giveRule')}</span>
       </p>
       <details className="group rounded-xl bg-surface-container-low">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-label-md text-on-surface [&::-webkit-details-marker]:hidden">
-          <Icon name="checklist" size={18} className="text-tertiary" /> À vérifier
+          <Icon name="checklist" size={18} className="text-tertiary" /> {t('handover.toCheck')}
           <Icon name="expand_more" size={18} className="ml-auto text-on-surface-variant transition-transform group-open:rotate-180" />
         </summary>
         <ul className="m-0 flex list-none flex-col gap-2 px-3 pb-3 pt-0">
           {CHECKS.map(c => (
-            <li key={c.title} className="flex items-start gap-2.5">
+            <li key={c.key} className="flex items-start gap-2.5">
               <Icon name={c.icon} size={18} className="mt-0.5 shrink-0 text-on-surface-variant" />
-              <span className="text-body-sm"><b className="block text-label-md text-on-surface">{c.title}</b><span className="text-on-surface-variant">{c.text}</span></span>
+              <span className="text-body-sm"><b className="block text-label-md text-on-surface">{t(`handover.check.${c.key}.title`)}</b><span className="text-on-surface-variant">{t(`handover.check.${c.key}.text`)}</span></span>
             </li>
           ))}
         </ul>
@@ -106,6 +112,7 @@ function SellerView({ h, conversationId, otherName, onConfirmed, onOpenDispute }
   onConfirmed: () => void
   onOpenDispute?: (id: string) => void
 }) {
+  const t = useT(chatNs)
   const [code, setCode] = useState('')
   const [focused, setFocused] = useState(false)
   const [method, setMethod] = useState<string | null>(h.defaultPaymentMethod)
@@ -123,8 +130,8 @@ function SellerView({ h, conversationId, otherName, onConfirmed, onOpenDispute }
     if (!lockedUntil) return
     const ms = Date.parse(lockedUntil) - Date.now()
     if (ms <= 0) return
-    const t = window.setTimeout(() => setRefusal(r => (r?.reason === 'HANDOVER_CODE_LOCKED' ? null : r)), Math.min(ms + 500, 2_147_000_000))
-    return () => window.clearTimeout(t)
+    const timer = window.setTimeout(() => setRefusal(r => (r?.reason === 'HANDOVER_CODE_LOCKED' ? null : r)), Math.min(ms + 500, 2_147_000_000))
+    return () => window.clearTimeout(timer)
   }, [lockedUntil])
 
   const submit = () => {
@@ -145,8 +152,8 @@ function SellerView({ h, conversationId, otherName, onConfirmed, onOpenDispute }
   return (
     <>
       <div>
-        <label htmlFor={`remise-code-${conversationId}`} className="text-label-md text-on-surface">Code de l’acheteur</label>
-        <p className="m-0 text-body-sm text-on-surface-variant">Demandez-le à {otherName} une fois l’article vérifié et payé.</p>
+        <label htmlFor={`remise-code-${conversationId}`} className="text-label-md text-on-surface">{t('handover.buyerCode')}</label>
+        <p className="m-0 text-body-sm text-on-surface-variant">{t('handover.askFor', { name: otherName })}</p>
         {/* One real input (paste, autofill, fast typing) drawn as 4 boxes: the
             caret moves to the next box by itself. */}
         <div className={`relative mt-2 flex w-fit gap-2.5 ${locked ? 'opacity-50' : ''}`}>
@@ -180,8 +187,8 @@ function SellerView({ h, conversationId, otherName, onConfirmed, onOpenDispute }
       </div>
 
       <div>
-        <div className="text-label-md text-on-surface">Paiement reçu{!h.paymentRequired && <span className="font-normal text-on-surface-variant"> (facultatif)</span>}</div>
-        <div className="-mx-3.5 mt-1.5 flex gap-1.5 overflow-x-auto px-3.5 pb-0.5 [scrollbar-width:none]" role="radiogroup" aria-label="Moyen de paiement reçu">
+        <div className="text-label-md text-on-surface">{t('handover.paymentReceived')}{!h.paymentRequired && <span className="font-normal text-on-surface-variant">{t('handover.optional')}</span>}</div>
+        <div className="-mx-3.5 mt-1.5 flex gap-1.5 overflow-x-auto px-3.5 pb-0.5 [scrollbar-width:none]" role="radiogroup" aria-label={t('handover.paymentAria')}>
           {h.paymentMethods.map(m => (
             <button
               key={m}
@@ -199,11 +206,11 @@ function SellerView({ h, conversationId, otherName, onConfirmed, onOpenDispute }
 
       {h.quantity > 1 && (
         <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-container-low px-3 py-2">
-          <span className="text-label-md text-on-surface">Exemplaires vendus</span>
+          <span className="text-label-md text-on-surface">{t('handover.unitsSold')}</span>
           <span className="flex items-center gap-1">
-            <button type="button" aria-label="Un de moins" disabled={qty <= 1} onClick={() => setQty(q => Math.max(1, q - 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={17} /></button>
+            <button type="button" aria-label={t('handover.oneLess')} disabled={qty <= 1} onClick={() => setQty(q => Math.max(1, q - 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={17} /></button>
             <span className="w-8 text-center text-label-lg text-on-surface">{qty}</span>
-            <button type="button" aria-label="Un de plus" disabled={qty >= h.quantity} onClick={() => setQty(q => Math.min(h.quantity, q + 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="add" size={17} /></button>
+            <button type="button" aria-label={t('handover.oneMore')} disabled={qty >= h.quantity} onClick={() => setQty(q => Math.min(h.quantity, q + 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="add" size={17} /></button>
           </span>
         </div>
       )}
@@ -212,16 +219,16 @@ function SellerView({ h, conversationId, otherName, onConfirmed, onOpenDispute }
         <div id={`remise-error-${conversationId}`} role="alert" className="flex items-start gap-2 rounded-xl bg-primary-fixed/60 p-2.5 text-body-sm text-on-surface">
           <Icon name={locked ? 'lock' : 'error'} size={18} className="mt-0.5 shrink-0 text-primary" />
           <span className="min-w-0 flex-1">
-            {locked ? `Trop de codes erronés : saisie bloquée jusqu’à ${clock(lockedUntil!)}.` : refusal!.message}
+            {locked ? t('handover.locked', { time: clock(lockedUntil!) }) : refusal!.message}
             {refusal?.reason === 'OFFLINE' && (
-              <button type="button" onClick={submit} className="ml-1 cursor-pointer border-none bg-transparent p-0 text-body-sm font-bold text-primary underline">Réessayer</button>
+              <button type="button" onClick={submit} className="ml-1 cursor-pointer border-none bg-transparent p-0 text-body-sm font-bold text-primary underline">{common.t('retry')}</button>
             )}
           </span>
         </div>
       )}
 
       <button type="button" onClick={submit} disabled={!ready} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-lg text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50">
-        <Icon name="task_alt" size={20} /> {loading ? 'Vérification…' : 'Confirmer la vente'}
+        <Icon name="task_alt" size={20} /> {loading ? t('handover.checking') : t('handover.confirmSale')}
       </button>
     </>
   )
@@ -239,8 +246,9 @@ export default function HandoverCard({ h, conversationId, otherName, onConfirmed
   // Opened by hand outside its window: can be put away again.
   onHide?: () => void
 }) {
+  const t = useT(chatNs)
   return (
-    <Shell title="Remise" onHide={onHide}>
+    <Shell title={t('handover.title')} onHide={onHide}>
       {h.place && h.scheduledAt && (
         <p className="m-0 -mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="schedule" size={15} className="shrink-0" /> <span className="truncate">{h.place} · {when(h.scheduledAt)}</span></p>
       )}
@@ -262,6 +270,7 @@ export function DealReview({ h, conversationId, otherName, onSaved }: {
   otherName: string
   onSaved: () => void
 }) {
+  const t = useT(chatNs)
   const [later, setLater] = useState(() => { try { return localStorage.getItem(skipKey(conversationId)) === '1' } catch { return false } })
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -271,10 +280,10 @@ export function DealReview({ h, conversationId, otherName, onSaved }: {
   if (h.myReview) {
     return (
       <div className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2 text-body-sm text-on-surface">
-        <span className="flex shrink-0" aria-label={`Votre note : ${h.myReview.rating} sur 5`}>
+        <span className="flex shrink-0" aria-label={t('review.yourRatingAria', { rating: h.myReview.rating })}>
           {[1, 2, 3, 4, 5].map(n => <Icon key={n} name="star" size={16} fill={n <= h.myReview!.rating} className={n <= h.myReview!.rating ? 'text-amber-500' : 'text-outline-variant'} />)}
         </span>
-        <span className="min-w-0 truncate">Merci, votre avis sur {otherName} est enregistré.</span>
+        <span className="min-w-0 truncate">{t('review.saved', { name: otherName })}</span>
       </div>
     )
   }
@@ -282,7 +291,7 @@ export function DealReview({ h, conversationId, otherName, onSaved }: {
   if (later) {
     return (
       <button type="button" onClick={() => setSkipped(false)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container px-3 py-2 text-label-md text-on-surface hover:bg-surface-container-high">
-        <Icon name="star" size={17} /> Noter {otherName}
+        <Icon name="star" size={17} /> {t('review.rate', { name: otherName })}
       </button>
     )
   }
@@ -295,21 +304,21 @@ export function DealReview({ h, conversationId, otherName, onSaved }: {
   }
   return (
     <div className="flex flex-col gap-2 rounded-xl bg-surface-container-low p-3">
-      <div className="text-label-md text-on-surface">Comment s’est passée la remise avec {otherName} ?</div>
-      <div className="flex gap-1" role="radiogroup" aria-label="Note sur 5">
+      <div className="text-label-md text-on-surface">{t('review.question', { name: otherName })}</div>
+      <div className="flex gap-1" role="radiogroup" aria-label={t('review.ratingAria')}>
         {[1, 2, 3, 4, 5].map(n => (
-          <button key={n} type="button" role="radio" aria-checked={rating === n} aria-label={`${n} étoile${n > 1 ? 's' : ''}`} onClick={() => setRating(n)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0">
+          <button key={n} type="button" role="radio" aria-checked={rating === n} aria-label={t('review.stars', { count: n })} onClick={() => setRating(n)} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0">
             <Icon name="star" size={30} fill={n <= rating} className={n <= rating ? 'text-amber-500' : 'text-outline-variant'} />
           </button>
         ))}
       </div>
       {rating > 0 && (
-        <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={1000} rows={2} placeholder="Un commentaire ? (facultatif)" aria-label="Commentaire (facultatif)" className="input min-h-0 resize-none !bg-surface-lowest text-body-sm" />
+        <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={1000} rows={2} placeholder={t('review.commentPlaceholder')} aria-label={t('review.commentAria')} className="input min-h-0 resize-none !bg-surface-lowest text-body-sm" />
       )}
       {error && <p role="alert" className="m-0 text-body-sm text-primary">{error}</p>}
       <div className="flex gap-2">
-        <button type="button" onClick={send} disabled={!rating || loading} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white disabled:opacity-50">{loading ? 'Envoi…' : 'Envoyer'}</button>
-        <button type="button" onClick={() => setSkipped(true)} className="cursor-pointer rounded-lg border-none bg-transparent px-3 py-2 text-label-md text-on-surface-variant hover:bg-surface-container">Plus tard</button>
+        <button type="button" onClick={send} disabled={!rating || loading} className="flex-1 cursor-pointer rounded-lg border-none bg-primary py-2 text-label-md text-white disabled:opacity-50">{loading ? t('review.sending') : common.t('send')}</button>
+        <button type="button" onClick={() => setSkipped(true)} className="cursor-pointer rounded-lg border-none bg-transparent px-3 py-2 text-label-md text-on-surface-variant hover:bg-surface-container">{t('review.later')}</button>
       </div>
     </div>
   )
@@ -319,6 +328,7 @@ export function DealReview({ h, conversationId, otherName, onSaved }: {
 // vendu »): the buyer's code can still certify it. Optional, folded into
 // a button until asked for.
 export function CertifyWithCode({ h, otherName, onDone }: { h: RemoteHandover; otherName: string; onDone: () => void }) {
+  const t = useT(chatNs)
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
   const [refusal, setRefusal] = useState<HandoverRefusal | null>(null)
@@ -327,7 +337,7 @@ export function CertifyWithCode({ h, otherName, onDone }: { h: RemoteHandover; o
   if (!open)
     return (
       <button type="button" onClick={() => setOpen(true)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container px-3 py-2 text-label-md text-on-surface hover:bg-surface-container-high">
-        <Icon name="verified" size={17} /> Certifier avec le code de {otherName} <span className="font-normal text-on-surface-variant">(facultatif)</span>
+        <Icon name="verified" size={17} /> {t.rich('certify.open', { name: otherName, muted: c => <span className="font-normal text-on-surface-variant">{c}</span> })}
       </button>
     )
   const submit = () => {
@@ -339,12 +349,12 @@ export function CertifyWithCode({ h, otherName, onDone }: { h: RemoteHandover; o
   }
   return (
     <div className="flex flex-col gap-2 rounded-xl bg-surface-container-low p-3">
-      <label htmlFor={`certify-${h.meetupId}`} className="text-label-md text-on-surface">Code de remise de {otherName}</label>
+      <label htmlFor={`certify-${h.meetupId}`} className="text-label-md text-on-surface">{t('certify.label', { name: otherName })}</label>
       <div className="flex gap-2">
         <input id={`certify-${h.meetupId}`} value={code} onChange={e => setCode(e.target.value.replace(/D/g, '').slice(0, 4))} onKeyDown={e => { if (e.key === 'Enter') submit() }}
           inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" maxLength={4} placeholder="••••" aria-invalid={!!refusal || undefined}
           className="input h-11 w-28 min-w-0 !bg-surface-lowest text-center font-mono text-headline-sm tracking-[0.3em]" />
-        <button type="button" onClick={submit} disabled={code.length !== 4 || loading} className="flex-1 cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-50">{loading ? 'Vérification…' : 'Certifier la vente'}</button>
+        <button type="button" onClick={submit} disabled={code.length !== 4 || loading} className="flex-1 cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-50">{loading ? t('handover.checking') : t('certify.submit')}</button>
       </div>
       {refusal && <p role="alert" className="m-0 text-body-sm text-primary">{refusal.message}</p>}
     </div>
@@ -361,10 +371,14 @@ export function DealDoneCard({ h, conversationId, otherName, amount, currency, o
   currency: string
   onSaved: () => void
 }) {
+  const t = useT(chatNs)
   return (
-    <Shell title="Vente conclue" icon="verified">
+    <Shell title={t('dealDone.title')} icon="verified">
       <p className="m-0 text-body-sm text-on-surface-variant">
-        {h.handoverMethod === 'CODE' || h.handoverMethod === 'BOTH_CONFIRMED' ? 'Vente confirmée' : 'Vente enregistrée'}{h.handedOverAt ? ` le ${when(h.handedOverAt)}` : ''}{amount != null ? <> · <Price amount={amount} currency={currency} /></> : null}.
+        {t.rich(h.handoverMethod === 'CODE' || h.handoverMethod === 'BOTH_CONFIRMED' ? 'dealDone.confirmed' : 'dealDone.recorded', {
+          on: h.handedOverAt ? t('dealDone.on', { date: when(h.handedOverAt) }) : '',
+          price: amount != null ? <> · <Price amount={amount} currency={currency} /></> : null,
+        })}
       </p>
       <CertifyWithCode h={h} otherName={otherName} onDone={onSaved} />
       <DealReview h={h} conversationId={conversationId} otherName={otherName} onSaved={onSaved} />

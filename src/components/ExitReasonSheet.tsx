@@ -1,6 +1,8 @@
 import BottomSheet from './BottomSheet'
 import Icon from './Icon'
 import { EXIT_REASONS, type ListingExitReason } from '../graphql/deals'
+import { useT } from '../i18n'
+import deals from '../i18n/ns/deals'
 
 // Why a listing goes offline (« Mettre en pause », « Supprimer »): one tap.
 // « Vendu sur Dilchap » leads to « Vendu à qui ? » instead.
@@ -13,13 +15,14 @@ export default function ExitReasonSheet({ open, action, title, busy, error, onPi
   onPick: (reason: ListingExitReason) => void
   onClose: () => void
 }) {
+  const t = useT(deals)
   return (
-    <BottomSheet open={open} onClose={onClose} title={action === 'pause' ? 'Mettre en pause' : 'Supprimer l’annonce'} maxWidth="480px">
+    <BottomSheet open={open} onClose={onClose} title={action === 'pause' ? t('exit.titlePause') : t('exit.titleDelete')} maxWidth="480px">
       <div className="flex flex-col gap-3">
         <p className="m-0 text-body-md text-on-surface-variant">
-          « <b className="text-on-surface">{title}</b> » {action === 'pause' ? 'sort de la recherche ; vous pourrez la remettre en ligne.' : 'sera supprimée définitivement.'} Pourquoi ?
+          {t.rich(action === 'pause' ? 'exit.textPause' : 'exit.textDelete', { title, b: c => <b className="text-on-surface">{c}</b> })}
         </p>
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Raison">
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label={t('exit.reasonAria')}>
           {EXIT_REASONS.map(r => (
             <button key={r.key} type="button" disabled={busy} onClick={() => onPick(r.key)}
               className={`flex min-h-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-none px-2 py-3 text-center text-label-md disabled:opacity-60 ${r.key === 'SOLD_ON_DILCHAP' ? 'bg-primary-fixed/50 text-on-surface hover:bg-primary-fixed' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
@@ -28,7 +31,7 @@ export default function ExitReasonSheet({ open, action, title, busy, error, onPi
             </button>
           ))}
         </div>
-        {action === 'delete' && <p className="m-0 text-body-sm text-on-surface-variant">Une annonce avec une vente conclue ou un litige ne peut pas être supprimée.</p>}
+        {action === 'delete' && <p className="m-0 text-body-sm text-on-surface-variant">{t('exit.deleteNote')}</p>}
         {error && <p role="alert" className="m-0 text-body-sm text-primary">{error}</p>}
       </div>
     </BottomSheet>

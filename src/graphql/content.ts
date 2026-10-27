@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import help from '../i18n/ns/help'
 import type { RemoteListing } from './listings'
 
 // `country` (both): the visitor's market.
@@ -133,11 +134,17 @@ export const CONTENT_PAGE_QUERY = gql`
   query ContentPage($slug: String!, $country: String) { contentPage(slug: $slug, country: $country) }
 `
 export type ContentPage = { slug: string; title: string; body: string; updatedAt: string }
+// Labels read at render (getters), in the visitor's language.
+const legalLabel = (slug: string, key: 'legal.cgu' | 'legal.handover' | 'legal.faq' | 'legal.privacy', icon: string) => ({
+  slug,
+  get label() { return help.t(key) },
+  icon,
+})
 export const LEGAL_PAGES = [
-  { slug: 'cgu', label: "Conditions d'utilisation", icon: 'gavel' },
-  { slug: 'remise-en-main-propre', label: 'Remise en main propre', icon: 'handshake' },
-  { slug: 'faq', label: 'FAQ & support', icon: 'help' },
-  { slug: 'confidentialite', label: 'Confidentialité', icon: 'lock' },
+  legalLabel('cgu', 'legal.cgu', 'gavel'),
+  legalLabel('remise-en-main-propre', 'legal.handover', 'handshake'),
+  legalLabel('faq', 'legal.faq', 'help'),
+  legalLabel('confidentialite', 'legal.privacy', 'lock'),
 ]
 
 // « Mesure d'audience » of the visitor's country (lib/analytics.ts): on or

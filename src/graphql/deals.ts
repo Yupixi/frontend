@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import deals from '../i18n/ns/deals'
 
 // « Mises en relation & ventes », member side: the private check-in card
 // « La vente a-t-elle eu lieu ? », « Marquer comme vendu », the reason of
@@ -30,19 +31,16 @@ export const ANSWER_DEAL_CHECKIN_MUTATION = gql`
   }
 `
 
-export const NOT_CONCLUDED_REASONS: { key: NotConcludedReason; label: string }[] = [
-  { key: 'NO_SHOW', label: 'Pas venu' },
-  { key: 'NOT_AS_DESCRIBED', label: 'Article différent' },
-  { key: 'PRICE', label: 'Prix' },
-  { key: 'OTHER', label: 'Autre' },
-]
+// Labels are getters: read at render, in the current language.
+const label = (k: string) => (deals.t as (k: string) => string)(k)
 
-export const EXIT_REASONS: { key: ListingExitReason; label: string; icon: string }[] = [
-  { key: 'SOLD_ON_DILCHAP', label: 'Vendu sur Dilchap', icon: 'handshake' },
-  { key: 'SOLD_ELSEWHERE', label: 'Vendu ailleurs', icon: 'storefront' },
-  { key: 'UNAVAILABLE', label: 'Plus disponible', icon: 'inventory_2' },
-  { key: 'OTHER', label: 'Autre', icon: 'help' },
-]
+export const NOT_CONCLUDED_REASONS: { key: NotConcludedReason; readonly label: string }[] = (
+  ['NO_SHOW', 'NOT_AS_DESCRIBED', 'PRICE', 'OTHER'] as const
+).map(key => ({ key, get label() { return label(`notConcluded.${key}`) } }))
+
+export const EXIT_REASONS: { key: ListingExitReason; readonly label: string; icon: string }[] = (
+  [['SOLD_ON_DILCHAP', 'handshake'], ['SOLD_ELSEWHERE', 'storefront'], ['UNAVAILABLE', 'inventory_2'], ['OTHER', 'help']] as const
+).map(([key, icon]) => ({ key, icon, get label() { return label(`exit.${key}`) } }))
 
 export type SaleCandidate = {
   conversationId: string

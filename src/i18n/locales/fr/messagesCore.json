@@ -1,0 +1,6 @@
+{
+  "inbox.preview.system": "Dilchap : {{title}}",
+  "inbox.preview.voice": "Message vocal",
+  "inbox.preview.photos_one": "Photo",
+  "inbox.preview.photos_other": "{{count}} photos"
+}

@@ -1,5 +1,10 @@
 import { gql } from '@apollo/client'
 import type { BadgeTier } from './badges'
+import supportNs from '../i18n/ns/support'
+
+// Labels are read at call time (current language): functions and getters,
+// never strings frozen at import.
+const st = supportNs.t as (key: string) => string
 
 // Member ↔ Dilchap team requests. Priority and response target come from
 // the paid badge ("Vendeur certifié" < 2 h, "Compte vérifié" < 24 h).
@@ -26,15 +31,13 @@ export type SupportObjectCard = {
   snapshotAt?: string; sellerName?: string; city?: string
 }
 export type SupportTicketObject = { id: string; kind: SupportObjectKind; targetId: string; snapshot: SupportObjectCard; auto: boolean; createdAt: string }
-export const OBJECT_KINDS: [SupportObjectKind, string, string][] = [
-  ['LISTING', 'Annonces consultées', 'sell'],
-  ['DEAL', 'Achats et ventes', 'handshake'],
-  ['PAYMENT', 'Paiements', 'payments'],
-  ['DISPUTE', 'Litiges', 'gavel'],
-  ['CONVERSATION', 'Conversations', 'forum'],
-]
-export const OBJECT_KIND_LABEL: Record<SupportObjectKind, string> = { LISTING: 'Annonce', DEAL: 'Achat ou vente', PAYMENT: 'Paiement', DISPUTE: 'Litige', CONVERSATION: 'Conversation' }
-export const OBJECT_KIND_ICON = Object.fromEntries(OBJECT_KINDS.map(([k, , icon]) => [k, icon])) as Record<SupportObjectKind, string>
+const KINDS: SupportObjectKind[] = ['LISTING', 'DEAL', 'PAYMENT', 'DISPUTE', 'CONVERSATION']
+export const OBJECT_KIND_ICON: Record<SupportObjectKind, string> = { LISTING: 'sell', DEAL: 'handshake', PAYMENT: 'payments', DISPUTE: 'gavel', CONVERSATION: 'forum' }
+// [kind, picker label, icon]
+export const objectKinds = (): [SupportObjectKind, string, string][] => KINDS.map(k => [k, st(`kinds.${k}`), OBJECT_KIND_ICON[k]])
+const labelGetters = <K extends string>(keys: readonly K[], prefix: string) =>
+  Object.defineProperties({} as Record<K, string>, Object.fromEntries(keys.map(k => [k, { get: () => st(`${prefix}.${k}`), enumerable: true }])))
+export const OBJECT_KIND_LABEL = labelGetters(KINDS, 'kind')
 
 export type SupportTicket = {
   id: string
@@ -57,24 +60,16 @@ export type SupportTicket = {
   unread: number
 }
 
-export const SUPPORT_CATEGORIES: [SupportCategory, string][] = [
-  ['PAYMENT', 'Paiement Mobile Money'],
-  ['BADGE', 'Badge & abonnement'],
-  ['LISTING', 'Annonce & modération'],
-  ['DISPUTE', 'Litige & remise'],
-  ['SHOP', 'Boutique officielle'],
-  ['ACCOUNT_RECOVERY', 'Accès au compte'],
-  ['OTHER', 'Autre question'],
-]
-export const CATEGORY_LABEL = Object.fromEntries(SUPPORT_CATEGORIES) as Record<SupportCategory, string>
+const CATEGORIES: SupportCategory[] = ['PAYMENT', 'BADGE', 'LISTING', 'DISPUTE', 'SHOP', 'ACCOUNT_RECOVERY', 'OTHER']
+export const supportCategories = (): [SupportCategory, string][] => CATEGORIES.map(k => [k, st(`category.${k}`)])
+export const CATEGORY_LABEL = labelGetters(CATEGORIES, 'category')
 
 // What the member picks when opening a conversation (CRITICAL is staff's).
-export const IMPORTANCE_CHOICES: [SupportImportance, string, string, string][] = [
-  ['LOW', 'Simple question', 'help', 'Pas urgent'],
-  ['NORMAL', 'Ça me gêne', 'report', 'Je peux attendre un peu'],
-  ['HIGH', 'Bloquant', 'block', 'Je ne peux plus avancer'],
-]
-export const IMPORTANCE_LABEL: Record<SupportImportance, string> = { LOW: 'Simple question', NORMAL: 'Ça me gêne', HIGH: 'Bloquant', CRITICAL: 'Critique' }
+const IMPORTANCE_ICON: [SupportImportance, string][] = [['LOW', 'help'], ['NORMAL', 'report'], ['HIGH', 'block']]
+// [importance, label, icon, hint]
+export const importanceChoices = (): [SupportImportance, string, string, string][] =>
+  IMPORTANCE_ICON.map(([k, icon]) => [k, st(`importance.${k}`), icon, st(`importanceHint.${k}`)])
+export const IMPORTANCE_LABEL = labelGetters(['LOW', 'NORMAL', 'HIGH', 'CRITICAL'] as const, 'importance')
 
 
 export const MY_SUPPORT_TICKETS_QUERY = gql`query MySupportTickets { mySupportTickets }`

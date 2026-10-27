@@ -4,6 +4,9 @@ import BottomSheet from './BottomSheet'
 import Icon from './Icon'
 import Price from './Price'
 import SafeImg from './SafeImg'
+import { useT } from '../i18n'
+import deals from '../i18n/ns/deals'
+import common from '../i18n/ns/common'
 import { MARK_LISTING_SOLD_MUTATION, SALE_CANDIDATES_QUERY, type SaleCandidate } from '../graphql/deals'
 
 type Data = {
@@ -25,6 +28,8 @@ export default function MarkSoldSheet({ open, listingId, preselect, onClose, onD
   onClose: () => void
   onDone: (status: string) => void
 }) {
+  const t = useT(deals)
+  const tc = useT(common)
   const { data, loading } = useQuery<Data>(SALE_CANDIDATES_QUERY, {
     variables: { listingId, id: listingId },
     skip: !open || !listingId,
@@ -59,23 +64,23 @@ export default function MarkSoldSheet({ open, listingId, preselect, onClose, onD
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Vendu à qui ?"
+      title={t('markSold.title')}
       maxWidth="520px"
       footer={
         <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
-          <button type="button" onClick={onClose} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Annuler</button>
+          <button type="button" onClick={onClose} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">{tc('cancel')}</button>
           <button type="button" onClick={confirm} disabled={!choice || saving} className="h-12 flex-[1.4] cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-50">
-            {saving ? 'Un instant…' : 'Marquer comme vendu'}
+            {saving ? t('markSold.saving') : t('markSold.submit')}
           </button>
         </div>
       }
     >
       <div className="flex flex-col gap-3">
-        {listing && <p className="m-0 text-body-sm text-on-surface-variant">« <b className="text-on-surface">{listing.title}</b> »{stock > 1 ? ` · ${stock} exemplaires en stock` : ''}</p>}
+        {listing && <p className="m-0 text-body-sm text-on-surface-variant">{t.rich(stock > 1 ? 'markSold.listingStock' : 'markSold.listing', { title: listing.title, count: String(stock), b: c => <b className="text-on-surface">{c}</b> })}</p>}
         {loading && !data ? (
           <div className="flex flex-col gap-2" aria-busy="true">{[0, 1].map(i => <div key={i} className="chat-skeleton h-14 rounded-xl" />)}</div>
         ) : (
-          <div role="radiogroup" aria-label="Acheteur" className="flex flex-col gap-2">
+          <div role="radiogroup" aria-label={t('markSold.buyerAria')} className="flex flex-col gap-2">
             {candidates.map(c => option(c.conversationId, (
               <>
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-container-high text-label-lg font-bold text-on-surface-variant">
@@ -84,20 +89,20 @@ export default function MarkSoldSheet({ open, listingId, preselect, onClose, onD
                 <span className="min-w-0">
                   <span className="block truncate text-label-lg text-on-surface">{c.buyerName}</span>
                   <span className="flex flex-wrap gap-x-2 text-body-sm text-on-surface-variant">
-                    {c.acceptedOffer != null && <span>Offre acceptée <Price amount={c.acceptedOffer} currency={listing?.currency ?? 'XOF'} /></span>}
-                    {c.meetupConfirmed && <span>RDV confirmé</span>}
-                    {c.acceptedOffer == null && !c.meetupConfirmed && <span>A écrit pour cette annonce</span>}
+                    {c.acceptedOffer != null && <span>{t.rich('markSold.offerAccepted', { price: <Price amount={c.acceptedOffer} currency={listing?.currency ?? 'XOF'} /> })}</span>}
+                    {c.meetupConfirmed && <span>{t('markSold.meetupConfirmed')}</span>}
+                    {c.acceptedOffer == null && !c.meetupConfirmed && <span>{t('markSold.wrote')}</span>}
                   </span>
                 </span>
               </>
             )))}
-            {!candidates.length && <p className="m-0 text-body-sm text-on-surface-variant">Personne ne vous a encore écrit pour cette annonce sur Dilchap.</p>}
+            {!candidates.length && <p className="m-0 text-body-sm text-on-surface-variant">{t('markSold.nobody')}</p>}
             {option(OFFSITE, (
               <>
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant"><Icon name="storefront" size={20} /></span>
                 <span className="min-w-0">
-                  <span className="block text-label-lg text-on-surface">Vendu hors Dilchap</span>
-                  <span className="block text-body-sm text-on-surface-variant">Vendu ailleurs, à quelqu’un qui ne vous a pas écrit ici</span>
+                  <span className="block text-label-lg text-on-surface">{t('markSold.offsite')}</span>
+                  <span className="block text-body-sm text-on-surface-variant">{t('markSold.offsiteHint')}</span>
                 </span>
               </>
             ))}
@@ -105,18 +110,18 @@ export default function MarkSoldSheet({ open, listingId, preselect, onClose, onD
         )}
         {stock > 1 && (
           <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-container-low px-3 py-2">
-            <span className="text-label-md text-on-surface">Exemplaires vendus</span>
+            <span className="text-label-md text-on-surface">{t('markSold.unitsSold')}</span>
             <span className="flex items-center gap-1">
-              <button type="button" aria-label="Un de moins" disabled={qty <= 1} onClick={() => setQty(q => Math.max(1, q - 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={17} /></button>
+              <button type="button" aria-label={t('markSold.oneLess')} disabled={qty <= 1} onClick={() => setQty(q => Math.max(1, q - 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={17} /></button>
               <span className="w-8 text-center text-label-lg text-on-surface">{qty}</span>
-              <button type="button" aria-label="Un de plus" disabled={qty >= stock} onClick={() => setQty(q => Math.min(stock, q + 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="add" size={17} /></button>
+              <button type="button" aria-label={t('markSold.oneMore')} disabled={qty >= stock} onClick={() => setQty(q => Math.min(stock, q + 1))} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="add" size={17} /></button>
             </span>
           </div>
         )}
         <p className="m-0 text-body-sm text-on-surface-variant">
           {choice && choice !== OFFSITE
-            ? 'La vente est enregistrée avec ce membre et la discussion se ferme ; vous pourrez vous noter. Son code de remise, si vous l’avez, certifie la vente (facultatif).'
-            : stock > 1 ? 'Les exemplaires vendus sont retirés du stock ; l’annonce reste en ligne tant qu’il en reste.' : 'L’annonce passe « Vendue » et sort de la recherche.'}
+            ? t('markSold.noteMember')
+            : stock > 1 ? t('markSold.noteStock') : t('markSold.noteSingle')}
         </p>
         {error && <p role="alert" className="m-0 text-body-sm text-primary">{error}</p>}
       </div>

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Grid, List } from './icons'
+import { useT } from '../i18n'
+import layout from '../i18n/ns/layout'
 
 type ViewToggleProps = {
   viewMode: 'grid' | 'list'
@@ -7,14 +9,15 @@ type ViewToggleProps = {
 }
 
 const MODES = [
-  { mode: 'grid' as const, icon: Grid, label: 'Grille' },
-  { mode: 'list' as const, icon: List, label: 'Liste' },
+  { mode: 'grid' as const, icon: Grid, labelKey: 'viewToggle.grid' as const },
+  { mode: 'list' as const, icon: List, labelKey: 'viewToggle.list' as const },
 ]
 
 // List view only makes sense as a compact layout for small screens — on
 // desktop there's room for the grid, so the toggle (and the choice itself)
 // disappears there rather than leaving a single-option control on screen.
 export default function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
+  const t = useT(layout)
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024)
 
   useEffect(() => {
@@ -30,8 +33,10 @@ export default function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
   if (isDesktop) return null
 
   return (
-    <div className="view-toggle" role="group" aria-label="Mode d'affichage">
-      {MODES.map(({ mode, icon: Icon, label }) => (
+    <div className="view-toggle" role="group" aria-label={t('viewToggle.aria')}>
+      {MODES.map(({ mode, icon: Icon, labelKey }) => {
+        const label = t(labelKey)
+        return (
         <button
           key={mode}
           type="button"
@@ -43,7 +48,8 @@ export default function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
           <Icon size={17} strokeWidth={2.2} />
           <span className="view-toggle-label">{label}</span>
         </button>
-      ))}
+        )
+      })}
     </div>
   )
 }

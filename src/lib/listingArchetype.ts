@@ -1,5 +1,7 @@
 import type { RemoteListing } from '../graphql/listings'
 import { numberFormat } from './intl'
+import { intlLocale } from '../i18n/format'
+import listingNs from '../i18n/ns/listing'
 
 // Card presentation varies by SUBCATEGORY, not category — "Covoiturage" and
 // "Cours particuliers" both live under the "Services" category (they share
@@ -91,7 +93,7 @@ export function archetypeHighlight(listing: RemoteListing): string | null {
   switch (getArchetype(listing)) {
     case 'route': {
       const dispo = attr(listing, 'disponibilite')
-      return dispo ? `Départ ${listing.city} · ${dispo}` : `Départ ${listing.city}`
+      return dispo ? `${listingNs.t('archetype.from', { city: listing.city })} · ${dispo}` : listingNs.t('archetype.from', { city: listing.city })
     }
     case 'rateService': {
       const parts = [attr(listing, 'tarif'), attr(listing, 'disponibilite')].filter(Boolean)
@@ -103,7 +105,7 @@ export function archetypeHighlight(listing: RemoteListing): string | null {
       const parts = [
         brandModel || undefined,
         attr(listing, 'annee'),
-        km ? `${numberFormat('fr-FR').format(Number(km))} km` : undefined,
+        km ? listingNs.t('archetype.km', { km: numberFormat(intlLocale()).format(Number(km)) }) : undefined,
       ].filter(Boolean)
       return parts.length ? parts.join(' · ') : null
     }
@@ -112,7 +114,7 @@ export function archetypeHighlight(listing: RemoteListing): string | null {
       const pieces = attr(listing, 'pieces')
       const parts = [
         surface ? `${surface} m²` : undefined,
-        pieces ? `${pieces} pièce${pieces === '1' ? '' : 's'}` : undefined,
+        pieces ? listingNs.t(pieces === '1' ? 'archetype.roomsOne' : 'archetype.rooms', { n: pieces }) : undefined,
         attr(listing, 'meuble'),
       ].filter(Boolean)
       return parts.length ? parts.join(' · ') : null
@@ -144,7 +146,7 @@ export function archetypePriceFallback(listing: RemoteListing): string | undefin
 
 export function archetypePriceSuffix(listing: RemoteListing): string | null {
   const archetype = getArchetype(listing)
-  if (archetype === 'route') return '/trajet'
+  if (archetype === 'route') return listingNs.t('archetype.perTrip')
   if (archetype === 'rateService' && attr(listing, 'tarif') === "À l'heure") return '/h'
   return null
 }

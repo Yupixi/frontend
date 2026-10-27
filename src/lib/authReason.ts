@@ -3,14 +3,15 @@
 // never shows on a later, deliberate visit. Lives outside pages/Auth so the
 // storefront can set it without pulling the (lazy) auth page into its bundle.
 const REASON_KEY = 'dilchap_auth_reason'
+// The sentence of each reason: i18n auth `reason.<key>` (pages/Auth).
 export const AUTH_REASONS = {
-  favorite: { icon: 'favorite', text: 'Connectez-vous pour enregistrer cet article dans vos favoris.' },
-  offer: { icon: 'sell', text: 'Connectez-vous pour faire une offre au vendeur.' },
-  follow: { icon: 'person_add', text: 'Connectez-vous pour suivre ce vendeur.' },
-  report: { icon: 'flag', text: 'Connectez-vous pour envoyer un signalement.' },
-  alert: { icon: 'notifications', text: 'Connectez-vous pour être alerté des nouvelles annonces.' },
-  contact: { icon: 'chat', text: 'Connectez-vous pour discuter avec le vendeur.' },
-  adult: { icon: 'lock', text: 'Connectez-vous pour accéder à la section Adultes (18+).' },
+  favorite: { icon: 'favorite' },
+  offer: { icon: 'sell' },
+  follow: { icon: 'person_add' },
+  report: { icon: 'flag' },
+  alert: { icon: 'notifications' },
+  contact: { icon: 'chat' },
+  adult: { icon: 'lock' },
 } as const
 export type AuthReason = keyof typeof AUTH_REASONS
 export const setAuthReason = (reason: AuthReason) => {

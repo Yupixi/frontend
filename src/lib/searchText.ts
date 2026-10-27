@@ -19,8 +19,10 @@ export function fold(text: string | null | undefined): string {
     .trim()
 }
 
+// French and English filler words, matched on folded text, never shown.
+// i18n-ignore
 const STOP = new Set(('a au aux avec c ca ce ces cet cette chez d dans de des du elle elles en est et il ils j je l la le les leur leurs m ma me mes moi mon n ne nos notre nous on ou par pas pour qu que qui quoi s sa sans se ses son sont sur suis t ta te tes toi ton tu un une vos votre vous y '
-  + 'veux voudrais voudrai aimerais souhaite souhaiterais cherche recherche besoin acheter achete trouver trouve avoir svp stp bonjour bonsoir salut merci please want need buy the for of and').split(' '))
+  + 'veux voudrais voudrai aimerais souhaite souhaiterais cherche recherche besoin acheter achete trouver trouve avoir svp stp bonjour bonsoir salut merci please want need buy the for of and').split(' ')) // i18n-ignore
 
 const stem = (w: string) => (w.length > 3 && /[sx]$/.test(w) ? w.slice(0, -1) : w)
 

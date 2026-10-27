@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import Icon from './Icon'
+import appShell from '../i18n/ns/appShell'
 
 // A chunk that can't be fetched (offline, or removed by a deploy the tab
 // hasn't picked up). Wording differs per browser.
@@ -45,7 +46,8 @@ export default class ErrorBoundary extends Component<Props, State> {
 }
 
 // Sober screen in the app's style: what happened, « Recharger », and a way
-// home. A missing chunk while offline says so instead.
+// home. A missing chunk while offline says so instead. Strings read with
+// `appShell.t` (no hook: this screen also stands in for a crashed tree).
 export function ErrorScreen({ error, fullScreen, compact }: { error: unknown; fullScreen?: boolean; compact?: boolean }) {
   const offline = isChunkLoadError(error) && typeof navigator !== 'undefined' && navigator.onLine === false
   return (
@@ -54,19 +56,17 @@ export function ErrorScreen({ error, fullScreen, compact }: { error: unknown; fu
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-fixed text-primary">
           <Icon name={offline ? 'wifi_off' : 'error'} size={32} />
         </span>
-        <h1 className="m-0 mt-4 text-headline-sm text-on-surface">{offline ? 'Connexion perdue' : 'Une erreur est survenue'}</h1>
+        <h1 className="m-0 mt-4 text-headline-sm text-on-surface">{offline ? appShell.t('error.offlineTitle') : appShell.t('error.title')}</h1>
         <p className="m-0 mt-1 text-body-md text-on-surface-variant">
-          {offline
-            ? 'Cette page n’a pas pu être chargée. Vérifiez votre connexion puis réessayez.'
-            : 'Cette page n’a pas pu s’afficher. Rechargez-la pour réessayer.'}
+          {offline ? appShell.t('error.offlineText') : appShell.t('error.text')}
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
           <button type="button" onClick={() => window.location.reload()} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-5 text-label-md text-white">
-            <Icon name="refresh" size={18} /> {offline ? 'Réessayer' : 'Recharger'}
+            <Icon name="refresh" size={18} /> {offline ? appShell.t('error.retry') : appShell.t('error.reload')}
           </button>
           {!compact && (
             <a href="/" className="flex h-11 items-center rounded-xl bg-surface-container-high px-5 text-label-md text-on-surface no-underline">
-              Accueil
+              {appShell.t('error.home')}
             </a>
           )}
         </div>

@@ -13,6 +13,8 @@ import { useMediaQuery } from '../lib/useMediaQuery'
 import { pathFor } from '../lib/routes'
 import { requestOpenLink } from '../lib/navigation'
 import { startTour } from '../lib/tourControl'
+import { useT } from '../i18n'
+import helpNs from '../i18n/ns/help'
 
 type Props = {
   // Article shown ('' = the help centre's home).
@@ -47,13 +49,14 @@ function ArticleLink({ article, onOpen, className, children }: { article: HelpAr
 }
 
 function ArticleCard({ article, onOpen }: { article: HelpArticle, onOpen: (slug: string) => void }) {
+  const t = useT(helpNs)
   return (
     <ArticleLink article={article} onOpen={onOpen} className={`${card} group flex min-w-0 items-start gap-3 p-4 transition-shadow hover:shadow-md`}>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="article" size={20} /></span>
       <span className="min-w-0 flex-1">
         <span className="block text-label-lg text-on-surface group-hover:text-primary">{article.title}</span>
         {article.summary && <span className="mt-0.5 block text-body-sm text-on-surface-variant">{article.summary}</span>}
-        <span className="mt-1.5 block text-label-sm text-outline">{article.steps.length} étape{article.steps.length > 1 ? 's' : ''}</span>
+        <span className="mt-1.5 block text-label-sm text-outline">{t('steps', { count: article.steps.length })}</span>
       </span>
       <Icon name="chevron_right" size={18} className="mt-2.5 shrink-0 text-on-surface-variant" />
     </ArticleLink>
@@ -62,19 +65,20 @@ function ArticleCard({ article, onOpen }: { article: HelpArticle, onOpen: (slug:
 
 // « Toujours bloqué ? »: the team's support (signed-in members), the FAQ.
 function ContactCard({ onNavigate }: { onNavigate: (p: any) => void }) {
+  const t = useT(helpNs)
   return (
     <section data-tour="help-contact" className={`${card} mt-8 flex flex-col gap-3 p-5 sm:flex-row sm:items-center`}>
       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="support_agent" size={26} /></span>
       <div className="min-w-0 flex-1">
-        <h2 className="m-0 text-headline-sm text-on-surface">Vous ne trouvez pas la réponse ?</h2>
-        <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Écrivez à l’équipe Dilchap : vous suivez sa réponse dans votre espace et recevez une notification.</p>
+        <h2 className="m-0 text-headline-sm text-on-surface">{t('contact.title')}</h2>
+        <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">{t('contact.text')}</p>
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
         <a href="/legal/faq" onClick={e => { e.preventDefault(); requestOpenLink('/legal/faq') }} className="flex h-11 items-center gap-1.5 whitespace-nowrap rounded-xl bg-surface-container-low px-4 text-label-md text-on-surface no-underline hover:bg-surface-container">
-          <Icon name="help" size={18} /> FAQ
+          <Icon name="help" size={18} /> {t('contact.faq')}
         </a>
         <button onClick={() => onNavigate('support')} className="flex h-11 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white hover:bg-primary-dark">
-          <Icon name="send" size={18} /> Contacter le support
+          <Icon name="send" size={18} /> {t('contact.button')}
         </button>
       </div>
     </section>
@@ -82,6 +86,7 @@ function ContactCard({ onNavigate }: { onNavigate: (p: any) => void }) {
 }
 
 function StepImage({ step, alt }: { step: HelpStep, alt: string }) {
+  const t = useT(helpNs)
   const phone = useMediaQuery('(max-width: 767px)')
   // The phone screenshot on small screens, the desktop one elsewhere; the
   // one there is when only one exists.
@@ -95,7 +100,7 @@ function StepImage({ step, alt }: { step: HelpStep, alt: string }) {
     <>
       <button
         onClick={() => setZoom(true)}
-        aria-label={`Agrandir la capture : ${alt}`}
+        aria-label={t('zoomShot', { alt })}
         className={`group relative mt-4 block cursor-zoom-in overflow-hidden rounded-xl border border-solid border-outline-variant bg-surface-container-low p-0 ${isPhoneShot ? 'mx-auto w-full max-w-[300px]' : 'w-full'}`}
       >
         <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(name)} className="block h-auto w-full" />
@@ -107,6 +112,7 @@ function StepImage({ step, alt }: { step: HelpStep, alt: string }) {
 }
 
 function Article({ slug, articles, onOpen, onNavigate }: { slug: string, articles: HelpArticle[] | null, onOpen: (slug: string) => void, onNavigate: (p: any) => void }) {
+  const t = useT(helpNs)
   const key = helpKeyOf(slug)
   // The list already holds it when the reader comes from the help centre;
   // a direct visit asks for this one only.
@@ -116,12 +122,12 @@ function Article({ slug, articles, onOpen, onNavigate }: { slug: string, article
     skip: !!listed,
   })
   const article = listed ?? data?.helpArticle ?? null
-  usePageTitle(article ? `${article.title} — Centre d’aide` : null)
+  usePageTitle(article ? t('articleTitle', { title: article.title }) : null)
   const related = (articles ?? []).filter(a => article && a.section === article.section && a.key !== article.key)
 
   const crumbs = (
-    <nav aria-label="Fil d’Ariane" className="mb-4 flex min-w-0 items-center gap-1 text-body-sm text-on-surface-variant">
-      <a href="/aide" onClick={e => { e.preventDefault(); onOpen('') }} className="flex shrink-0 items-center gap-1 text-on-surface-variant no-underline hover:text-primary"><Icon name="arrow_back" size={17} /> Centre d’aide</a>
+    <nav aria-label={t('breadcrumb')} className="mb-4 flex min-w-0 items-center gap-1 text-body-sm text-on-surface-variant">
+      <a href="/aide" onClick={e => { e.preventDefault(); onOpen('') }} className="flex shrink-0 items-center gap-1 text-on-surface-variant no-underline hover:text-primary"><Icon name="arrow_back" size={17} /> {t('centre')}</a>
       {article && <><Icon name="chevron_right" size={15} className="shrink-0" /><span className="truncate">{article.section}</span></>}
     </nav>
   )
@@ -132,13 +138,13 @@ function Article({ slug, articles, onOpen, onNavigate }: { slug: string, article
         {crumbs}
         <div className={`${card} p-8 text-center`}>
           {loading && !data ? (
-            <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-[3px] border-surface-container-high border-t-primary" role="status" aria-label="Chargement" />
+            <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-[3px] border-surface-container-high border-t-primary" role="status" aria-label={t('loadingAria')} />
           ) : (
             <>
               <Icon name="article" size={36} className="text-on-surface-variant" />
-              <h1 className="m-0 mt-2 text-headline-sm text-on-surface">Ce guide n’est pas disponible</h1>
-              <p className="m-0 mt-1 text-body-md text-on-surface-variant">Il a peut-être été retiré ou n’existe pas dans votre pays.</p>
-              <button onClick={() => onOpen('')} className="mt-4 h-11 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-md text-white">Voir tous les guides</button>
+              <h1 className="m-0 mt-2 text-headline-sm text-on-surface">{t('missing.title')}</h1>
+              <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('missing.text')}</p>
+              <button onClick={() => onOpen('')} className="mt-4 h-11 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-md text-white">{t('missing.all')}</button>
             </>
           )}
         </div>
@@ -161,7 +167,7 @@ function Article({ slug, articles, onOpen, onNavigate }: { slug: string, article
               <div className="flex items-start gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-label-md text-white" aria-hidden>{i + 1}</span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="m-0 pt-1 text-headline-sm text-on-surface"><span className="sr-only">Étape {i + 1} : </span>{step.title}</h2>
+                  <h2 className="m-0 pt-1 text-headline-sm text-on-surface"><span className="sr-only">{t('stepSr', { n: i + 1 })}</span>{step.title}</h2>
                   {step.body && <div className="rich-text selectable mt-2 text-body-md leading-relaxed text-on-surface [&_p]:my-2" dangerouslySetInnerHTML={{ __html: richHtml(step.body) }} />}
                 </div>
               </div>
@@ -172,7 +178,7 @@ function Article({ slug, articles, onOpen, onNavigate }: { slug: string, article
       </article>
       {related.length > 0 && (
         <section className="mt-8">
-          <h2 className="m-0 mb-3 text-headline-sm text-on-surface">Dans la même rubrique</h2>
+          <h2 className="m-0 mb-3 text-headline-sm text-on-surface">{t('related')}</h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {related.map(a => <ArticleCard key={a.key} article={a} onOpen={onOpen} />)}
           </div>
@@ -184,7 +190,8 @@ function Article({ slug, articles, onOpen, onNavigate }: { slug: string, article
 }
 
 function Home({ articles, loading, onOpen, onNavigate }: { articles: HelpArticle[] | null, loading: boolean, onOpen: (slug: string) => void, onNavigate: (p: any) => void }) {
-  usePageTitle('Centre d’aide')
+  const t = useT(helpNs)
+  usePageTitle(t('centre'))
   const [query, setQuery] = useState('')
   const list = articles ?? []
   const index = useMemo(() => new Map(list.map(a => [a.key, haystack(a)])), [list])
@@ -207,23 +214,23 @@ function Home({ articles, loading, onOpen, onNavigate }: { articles: HelpArticle
   return (
     <>
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-surface-lowest via-surface-lowest to-primary-fixed/60 p-5 shadow-sm lg:p-10">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-fixed px-3 py-1 text-label-sm uppercase text-primary"><Icon name="menu_book" size={14} /> Centre d’aide</span>
-        <h1 className="m-0 mt-3 text-headline-md text-on-surface lg:text-headline-lg">Comment pouvons-nous vous aider ?</h1>
-        <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">Des guides pas à pas, captures d’écran à l’appui, pour acheter et vendre sur Dilchap.</p>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-fixed px-3 py-1 text-label-sm uppercase text-primary"><Icon name="menu_book" size={14} /> {t('centre')}</span>
+        <h1 className="m-0 mt-3 text-headline-md text-on-surface lg:text-headline-lg">{t('home.title')}</h1>
+        <p className="m-0 mt-1 max-w-xl text-body-md text-on-surface-variant">{t('home.text')}</p>
         <label data-tour="help-search" className="mt-5 flex h-12 max-w-xl items-center gap-2 rounded-xl bg-surface-lowest px-3 shadow-sm ring-1 ring-outline-variant focus-within:ring-2 focus-within:ring-primary">
           <Icon name="search" size={20} className="shrink-0 text-on-surface-variant" />
           <input
             type="search"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Vendre, crédits, remise en main propre…"
-            aria-label="Rechercher dans l’aide"
+            placeholder={t('home.placeholder')}
+            aria-label={t('home.searchAria')}
             className="h-full min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none"
           />
-          {query && <button onClick={() => setQuery('')} aria-label="Effacer" className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-low text-on-surface-variant"><Icon name="close" size={16} /></button>}
+          {query && <button onClick={() => setQuery('')} aria-label={t('home.clear')} className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-low text-on-surface-variant"><Icon name="close" size={16} /></button>}
         </label>
         <button onClick={() => void startTour('fe-welcome')} className="mt-3 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary hover:underline">
-          <Icon name="replay" size={17} /> Visite guidée
+          <Icon name="replay" size={17} /> {t('home.tour')}
         </button>
         <ManageCookies icon={<Icon name="tune" size={17} />} className="mt-2 flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-label-md text-primary hover:underline" />
       </section>
@@ -234,13 +241,13 @@ function Home({ articles, loading, onOpen, onNavigate }: { articles: HelpArticle
         </div>
       ) : results ? (
         <section className="mt-6" aria-live="polite">
-          <h2 className="m-0 mb-3 text-headline-sm text-on-surface">{results.length ? `${results.length} guide${results.length > 1 ? 's' : ''} trouvé${results.length > 1 ? 's' : ''}` : 'Aucun guide trouvé'}</h2>
+          <h2 className="m-0 mb-3 text-headline-sm text-on-surface">{t('home.found', { count: results.length })}</h2>
           {results.length ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {results.map(a => <ArticleCard key={a.key} article={a} onOpen={onOpen} />)}
             </div>
           ) : (
-            <p className={`${card} m-0 p-5 text-body-md text-on-surface-variant`}>Essayez d’autres mots, ou écrivez-nous : l’équipe vous répond.</p>
+            <p className={`${card} m-0 p-5 text-body-md text-on-surface-variant`}>{t('home.noResult')}</p>
           )}
         </section>
       ) : sections.length ? (
@@ -255,7 +262,7 @@ function Home({ articles, loading, onOpen, onNavigate }: { articles: HelpArticle
           ))}
         </div>
       ) : (
-        <p className={`${card} m-0 mt-6 flex items-center gap-2 p-5 text-body-md text-on-surface-variant`}><Icon name="menu_book" size={22} /> Les guides arrivent bientôt.</p>
+        <p className={`${card} m-0 mt-6 flex items-center gap-2 p-5 text-body-md text-on-surface-variant`}><Icon name="menu_book" size={22} /> {t('home.soon')}</p>
       )}
       <ContactCard onNavigate={onNavigate} />
     </>

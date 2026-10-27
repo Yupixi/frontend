@@ -8,6 +8,8 @@ import { formatRelativeDate } from '../lib/format'
 import { thumbnailUrl } from '../lib/media'
 import { formatSeconds } from './VoiceMessage'
 import type { RemoteConversation } from '../graphql/messaging'
+import { useT, fmtCfa } from '../i18n'
+import messagesNs from '../i18n/ns/messages'
 
 type Filter = 'all' | 'unread' | 'buy' | 'sell'
 type View = 'threads' | 'listings'
@@ -28,14 +30,15 @@ type Props = {
 // What the last message was about, with its icon ("Vous : " when sent by me).
 function preview(c: RemoteConversation, me?: string): { icon?: string; text: string } {
   const m = c.lastMessage
-  if (!m) return { icon: 'waving_hand', text: 'Démarrez la discussion' }
-  const who = m.senderId === me ? 'Vous : ' : ''
-  if (m.system) return { icon: 'verified_user', text: `Dilchap : ${m.system.title}` }
-  if (m.audioUrl) return { icon: 'mic', text: `${who}Message vocal${m.audioDuration ? ` (${formatSeconds(m.audioDuration)})` : ''}` }
-  if (m.offer) return { icon: 'sell', text: `${who}Offre de ${m.offer.amount.toLocaleString('fr-FR')} F` }
-  if (m.meetup) return { icon: 'event', text: `${who}Rendez-vous : ${m.meetup.place}` }
-  if (!m.body && m.attachments?.length) return { icon: 'photo_camera', text: `${who}${m.attachments.length > 1 ? `${m.attachments.length} photos` : 'Photo'}` }
-  return { icon: m.attachments?.length ? 'photo_camera' : undefined, text: `${who}${m.body}` }
+  const t = messagesNs.t
+  if (!m) return { icon: 'waving_hand', text: t('inbox.preview.start') }
+  const who = (text: string) => (m.senderId === me ? t('inbox.preview.mine', { text }) : text)
+  if (m.system) return { icon: 'verified_user', text: t('inbox.preview.system', { title: m.system.title }) }
+  if (m.audioUrl) return { icon: 'mic', text: who(m.audioDuration ? t('inbox.preview.voiceDuration', { duration: formatSeconds(m.audioDuration) }) : t('inbox.preview.voice')) }
+  if (m.offer) return { icon: 'sell', text: who(t('inbox.preview.offer', { price: fmtCfa(m.offer.amount) })) }
+  if (m.meetup) return { icon: 'event', text: who(t('inbox.preview.meetup', { place: m.meetup.place })) }
+  if (!m.body && m.attachments?.length) return { icon: 'photo_camera', text: who(t('inbox.preview.photos', { count: m.attachments.length })) }
+  return { icon: m.attachments?.length ? 'photo_camera' : undefined, text: who(m.body) }
 }
 
 function Avatar({ c, size }: { c: RemoteConversation; size: number }) {
@@ -47,14 +50,18 @@ function Avatar({ c, size }: { c: RemoteConversation; size: number }) {
   )
 }
 
-const DealChip = ({ c }: { c: RemoteConversation }) => c.dealStatus === 'DISCUSSING' ? (
-  c.closedAt ? <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-surface-container px-1.5 py-px text-[10px] font-bold text-on-surface-variant"><Icon name="lock" size={11} /> Fermée</span>
-    : c.closesAt ? <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-bold text-amber-800">Inactive</span> : null
-) : (
-  <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold ${c.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.dealStatus === 'CONCLUDED' ? 'Conclu' : 'Non conclu'}</span>
-)
+function DealChip({ c }: { c: RemoteConversation }) {
+  const t = useT(messagesNs)
+  return c.dealStatus === 'DISCUSSING' ? (
+    c.closedAt ? <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-surface-container px-1.5 py-px text-[10px] font-bold text-on-surface-variant"><Icon name="lock" size={11} /> {t('inbox.chip.closed')}</span>
+      : c.closesAt ? <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-bold text-amber-800">{t('inbox.chip.inactive')}</span> : null
+  ) : (
+    <span className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold ${c.dealStatus === 'CONCLUDED' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.dealStatus === 'CONCLUDED' ? t('inbox.chip.concluded') : t('inbox.chip.notConcluded')}</span>
+  )
+}
 
 function PreviewLine({ c, me }: { c: RemoteConversation; me?: string }) {
+  useT(messagesNs)
   const p = preview(c, me)
   return (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -69,6 +76,7 @@ function PreviewLine({ c, me }: { c: RemoteConversation; me?: string }) {
 // Inbox: filters, search, and two views the member picks (remembered):
 // one row per discussion, or discussions grouped under each listing.
 export default function InboxList({ conversations, activeId, currentUserId, onOpen, onExplore }: Props) {
+  const t = useT(messagesNs)
   const [filter, setFilter] = useState<Filter>('all')
   const [q, setQ] = useState('')
   const [view, setView] = useState<View>(() => read<View>(VIEW_KEY, 'threads'))
@@ -127,9 +135,9 @@ export default function InboxList({ conversations, activeId, currentUserId, onOp
           </span>
           {c.listing && (
             <span className="flex min-w-0 items-center gap-1.5 text-body-sm">
-              <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${c.canManageDeal ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.canManageDeal ? 'Vente' : 'Achat'}</span>
+              <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${c.canManageDeal ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}>{c.canManageDeal ? t('inbox.role.sell') : t('inbox.role.buy')}</span>
               {/* « Section Adultes »: the conversation belongs to its space. */}
-              {c.listing.isAdult && <span data-testid="conversation-adult" title="Section Adultes" className="shrink-0 rounded bg-primary px-1 text-[10px] font-bold text-white">18+</span>}
+              {c.listing.isAdult && <span data-testid="conversation-adult" title={t('inbox.adultTitle')} className="shrink-0 rounded bg-primary px-1 text-[10px] font-bold text-white">18+</span>}
               <span className="min-w-0 truncate text-on-surface-variant">{c.listing.title}</span>
               <span className="shrink-0 font-semibold text-on-surface"><Price amount={c.listing.price} currency={c.listing.currency} /></span>
             </span>
@@ -145,11 +153,11 @@ export default function InboxList({ conversations, activeId, currentUserId, onOp
       <div className="border-0 border-b border-solid border-outline-variant px-3 pb-2 pt-3">
         <div className="mb-2.5 flex items-center justify-between gap-2">
           <h1 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface">
-            Messages {unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-label-sm text-white">{unread}</span>}
+            {t('inbox.title')} {unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-label-sm text-white">{unread}</span>}
           </h1>
           {/* View picker (remembered) */}
-          <div role="radiogroup" aria-label="Affichage" className="flex rounded-full bg-surface-container-low p-0.5">
-            {([['threads', 'forum', 'Liste', 'Une ligne par discussion'], ['listings', 'storefront', 'Annonces', 'Regrouper par annonce']] as const).map(([v, icon, label, hint]) => (
+          <div role="radiogroup" aria-label={t('inbox.viewAria')} className="flex rounded-full bg-surface-container-low p-0.5">
+            {([['threads', 'forum', t('inbox.view.threads'), t('inbox.view.threadsHint')], ['listings', 'storefront', t('inbox.view.listings'), t('inbox.view.listingsHint')]] as const).map(([v, icon, label, hint]) => (
               <button key={v} role="radio" aria-checked={view === v} title={hint} onClick={() => pickView(v)} className={`flex cursor-pointer items-center gap-1 rounded-full border-none px-2.5 py-1 text-label-sm transition-colors ${view === v ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
                 <Icon name={icon} size={16} /> {label}
               </button>
@@ -158,18 +166,18 @@ export default function InboxList({ conversations, activeId, currentUserId, onOp
         </div>
         <label className="mb-2 flex items-center gap-2 rounded-full bg-surface-container-low px-3.5 py-2 focus-within:bg-surface-container">
           <Icon name="search" size={18} className="text-outline" />
-          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Contact, annonce, message…" className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
-          {q && <button onClick={() => setQ('')} aria-label="Effacer" className="flex cursor-pointer border-none bg-transparent p-0 text-outline"><Icon name="close" size={16} /></button>}
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('inbox.searchPlaceholder')} className="w-full border-none bg-transparent text-body-sm text-on-surface outline-none" />
+          {q && <button onClick={() => setQ('')} aria-label={t('inbox.clearAria')} className="flex cursor-pointer border-none bg-transparent p-0 text-outline"><Icon name="close" size={16} /></button>}
         </label>
         <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
-          {chip('all', 'Toutes')}{chip('unread', 'Non lues')}{chip('buy', 'Achats')}{chip('sell', 'Ventes')}
+          {chip('all', t('inbox.filter.all'))}{chip('unread', t('inbox.filter.unread'))}{chip('buy', t('inbox.filter.buy'))}{chip('sell', t('inbox.filter.sell'))}
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-1.5 py-2">
         {shown.length === 0 && (conversations.length === 0
-          ? <EmptyState className="m-2" icon="empty-messages" fallback="chat" title="Aucune conversation" text="Contactez un vendeur depuis une annonce pour démarrer." action={{ label: 'Explorer les annonces', onClick: onExplore }} />
-          : <p className="m-0 px-4 py-10 text-center text-body-sm text-on-surface-variant">Aucune conversation ne correspond.</p>)}
+          ? <EmptyState className="m-2" icon="empty-messages" fallback="chat" title={t('inbox.empty.title')} text={t('inbox.empty.text')} action={{ label: t('inbox.empty.action'), onClick: onExplore }} />
+          : <p className="m-0 px-4 py-10 text-center text-body-sm text-on-surface-variant">{t('inbox.noMatch')}</p>)}
 
         {view === 'threads' ? (
           <div className="flex flex-col gap-0.5">{shown.map(row)}</div>
@@ -184,10 +192,10 @@ export default function InboxList({ conversations, activeId, currentUserId, onOp
                       {g.listing?.coverImageUrl ? <ListingThumb listing={g.listing} src={thumbnailUrl(g.listing.coverImageUrl)} alt={g.listing.title} icon="sell" /> : <span className="flex h-full w-full items-center justify-center text-outline"><Icon name="forum" size={22} /></span>}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-label-lg text-on-surface">{g.listing?.title ?? 'Sans annonce'}</span>
+                      <span className="block truncate text-label-lg text-on-surface">{g.listing?.title ?? t('inbox.noListing')}</span>
                       <span className="flex items-center gap-1.5 text-body-sm text-on-surface-variant">
                         {g.listing && <span className="font-semibold text-primary"><Price amount={g.listing.price} currency={g.listing.currency} /></span>}
-                        <span>{g.items.length} discussion{g.items.length > 1 ? 's' : ''}</span>
+                        <span>{t('inbox.groupCount', { count: g.items.length })}</span>
                       </span>
                     </span>
                     {g.unread > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-white">{g.unread}</span>}

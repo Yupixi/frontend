@@ -27,7 +27,7 @@ import { track } from '../lib/analytics'
 import { GridSkeleton } from '../components/Skeleton'
 import InfiniteLoader from '../components/InfiniteLoader'
 import { useLoadMore } from '../lib/useLoadMore'
-import { formatNumber } from '../lib/format'
+import { formatNumber, conditionLabel } from '../lib/format'
 import { metaTrack, noteAdultSlugs } from '../lib/metaPixel'
 import { AdultSectionContext, SEARCH_ROUTING_QUERY, adultGateReason, useAdultAccessState, type SearchRouting } from '../lib/adult'
 import AdultGate from '../components/AdultGate'
@@ -36,22 +36,19 @@ import type { Space } from '../lib/routes'
 import { AdultSearchNotice } from '../components/AdultSearchNotice'
 import { matchesAll, recordFinalSearch, searchTokens } from '../lib/searchText'
 import { noteResultOpen } from '../lib/searchAttribution'
+import { cfaUnit, useT } from '../i18n'
+import common from '../i18n/ns/common'
+import searchNs from '../i18n/ns/search'
 
 const PAGE_SIZE = 18
 
-const SORTS: { value: ListingSort, label: string }[] = [
-  { value: 'RELEVANCE', label: 'Pertinence' },
-  { value: 'RECENT', label: 'Plus récents' },
-  { value: 'PRICE_ASC', label: 'Prix croissant' },
-  { value: 'PRICE_DESC', label: 'Prix décroissant' },
-  { value: 'POPULAR', label: 'Plus populaires' },
-]
+const SORTS: ListingSort[] = ['RELEVANCE', 'RECENT', 'PRICE_ASC', 'PRICE_DESC', 'POPULAR']
 
-const BUDGETS: { label: string, min?: number, max?: number }[] = [
-  { label: '< 10 000 F', max: 10_000 },
-  { label: '10k – 50k F', min: 10_000, max: 50_000 },
-  { label: '50k – 100k F', min: 50_000, max: 100_000 },
-  { label: '+ 100 000 F', min: 100_000 },
+const BUDGETS: { key: 'under10k' | '10kTo50k' | '50kTo100k' | 'over100k', min?: number, max?: number }[] = [
+  { key: 'under10k', max: 10_000 },
+  { key: '10kTo50k', min: 10_000, max: 50_000 },
+  { key: '50kTo100k', min: 50_000, max: 100_000 },
+  { key: 'over100k', min: 100_000 },
 ]
 
 type SearchProps = {
@@ -115,6 +112,7 @@ function CheckRow({ checked, label, count, onChange, highlight, logos }: { check
 function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
   facets: FacetCount[], selected: string[], onToggle: (v: string) => void, placeholder: string, icon?: React.ReactNode
 }) {
+  const t = useT(searchNs)
   const [q, setQ] = useState('')
   const shown = facets.filter(f => f.label.toLowerCase().includes(q.toLowerCase()))
   return (
@@ -125,7 +123,7 @@ function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
       </div>
       <div className="flex max-h-40 flex-col overflow-y-auto">
         {shown.map(f => <CheckRow key={f.value} checked={selected.includes(f.value)} label={f.label} count={f.count} onChange={() => onToggle(f.value)} />)}
-        {shown.length === 0 && <span className="py-1 text-body-sm text-outline">Aucun résultat</span>}
+        {shown.length === 0 && <span className="py-1 text-body-sm text-outline">{t('page.noResult')}</span>}
       </div>
     </>
   )
@@ -135,6 +133,7 @@ function SearchableFacet({ facets, selected, onToggle, placeholder, icon }: {
 // the layout and every result card. The term goes up after a 300 ms pause
 // (which is when the results query runs anyway).
 function DebouncedSearchInput({ value, onCommit, placeholder }: { value: string, onCommit: (term: string) => void, placeholder: string }) {
+  const tc = useT(common)
   const [draft, setDraft] = useState(value)
   const committed = useRef(value)
   const commit = useRef(onCommit)
@@ -142,8 +141,8 @@ function DebouncedSearchInput({ value, onCommit, placeholder }: { value: string,
   useEffect(() => { committed.current = value; setDraft(value) }, [value])
   useEffect(() => {
     if (draft === committed.current) return
-    const t = setTimeout(() => { committed.current = draft; commit.current(draft) }, 300)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => { committed.current = draft; commit.current(draft) }, 300)
+    return () => clearTimeout(timer)
   }, [draft])
   return (
     <input
@@ -153,7 +152,7 @@ function DebouncedSearchInput({ value, onCommit, placeholder }: { value: string,
       onChange={e => setDraft(e.target.value)}
       onKeyDown={e => { if (e.key === 'Enter' && draft !== committed.current) { committed.current = draft; commit.current(draft) } }}
       placeholder={placeholder}
-      aria-label="Rechercher"
+      aria-label={tc('search')}
       className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80"
     />
   )
@@ -163,6 +162,7 @@ export default function SearchPage({
   onNavigate, onSelectListing, favorites, onToggleFavorite, categoryFilter, categoryCity, onCategoryCityChange, onClearCategoryFilter, onCategorySelect,
   searchTerm, onSearchTermChange, selectedCity, initialMaxPrice, initialPromoOnly, currentUserId, isLoggedIn, onContactSeller, onOpenSection, onSpaceKnown,
 }: SearchProps) {
+  const t = useT(searchNs)
   // « Section Adultes »: this page is its search / rayon (/adultes/…), a
   // marketplace of its own — its listings, categories and filters only.
   const adultSpace = useAdultSpace()
@@ -198,8 +198,8 @@ export default function SearchPage({
   // the results and the facets. Chips and "clear" apply at once (applyPrice).
   const [appliedPrice, setAppliedPrice] = useState({ min: minPrice, max: maxPrice })
   useEffect(() => {
-    const t = setTimeout(() => setAppliedPrice(p => p.min === minPrice && p.max === maxPrice ? p : { min: minPrice, max: maxPrice }), 400)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setAppliedPrice(p => p.min === minPrice && p.max === maxPrice ? p : { min: minPrice, max: maxPrice }), 400)
+    return () => clearTimeout(timer)
   }, [minPrice, maxPrice])
   const applyPrice = (min: string, max: string) => { setMinPrice(min); setMaxPrice(max); setAppliedPrice({ min, max }) }
   const [search, setSearch] = useState(searchTerm || '')
@@ -329,8 +329,8 @@ export default function SearchPage({
   useEffect(() => {
     const words = search.trim()
     if (!words || !data) return
-    const t = setTimeout(() => recordFinalSearch(words, countryCode, inSection), 1500)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => recordFinalSearch(words, countryCode, inSection), 1500)
+    return () => clearTimeout(timer)
   }, [search, data, countryCode, inSection])
   const { data: routingData } = useQuery<{ searchRouting: SearchRouting }>(SEARCH_ROUTING_QUERY, {
     variables: { term: search.trim(), countryCode: countryCode ?? null },
@@ -386,7 +386,7 @@ export default function SearchPage({
   const [createSavedSearch, { loading: savingAlert }] = useMutation(CREATE_SAVED_SEARCH_MUTATION)
   const createAlert = async () => {
     if (!isLoggedIn) { setAuthReason('alert'); onNavigate('auth'); return }
-    const label = search || (pageCity && rubricName ? `${rubricName} à ${pagePlace}` : rubricName) || 'Ma recherche'
+    const label = search || (pageCity && rubricName ? t('page.inPlace', { name: rubricName, place: pagePlace }) : rubricName) || t('page.mySearch')
     try {
       await createSavedSearch({ variables: { label, filter } })
       setAlertState('done')
@@ -405,18 +405,18 @@ export default function SearchPage({
 
   const chips: { key: string, label: string, near?: boolean, clear: () => void }[] = [
     ...(search ? [{ key: 'q', label: `« ${search} »`, clear: () => onSearchTermChange?.('') }] : []),
-    ...(promoOnly ? [{ key: 'promo', label: 'En promotion', clear: () => setPromoOnly(false) }] : []),
+    ...(promoOnly ? [{ key: 'promo', label: t('page.promo'), clear: () => setPromoOnly(false) }] : []),
     ...(category ? [{ key: 'cat', label: rubricName ?? category.name, clear: () => onClearCategoryFilter?.() }] : []),
-    ...(pageCity ? [{ key: 'page-city', label: `À ${pagePlace}`, clear: () => onCategoryCityChange?.('') }] : []),
+    ...(pageCity ? [{ key: 'page-city', label: t('page.atPlace', { place: pagePlace }), clear: () => onCategoryCityChange?.('') }] : []),
     ...subcategories.map(v => ({ key: `sub-${v}`, label: facets?.subcategories.find(f => f.value === v)?.label ?? v, clear: () => setSubcategories(s => s.filter(x => x !== v)) })),
-    ...cities.map(v => ({ key: `city-${v}`, label: v === nearCity ? `Près de vous : ${v}` : v, near: v === nearCity, clear: () => setCities(s => s.filter(x => x !== v)) })),
-    ...conditions.map(v => ({ key: `cond-${v}`, label: v, clear: () => setConditions(s => s.filter(x => x !== v)) })),
+    ...cities.map(v => ({ key: `city-${v}`, label: v === nearCity ? t('page.nearYou', { city: v }) : v, near: v === nearCity, clear: () => setCities(s => s.filter(x => x !== v)) })),
+    ...conditions.map(v => ({ key: `cond-${v}`, label: conditionLabel(v), clear: () => setConditions(s => s.filter(x => x !== v)) })),
     ...brands.map(v => ({ key: `brand-${v}`, label: v, clear: () => setBrands(s => s.filter(x => x !== v)) })),
-    ...sizes.map(v => ({ key: `size-${v}`, label: `Taille : ${v}`, clear: () => setSizes(s => s.filter(x => x !== v)) })),
-    ...(minPrice || maxPrice ? [{ key: 'price', label: `${minPrice || 0} – ${maxPrice || '∞'} F`, clear: () => applyPrice('', '') }] : []),
-    ...(verifiedOnly ? [{ key: 'verified', label: 'Vendeurs vérifiés', clear: () => setVerifiedOnly(false) }] : []),
-    ...(shopsOnly ? [{ key: 'shops', label: 'Boutiques officielles', clear: () => setShopsOnly(false) }] : []),
-    ...(handoverOnly ? [{ key: 'handover', label: 'Remise en main propre', clear: () => setHandoverOnly(false) }] : []),
+    ...sizes.map(v => ({ key: `size-${v}`, label: t('page.size', { size: v }), clear: () => setSizes(s => s.filter(x => x !== v)) })),
+    ...(minPrice || maxPrice ? [{ key: 'price', label: t('page.priceChip', { min: minPrice || '0', max: maxPrice || '∞', unit: cfaUnit() }), clear: () => applyPrice('', '') }] : []),
+    ...(verifiedOnly ? [{ key: 'verified', label: t('page.verified'), clear: () => setVerifiedOnly(false) }] : []),
+    ...(shopsOnly ? [{ key: 'shops', label: t('page.shops'), clear: () => setShopsOnly(false) }] : []),
+    ...(handoverOnly ? [{ key: 'handover', label: t('page.handover'), clear: () => setHandoverOnly(false) }] : []),
     ...(mobileMoneyOnly ? [{ key: 'momo', label: 'Mobile Money', clear: () => setMobileMoneyOnly(false) }] : []),
     ...categorySlugs.map(v => ({ key: `cats-${v}`, label: categories.find(c => c.slug === v)?.name ?? v, clear: () => setCategorySlugs(s => s.filter(x => x !== v)) })),
   ]
@@ -429,16 +429,16 @@ export default function SearchPage({
   const filtersPanel = (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-headline-sm text-on-surface"><SlidersHorizontal size={19} className="text-primary" /> Filtres</span>
-        <button onClick={resetAll} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary hover:underline">Réinitialiser</button>
+        <span className="flex items-center gap-1.5 text-headline-sm text-on-surface"><SlidersHorizontal size={19} className="text-primary" /> {t('filters.title')}</span>
+        <button onClick={resetAll} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-primary hover:underline">{t('filters.reset')}</button>
       </div>
 
       <label className="relative flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-tertiary-soft p-3">
         <span className="flex items-center gap-2">
           <BadgeCheck size={19} className="text-tertiary" />
           <span className="flex flex-col">
-            <span className="text-label-md text-on-surface">Vendeurs vérifiés</span>
-            <span className="text-label-sm text-tertiary">Badge Compte vérifié ou Vendeur certifié</span>
+            <span className="text-label-md text-on-surface">{t('page.verified')}</span>
+            <span className="text-label-sm text-tertiary">{t('filters.verifiedOnly.text')}</span>
           </span>
         </span>
         <input type="checkbox" className="peer sr-only" checked={verifiedOnly} onChange={() => setVerifiedOnly(v => !v)} />
@@ -449,21 +449,21 @@ export default function SearchPage({
         <span className="flex items-center gap-2">
           <Icon name="storefront" size={19} className="text-tertiary" />
           <span className="flex flex-col">
-            <span className="text-label-md text-on-surface">Boutiques officielles</span>
-            <span className="text-label-sm text-on-surface-variant">Entreprises vérifiées (RCCM ou identifiant fiscal)</span>
+            <span className="text-label-md text-on-surface">{t('page.shops')}</span>
+            <span className="text-label-sm text-on-surface-variant">{t('filters.shopsOnly.text')}</span>
           </span>
         </span>
         <input type="checkbox" className="peer sr-only" checked={shopsOnly} onChange={() => setShopsOnly(v => !v)} />
         <span className="relative h-5 w-9 shrink-0 rounded-full bg-surface-container-highest transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-tertiary peer-checked:after:translate-x-4" />
       </label>
 
-      <FilterBlock title="Catégorie">
+      <FilterBlock title={t('page.category')}>
         {category ? (
           <>
             {/* In the section's space its category is the whole site. */}
             {!(adultSpace && !subcategory) && (
               <button onClick={() => onClearCategoryFilter?.()} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">
-                <ChevronLeft size={14} /> {adultSpace ? 'Toute la section' : 'Toutes les catégories'}
+                <ChevronLeft size={14} /> {adultSpace ? t('page.wholeSection') : t('page.allCategories')}
               </button>
             )}
             <div className="mb-1 flex items-center gap-2 text-label-md text-on-surface"><CategoryIcon icon={category.icon} size={20} className="text-primary" /> {category.name}</div>
@@ -492,20 +492,20 @@ export default function SearchPage({
       </FilterBlock>
 
       {!!facets?.conditions.length && (
-        <FilterBlock title="État de l'objet">
+        <FilterBlock title={t('page.condition')}>
           {facets.conditions.map(f => (
-            <CheckRow key={f.value} checked={conditions.includes(f.value)} label={f.label} count={f.count} highlight onChange={() => setConditions(s => toggle(s, f.value))} />
+            <CheckRow key={f.value} checked={conditions.includes(f.value)} label={conditionLabel(f.label)} count={f.count} highlight onChange={() => setConditions(s => toggle(s, f.value))} />
           ))}
         </FilterBlock>
       )}
 
-      <FilterBlock title="Budget (F)">
+      <FilterBlock title={t('page.budget', { unit: cfaUnit() })}>
         <div className="mb-3 grid grid-cols-2 gap-2">
-          {[{ label: 'Min', value: minPrice, set: setMinPrice }, { label: 'Max', value: maxPrice, set: setMaxPrice }].map(f => (
+          {[{ label: t('filters.min'), value: minPrice, set: setMinPrice }, { label: t('filters.max'), value: maxPrice, set: setMaxPrice }].map(f => (
             <label key={f.label} className="flex items-center gap-1 rounded-lg bg-surface-container-low px-2 py-1.5">
               <span className="text-label-sm text-outline">{f.label}</span>
               <input type="number" min={0} value={f.value} onChange={e => f.set(e.target.value)} className="w-full min-w-0 border-none bg-transparent text-right text-label-lg text-on-surface outline-none" />
-              <span className="text-label-sm text-on-surface">F</span>
+              <span className="text-label-sm text-on-surface">{cfaUnit()}</span>
             </label>
           ))}
         </div>
@@ -514,11 +514,11 @@ export default function SearchPage({
             const active = minPrice === String(b.min ?? '') && maxPrice === String(b.max ?? '')
             return (
               <button
-                key={b.label}
+                key={b.key}
                 onClick={() => applyPrice(active ? '' : String(b.min ?? ''), active ? '' : String(b.max ?? ''))}
                 className={`cursor-pointer rounded-lg border-none px-2.5 py-1 text-body-sm ${active ? 'bg-inverse-surface font-semibold text-white' : 'bg-surface-container text-on-surface hover:bg-surface-container-highest'}`}
               >
-                {b.label}
+                {t(`page.budget.${b.key}`)}
               </button>
             )
           })}
@@ -526,13 +526,13 @@ export default function SearchPage({
       </FilterBlock>
 
       {!!facets?.brands.length && (
-        <FilterBlock title="Marque">
-          <SearchableFacet facets={facets.brands} selected={brands} onToggle={v => setBrands(s => toggle(s, v))} placeholder="Rechercher une marque…" />
+        <FilterBlock title={t('page.brand')}>
+          <SearchableFacet facets={facets.brands} selected={brands} onToggle={v => setBrands(s => toggle(s, v))} placeholder={t('page.brandSearch')} />
         </FilterBlock>
       )}
 
       {!!facets?.sizes.length && (
-        <FilterBlock title="Taille">
+        <FilterBlock title={t('page.sizeTitle')}>
           <div className="grid grid-cols-4 gap-1.5">
             {facets.sizes.map(f => (
               <button
@@ -548,36 +548,36 @@ export default function SearchPage({
       )}
 
       {!!facets?.cities.length && (
-        <FilterBlock title="Villes & Quartiers">
-          <SearchableFacet facets={facets.cities} selected={cities} onToggle={v => setCities(s => toggle(s, v))} placeholder="Rechercher une ville…" icon={<MapPin size={15} />} />
+        <FilterBlock title={t('page.cities')}>
+          <SearchableFacet facets={facets.cities} selected={cities} onToggle={v => setCities(s => toggle(s, v))} placeholder={t('page.citySearch')} icon={<MapPin size={15} />} />
         </FilterBlock>
       )}
 
-      {!adultSpace && <FilterBlock title="Bonnes affaires">
-        <CheckRow checked={promoOnly} label="En promotion (soldes & campagnes)" onChange={() => setPromoOnly(v => !v)} />
+      {!adultSpace && <FilterBlock title={t('filters.deals')}>
+        <CheckRow checked={promoOnly} label={t('page.promoLong')} onChange={() => setPromoOnly(v => !v)} />
       </FilterBlock>}
 
-      <FilterBlock title="Vendeurs de confiance">
-        <CheckRow checked={handoverOnly} label="Remise en main propre privilégiée" onChange={() => setHandoverOnly(v => !v)} />
-        <CheckRow checked={mobileMoneyOnly} label="Mobile Money accepté" logos={mobile} onChange={() => setMobileMoneyOnly(v => !v)} />
-        <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> {noCommission ? '0 % de commission, paiement à la remise' : 'Paiement à la remise'}</div>
+      <FilterBlock title={t('filters.trusted')}>
+        <CheckRow checked={handoverOnly} label={t('filters.handoverOnly.title')} onChange={() => setHandoverOnly(v => !v)} />
+        <CheckRow checked={mobileMoneyOnly} label={t('filters.mobileMoneyOnly.title')} logos={mobile} onChange={() => setMobileMoneyOnly(v => !v)} />
+        <div className="mt-2 flex items-center gap-1 text-label-sm text-tertiary"><Handshake size={13} /> {noCommission ? t('page.noCommission') : t('page.payAtHandover')}</div>
       </FilterBlock>
 
       <button onClick={resetAll} className="cursor-pointer rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest">
-        Réinitialiser tous les filtres
+        {t('page.resetAll')}
       </button>
     </div>
   )
 
   // Category pages: « Mode à Abidjan » (city page), « Mode à Abidjan et en
   // Côte d’Ivoire » (the visitor's country), as search engines get them.
-  const rubricTitle = rubricName ? (pageCity ? `${rubricName} à ${pagePlace}` : market ? `${rubricName} à ${market.mainCity} et ${market.inName}` : rubricName) : ''
-  const title = search ? `Résultats pour « ${search} »` : rubricPending ? ' ' : adultSpace && rubricName ? rubricName : rubricName ? rubricTitle : adultSpace ? 'Toute la section' : promoOnly ? 'Annonces en promotion' : 'Toutes les annonces'
+  const rubricTitle = rubricName ? (pageCity ? t('page.inPlace', { name: rubricName, place: pagePlace }) : market ? t('page.inMarket', { name: rubricName, city: market.mainCity, inCountry: market.inName }) : rubricName) : ''
+  const title = search ? t('page.resultsFor', { q: search }) : rubricPending ? ' ' : adultSpace && rubricName ? rubricName : rubricName ? rubricTitle : adultSpace ? t('page.wholeSection') : promoOnly ? t('page.promoListings') : t('page.allListings')
   // Category pages: same tab title as the one search engines get.
-  const countText = `${formatNumber(total, 0)} annonce${total > 1 ? 's' : ''}`
+  const countText = t('categories.listings', { count: total })
   // With its count while the whole title stays within ~60 characters.
   const brandName = useSite().brand.name
-  const counted = `${title} : ${countText}`
+  const counted = t('page.counted', { title, count: countText })
   usePageTitle(!inSection && categoryFilter && !search && rubricName && (data || previousData) ? (total > 0 && counted.length + brandName.length + 3 <= 60 ? counted : title) : null)
 
   return (
@@ -587,9 +587,9 @@ export default function SearchPage({
       <div className="mb-4 flex items-center gap-2 lg:hidden">
         <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-xl border border-solid border-outline-variant bg-surface-lowest">
           <SearchIcon size={20} className="pointer-events-none absolute left-3.5 text-primary" />
-          <DebouncedSearchInput value={searchTerm ?? ''} onCommit={term => onSearchTermChange?.(term)} placeholder={adultSpace ? 'Rechercher dans la section' : 'Rechercher sur Dilchap'} />
+          <DebouncedSearchInput value={searchTerm ?? ''} onCommit={term => onSearchTermChange?.(term)} placeholder={adultSpace ? t('overlay.placeholderAdult') : t('overlay.dialog')} />
         </label>
-        <button onClick={() => setFiltersOpen(true)} aria-label="Filtres" className="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-inverse-surface text-white">
+        <button onClick={() => setFiltersOpen(true)} aria-label={t('filters.title')} className="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-inverse-surface text-white">
           <SlidersHorizontal size={20} />
           {chosenCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] text-white">{chosenCount}</span>}
         </button>
@@ -598,13 +598,13 @@ export default function SearchPage({
       {!adultSpace && <div className="-mt-2 mb-4 lg:hidden">
         <button type="button" aria-pressed={promoOnly} onClick={() => setPromoOnly(v => !v)}
           className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-solid px-3 py-1.5 text-label-md ${promoOnly ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
-          <Icon name="percent" size={16} /> En promotion
+          <Icon name="percent" size={16} /> {t('page.promo')}
         </button>
       </div>}
 
       {/* Category pages: the same trail as their structured data (Backend seo). */}
-      <nav aria-label="Fil d'ariane" className={`mb-2 flex-wrap items-center gap-1 text-label-md text-on-surface-variant ${category ? 'flex' : 'hidden lg:flex'}`}>
-        <a href={adultSpace ? '/adultes' : '/'} onClick={e => { e.preventDefault(); onNavigate('home') }} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{adultSpace ? 'Section Adultes' : 'Accueil'}</a>
+      <nav aria-label={t('page.breadcrumb')} className={`mb-2 flex-wrap items-center gap-1 text-label-md text-on-surface-variant ${category ? 'flex' : 'hidden lg:flex'}`}>
+        <a href={adultSpace ? '/adultes' : '/'} onClick={e => { e.preventDefault(); onNavigate('home') }} className="text-label-md text-on-surface-variant no-underline hover:text-primary">{adultSpace ? t('page.adultSection') : t('page.home')}</a>
         <ChevronRight size={14} className="text-outline-variant" />
         {category ? (
           <>
@@ -622,35 +622,35 @@ export default function SearchPage({
             )}
             <span className="font-semibold text-on-surface">{pageCity ? pageCity.name : rubricName}</span>
           </>
-        ) : <span className="font-semibold text-on-surface">{adultSpace ? 'Recherche' : 'Catalogue'}</span>}
+        ) : <span className="font-semibold text-on-surface">{adultSpace ? t('page.search') : t('page.catalogue')}</span>}
       </nav>
 
       {/* Heading + sort + view */}
       <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
         <div>
           {verifiedOnly && (
-            <span className="mb-1 inline-block rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">Sélection vérifiée</span>
+            <span className="mb-1 inline-block rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm uppercase text-primary">{t('page.verifiedSelection')}</span>
           )}
           <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{title}</h1>
           <p className="m-0 mt-1 text-body-md text-on-surface-variant">
-            {result ? <><span className="font-bold text-on-surface">{formatNumber(total, 0)} article{total > 1 ? 's' : ''}</span> disponible{total > 1 ? 's' : ''} auprès de notre communauté.</> : ' '}
+            {result ? t.rich('page.available', { count: total, b: c => <span className="font-bold text-on-surface">{c}</span> }) : ' '}
           </p>
           <div className="mt-1 flex flex-wrap gap-x-4">
             {/* Transparency: how « Pertinence » ranks (help center). */}
-            {sort === 'RELEVANCE' && <HelpLink article="comment-sont-classees-les-annonces" label="Comment sont classées les annonces ?" />}
-            {!!result?.promoted?.length && <HelpLink article="badges-des-annonces" label="Pourquoi certaines annonces sont en tête ?" />}
+            {sort === 'RELEVANCE' && <HelpLink article="comment-sont-classees-les-annonces" label={t('page.howRanked')} />}
+            {!!result?.promoted?.length && <HelpLink article="badges-des-annonces" label={t('page.whyTop')} />}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-1.5">
-            <span className="hidden text-label-sm uppercase text-on-surface-variant sm:inline">Trier :</span>
+            <span className="hidden text-label-sm uppercase text-on-surface-variant sm:inline">{t('page.sortLabel')}</span>
             <Select value={sort} onChange={e => setSort(e.target.value as ListingSort)} className="cursor-pointer border-none bg-transparent py-1 text-label-md font-bold text-on-surface outline-none">
-              {SORTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {SORTS.map(s => <option key={s} value={s}>{t(`page.sort.${s}`)}</option>)}
             </Select>
           </label>
           <div className="flex items-center rounded-xl bg-surface-container-low p-1">
-            {([['grid', LayoutGrid, 'Vue grille'], ['list', List, 'Vue liste']] as const).map(([mode, Icon, label]) => (
-              <button key={mode} onClick={() => setViewMode(mode)} title={label} className={`flex cursor-pointer rounded-lg border-none p-1.5 ${viewMode === mode ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
+            {([['grid', LayoutGrid, 'page.viewGrid'], ['list', List, 'page.viewList']] as const).map(([mode, Icon, labelKey]) => (
+              <button key={mode} onClick={() => setViewMode(mode)} title={t(labelKey)} className={`flex cursor-pointer rounded-lg border-none p-1.5 ${viewMode === mode ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
                 <Icon size={19} />
               </button>
             ))}
@@ -664,14 +664,14 @@ export default function SearchPage({
         <section className="min-w-0 lg:col-span-9">
           {chips.length > 0 && (
             <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
-              <span className="pl-1 text-label-sm uppercase text-on-surface-variant">Actifs :</span>
+              <span className="pl-1 text-label-sm uppercase text-on-surface-variant">{t('page.active')}</span>
               {chips.map(c => (
                 <span key={c.key} className={`flex items-center gap-1 rounded-lg px-2 py-1 text-label-md ${c.near ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-lowest text-on-surface'}`}>
                   {c.near && <MapPin size={13} />}{c.label}
-                  <button onClick={c.clear} className="tap-44 relative flex cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary" aria-label={`Retirer ${c.label}`}><X size={13} /></button>
+                  <button onClick={c.clear} className="tap-44 relative flex cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary" aria-label={t('page.remove', { label: c.label })}><X size={13} /></button>
                 </span>
               ))}
-              <button onClick={resetAll} className="cursor-pointer border-none bg-transparent px-1 text-label-sm text-primary hover:underline">Tout effacer</button>
+              <button onClick={resetAll} className="cursor-pointer border-none bg-transparent px-1 text-label-sm text-primary hover:underline">{t('page.clearAll')}</button>
             </div>
           )}
 
@@ -681,14 +681,15 @@ export default function SearchPage({
               <Icon name="spellcheck" size={18} className="text-primary" />
               {correction.applied ? (
                 <>
-                  <span>Résultats pour <b>« {correction.corrected} »</b>.</span>
-                  <button type="button" onClick={() => setAsTyped(search)} className="cursor-pointer border-none bg-transparent p-0 text-body-md text-primary underline">Rechercher plutôt « {correction.original} »</button>
+                  <span>{t.rich('page.correctedResults', { q: correction.corrected, b: c => <b>{c}</b> })}</span>
+                  <button type="button" onClick={() => setAsTyped(search)} className="cursor-pointer border-none bg-transparent p-0 text-body-md text-primary underline">{t('page.searchInstead', { q: correction.original })}</button>
                 </>
               ) : (
                 <>
-                  <span>Vouliez-vous dire</span>
-                  <button type="button" onClick={() => onSearchTermChange?.(correction.corrected)} className="cursor-pointer border-none bg-transparent p-0 text-body-md font-bold text-primary underline">« {correction.corrected} »</button>
-                  <span>?</span>
+                  {t.rich('page.didYouMean', {
+                    word: c => <span>{c}</span>,
+                    term: <button type="button" onClick={() => onSearchTermChange?.(correction.corrected)} className="cursor-pointer border-none bg-transparent p-0 text-body-md font-bold text-primary underline">{t('page.quoted', { q: correction.corrected })}</button>,
+                  })}
                 </>
               )}
             </p>
@@ -717,15 +718,15 @@ export default function SearchPage({
                 ))}
               </div>
             )}
-            {!showGate && data && <InfiniteLoader key={listKey} list={nextPage} pageSize={PAGE_SIZE} endLabel={items.length > PAGE_SIZE ? 'Vous avez tout vu' : null} />}
+            {!showGate && data && <InfiniteLoader key={listKey} list={nextPage} pageSize={PAGE_SIZE} endLabel={items.length > PAGE_SIZE ? t('page.seenAll') : null} />}
             {!loading && items.length === 0 && (
               <>
-                <EmptyState icon="empty-search" fallback="search" tone="neutral" title="Aucune annonce ne correspond"
-                  text={search && searchTokens(search).length > 2 ? 'Essayez avec moins de mots, élargissez vos filtres ou créez une alerte ci-dessous.' : 'Vérifiez l’orthographe, élargissez vos filtres ou créez une alerte ci-dessous.'} />
+                <EmptyState icon="empty-search" fallback="search" tone="neutral" title={t('page.emptyTitle')}
+                  text={search && searchTokens(search).length > 2 ? t('page.emptyLong') : t('page.emptyShort')} />
                 {/* Nearby categories (« telephone » → Téléphones). */}
                 {search && closeCategories.length > 0 && (
                   <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                    <span className="text-body-sm text-on-surface-variant">Voir aussi :</span>
+                    <span className="text-body-sm text-on-surface-variant">{t('page.seeAlso')}</span>
                     {closeCategories.map(c => (
                       <a key={c.slug} href={rubricHref(c.slug)} onClick={goCategory(c.slug)} className="rounded-full bg-surface-lowest px-3.5 py-1.5 text-label-md text-on-surface no-underline hover:text-primary">{c.name}</a>
                     ))}
@@ -743,8 +744,8 @@ export default function SearchPage({
             <div className="flex items-center gap-4">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><BellRing size={22} /></span>
               <div>
-                <div className="text-headline-sm text-on-surface">Vous ne trouvez pas la perle rare ?</div>
-                <p className="m-0 text-body-sm text-on-surface-variant">Enregistrez cette recherche avec vos filtres pour être alerté des nouvelles annonces.</p>
+                <div className="text-headline-sm text-on-surface">{t('page.alert.title')}</div>
+                <p className="m-0 text-body-sm text-on-surface-variant">{t('page.alert.text')}</p>
               </div>
             </div>
             <button
@@ -752,10 +753,10 @@ export default function SearchPage({
               disabled={savingAlert || alertState === 'done'}
               className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-[1.5px] border-solid border-on-surface bg-surface-lowest px-4 py-2.5 text-label-md text-on-surface hover:bg-surface-container disabled:cursor-default disabled:opacity-80"
             >
-              {alertState === 'done' ? <><Check size={16} className="text-tertiary" /> Alerte créée</> : <><BellRing size={16} className="text-primary" /> Créer une alerte</>}
+              {alertState === 'done' ? <><Check size={16} className="text-tertiary" /> {t('page.alert.done')}</> : <><BellRing size={16} className="text-primary" /> {t('page.alert.create')}</>}
             </button>
           </div>}
-          {alertState === 'error' && <p className="mt-2 text-body-sm text-primary">Impossible de créer l'alerte pour le moment.</p>}
+          {alertState === 'error' && <p className="mt-2 text-body-sm text-primary">{t('page.alert.error')}</p>}
 
           {landing && !search && (
             <CategoryLandingExtras

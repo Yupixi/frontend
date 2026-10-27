@@ -1,4 +1,5 @@
 import { WELCOME_TOUR } from './tourControl'
+import tours from '../i18n/ns/tours'
 
 // Guided tours of the storefront (started with lib/tourControl startTour).
 // Each step points at an element marked `data-tour="<target>"` (the first
@@ -24,47 +25,43 @@ export type Tour = {
   steps: TourStep[]
 }
 
+// Texts are read when a tour starts (getters), in the visitor's language.
+type TourKey = Parameters<typeof tours.t>[0]
+const tx = (key: string) => tours.t(key as TourKey)
+const step = (target: string, key: string, extra: Partial<TourStep> = {}): TourStep => ({
+  target,
+  ...extra,
+  get title() { return tx(`${key}.title`) },
+  get text() { return tx(`${key}.text`) },
+})
+const tour = (id: string, labelKey: string, page: string, steps: TourStep[]): Tour => ({
+  id,
+  get label() { return tx(labelKey) },
+  page,
+  steps,
+})
+
 export const TOURS: Record<string, Tour> = {
-  [WELCOME_TOUR]: {
-    id: WELCOME_TOUR,
-    label: 'Visite guidée',
-    page: 'home',
-    // The essentials only (it used to have 8 steps, and its « Suivant » was
-    // the most tapped element of the home page): find, sell, talk.
-    steps: [
-      { target: 'search', title: 'Bienvenue sur Dilchap !', text: 'Cherchez un article, une marque ou un service près de chez vous, puis affinez par ville et par prix.' },
-      { target: 'sell', title: 'Vendre en quelques minutes', text: 'Quelques photos, un prix et votre ville suffisent pour publier une annonce.' },
-      { target: 'messages', title: 'Discuter, se retrouver, payer', text: 'Négociez sur le chat, fixez le rendez-vous et payez de main à main à la remise. Revoyez cette visite quand vous voulez : « Visite guidée » dans l’aide.' },
-    ],
-  },
-  'fe-help-center': {
-    id: 'fe-help-center',
-    label: 'Le Centre d’aide',
-    page: 'help',
-    steps: [
-      { target: 'help-search', title: 'Posez votre question', text: 'Tapez quelques mots : les guides qui en parlent s’affichent aussitôt.' },
-      { target: 'help-sections', title: 'Des guides pas à pas', text: 'Chaque guide détaille les étapes avec des captures d’écran, sur ordinateur comme sur téléphone.' },
-      { target: 'help-contact', title: 'Toujours bloqué ?', text: 'Écrivez à l’équipe Dilchap : vous suivez sa réponse dans Aide & support.' },
-    ],
-  },
-  'fe-country-picker': {
-    id: 'fe-country-picker',
-    label: 'Choisir son pays',
-    page: 'home',
-    steps: [
-      { target: 'country', title: 'Changez de pays', text: 'Touchez ici pour choisir un pays et une ville : les annonces, les prix et les moyens de paiement s’adaptent.' },
-    ],
-  },
-  'fe-boost': {
-    id: 'fe-boost',
-    label: 'Booster une annonce',
-    page: 'seller-premium',
-    steps: [
-      { target: 'boost-credits', title: 'Vos crédits', text: 'Les boosts se paient en crédits, achetés par Mobile Money dans votre porte-monnaie.' },
-      { target: 'boost-listing', title: 'Choisissez l’annonce', text: 'Chaque carte montre sa visibilité et ses boutons : Booster, Remonter, Statistiques.' },
-      { target: 'boost-packs', title: 'Choisissez la formule', text: 'Les formules côte à côte : ce qu’elles font, leur durée, leur prix en crédits et en F.' },
-    ],
-  },
+  // The essentials only (it used to have 8 steps, and its « Suivant » was
+  // the most tapped element of the home page): find, sell, talk.
+  [WELCOME_TOUR]: tour(WELCOME_TOUR, 'welcome.label', 'home', [
+    step('search', 'welcome.search'),
+    step('sell', 'welcome.sell'),
+    step('messages', 'welcome.messages'),
+  ]),
+  'fe-help-center': tour('fe-help-center', 'helpCenter.label', 'help', [
+    step('help-search', 'helpCenter.search'),
+    step('help-sections', 'helpCenter.sections'),
+    step('help-contact', 'helpCenter.contact'),
+  ]),
+  'fe-country-picker': tour('fe-country-picker', 'countryPicker.label', 'home', [
+    step('country', 'countryPicker.country'),
+  ]),
+  'fe-boost': tour('fe-boost', 'boost.label', 'seller-premium', [
+    step('boost-credits', 'boost.credits'),
+    step('boost-listing', 'boost.listing'),
+    step('boost-packs', 'boost.packs'),
+  ]),
 }
 
 export const isTour = (id: string | null | undefined): id is string => !!id && id in TOURS

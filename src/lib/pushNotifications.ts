@@ -2,6 +2,7 @@ import { print } from 'graphql'
 import { apolloClient, GRAPHQL_URL } from './apollo'
 import { registerServiceWorker } from './serviceWorker'
 import { VAPID_PUBLIC_KEY_QUERY, SAVE_PUSH_SUBSCRIPTION_MUTATION, REMOVE_PUSH_SUBSCRIPTION_MUTATION } from '../graphql/push'
+import { localeHeaders } from '../i18n/headers'
 
 // VAPID public keys are base64url — the Push API wants a raw Uint8Array.
 function urlBase64ToUint8Array(base64url: string): Uint8Array {
@@ -113,7 +114,7 @@ export async function unsubscribeFromPush(accessToken: string | null): Promise<v
       await fetch(GRAPHQL_URL, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
+        headers: { 'content-type': 'application/json', ...localeHeaders(), authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ query: print(REMOVE_PUSH_SUBSCRIPTION_MUTATION), variables: { endpoint: subscription.endpoint } }),
       }).catch(() => undefined)
     }

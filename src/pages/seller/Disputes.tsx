@@ -20,35 +20,40 @@ import BottomSheet from '../../components/BottomSheet'
 import SellerBadge from '../../components/SellerBadge'
 import { BADGE_LABEL } from '../../graphql/badges'
 import { useDisputeLabel } from '../../lib/lists'
+import { cfaUnit, fmtCfa, fmtDate, useT } from '../../i18n'
+import common from '../../i18n/ns/common'
+import disputes from '../../i18n/ns/disputes'
 
 type Props = { onNavigate: (p: any) => void; onSelectListing: (id: string) => void; focusDisputeId?: string; currentUser?: AuthUser | null; onLogout: () => void }
 
 // `short` labels for phones, where the tab row scrolls sideways.
-const TABS: { key: string; label: string; short: string; statuses?: DisputeStatus[]; dot?: string }[] = [
-  { key: 'all', label: 'Tous les dossiers', short: 'Tous' },
-  { key: 'mediation', label: 'En cours de médiation', short: 'En médiation', statuses: ['AWAITING_SELLER', 'IN_MEDIATION'], dot: 'bg-primary' },
-  { key: 'buyer', label: "En attente de l'acheteur", short: 'Attente acheteur', statuses: ['AWAITING_BUYER'], dot: 'bg-on-surface-variant' },
-  { key: 'amicable', label: 'Clôturés en accord direct', short: 'Clôturés', statuses: ['RESOLVED_AMICABLY', 'CANCELLED'], dot: 'bg-tertiary' },
-  { key: 'rejected', label: 'Rejetés / Faux signalements', short: 'Rejetés', statuses: ['REJECTED'] },
+type TabKey = 'all' | 'mediation' | 'buyer' | 'amicable' | 'rejected'
+const TABS: { key: TabKey; statuses?: DisputeStatus[]; dot?: string }[] = [
+  { key: 'all' },
+  { key: 'mediation', statuses: ['AWAITING_SELLER', 'IN_MEDIATION'], dot: 'bg-primary' },
+  { key: 'buyer', statuses: ['AWAITING_BUYER'], dot: 'bg-on-surface-variant' },
+  { key: 'amicable', statuses: ['RESOLVED_AMICABLY', 'CANCELLED'], dot: 'bg-tertiary' },
+  { key: 'rejected', statuses: ['REJECTED'] },
 ]
 const PAGE = 5
 const commune = (d: Dispute) => d.meetupPlace ?? d.listing?.city ?? '—'
-const fmtDate = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const fmtStamp = (iso: string) => fmtDate(iso, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 function exportCsv(rows: Dispute[], reasonLabel: (r: DisputeReason) => string) {
   const data = [
-    ['Référence', 'Date', 'Article', 'Montant', 'Motif', 'Lieu', 'Statut'],
+    [disputes.t('csv.reference'), disputes.t('csv.date'), disputes.t('csv.item'), disputes.t('csv.amount'), disputes.t('csv.reason'), disputes.t('csv.place'), disputes.t('csv.status')],
     ...rows.map(d => [d.reference, d.createdAt.slice(0, 16).replace('T', ' '), d.listing?.title ?? '', d.amount, reasonLabel(d.reason), commune(d), d.verdict ?? d.status]),
   ]
   const csv = data.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
-  a.download = 'dilchap-registre-litiges.csv'
+  a.download = disputes.t('csv.filename')
   a.click()
   URL.revokeObjectURL(a.href)
 }
 
 function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
+  const t = useT(disputes)
   const [proposal, setProposal] = useState<DisputeProposal>('COURTESY_DISCOUNT')
   const [discount, setDiscount] = useState(Math.max(500, Math.round((d.amount * 0.03) / 500) * 500))
   const [message, setMessage] = useState('')
@@ -57,10 +62,10 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
 
   if (d.status !== 'AWAITING_SELLER') {
     const texts: Partial<Record<DisputeStatus, [string, string]>> = {
-      AWAITING_BUYER: ["En attente de l'acheteur", "Votre proposition a été transmise. L'acheteur peut l'accepter ou demander l'arbitrage Dilchap."],
-      IN_MEDIATION: ['Arbitrage Dilchap en cours', 'Un modérateur examine le dossier et les justificatifs des deux parties.'],
+      AWAITING_BUYER: [t('respond.awaitingBuyer.title'), t('respond.awaitingBuyer.text')],
+      IN_MEDIATION: [t('respond.inMediation.title'), t('respond.inMediation.text')],
     }
-    const [title, text] = texts[d.status] ?? ['Dossier clôturé', d.verdict ?? '']
+    const [title, text] = texts[d.status] ?? [t('respond.closed'), d.verdict ?? '']
     return (
       <div className="rounded-2xl bg-surface-container-low p-5">
         <h3 className="m-0 text-headline-sm text-on-surface">{title}</h3>
@@ -70,9 +75,9 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
   }
 
   const options: { key: DisputeProposal; title: React.ReactNode; sub: string }[] = [
-    { key: 'COURTESY_DISCOUNT', title: <>Proposer une remise de courtoisie de <Price amount={discount} /></>, sub: `Vente finalisée immédiatement à ${formatNumber(Math.max(0, d.amount - discount))} F` },
-    { key: 'CANCEL_RELIST', title: 'Annuler sans frais & Remettre en vente', sub: "L'article est réactivé en tête de liste" },
-    { key: 'ARBITRATION', title: "Solliciter l'arbitrage d'un agent Dilchap", sub: 'Examen neutre par un modérateur' },
+    { key: 'COURTESY_DISCOUNT', title: t.rich('respond.discount.title', { price: <Price amount={discount} /> }), sub: t('respond.discount.sub', { price: fmtCfa(Math.max(0, d.amount - discount)) }) },
+    { key: 'CANCEL_RELIST', title: t('respond.cancel.title'), sub: t('respond.cancel.sub') },
+    { key: 'ARBITRATION', title: t('respond.arbitration.title'), sub: t('respond.arbitration.sub') },
   ]
   const send = () => void respond({
     variables: { input: { disputeId: d.id, proposal, discountAmount: proposal === 'COURTESY_DISCOUNT' ? discount : undefined, message: message.trim() || undefined, photos } },
@@ -81,10 +86,10 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
   return (
     <div className="rounded-2xl bg-surface-container-low p-5">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="m-0 text-headline-sm text-on-surface">Espace de Réponse Vendeur</h3>
-        <span className="rounded-md bg-surface-container-high px-2 py-1 text-label-sm text-on-surface-variant">Étape 2/3</span>
+        <h3 className="m-0 text-headline-sm text-on-surface">{t('respond.title')}</h3>
+        <span className="rounded-md bg-surface-container-high px-2 py-1 text-label-sm text-on-surface-variant">{t('respond.step')}</span>
       </div>
-      <div className="mt-4 text-label-sm uppercase text-on-surface-variant">Choisir une proposition rapide</div>
+      <div className="mt-4 text-label-sm uppercase text-on-surface-variant">{t('respond.pick')}</div>
       <div className="mt-2 flex flex-col gap-2">
         {options.map(o => (
           <label key={o.key} className={`flex min-h-12 cursor-pointer gap-3 rounded-xl border bg-surface-lowest p-3 ${proposal === o.key ? 'border-primary' : 'border-outline-variant'}`}>
@@ -94,28 +99,29 @@ function ResponsePanel({ d, onDone }: { d: Dispute; onDone: () => void }) {
               <span className="block text-body-sm text-on-surface-variant">{o.sub}</span>
               {o.key === 'COURTESY_DISCOUNT' && proposal === 'COURTESY_DISCOUNT' && (
                 <span className="mt-2 flex items-center gap-2 text-body-sm text-on-surface-variant">
-                  Montant :
-                  <input type="number" min={0} step={500} value={discount} onChange={e => setDiscount(Math.max(0, Number(e.target.value) || 0))} className="w-28 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-label-md text-on-surface" /> F
+                  {t('respond.amount')}
+                  <input type="number" min={0} step={500} value={discount} onChange={e => setDiscount(Math.max(0, Number(e.target.value) || 0))} className="w-28 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1 text-label-md text-on-surface" /> {cfaUnit()}
                 </span>
               )}
             </span>
           </label>
         ))}
       </div>
-      <div className="mt-4 text-label-sm uppercase text-on-surface-variant">Message explicatif à l'acheteur</div>
-      <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder={`Bonjour ${d.buyer.fullName.split(' ')[0]}, ...`} className="mt-2 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
-      <div className="mt-3"><PhotoPicker urls={photos} onChange={setPhotos} label="Ajouter des photos" /></div>
+      <div className="mt-4 text-label-sm uppercase text-on-surface-variant">{t('respond.message')}</div>
+      <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder={t('respond.placeholder', { name: d.buyer.fullName.split(' ')[0] })} className="mt-2 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
+      <div className="mt-3"><PhotoPicker urls={photos} onChange={setPhotos} label={t('respond.addPhotos')} /></div>
       {error && <p className="m-0 mt-2 text-body-sm text-primary">{error.message}</p>}
       <button onClick={send} disabled={loading || (proposal === 'COURTESY_DISCOUNT' && discount <= 0)} className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white hover:bg-primary-dark disabled:opacity-60">
-        <Icon name="send" size={18} /> <span className="sm:hidden">Envoyer ma réponse</span><span className="hidden sm:inline">Envoyer ma réponse &amp; mes justificatifs</span>
+        <Icon name="send" size={18} /> <span className="sm:hidden">{t('respond.sendShort')}</span><span className="hidden sm:inline">{t('respond.send')}</span>
       </button>
-      <p className="m-0 mt-2 text-center text-label-sm text-on-surface-variant">Garantie Dilchap : aucune pénalité tant que vous répondez dans les délais</p>
+      <p className="m-0 mt-2 text-center text-label-sm text-on-surface-variant">{t('respond.guarantee')}</p>
     </div>
   )
 }
 
 function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectListing: (id: string) => void; onDone: () => void }) {
   const reasonLabel = useDisputeLabel()
+  const t = useT(disputes)
   const left = hoursLeft(d.deadlineAt)
   const open = disputeIsOpen(d.status)
   return (
@@ -124,13 +130,13 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
         <div className="flex items-center gap-3">
           <span className={`flex h-8 w-8 items-center justify-center rounded-full text-white ${open ? 'bg-primary' : 'bg-tertiary'}`}><Icon name={open ? 'priority_high' : 'task_alt'} size={18} /></span>
           <div>
-            <div className={`text-label-sm uppercase ${open ? 'text-primary' : 'text-tertiary'}`}>{open ? (d.status === 'AWAITING_SELLER' ? 'Dossier prioritaire ouvert' : 'Dossier en cours') : 'Dossier clôturé'}</div>
-            <div className="text-label-md text-on-surface">Litige #{d.reference} • Vente n° {d.orderReference}</div>
+            <div className={`text-label-sm uppercase ${open ? 'text-primary' : 'text-tertiary'}`}>{open ? (d.status === 'AWAITING_SELLER' ? t('focus.priority') : t('focus.ongoing')) : t('focus.closed')}</div>
+            <div className="text-label-md text-on-surface">{t('focus.refs', { ref: String(d.reference), order: String(d.orderReference) })}</div>
           </div>
         </div>
         {d.status === 'AWAITING_SELLER' ? (
           <span className="flex items-center gap-1 rounded-full border border-primary/30 bg-surface-lowest px-3 py-1 text-label-sm text-primary">
-            <Icon name="schedule" size={14} /> Action requise avant le {new Date(d.deadlineAt).toLocaleString('fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} ({left}h restantes)
+            <Icon name="schedule" size={14} /> {t('focus.actionBefore', { date: fmtDate(d.deadlineAt, { weekday: 'short', hour: '2-digit', minute: '2-digit' }), h: left })}
           </span>
         ) : <DisputeStatusChip d={d} />}
       </div>
@@ -147,9 +153,9 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
                 </span>
                 <span className="block truncate text-headline-sm text-on-surface">{d.listing.title}</span>
                 <span className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-on-surface-variant">
-                  {d.meetupPlace && <span className="flex items-center gap-1"><Icon name="pin_drop" size={15} /> Rdv : {d.meetupPlace}</span>}
+                  {d.meetupPlace && <span className="flex items-center gap-1"><Icon name="pin_drop" size={15} /> {t('focus.meetup', { place: d.meetupPlace })}</span>}
                   {d.paymentMethod && <span className="flex items-center gap-1"><Icon name="account_balance_wallet" size={15} /> {PAYMENT_LABELS[d.paymentMethod] ?? d.paymentMethod}</span>}
-                  <span className="flex items-center gap-1"><Icon name="calendar_today" size={15} /> {new Date(d.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  <span className="flex items-center gap-1"><Icon name="calendar_today" size={15} /> {fmtDate(d.createdAt, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </span>
               </span>
             </button>
@@ -157,31 +163,31 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-outline-variant p-3">
-              <div className="text-label-sm uppercase text-on-surface-variant">{d.openedBy === 'BUYER' ? 'Acheteur réclamant' : 'Acheteur signalé'}</div>
+              <div className="text-label-sm uppercase text-on-surface-variant">{d.openedBy === 'BUYER' ? t('focus.buyerClaimant') : t('focus.buyerReported')}</div>
               <div className="mt-2 flex items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">
                   {d.buyer.avatarUrl ? <img src={d.buyer.avatarUrl} alt="" className="h-full w-full object-cover" /> : d.buyer.fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1 text-label-md text-on-surface"><span className="truncate">{d.buyer.fullName}</span><SellerBadge tier={d.buyer.badge} size={15} /></div>
-                  <div className="text-body-sm text-on-surface-variant">{[d.buyer.city && `Résident ${d.buyer.city}`, d.buyer.buyerReviewsCount ? `★ ${d.buyer.buyerRating.toFixed(1)} · ${d.buyer.buyerReviewsCount} achat${d.buyer.buyerReviewsCount > 1 ? 's' : ''} noté${d.buyer.buyerReviewsCount > 1 ? 's' : ''}` : null].filter(Boolean).join(' • ') || 'Membre Dilchap'}</div>
+                  <div className="text-body-sm text-on-surface-variant">{[d.buyer.city && t('focus.resident', { city: d.buyer.city }), d.buyer.buyerReviewsCount ? t('focus.buyerRated', { rating: d.buyer.buyerRating.toFixed(1), count: d.buyer.buyerReviewsCount }) : null].filter(Boolean).join(' • ') || t('focus.member')}</div>
                 </div>
               </div>
             </div>
             <div className="rounded-xl border border-outline-variant p-3">
-              <div className="text-label-sm uppercase text-on-surface-variant">Motif déclaré</div>
+              <div className="text-label-sm uppercase text-on-surface-variant">{t('focus.declaredReason')}</div>
               <div className="mt-2 flex items-center gap-1 text-label-md text-primary"><Icon name={DISPUTE_REASON_ICONS[d.reason]} size={16} /> {reasonLabel(d.reason)}</div>
               <p className="m-0 mt-1 line-clamp-3 text-body-sm italic text-on-surface-variant">« {d.description} »</p>
             </div>
           </div>
 
-          <div className="mt-5 text-label-sm uppercase text-on-surface-variant">Chronologie de l'incident</div>
+          <div className="mt-5 text-label-sm uppercase text-on-surface-variant">{t('focus.timeline')}</div>
           <div className="mt-3"><DisputeTimeline d={d} perspective="SELLER" /></div>
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">
           <ResponsePanel key={d.id + d.status} d={d} onDone={onDone} />
-          <SupportAboutButton about={{ kind: 'DISPUTE', id: d.id }} what="ce litige" />
+          <SupportAboutButton about={{ kind: 'DISPUTE', id: d.id }} what={t('follow.supportWhat')} />
         </div>
       </div>
     </section>
@@ -190,6 +196,8 @@ function FocusedDispute({ d, onSelectListing, onDone }: { d: Dispute; onSelectLi
 
 function ReportModal({ onClose }: { onClose: () => void }) {
   const reasonLabel = useDisputeLabel()
+  const t = useT(disputes)
+  const tc = useT(common)
   const { data } = useQuery<{ mySalesOrders: SalesOrder[] }>(MY_SALES_ORDERS_QUERY)
   const buyers = useMemo(() => {
     const seen = new Map<string, SalesOrder['buyer']>()
@@ -204,28 +212,28 @@ function ReportModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
       <div className="w-full max-w-lg rounded-t-2xl bg-surface-lowest p-5 sm:rounded-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="m-0 text-headline-sm text-on-surface">Signaler un comportement suspect</h3>
-          <button onClick={onClose} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant" aria-label="Fermer"><Icon name="close" size={22} /></button>
+          <h3 className="m-0 text-headline-sm text-on-surface">{t('report.title')}</h3>
+          <button onClick={onClose} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant" aria-label={tc('close')}><Icon name="close" size={22} /></button>
         </div>
         {sent ? (
-          <p className="m-0 mt-4 text-body-md text-tertiary">Signalement transmis à la modération Dilchap. Merci de votre vigilance.</p>
+          <p className="m-0 mt-4 text-body-md text-tertiary">{t('report.sent')}</p>
         ) : (
           <>
-            <label className="mt-4 block text-label-md text-on-surface">Acheteur concerné
+            <label className="mt-4 block text-label-md text-on-surface">{t('report.buyer')}
               <Select value={userId} onChange={e => setUserId(e.target.value)} className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-body-md text-on-surface">
-                <option value="">Choisir parmi vos acheteurs…</option>
+                <option value="">{t('report.pickBuyer')}</option>
                 {buyers.map(b => <option key={b.id} value={b.id}>{b.fullName}{b.city ? ` — ${b.city}` : ''}</option>)}
               </Select>
             </label>
-            <label className="mt-3 block text-label-md text-on-surface">Motif
+            <label className="mt-3 block text-label-md text-on-surface">{t('report.reason')}
               <Select value={reason} onChange={e => setReason(e.target.value as DisputeReason)} className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-body-md text-on-surface">
                 {DISPUTE_REASONS.map(r => <option key={r} value={r}>{reasonLabel(r)}</option>)}
               </Select>
             </label>
-            <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="Décrivez ce qui s'est passé…" className="mt-3 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
+            <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder={t('report.placeholder')} className="mt-3 w-full resize-none rounded-xl border border-outline-variant bg-surface-lowest p-3 text-body-md text-on-surface outline-none focus:border-primary" />
             {error && <p className="m-0 mt-1 text-body-sm text-primary">{error.message}</p>}
             <button disabled={!userId || loading} onClick={() => void report({ variables: { targetType: 'USER', targetUserId: userId, reason: reasonLabel(reason), message: message.trim() || undefined } })} className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 py-3 text-label-md text-white disabled:opacity-60">
-              <Icon name="flag" size={18} /> Envoyer le signalement
+              <Icon name="flag" size={18} /> {t('report.submit')}
             </button>
           </>
         )}
@@ -238,6 +246,8 @@ function ReportModal({ onClose }: { onClose: () => void }) {
 // Room"): the seller answers disputes opened on their hand-overs.
 export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, currentUser, onLogout }: Props) {
   const reasonLabel = useDisputeLabel()
+  const t = useT(disputes)
+  const tc = useT(common)
   const { data, refetch } = useQuery<{ mySellerDisputes: Dispute[] }>(MY_SELLER_DISPUTES_QUERY)
   const { data: statsData, refetch: refetchStats } = useQuery<{ myDisputeStats: DisputeStats }>(MY_DISPUTE_STATS_QUERY)
   const all = data?.mySellerDisputes ?? []
@@ -255,11 +265,11 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
 
   const counts: Record<string, number> = {
     all: all.length,
-    ...Object.fromEntries(TABS.filter(t => t.statuses).map(t => [t.key, all.filter(d => t.statuses!.includes(d.status)).length])),
+    ...Object.fromEntries(TABS.filter(tb => tb.statuses).map(tb => [tb.key, all.filter(d => tb.statuses!.includes(d.status)).length])),
   }
   const places = [...new Set(all.map(commune).filter(p => p !== '—'))]
   const filtered = all.filter(d => {
-    const statuses = TABS.find(t => t.key === tab)?.statuses
+    const statuses = TABS.find(tb => tb.key === tab)?.statuses
     if (statuses && !statuses.includes(d.status)) return false
     if (reason && d.reason !== reason) return false
     if (place && commune(d) !== place) return false
@@ -281,9 +291,9 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
         {/* Breadcrumb + heading are desktop-only: the mobile shell titles the page. */}
         <div className="mb-2 hidden flex-wrap items-center justify-between gap-2 lg:flex">
           <nav className="hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
-            <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />
-            <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">Tableau de bord</button>
-            <Icon name="chevron_right" size={14} /><span className="text-on-surface">Sécurité, Litiges &amp; Signalements</span>
+            <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />{/* i18n-ignore */}
+            <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">{t('page.crumbDashboard')}</button>
+            <Icon name="chevron_right" size={14} /><span className="text-on-surface">{t('page.crumbCurrent')}</span>
           </nav>
           <SellerBadge tier={currentUser?.badge} variant="pill" size={16} />
         </div>
@@ -291,14 +301,14 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
         <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div className="max-w-xl">
             <h1 className="m-0 flex flex-wrap items-center gap-2 text-headline-lg-mobile text-on-surface md:text-headline-lg">
-              Gestion des Litiges &amp; Signalements
-              {!!stats?.active && <span className="rounded-full bg-primary-fixed px-2.5 py-0.5 text-label-sm text-primary">{stats.active} En cours</span>}
+              {t('page.title')}
+              {!!stats?.active && <span className="rounded-full bg-primary-fixed px-2.5 py-0.5 text-label-sm text-primary">{t('page.activeBadge', { n: stats.active })}</span>}
             </h1>
-            <p className="m-0 mt-1 text-body-md text-on-surface-variant">Consultez, gérez et résolvez en direct les signalements, annulations suspectes ou contestations d'acheteurs lors des remises en main propre.</p>
+            <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('page.subtitle')}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => rulesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center gap-2 rounded-xl border border-outline-variant bg-surface-lowest px-4 py-2.5 text-label-md text-on-surface hover:bg-surface-container-low"><Icon name="menu_book" size={18} /> Centre de Médiation &amp; Règles</button>
-            <button onClick={() => setReporting(true)} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark"><Icon name="flag" size={18} /> Signaler un comportement suspect</button>
+            <button onClick={() => rulesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center gap-2 rounded-xl border border-outline-variant bg-surface-lowest px-4 py-2.5 text-label-md text-on-surface hover:bg-surface-container-low"><Icon name="menu_book" size={18} /> {t('page.rulesCentre')}</button>
+            <button onClick={() => setReporting(true)} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark"><Icon name="flag" size={18} /> {t('report.title')}</button>
           </div>
         </div>
 
@@ -306,42 +316,42 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
         {/* Mobile: compact KPI row */}
         <section className="mt-4 grid grid-cols-3 gap-2 md:hidden">
           <div className="min-w-0 rounded-xl bg-surface-lowest p-2.5 shadow-sm">
-            <div className="truncate text-label-sm text-on-surface-variant">Amiable</div>
+            <div className="truncate text-label-sm text-on-surface-variant">{t('kpi.amicableShort')}</div>
             <div className="text-headline-sm font-extrabold text-tertiary">{stats?.amicableRate != null ? `${formatNumber(stats.amicableRate)}%` : '—'}</div>
           </div>
           <div className={`min-w-0 rounded-xl p-2.5 shadow-sm ${stats?.active ? 'bg-primary-fixed/60' : 'bg-surface-lowest'}`}>
-            <div className="truncate text-label-sm text-primary">Dossiers actifs</div>
+            <div className="truncate text-label-sm text-primary">{t('kpi.activeShort')}</div>
             <div className="text-headline-sm font-extrabold text-primary">{stats?.active ?? 0}</div>
-            {stats?.nextDeadline && <div className="truncate text-[11px] text-primary">Reste {hoursLeft(stats.nextDeadline)}h</div>}
+            {stats?.nextDeadline && <div className="truncate text-[11px] text-primary">{t('kpi.left', { h: hoursLeft(stats.nextDeadline) })}</div>}
           </div>
           <div className="min-w-0 rounded-xl bg-surface-lowest p-2.5 shadow-sm">
-            <div className="truncate text-label-sm text-on-surface-variant">Clôturés</div>
+            <div className="truncate text-label-sm text-on-surface-variant">{t('kpi.closedShort')}</div>
             <div className="text-headline-sm font-extrabold text-on-surface">{stats?.resolved ?? 0}</div>
-            <div className="truncate text-[11px] text-on-surface-variant">{stats?.penalties ?? 0} pénalité{(stats?.penalties ?? 0) > 1 ? 's' : ''}</div>
+            <div className="truncate text-[11px] text-on-surface-variant">{t('kpi.penalties', { count: stats?.penalties ?? 0 })}</div>
           </div>
         </section>
 
         {/* KPIs */}
         <section className="hidden grid-cols-2 gap-3 md:grid lg:grid-cols-4">
           <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">Résolution amiable</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><Icon name="handshake" size={18} /></span></div>
+            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">{t('kpi.amicable')}</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><Icon name="handshake" size={18} /></span></div>
             <div className="mt-2 text-headline-lg font-extrabold text-on-surface">{stats?.amicableRate != null ? `${formatNumber(stats.amicableRate)}%` : '—'}</div>
-            <div className="flex flex-wrap justify-between gap-1 text-body-sm"><span className="flex items-center gap-1 text-tertiary"><Icon name="verified" size={14} fill /> {stats?.amicableRate == null || stats.amicableRate >= 95 ? 'Statut exemplaire' : 'À surveiller'}</span><span className="text-on-surface-variant">Objectif &gt; 95%</span></div>
+            <div className="flex flex-wrap justify-between gap-1 text-body-sm"><span className="flex items-center gap-1 text-tertiary"><Icon name="verified" size={14} fill /> {stats?.amicableRate == null || stats.amicableRate >= 95 ? t('kpi.exemplary') : t('kpi.watch')}</span><span className="text-on-surface-variant">{t('kpi.target')}</span></div>
           </div>
           <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">Dossier en attente</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="timer" size={18} /></span></div>
-            <div className="mt-2 text-headline-lg font-extrabold text-primary">{String(stats?.active ?? 0).padStart(2, '0')} <span className="text-body-sm font-normal text-on-surface-variant">dossier{(stats?.active ?? 0) > 1 ? 's' : ''} actif{(stats?.active ?? 0) > 1 ? 's' : ''}</span></div>
-            {stats?.nextDeadline && <div className="mt-1 flex items-center gap-1 rounded-lg bg-primary-fixed/60 px-2 py-1 text-label-sm text-primary"><Icon name="priority_high" size={14} /> Délai d'action restant : {hoursLeft(stats.nextDeadline)}h</div>}
+            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">{t('kpi.pending')}</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name="timer" size={18} /></span></div>
+            <div className="mt-2 text-headline-lg font-extrabold text-primary">{String(stats?.active ?? 0).padStart(2, '0')} <span className="text-body-sm font-normal text-on-surface-variant">{t('kpi.activeFiles', { count: stats?.active ?? 0 })}</span></div>
+            {stats?.nextDeadline && <div className="mt-1 flex items-center gap-1 rounded-lg bg-primary-fixed/60 px-2 py-1 text-label-sm text-primary"><Icon name="priority_high" size={14} /> {t('kpi.timeLeft', { h: hoursLeft(stats.nextDeadline) })}</div>}
           </div>
           <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">Clôturés avec succès</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-container text-on-surface"><Icon name="task_alt" size={18} /></span></div>
-            <div className="mt-2 text-headline-lg font-extrabold text-on-surface">{stats?.resolved ?? 0} <span className="text-body-sm font-normal text-on-surface-variant">résolus</span></div>
-            <div className="text-body-sm text-on-surface-variant">{stats?.penalties ?? 0} pénalité{(stats?.penalties ?? 0) > 1 ? 's' : ''} appliquée{(stats?.penalties ?? 0) > 1 ? 's' : ''}</div>
+            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">{t('kpi.closed')}</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-container text-on-surface"><Icon name="task_alt" size={18} /></span></div>
+            <div className="mt-2 text-headline-lg font-extrabold text-on-surface">{stats?.resolved ?? 0} <span className="text-body-sm font-normal text-on-surface-variant">{t('kpi.resolved')}</span></div>
+            <div className="text-body-sm text-on-surface-variant">{t('kpi.penaltiesApplied', { count: stats?.penalties ?? 0 })}</div>
           </div>
           <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">Protection compte</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><Icon name="military_tech" size={18} /></span></div>
-            <div className="mt-2 text-headline-sm text-on-surface">{currentUser?.badge ? BADGE_LABEL[currentUser.badge] : 'Vendeur standard'}</div>
-            <div className={`mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-label-sm ${stats?.penalties ? 'bg-primary-fixed text-primary' : 'bg-tertiary-soft text-tertiary'}`}><Icon name="security" size={14} /> {stats?.penalties ? 'Surveillance renforcée' : 'Aucun blocage préventif'}</div>
+            <div className="flex items-start justify-between"><span className="text-label-sm uppercase text-on-surface-variant">{t('kpi.protection')}</span><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-soft text-tertiary"><Icon name="military_tech" size={18} /></span></div>
+            <div className="mt-2 text-headline-sm text-on-surface">{currentUser?.badge ? BADGE_LABEL[currentUser.badge] : t('kpi.standardSeller')}</div>
+            <div className={`mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-label-sm ${stats?.penalties ? 'bg-primary-fixed text-primary' : 'bg-tertiary-soft text-tertiary'}`}><Icon name="security" size={14} /> {stats?.penalties ? t('kpi.reinforced') : t('kpi.noBlock')}</div>
           </div>
         </section>
 
@@ -350,50 +360,50 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
           <div className="flex items-center gap-2 md:hidden">
             <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2.5">
               <Icon name="search" size={18} className="shrink-0 text-on-surface-variant" />
-              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Réf., acheteur, article…" className="w-full min-w-0 border-none bg-transparent text-body-md text-on-surface outline-none" />
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('filters.searchShort')} className="w-full min-w-0 border-none bg-transparent text-body-md text-on-surface outline-none" />
             </label>
-            <button onClick={() => setFiltersOpen(true)} aria-label="Filtrer par motif ou lieu" className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-low text-on-surface">
+            <button onClick={() => setFiltersOpen(true)} aria-label={t('filters.aria')} className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-low text-on-surface">
               <Icon name="tune" size={20} />
               {!!(reason || place) && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />}
             </button>
           </div>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] md:mt-0">
-            {TABS.map(t => (
-              <button key={t.key} onClick={() => { setTab(t.key); setPage(1) }} className={`flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border-none px-3 py-2 text-label-md ${tab === t.key ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
-                {t.dot && <span className={`h-2 w-2 rounded-full ${t.dot}`} />}<span className="md:hidden">{t.short}</span><span className="hidden md:inline">{t.label}</span>
-                <span className={`rounded-full px-1.5 text-label-sm ${tab === t.key ? 'bg-white/20' : 'bg-surface-container-high'}`}>{counts[t.key] ?? 0}</span>
+            {TABS.map(tb => (
+              <button key={tb.key} onClick={() => { setTab(tb.key); setPage(1) }} className={`flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border-none px-3 py-2 text-label-md ${tab === tb.key ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
+                {tb.dot && <span className={`h-2 w-2 rounded-full ${tb.dot}`} />}<span className="md:hidden">{t(`tab.${tb.key}Short`)}</span><span className="hidden md:inline">{t(`tab.${tb.key}`)}</span>
+                <span className={`rounded-full px-1.5 text-label-sm ${tab === tb.key ? 'bg-white/20' : 'bg-surface-container-high'}`}>{counts[tb.key] ?? 0}</span>
               </button>
             ))}
           </div>
           <div className="mt-2 hidden gap-2 md:grid md:grid-cols-[1.4fr_1fr_1fr]">
             <label className="flex items-center gap-2 rounded-xl bg-surface-container-low px-3 py-2">
               <Icon name="search" size={18} className="text-on-surface-variant" />
-              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Rechercher par référence (#LIT-xxxx), nom de l'acheteur..." className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('filters.search')} className="w-full border-none bg-transparent text-body-md text-on-surface outline-none" />
             </label>
             <Select value={reason} onChange={e => { setReason(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
-              <option value="">Tous les motifs de litige</option>
+              <option value="">{t('filters.allReasons')}</option>
               {DISPUTE_REASONS.map(r => <option key={r} value={r}>{reasonLabel(r)}</option>)}
             </Select>
             <Select value={place} onChange={e => { setPlace(e.target.value); setPage(1) }} className="rounded-xl border-none bg-surface-container-low px-3 py-2 text-body-md text-on-surface">
-              <option value="">Tous les lieux de remise</option>
+              <option value="">{t('filters.allPlaces')}</option>
               {places.map(p => <option key={p} value={p}>{p}</option>)}
             </Select>
           </div>
         </section>
-        <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtrer les dossiers"
+        <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title={t('filters.sheetTitle')}
           footer={
             <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
-              <button onClick={() => { setReason(''); setPlace(''); setPage(1) }} className="h-12 flex-1 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Réinitialiser</button>
-              <button onClick={() => setFiltersOpen(false)} className="h-12 flex-[1.4] cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary text-label-lg text-white">Voir {history.length} dossier{history.length > 1 ? 's' : ''}</button>
+              <button onClick={() => { setReason(''); setPlace(''); setPage(1) }} className="h-12 flex-1 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">{t('filters.reset')}</button>
+              <button onClick={() => setFiltersOpen(false)} className="h-12 flex-[1.4] cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary text-label-lg text-white">{t('filters.show', { count: history.length })}</button>
             </div>
           }>
           <div className="flex flex-col gap-3">
             <Select value={reason} onChange={e => { setReason(e.target.value); setPage(1) }} className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface">
-              <option value="">Tous les motifs de litige</option>
+              <option value="">{t('filters.allReasons')}</option>
               {DISPUTE_REASONS.map(r => <option key={r} value={r}>{reasonLabel(r)}</option>)}
             </Select>
             <Select value={place} onChange={e => { setPlace(e.target.value); setPage(1) }} className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface">
-              <option value="">Tous les lieux de remise</option>
+              <option value="">{t('filters.allPlaces')}</option>
               {places.map(p => <option key={p} value={p}>{p}</option>)}
             </Select>
           </div>
@@ -402,7 +412,7 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
         {/* Mobile: the case needing action comes first, above KPIs and filters. */}
         <div ref={focusRef} className="scroll-mt-4 max-md:order-first">
           {focused ? <FocusedDispute d={focused} onSelectListing={onSelectListing} onDone={refresh} /> : (
-            <EmptyState className="md:mt-5" icon="empty-shield" fallback="verified_user" tone="tertiary" title="Aucun litige en cours" text="Vos remises se déroulent sans incident. Continuez à appliquer les règles d'or ci-dessous." />
+            <EmptyState className="md:mt-5" icon="empty-shield" fallback="verified_user" tone="tertiary" title={t('page.emptyTitle')} text={t('page.emptyText')} />
           )}
         </div>
         </div>
@@ -411,33 +421,33 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
         <section className="mt-6">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">Historique<span className="hidden md:inline"> des litiges &amp; signalements</span></h2>
-              <p className="m-0 mt-1 hidden text-body-sm text-on-surface-variant md:block">Historique consolidé de vos contestations traitées avec l'équipe de modération Dilchap.</p>
+              <h2 className="m-0 text-headline-sm text-on-surface md:text-headline-md">{t.rich('history.title', { wide: c => <span className="hidden md:inline">{c}</span> })}</h2>
+              <p className="m-0 mt-1 hidden text-body-sm text-on-surface-variant md:block">{t('history.text')}</p>
             </div>
-            <button onClick={() => exportCsv(filtered, reasonLabel)} disabled={!filtered.length} className="hidden cursor-pointer md:flex items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface hover:text-primary"><Icon name="download" size={17} /> Exporter le registre de conformité (.CSV)</button>
+            <button onClick={() => exportCsv(filtered, reasonLabel)} disabled={!filtered.length} className="hidden cursor-pointer md:flex items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface hover:text-primary"><Icon name="download" size={17} /> {t('history.export')}</button>
           </div>
           <div className="overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full border-collapse text-left">
                 <thead>
                   <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
-                    {['Référence / Date', 'Article & Montant', "Motif de l'incident", 'Lieu', 'Statut & Verdict', 'Actions'].map(h => <th key={h} className="px-4 py-3 font-semibold">{h}</th>)}
+                    {[t('history.col.ref'), t('history.col.item'), t('history.col.reason'), t('history.col.place'), t('history.col.status'), t('history.col.actions')].map(h => <th key={h} className="px-4 py-3 font-semibold">{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {shown.map(d => (
                     <tr key={d.id} className="border-0 border-b border-solid border-outline-variant/60 align-top">
-                      <td className="px-4 py-3"><div className="text-label-md text-on-surface">#{d.reference}</div><div className="text-body-sm text-on-surface-variant">{fmtDate(d.createdAt)}</div></td>
+                      <td className="px-4 py-3"><div className="text-label-md text-on-surface">#{d.reference}</div><div className="text-body-sm text-on-surface-variant">{fmtStamp(d.createdAt)}</div></td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-surface-container">{d.listing?.coverImageUrl && <img src={d.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
-                          <div className="min-w-0"><div className="max-w-[200px] truncate text-label-md text-on-surface">{d.listing?.title ?? 'Annonce supprimée'}</div><div className="text-label-sm text-primary"><Price amount={d.amount} /></div></div>
+                          <div className="min-w-0"><div className="max-w-[200px] truncate text-label-md text-on-surface">{d.listing?.title ?? t('history.deletedListing')}</div><div className="text-label-sm text-primary"><Price amount={d.amount} /></div></div>
                         </div>
                       </td>
                       <td className="max-w-[240px] px-4 py-3"><div className="flex items-center gap-1 text-label-sm text-primary"><Icon name={DISPUTE_REASON_ICONS[d.reason]} size={14} /> {reasonLabel(d.reason)}</div><div className="truncate text-body-sm text-on-surface-variant">{d.description}</div></td>
                       <td className="px-4 py-3 text-body-sm text-on-surface"><span className="flex items-center gap-1"><Icon name="location_on" size={14} className="text-on-surface-variant" /> {commune(d)}</span></td>
                       <td className="px-4 py-3"><DisputeStatusChip d={d} /></td>
-                      <td className="px-4 py-3"><button onClick={() => focus(d.id)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant hover:text-primary" aria-label="Voir le dossier"><Icon name="visibility" size={20} /></button></td>
+                      <td className="px-4 py-3"><button onClick={() => focus(d.id)} className="flex cursor-pointer border-none bg-transparent p-1 text-on-surface-variant hover:text-primary" aria-label={t('history.view')}><Icon name="visibility" size={20} /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -449,8 +459,8 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
                   <div className="flex items-center gap-3">
                     <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container">{d.listing?.coverImageUrl && <img src={d.listing.coverImageUrl} alt="" className="h-full w-full object-cover" />}</span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-1"><span className="truncate text-label-md text-on-surface">{d.listing?.title ?? 'Annonce supprimée'}</span><span className="shrink-0 text-label-sm text-on-surface-variant"><Price amount={d.amount} /></span></div>
-                      <div className="text-body-sm text-on-surface-variant">Dossier #{d.reference} • {commune(d)}</div>
+                      <div className="flex items-baseline gap-1"><span className="truncate text-label-md text-on-surface">{d.listing?.title ?? t('history.deletedListing')}</span><span className="shrink-0 text-label-sm text-on-surface-variant"><Price amount={d.amount} /></span></div>
+                      <div className="text-body-sm text-on-surface-variant">{t('history.file', { ref: String(d.reference), place: commune(d) })}</div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">
@@ -459,33 +469,33 @@ export default function Disputes({ onNavigate, onSelectListing, focusDisputeId, 
                 </button>
               ))}
             </div>
-            {shown.length === 0 && <p className="m-0 p-5 text-body-sm text-on-surface-variant">Aucun dossier ne correspond à ces filtres.</p>}
+            {shown.length === 0 && <p className="m-0 p-5 text-body-sm text-on-surface-variant">{t('history.noMatch')}</p>}
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-label-sm text-on-surface-variant">
-              <span>{shown.length} sur {history.length} dossier{history.length > 1 ? 's' : ''}</span>
+              <span>{t('history.count', { shown: shown.length, count: history.length })}</span>
               <div className="flex items-center gap-1">
-                <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} aria-label="Page précédente" className="flex h-10 cursor-pointer items-center rounded-md border-none bg-transparent px-2 text-label-sm text-on-surface disabled:opacity-40 md:h-7"><Icon name="chevron_left" size={18} /><span className="hidden md:inline">Précédent</span></button>
+                <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} aria-label={t('history.prevPage')} className="flex h-10 cursor-pointer items-center rounded-md border-none bg-transparent px-2 text-label-sm text-on-surface disabled:opacity-40 md:h-7"><Icon name="chevron_left" size={18} /><span className="hidden md:inline">{tc('previous')}</span></button>
                 {Array.from({ length: pages }, (_, i) => i + 1).map(n => (
                   <button key={n} onClick={() => setPage(n)} className={`h-10 w-10 cursor-pointer rounded-md border-none text-label-sm md:h-7 md:w-7 ${n === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface'}`}>{n}</button>
                 ))}
-                <button disabled={page >= pages} onClick={() => setPage(p => p + 1)} aria-label="Page suivante" className="flex h-10 cursor-pointer items-center rounded-md border-none bg-transparent px-2 text-label-sm text-on-surface disabled:opacity-40 md:h-7"><span className="hidden md:inline">Suivant</span><Icon name="chevron_right" size={18} /></button>
+                <button disabled={page >= pages} onClick={() => setPage(p => p + 1)} aria-label={t('history.nextPage')} className="flex h-10 cursor-pointer items-center rounded-md border-none bg-transparent px-2 text-label-sm text-on-surface disabled:opacity-40 md:h-7"><span className="hidden md:inline">{tc('next')}</span><Icon name="chevron_right" size={18} /></button>
               </div>
             </div>
           </div>
         </section>
 
         {/* Mobile: the header actions live here (the desktop heading is hidden). */}
-        <button onClick={() => setReporting(true)} className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white lg:hidden"><Icon name="flag" size={18} /> Signaler un comportement suspect</button>
+        <button onClick={() => setReporting(true)} className="mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white lg:hidden"><Icon name="flag" size={18} /> {t('report.title')}</button>
 
         {/* Rules + mediation */}
         <section ref={rulesRef} className="mt-6 grid scroll-mt-4 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div className="rounded-2xl bg-surface-lowest p-5 shadow-sm">
-            <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="shield" size={22} className="text-primary" /> Règles d'or anti-fraude Vendeur Dilchap</h2>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">La remise en main propre sécurisée repose sur 3 principes stricts recommandés par notre charte de confiance :</p>
+            <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="shield" size={22} className="text-primary" /> {t('rules.title')}</h2>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('rules.text')}</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {ANTI_FRAUD_RULES.map((r, i) => (
-                <div key={r.title} className="rounded-xl bg-surface-container-low p-3">
-                  <div className={`flex items-center gap-1 text-label-md ${i === 2 ? 'text-tertiary' : 'text-primary'}`}><Icon name={r.icon} size={17} /> {r.title}</div>
-                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{r.text}</p>
+                <div key={r.icon} className="rounded-xl bg-surface-container-low p-3">
+                  <div className={`flex items-center gap-1 text-label-md ${i === 2 ? 'text-tertiary' : 'text-primary'}`}><Icon name={r.icon} size={17} /> {t(r.titleKey)}</div>
+                  <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t(r.textKey)}</p>
                 </div>
               ))}
             </div>

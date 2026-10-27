@@ -4,20 +4,22 @@ import SafeImg from '../SafeImg'
 import ChatBubble from '../ChatBubble'
 import OfferBubble from '../OfferBubble'
 import { MeetupCard, SystemCard } from './ChatCards'
-import { dateFormat } from '../../lib/intl'
+import { useT, fmtDate, fmtTime } from '../../i18n'
+import common from '../../i18n/ns/common'
+import chatNs from '../../i18n/ns/chat'
 import { messagePreview, type RemoteConversation, type RemoteMessage, type SystemCard as Card } from '../../graphql/messaging'
 
 // A message being sent (shown at once, retried on failure).
 export type PendingMessage = { id: string; body: string; attachments: string[]; audio: boolean; status: 'sending' | 'failed'; error?: string }
 
 const GROUP_MS = 5 * 60_000
-const time = (iso: string) => dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+const time = (iso: string) => fmtTime(iso)
 function dayLabel(iso: string) {
   const d = new Date(iso)
   const today = new Date()
   const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
   const same = (a: Date, b: Date) => a.toDateString() === b.toDateString()
-  const day = same(d, today) ? 'Aujourd’hui' : same(d, yesterday) ? 'Hier' : dateFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d)
+  const day = same(d, today) ? common.t('today') : same(d, yesterday) ? common.t('yesterday') : fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' })
   return `${day.charAt(0).toUpperCase()}${day.slice(1)}`
 }
 const reduced = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -31,8 +33,9 @@ export function Avatar({ url, name, size = 40 }: { url?: string | null; name: st
 }
 
 export function ThreadSkeleton() {
+  const t = useT(chatNs)
   return (
-    <div className="flex flex-1 flex-col gap-3 px-4 py-6" aria-busy="true" aria-label="Chargement de la discussion">
+    <div className="flex flex-1 flex-col gap-3 px-4 py-6" aria-busy="true" aria-label={t('thread.loading')}>
       {[['w-40', false], ['w-56', true], ['w-32', false], ['w-64', true], ['w-44', false]].map(([w, mine], i) => (
         <div key={i} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}><div className={`chat-skeleton h-10 rounded-2xl ${w}`} /></div>
       ))}
@@ -71,6 +74,7 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
   onRetry: (p: PendingMessage) => void
   onDiscard: (id: string) => void
 }) {
+  const t = useT(chatNs)
   const scroller = useRef<HTMLDivElement>(null)
   const atBottom = useRef(true)
   const seen = useRef<{ conv: string; count: number; lastId?: string }>({ conv: '', count: 0 })
@@ -114,7 +118,7 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
     s.count = messages.length
     s.lastId = last.id
     const incoming = fresh.filter(m => m.senderId !== me && m.kind !== 'SYSTEM')
-    if (incoming.length) setAnnounce(`Nouveau message de ${firstName} : ${messagePreview(incoming[incoming.length - 1]).slice(0, 120)}`)
+    if (incoming.length) setAnnounce(t('thread.newFrom', { name: firstName, preview: messagePreview(incoming[incoming.length - 1]).slice(0, 120) }))
     if (atBottom.current || last.senderId === me) requestAnimationFrame(() => toBottom(true))
     else setUnseen(n => n + Math.max(1, incoming.length))
   }, [messages, conv.id, me]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -126,7 +130,7 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <div ref={scroller} onScroll={onScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" role="log" aria-label={`Discussion avec ${other.fullName}`}>
+      <div ref={scroller} onScroll={onScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" role="log" aria-label={t('thread.logAria', { name: other.fullName })}>
         {top}
         <div className="flex flex-1 flex-col px-3 pb-3 pt-2 sm:px-4">
           {messages.length === 0 && !pending.length && empty}
@@ -155,13 +159,13 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
                       ) : m.meetup ? (
                         <MeetupCard meetup={m.meetup} mine={mine} busy={busyId === m.meetup.id} onConfirm={() => onAnswerMeetup(m.meetup!.id, true)} onChange={() => onAnswerMeetup(m.meetup!.id, false)} action={meetupAction(m)} live={meetupLive?.(m)} />
                       ) : (
-                        <ChatBubble message={m} mine={mine} grouped={{ top: joinsPrev, bottom: joinsNext }} quoteAuthor={id => (id === me ? 'Vous' : firstName)} onReply={() => onReply(m)} onOpenPhotos={onOpenPhotos} onJumpTo={onJumpTo} />
+                        <ChatBubble message={m} mine={mine} grouped={{ top: joinsPrev, bottom: joinsNext }} quoteAuthor={id => (id === me ? t('thread.you') : firstName)} onReply={() => onReply(m)} onOpenPhotos={onOpenPhotos} onJumpTo={onJumpTo} />
                       )}
                       {!joinsNext && (
                         <span className={`mt-1 flex items-center gap-1 text-[11px] text-on-surface-variant ${mine ? 'mr-1' : 'ml-1'}`}>
                           {time(m.createdAt)}
                           {mine && <Icon name="done_all" size={14} className={m.readAt ? 'text-primary' : 'text-outline'} />}
-                          {mine && m.id === lastMine?.id && <span className={m.readAt ? 'text-primary' : ''}>{m.readAt ? 'Vu' : 'Envoyé'}</span>}
+                          {mine && m.id === lastMine?.id && <span className={m.readAt ? 'text-primary' : ''}>{m.readAt ? t('thread.seen') : t('thread.sent')}</span>}
                         </span>
                       )}
                     </div>
@@ -175,15 +179,15 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
             <div key={p.id} className="chat-in mt-3 flex justify-end">
               <div className="flex max-w-[85%] flex-col items-end sm:max-w-[75%]">
                 <div className={`whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-body-md text-white shadow-sm ${p.status === 'failed' ? 'bg-primary/60' : 'bg-primary/80'}`}>
-                  {p.body || (p.audio ? 'Message vocal' : `${p.attachments.length} photo${p.attachments.length > 1 ? 's' : ''}`)}
+                  {p.body || (p.audio ? t('thread.voice') : t('thread.photos', { count: p.attachments.length }))}
                 </div>
                 {p.status === 'sending' ? (
-                  <span className="mr-1 mt-1 flex items-center gap-1 text-[11px] text-on-surface-variant"><Icon name="schedule" size={13} /> Envoi…</span>
+                  <span className="mr-1 mt-1 flex items-center gap-1 text-[11px] text-on-surface-variant"><Icon name="schedule" size={13} /> {t('thread.sending')}</span>
                 ) : (
                   <span className="mr-1 mt-1 flex flex-wrap items-center justify-end gap-x-2 text-[11px] text-primary" role="alert">
-                    <span className="flex items-center gap-1"><Icon name="error" size={13} /> {p.error ?? 'Non envoyé'}</span>
-                    <button type="button" onClick={() => onRetry(p)} className="cursor-pointer border-none bg-transparent p-0 text-[11px] font-bold text-primary underline">Réessayer</button>
-                    <button type="button" onClick={() => onDiscard(p.id)} className="cursor-pointer border-none bg-transparent p-0 text-[11px] text-on-surface-variant underline">Supprimer</button>
+                    <span className="flex items-center gap-1"><Icon name="error" size={13} /> {p.error ?? t('thread.notSent')}</span>
+                    <button type="button" onClick={() => onRetry(p)} className="cursor-pointer border-none bg-transparent p-0 text-[11px] font-bold text-primary underline">{common.t('retry')}</button>
+                    <button type="button" onClick={() => onDiscard(p.id)} className="cursor-pointer border-none bg-transparent p-0 text-[11px] text-on-surface-variant underline">{common.t('delete')}</button>
                   </span>
                 )}
               </div>
@@ -199,7 +203,7 @@ export default function ChatThread({ conv, messages, me, pending, otherIsTyping,
       </div>
       {unseen > 0 && (
         <button type="button" onClick={() => toBottom(true)} className="chat-in absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-full border-none bg-on-surface px-3.5 py-2 text-label-sm font-semibold text-surface shadow-lg">
-          <Icon name="arrow_downward" size={15} /> {unseen > 1 ? `${unseen} nouveaux messages` : 'Nouveau message'}
+          <Icon name="arrow_downward" size={15} /> {t('thread.newMessages', { count: unseen })}
         </button>
       )}
       <p className="sr-only" aria-live="polite">{announce}</p>

@@ -2,6 +2,7 @@ import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { getAccessToken } from './auth'
 import { countryVars, useMarketCode, usePayerCountryCode } from './countries'
+import offersNs from '../i18n/ns/offersCore'
 
 // Price offers (BO « Offres & gratuités »): a discount or a free period on
 // what members pay in credits. The server applies them to every purchase;
@@ -106,4 +107,4 @@ export function operationOf(kind: string, product?: string | null): OfferOperati
 // Operation of a boost pack (the flash one is a bump).
 export const packOperation = (pack: string): OfferOperation => (pack === 'BUMP_FLASH' ? 'BUMP' : 'BOOST')
 
-export const offerLabel = (percent: number) => (percent >= 100 ? 'Offert' : `−${percent} %`)
+export const offerLabel = (percent: number) => (percent >= 100 ? offersNs.t('label.free') : offersNs.t('banner.percent', { n: percent }))

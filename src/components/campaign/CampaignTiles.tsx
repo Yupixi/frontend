@@ -12,6 +12,8 @@ import { LISTINGS_QUERY, type RemoteListing } from '../../graphql/listings'
 import { plainText } from '../../lib/format'
 import { useMarketCode, useMarketVars } from '../../lib/countries'
 import { RailSkeleton } from '../Skeleton'
+import { fmtNumber, useT } from '../../i18n'
+import campaignNs from '../../i18n/ns/campaign'
 
 const DEFAULT_TINT = '#EB1100'
 const tintOf = (c: LiveCampaign) => c.themeColor || DEFAULT_TINT
@@ -60,7 +62,7 @@ function Visual({ c, visual, cols = 4 }: { c: LiveCampaign; visual?: CampaignVis
 
 // The CTA's words: what a tap opens.
 const ctaLabel = (c: LiveCampaign) =>
-  c.listingsCount > 1 ? `Voir les ${c.listingsCount.toLocaleString('fr-FR')} offres` : c.listingsCount === 1 ? 'Voir l’offre' : 'Découvrir la campagne'
+  c.listingsCount > 1 ? campaignNs.t('cta.seeAll', { n: fmtNumber(c.listingsCount) }) : c.listingsCount === 1 ? campaignNs.t('cta.seeOne') : campaignNs.t('cta.discover')
 
 // The campaign's picture in a card: the team's « Carte » visual (else its
 // banner) shown whole — never cropped, so the text drawn in it stays
@@ -87,6 +89,7 @@ function UpTo({ c }: { c: LiveCampaign }) {
 // best discount and time left, one CTA; its visual beside (desktop) or
 // above (phones), whole.
 export function CampaignFeatured({ c, desktop }: { c: LiveCampaign; desktop: boolean }) {
+  useT(campaignNs)
   const tint = tintOf(c)
   const kicker = c.homeHeroTagline || CAMPAIGN_HERO_BADGE[c.type]
   const text = (
@@ -122,15 +125,16 @@ export function CampaignFeatured({ c, desktop }: { c: LiveCampaign; desktop: boo
 // Other campaigns next to the featured one (home), and « Autres campagnes
 // en cours » (campaign page).
 export function CampaignCompact({ c }: { c: LiveCampaign }) {
+  const t = useT(campaignNs)
   const label = upToLabel(c)
-  const count = c.listingsCount ? `${c.listingsCount} article${c.listingsCount > 1 ? 's' : ''}` : ''
+  const count = c.listingsCount ? t('items', { count: c.listingsCount, n: String(c.listingsCount) }) : ''
   return (
     <article onClick={open(c)} className="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm transition-shadow hover:shadow-card-hover">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center justify-between gap-2"><TypeBadge c={c} /><EndsIn endsAt={c.endsAt} className="text-label-sm text-on-surface-variant" /></div>
         <h3 className="m-0 truncate text-label-lg font-bold text-on-surface">{c.name.trim()}</h3>
         {(label || count) && <p className="m-0 text-body-sm text-on-surface-variant">{label && <b className="text-primary">{label}</b>}{label && count ? ' · ' : ''}{count}</p>}
-        <span className="mt-1 inline-flex items-center gap-1 text-label-md text-primary">Voir l’offre <Icon name="arrow_forward" size={15} /></span>
+        <span className="mt-1 inline-flex items-center gap-1 text-label-md text-primary">{t('cta.seeOne')} <Icon name="arrow_forward" size={15} /></span>
       </div>
       <Thumbs c={c} />
     </article>
@@ -172,6 +176,7 @@ export function useLiveCampaignsSettled() {
 // Best deals of a campaign (« Les meilleures affaires · … »); BO
 // « Visibilité » › « Bande Les meilleures affaires sur l'accueil ».
 function DealsRail({ c, desktop, renderCard }: { c: LiveCampaign; desktop: boolean; renderCard: (l: RemoteListing) => React.ReactNode }) {
+  const t = useT(campaignNs)
   // Only the visitor's country (a campaign may run in several).
   const marketCode = useMarketCode()
   const { data } = useQuery<{ listings: { items: RemoteListing[] } }>(LISTINGS_QUERY, {
@@ -186,11 +191,11 @@ function DealsRail({ c, desktop, renderCard }: { c: LiveCampaign; desktop: boole
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="m-0 flex items-center gap-1.5 text-label-sm font-bold uppercase tracking-wider" style={{ color: tintOf(c) }}>
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: tintOf(c) }} /> Les meilleures affaires
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: tintOf(c) }} /> {t('deals.title')}
           </p>
           <h3 className={`m-0 mt-1 truncate text-on-surface ${desktop ? 'text-headline-lg' : 'text-headline-sm font-bold'}`}>{c.name.trim()}</h3>
         </div>
-        <button onClick={open(c)} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">Tout voir <Icon name="chevron_right" size={18} /></button>
+        <button onClick={open(c)} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-lg font-semibold text-primary hover:underline">{t('deals.seeAll')} <Icon name="chevron_right" size={18} /></button>
       </div>
       {desktop
         // The same grid as the home's other rails (« Pépites à la Une »).
@@ -207,6 +212,7 @@ function DealsRail({ c, desktop, renderCard }: { c: LiveCampaign; desktop: boole
 //   others under it), then the first one's rail.
 // Nothing at all when there is nothing new to show.
 export function HomePromotions({ desktop, renderCard, heroIds }: { desktop: boolean; renderCard: (l: RemoteListing) => React.ReactNode; heroIds: string[] }) {
+  const t = useT(campaignNs)
   const campaigns = useLiveCampaigns().filter(c => c.featuredOnHome !== false)
   const [active, setActive] = useState(0)
   const inHero = campaigns.filter(c => heroIds.includes(c.id))
@@ -220,10 +226,10 @@ export function HomePromotions({ desktop, renderCard, heroIds }: { desktop: bool
   const heading = (
     <div className="mb-4 flex items-end justify-between gap-3">
       <div className="min-w-0">
-        <p className="m-0 text-label-sm font-bold uppercase tracking-wider text-primary">Offres limitées</p>
-        <h2 className={`m-0 text-on-surface ${desktop ? 'mt-1 text-headline-lg' : 'text-headline-sm font-bold'}`}>{inHero.length ? 'Autres promotions en cours' : 'Promotions en cours'}</h2>
+        <p className="m-0 text-label-sm font-bold uppercase tracking-wider text-primary">{t('home.kicker')}</p>
+        <h2 className={`m-0 text-on-surface ${desktop ? 'mt-1 text-headline-lg' : 'text-headline-sm font-bold'}`}>{inHero.length ? t('home.otherTitle') : t('home.title')}</h2>
       </div>
-      {rest.length > 1 && <span className="shrink-0 whitespace-nowrap text-label-md text-on-surface-variant">{rest.length} campagnes</span>}
+      {rest.length > 1 && <span className="shrink-0 whitespace-nowrap text-label-md text-on-surface-variant">{t('home.count', { count: rest.length })}</span>}
     </div>
   )
 

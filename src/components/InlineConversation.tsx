@@ -19,7 +19,9 @@ import { setActiveConversation } from '../lib/activeConversation'
 import { useConversationReadRefresh, useOfferUpdatedRefresh, useTypingIndicator } from '../lib/useMessagingLive'
 import OfferBubble from './OfferBubble'
 import PriceSuggestionHint from './PriceSuggestionHint'
-import { dateFormat } from '../lib/intl'
+import { useT, fmtDate, fmtTime, cfaUnit } from '../i18n'
+import common from '../i18n/ns/common'
+import messagesNs from '../i18n/ns/messages'
 import { useMemberLists } from '../lib/lists'
 import AccountVerifyPanel from './AccountVerifyPanel'
 import { isNotVerifiedError } from '../lib/accountVerify'
@@ -47,6 +49,8 @@ const chip = 'shrink-0 whitespace-nowrap cursor-pointer rounded-full border-none
 // account behind the scenes — see Backend AuthService.guestLogin) — either
 // way the conversation opens right here, in place, on this same page.
 export default function InlineConversation({ sellerId, listingId, sellerName, onAuthenticated, onClose }: InlineConversationProps) {
+  const t = useT(messagesNs)
+  const tc = useT(common)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [startError, setStartError] = useState<string | null>(null)
   // A member whose account isn't confirmed: the SMS code right here, then
@@ -60,7 +64,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
       .then(({ data }) => data?.startConversation && setConversationId(data.startConversation.id))
       .catch((e: unknown) => {
         if (isNotVerifiedError(e)) setNeedsVerify(true)
-        else setStartError('Impossible de démarrer la discussion. Réessayez.')
+        else setStartError(messagesNs.t('inline.startError'))
       })
   }
 
@@ -78,7 +82,7 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   if (needsVerify) {
     return (
       <div data-clarity-mask="True" className={panel}>
-        <AccountVerifyPanel tone="plain" intro={`Pour écrire à ${sellerName}, confirmez votre compte : par SMS, c’est immédiat, et la discussion s’ouvre aussitôt.`} onVerified={() => { setNeedsVerify(false); beginThread() }} />
+        <AccountVerifyPanel tone="plain" intro={t('inline.verifyIntro', { name: sellerName })} onVerified={() => { setNeedsVerify(false); beginThread() }} />
       </div>
     )
   }
@@ -86,8 +90,8 @@ export default function InlineConversation({ sellerId, listingId, sellerName, on
   if (getAccessToken()) {
     return (
       <div data-clarity-mask="True" className={`${panel} text-center text-body-sm text-on-surface-variant`}>
-        {starting ? 'Connexion à la discussion…' : (startError ?? '')}
-        {startError && <button onClick={beginThread} className="mx-auto mt-3 block cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white">Réessayer</button>}
+        {starting ? t('inline.connecting') : (startError ?? '')}
+        {startError && <button onClick={beginThread} className="mx-auto mt-3 block cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white">{tc('retry')}</button>}
       </div>
     )
   }
@@ -105,6 +109,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
   onAuthenticated: () => void
   onStarted: (conversationId: string) => void
 }) {
+  const t = useT(messagesNs)
   const quick = useMemberLists().quickReplies.buyer.slice(0, 3)
   // A phone typed without its country code gets this country's.
   const home = useHomeCountry()
@@ -122,7 +127,7 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.trim() && !phone.trim()) {
-      setError('Indiquez au moins un e-mail ou un numéro de téléphone.')
+      setError(t('inline.contactRequired'))
       return
     }
     setError(null)
@@ -145,9 +150,11 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
       // startConversation/sendMessage calls before they finish.
       onAuthenticated()
     } catch (err: any) {
+      // Server messages shown as they are (translated by the API).
+      // i18n-ignore
       setError(/déjà associé|Impossible de continuer|Numéro de téléphone invalide/.test(err?.message ?? '')
         ? err.message
-        : "Impossible d'envoyer le message. Vérifiez vos informations et réessayez.")
+        : t('inline.sendError'))
     } finally {
       setSending(false)
     }
@@ -162,17 +169,17 @@ function GuestForm({ sellerId, listingId, onAuthenticated, onStarted }: {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
-      <p className="m-0 flex gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="shrink-0 text-tertiary" /> Pas besoin de compte : indiquez comment le vendeur peut vous identifier (e-mail ou téléphone).</p>
+      <p className="m-0 flex gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="shrink-0 text-tertiary" /> {t('inline.noAccount')}</p>
       {error && <p className="m-0 rounded-xl bg-primary-fixed/60 px-3 py-2 text-body-sm text-primary">{error}</p>}
-      {withIcon('person', <input className={`${field} pl-10 pr-3`} placeholder="Votre nom" value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} />)}
-      {withIcon('call', <input className={`${field} pl-10 pr-3`} type="tel" placeholder={`Téléphone +${country.dialCode} (optionnel)`} value={phone} onChange={e => setPhone(e.target.value)} />)}
-      {withIcon('mail', <input className={`${field} pl-10 pr-3`} type="email" placeholder="E-mail (optionnel)" value={email} onChange={e => setEmail(e.target.value)} />)}
+      {withIcon('person', <input className={`${field} pl-10 pr-3`} placeholder={t('inline.namePlaceholder')} value={fullName} onChange={e => setFullName(e.target.value)} required minLength={2} />)}
+      {withIcon('call', <input className={`${field} pl-10 pr-3`} type="tel" placeholder={t('inline.phonePlaceholder', { dial: String(country.dialCode) })} value={phone} onChange={e => setPhone(e.target.value)} />)}
+      {withIcon('mail', <input className={`${field} pl-10 pr-3`} type="email" placeholder={t('inline.emailPlaceholder')} value={email} onChange={e => setEmail(e.target.value)} />)}
       <div className="flex flex-wrap gap-1.5">
         {quick.map(q => <button key={q} type="button" onClick={() => setMessage(q)} className={chip}>{q}</button>)}
       </div>
-      <textarea className={`${field} resize-y px-3`} placeholder="Votre message…" value={message} onChange={e => setMessage(e.target.value)} required minLength={2} rows={3} />
+      <textarea className={`${field} resize-y px-3`} placeholder={t('inline.messagePlaceholder')} value={message} onChange={e => setMessage(e.target.value)} required minLength={2} rows={3} />
       <button type="submit" disabled={sending || loggingIn} className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3 text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
-        <Icon name="send" size={18} /> {sending || loggingIn ? 'Envoi…' : 'Envoyer le message'}
+        <Icon name="send" size={18} /> {sending || loggingIn ? t('inline.sending') : t('inline.send')}
       </button>
     </form>
   )
@@ -184,12 +191,14 @@ function messageDayLabel(iso: string): string {
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
-  if (sameDay(d, today)) return "Aujourd'hui"
-  if (sameDay(d, yesterday)) return 'Hier'
-  return dateFormat('fr-FR', { day: 'numeric', month: 'long' }).format(d)
+  if (sameDay(d, today)) return messagesNs.t('inline.today')
+  if (sameDay(d, yesterday)) return common.t('yesterday')
+  return fmtDate(d, { day: 'numeric', month: 'long' })
 }
 
 function ThreadView({ conversationId, sellerName, onClose }: { conversationId: string, sellerName: string, onClose: () => void }) {
+  const t = useT(messagesNs)
+  const tc = useT(common)
   const quick = useMemberLists().quickReplies.buyer.slice(0, 3)
   const [msg, setMsg] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -246,7 +255,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
     if (!listingId) return
     const amount = Number(offerAmount.replace(/\s/g, ''))
     if (!Number.isInteger(amount) || amount <= 0) {
-      setOfferError('Entrez un montant valide.')
+      setOfferError(t('offer.invalidAmount'))
       return
     }
     setOfferError(null)
@@ -264,12 +273,12 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
   return (
     <div className="flex h-[400px] flex-col">
       <div className="mb-2 flex items-center justify-between">
-        <p className="m-0 flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="chat" size={18} className="text-primary" /> Discussion avec {sellerName}</p>
-        <button onClick={onClose} aria-label="Fermer" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={16} /></button>
+        <p className="m-0 flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="chat" size={18} className="text-primary" /> {t('inline.title', { name: sellerName })}</p>
+        <button onClick={onClose} aria-label={tc('close')} className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={16} /></button>
       </div>
 
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto py-1">
-        {messages.length === 0 && <p className="m-auto text-center text-body-sm text-on-surface-variant">Message envoyé — la réponse apparaîtra ici.</p>}
+        {messages.length === 0 && <p className="m-auto text-center text-body-sm text-on-surface-variant">{t('inline.sent')}</p>}
         {messages.map((m: RemoteMessage, i: number) => {
           const isMe = m.senderId !== otherId
           const prev = messages[i - 1]
@@ -287,7 +296,7 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
                     <div className={`selectable px-3 py-2 text-body-sm ${isMe ? 'rounded-2xl rounded-br-md bg-primary text-white' : 'rounded-2xl rounded-bl-md bg-surface-lowest text-on-surface'}`}>{m.body}</div>
                   )}
                   <div className={`mt-0.5 flex items-center gap-1 text-label-sm text-on-surface-variant ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    {dateFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(m.createdAt))}
+                    {fmtTime(m.createdAt)}
                     {isMe && <Icon name="done_all" size={14} className={m.readAt ? 'text-tertiary' : ''} />}
                   </div>
                 </div>
@@ -298,20 +307,20 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
         <div ref={messagesEndRef} />
       </div>
 
-      {otherIsTyping && <p className="m-0 mb-1 text-label-sm italic text-on-surface-variant">{sellerName} est en train d'écrire…</p>}
+      {otherIsTyping && <p className="m-0 mb-1 text-label-sm italic text-on-surface-variant">{t('inline.typing', { name: sellerName })}</p>}
       {!!data?.conversation?.safetyAlerts?.length && (
         <div className="mt-1.5"><SafetyBanners compact alerts={data.conversation.safetyAlerts} conversationId={conversationId} otherId={otherId} onDone={() => void refetch()} /></div>
       )}
 
       {offerFormOpen ? (
         <div className="mt-2 rounded-xl bg-surface-lowest p-3">
-          <label className="mb-1.5 block text-label-md text-on-surface">Votre offre ({data?.conversation?.listing?.currency === 'XOF' || !data?.conversation?.listing?.currency ? 'F' : data.conversation.listing.currency})</label>
+          <label className="mb-1.5 block text-label-md text-on-surface">{t('inline.offerTitle', { unit: data?.conversation?.listing?.currency === 'XOF' || !data?.conversation?.listing?.currency ? cfaUnit() : data.conversation.listing.currency })}</label>
           <PriceSuggestionHint listingId={data?.conversation?.listingId} onUseAmount={amount => setOfferAmount(String(amount))} />
-          <input className={`${field} mb-2 bg-surface-container-low px-3`} inputMode="numeric" placeholder="Ex : 430 000" value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
+          <input className={`${field} mb-2 bg-surface-container-low px-3`} inputMode="numeric" placeholder={t('inline.offerPlaceholder')} value={offerAmount} onChange={e => setOfferAmount(e.target.value)} />
           {offerError && <p className="m-0 mb-2 text-body-sm text-primary">{offerError}</p>}
           <div className="flex gap-2">
-            <button disabled={sendingOffer} onClick={submitOffer} className="flex-1 cursor-pointer rounded-xl border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-60">{sendingOffer ? 'Envoi…' : "Envoyer l'offre"}</button>
-            <button onClick={() => { setOfferFormOpen(false); setOfferError(null) }} aria-label="Annuler" className="flex w-11 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={18} /></button>
+            <button disabled={sendingOffer} onClick={submitOffer} className="flex-1 cursor-pointer rounded-xl border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-60">{sendingOffer ? t('offer.sending') : t('offer.send')}</button>
+            <button onClick={() => { setOfferFormOpen(false); setOfferError(null) }} aria-label={tc('cancel')} className="flex w-11 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container-high text-on-surface-variant"><Icon name="close" size={18} /></button>
           </div>
         </div>
       ) : (
@@ -321,16 +330,16 @@ function ThreadView({ conversationId, sellerName, onClose }: { conversationId: s
           </div>
           <div className="flex gap-2">
             {canOffer && (
-              <button title="Faire une offre" onClick={() => setOfferFormOpen(true)} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-lowest text-primary"><Icon name="sell" size={19} /></button>
+              <button title={t('inline.makeOffer')} onClick={() => setOfferFormOpen(true)} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-lowest text-primary"><Icon name="sell" size={19} /></button>
             )}
             <input
               className={`${field} min-w-0 flex-1 px-3`}
-              placeholder="Écrivez votre message…"
+              placeholder={t('inline.composerPlaceholder')}
               value={msg}
               onChange={e => { setMsg(e.target.value); notifyTyping() }}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
             />
-            <button onClick={handleSend} disabled={sending || !msg.trim()} aria-label="Envoyer" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-primary text-white disabled:opacity-50"><Icon name="send" size={19} /></button>
+            <button onClick={handleSend} disabled={sending || !msg.trim()} aria-label={tc('send')} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-primary text-white disabled:opacity-50"><Icon name="send" size={19} /></button>
           </div>
         </div>
       )}

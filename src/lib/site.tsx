@@ -3,6 +3,8 @@ import { gql } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { countryVars, useCountry, useMarket, useMarketCode, useMemberCountryCode } from './countries'
 import { FOOTER_SETTINGS_QUERY } from '../graphql/content'
+import { useLocale } from '../i18n'
+import seoNs from '../i18n/ns/seo'
 
 // Site-wide settings set in the back-office (« Réglages du site », Backend
 // content/site-config.ts): brand, SEO, contacts, social and app links, and
@@ -22,18 +24,19 @@ export type SiteConfig = {
   claims: { noCommission: boolean }
 }
 
-export const DEFAULT_SITE: SiteConfig = {
-  brand: { name: 'Dilchap', logoUrl: '', tagline: 'La marketplace de confiance' },
+// Built at each call, in the visitor's language.
+export const defaultSite = (): SiteConfig => ({
+  brand: { name: 'Dilchap', logoUrl: '', tagline: seoNs.t('default.tagline') },
   seo: {
-    title: 'Dilchap — Marketplace d’Afrique de l’Ouest',
-    description: 'Achetez et vendez près de chez vous, de Dakar à Niamey : annonces, négociation sur le chat et remise en main propre.',
+    title: seoNs.t('default.title'),
+    description: seoNs.t('default.description'),
     image: '',
   },
   contact: { email: '', hours: '', address: '' },
   socials: { facebook: '', instagram: '', tiktok: '', youtube: '', x: '', linkedin: '', whatsapp: '' },
   apps: { android: '', ios: '' },
   claims: { noCommission: true },
-}
+})
 
 // The visitor's market version (« Tous les pays »: the general one). Each
 // country is cached apart; the previous one stays while another loads.
@@ -43,7 +46,7 @@ export function useSite(): SiteConfig {
     variables: countryVars(market),
     fetchPolicy: 'cache-first',
   })
-  return (data ?? previousData)?.siteConfig ?? DEFAULT_SITE
+  return (data ?? previousData)?.siteConfig ?? defaultSite()
 }
 
 // Support number on member screens (sign-in help, dashboard, KYC): the
@@ -79,18 +82,21 @@ function setMeta(attr: 'name' | 'property', key: string, value: string) {
 
 // Default tab title of each app page, « … | Dilchap » (the server's SEO
 // titles for the pages it renders: Backend src/modules/seo).
-const PAGE_TITLES: Record<string, string> = {
-  search: 'Recherche', reels: 'Reels : les articles en vidéo', 'seller-reels': 'Mes Reels', 'flash-offers': 'Bonnes affaires et promotions', 'listing-detail': 'Annonce', 'seller-profile': 'Vendeur',
-  categories: 'Toutes les catégories', auth: 'Connexion', legal: 'Informations légales', shop: 'Boutique officielle', shops: 'Boutiques officielles', help: 'Centre d’aide',
-  'buyer-dashboard': 'Mon compte', 'buyer-favorites': 'Mes favoris', 'buyer-messages': 'Messages', 'buyer-notifications': 'Notifications',
-  'buyer-history': 'Historique', 'buyer-settings': 'Paramètres', 'buyer-purchases': 'Mes achats', 'buyer-receipts': 'Mes reçus', 'buyer-receipt': 'Reçu',
-  'buyer-handover': 'Remise en main propre', 'buyer-dispute-new': 'Ouvrir un litige', 'buyer-disputes': 'Mes litiges',
-  'seller-dashboard': 'Mon compte', 'seller-post': 'Publier une annonce', 'seller-edit': 'Modifier une annonce', 'seller-listings': 'Mes annonces',
-  'seller-stats': 'Statistiques', 'seller-premium': 'Booster une annonce', 'seller-orders': 'Mes ventes', 'seller-wallet': 'Mes crédits',
-  'seller-reviews': 'Mes avis', 'seller-disputes': 'Litiges', 'seller-handover': 'Remise en main propre', 'seller-kyc': 'Vérification d’identité',
-  'seller-shop': 'Ma Boutique officielle', 'seller-shop-stats': 'Statistiques de la boutique', 'seller-shop-promos': 'Promotions de la boutique',
-  'seller-badge': 'Mon badge', 'seller-qr': 'Mon QR code', 'seller-campaigns': 'Campagnes Dilchap', support: 'Aide & support',
-}
+// Read at each call (seo namespace, `page.<id>`), in the visitor's language.
+const PAGE_IDS = new Set([
+  'search', 'reels', 'seller-reels', 'flash-offers', 'listing-detail', 'seller-profile',
+  'categories', 'auth', 'legal', 'shop', 'shops', 'help',
+  'buyer-dashboard', 'buyer-favorites', 'buyer-messages', 'buyer-notifications',
+  'buyer-history', 'buyer-settings', 'buyer-purchases', 'buyer-receipts', 'buyer-receipt',
+  'buyer-handover', 'buyer-dispute-new', 'buyer-disputes',
+  'seller-dashboard', 'seller-post', 'seller-edit', 'seller-listings',
+  'seller-stats', 'seller-premium', 'seller-orders', 'seller-wallet',
+  'seller-reviews', 'seller-disputes', 'seller-handover', 'seller-kyc',
+  'seller-shop', 'seller-shop-stats', 'seller-shop-promos',
+  'seller-badge', 'seller-qr', 'seller-campaigns', 'support',
+])
+const pageTitle = (page: string): string | undefined =>
+  PAGE_IDS.has(page) ? (seoNs.t as (k: string) => string)(`page.${page}`) : undefined
 
 // « velos-vtt » → « Velos vtt »: the category page's title until its name is loaded.
 const fromSlug = (slug: string) => {
@@ -103,13 +109,13 @@ export function routeTitle(page: string, ctx: { searchTerm?: string; category?: 
   if (page === 'home') return null
   // « Section Adultes »: one discreet title for all its pages (a shared
   // screen, the tab list), never a product or a search.
-  if (ctx.adult || page === 'adult-home') return 'Section Adultes'
+  if (ctx.adult || page === 'adult-home') return seoNs.t('adultSection')
   if (page === 'search') {
     if (ctx.category) return fromSlug(ctx.category)
     const q = ctx.searchTerm?.trim()
-    return q ? `Recherche : ${q.slice(0, 60)}` : PAGE_TITLES.search
+    return q ? seoNs.t('searchFor', { q: q.slice(0, 60) }) : seoNs.t('page.search')
   }
-  return PAGE_TITLES[page] ?? 'Mon compte'
+  return pageTitle(page) ?? seoNs.t('fallback')
 }
 
 // A country's own home title only when it names the site (a stray label
@@ -122,9 +128,10 @@ export function marketSeo(
 ) {
   const ownTitle = market?.seoTitle?.trim() ?? ''
   const ownDescription = market?.seoDescription?.trim() ?? ''
-  const local = market ? `à ${market.mainCity} et ${market.inName}` : ''
-  const generated = market ? [`${brand} : petites annonces ${local}`, `${brand} : petites annonces ${market.inName}`].find(t => t.length <= 60) ?? `${brand} : petites annonces ${market.inName}` : ''
-  const description = market ? `Petites annonces ${local}. ${site.description}` : site.description
+  const local = market ? seoNs.t('market.local', { city: market.mainCity, inCountry: market.inName }) : ''
+  const byCountry = market ? seoNs.t('market.titleCountry', { brand, inCountry: market.inName }) : ''
+  const generated = market ? [seoNs.t('market.titleLocal', { brand, local }), byCountry].find(t => t.length <= 60) ?? byCountry : ''
+  const description = market ? seoNs.t('market.description', { local, description: site.description }) : site.description
   return {
     title: (ownTitle && ownTitle.toLowerCase().includes(brand.toLowerCase()) ? ownTitle : '') || generated || site.title,
     description: ownDescription.length >= 50 ? ownDescription : description.length > 155 ? `${description.slice(0, 154).replace(/\s+\S*$/, '')}…` : description,
@@ -140,8 +147,13 @@ export function marketSeo(
 // runs after this one). The first page's tags come from the storefront's
 // server (Backend src/modules/seo), already right for that URL: left as
 // they are.
+// Language of the title last written (the first page's comes from the server, in French).
+let titleLocale = 'fr'
+
 export function useSeo(page: string, ctx: { searchTerm?: string; category?: string; adult?: boolean } = {}) {
   const { seo: siteSeo, brand } = useSite()
+  // Titles are read in the visitor's language: a switch re-renders (and re-sets) them.
+  const locale = useLocale()
   // The visitor's country: its own texts (« Pays » in the BO), else « Dilchap :
   // petites annonces à Abidjan et en Côte d’Ivoire » — what search engines
   // get (Backend seo homeMeta) — else the site's.
@@ -154,9 +166,12 @@ export function useSeo(page: string, ctx: { searchTerm?: string; category?: stri
   useLayoutEffect(() => {
     // First page: the server's title stays, unless it is the generic one of
     // a page it doesn't render (account, sign-in, a search: /compte, /connexion…).
-    if (!moved.current && !(own && !document.title.includes(` | ${brand.name}`))) return
+    // After a language switch (the app is mounted afresh) the title is
+    // always rewritten, in the new language.
+    if (!moved.current && titleLocale === locale && !(own && !document.title.includes(` | ${brand.name}`))) return
+    titleLocale = locale
     document.title = own ? `${own} | ${brand.name}` : seo.title || brand.name
-  }, [page, own, seo.title, brand.name])
+  }, [page, own, seo.title, brand.name, locale])
   useEffect(() => {
     if (!moved.current) return
     setMeta('name', 'description', seo.description)

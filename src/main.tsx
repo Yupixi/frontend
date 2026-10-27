@@ -11,6 +11,10 @@ import './index.css'
 import { captureCampaignParams } from './lib/campaignParams'
 import { captureFacebookReturn } from './lib/facebookReturn'
 import { startPwaTracking } from './lib/pwaInstall'
+import { getStoredLocation } from './lib/location'
+import { useLocale } from './i18n'
+import { applyLocale, loadEnglish } from './i18n/core'
+import { bootLocale, setLocaleSwitcher } from './i18n/locale'
 
 // /q/<code> (printed QR codes of the shops): a page of its own, outside the
 // app and the launch gate (it shows the launch page itself).
@@ -39,12 +43,25 @@ captureFacebookReturn()
 // device), and the browser's install event — sent in one batch later.
 startPwaTracking()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// Another language: its strings first, then the API's content asked again
+// in it (empty cache), and the whole tree mounted afresh (LocalizedRoot).
+setLocaleSwitcher(async (locale) => {
+  if (locale === 'en') await loadEnglish()
+  await apolloClient.clearStore().catch(() => undefined)
+  await applyLocale(locale)
+})
+
+function LocalizedRoot({ children }: { children: React.ReactNode }) {
+  return <React.Fragment key={useLocale()}>{children}</React.Fragment>
+}
+
+const render = () => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     {/* Last resort: an error no page boundary caught (App's shell, the
         launch gate…) shows « Une erreur est survenue » instead of a blank page. */}
     <ErrorBoundary fullScreen>
       <ApolloProvider client={apolloClient}>
+        <LocalizedRoot>
         {/* The links of our e-mails work even before the launch. */}
         {isEmailLinkPath(window.location.pathname) ? (
           <EmailLinkPage />
@@ -61,7 +78,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <App />
           </LaunchGate>
         )}
+        </LocalizedRoot>
       </ApolloProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// English is loaded before the first render (French is in the bundle).
+void bootLocale(getStoredLocation()?.countryCode).then(render)

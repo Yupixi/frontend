@@ -5,6 +5,9 @@ import { useCountries } from '../lib/countries'
 import type { StoredLocation } from '../lib/location'
 import Flag from './Flag'
 import { OPEN_LOCATION_EVENT } from '../lib/navigation'
+import { useT } from '../i18n'
+import common from '../i18n/ns/common'
+import layout from '../i18n/ns/layout'
 
 type LocationPillProps = {
   location: StoredLocation | null | undefined
@@ -16,14 +19,16 @@ type LocationPillProps = {
 // UI, since a wrong or unknown detection must never trap the user behind a
 // filter they can't see or clear.
 export default function LocationPill({ location, onChange, compact }: LocationPillProps) {
+  const t = useT(layout)
+  const tc = useT(common)
   const [open, setOpen] = useState(false)
   const [city, setCity] = useState(location?.city ?? '')
   // Only the active UEMOA countries (Backoffice « Pays »).
   const countries = useCountries()
   const market = location?.countryCode ? countries.find(m => m.code === location.countryCode) : undefined
-  const label = market ? (location?.city ? `${location.city}, ${market.name}` : market.name) : 'Tous les pays'
+  const label = market ? (location?.city ? `${location.city}, ${market.name}` : market.name) : t('location.allCountries')
   // Mobile header pill (Stitch "Ville ▾"): the city alone, else the country.
-  const shortLabel = location?.city || market?.name || 'Tous pays'
+  const shortLabel = location?.city || market?.name || t('location.allShort')
   // Suggestions: the country's towns and the districts of its main city.
   const suggestions = market ? [...new Set([...market.cities, ...market.districts])] : []
 
@@ -73,8 +78,8 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
           <div className="fixed inset-0 z-[29]" onClick={() => setOpen(false)} />
           {/* Phones: pinned under the header so it never spills off-screen. */}
           <div className={`z-30 max-h-[380px] overflow-y-auto rounded-2xl border border-outline-variant bg-surface-lowest p-2 shadow-float ${compact ? 'fixed left-4 right-4 top-16' : 'absolute right-0 top-full mt-2 w-64'}`}>
-            <div className="px-2 pb-1 pt-1 text-label-sm uppercase text-on-surface-variant">Pays</div>
-            <button onClick={() => pick(null)} className={option(!market)}>Tous les pays{!market && <Icon name="check" size={17} />}</button>
+            <div className="px-2 pb-1 pt-1 text-label-sm uppercase text-on-surface-variant">{t('location.countries')}</div>
+            <button onClick={() => pick(null)} className={option(!market)}>{t('location.allCountries')}{!market && <Icon name="check" size={17} />}</button>
             {countries.map(m => (
               <button key={m.code} onClick={() => pick(m.code)} className={option(market?.code === m.code)}>
                 <span className="flex items-center gap-2"><Flag code={m.code} />{m.name}</span>{market?.code === m.code && <Icon name="check" size={17} />}
@@ -82,10 +87,10 @@ export default function LocationPill({ location, onChange, compact }: LocationPi
             ))}
             {market && (
               <div className="mt-2 border-0 border-t border-solid border-outline-variant px-1 pb-1 pt-3">
-                <label className="mb-1.5 block text-label-sm text-on-surface-variant">Ville ou commune</label>
+                <label className="mb-1.5 block text-label-sm text-on-surface-variant">{t('location.city')}</label>
                 <div className="flex gap-1.5">
-                  <input value={city} onChange={e => setCity(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCity()} list="location-pill-cities" placeholder={`Ex : ${market.districts[0] ?? market.mainCity}`} className="min-w-0 flex-1 rounded-lg border border-transparent bg-surface-container-low px-2.5 py-2 text-body-sm text-on-surface outline-none focus:border-primary" />
-                  <button onClick={applyCity} className="cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white">OK</button>
+                  <input value={city} onChange={e => setCity(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCity()} list="location-pill-cities" placeholder={t('location.example', { place: market.districts[0] ?? market.mainCity })} className="min-w-0 flex-1 rounded-lg border border-transparent bg-surface-container-low px-2.5 py-2 text-body-sm text-on-surface outline-none focus:border-primary" />
+                  <button onClick={applyCity} className="cursor-pointer rounded-lg border-none bg-primary px-3 text-label-md text-white">{tc('ok')}</button>
                   <datalist id="location-pill-cities">{suggestions.map(c => <option key={c} value={c} />)}</datalist>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">

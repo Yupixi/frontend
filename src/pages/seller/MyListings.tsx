@@ -39,6 +39,8 @@ import type { BumpStatus } from '../../graphql/bumps'
 import { requestOpenLink } from '../../lib/navigation'
 import { useCreditValue } from '../../lib/creditValue'
 import BoostPicker from '../../components/boost/BoostPicker'
+import { fmtCfa, fmtDate, fmtNumber, useT } from '../../i18n'
+import myListings from '../../i18n/ns/myListings'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -53,34 +55,38 @@ const future = (iso?: string | null) => !!iso && new Date(iso) > new Date()
 const negotiating = (l: MyListingRow) => l.status === 'APPROVED' && ((l.activeConversationsCount ?? 0) > 0 || (l.pendingOffersCount ?? 0) > 0)
 
 const TABS = [
-  { key: 'live', label: 'En ligne', match: (l: MyListingRow) => l.status === 'APPROVED' },
-  { key: 'nego', label: 'En négociation chat', match: negotiating },
-  { key: 'sold', label: 'Vendues', match: (l: MyListingRow) => l.status === 'SOLD' },
-  { key: 'review', label: 'En validation', match: (l: MyListingRow) => l.status === 'PENDING_REVIEW' || l.status === 'REJECTED' },
-  { key: 'draft', label: 'Brouillons', match: (l: MyListingRow) => l.status === 'DRAFT' },
-  { key: 'archived', label: 'Archivées', match: (l: MyListingRow) => l.status === 'EXPIRED' || l.status === 'PAUSED' },
+  { key: 'live', match: (l: MyListingRow) => l.status === 'APPROVED' },
+  { key: 'nego', match: negotiating },
+  { key: 'sold', match: (l: MyListingRow) => l.status === 'SOLD' },
+  { key: 'review', match: (l: MyListingRow) => l.status === 'PENDING_REVIEW' || l.status === 'REJECTED' },
+  { key: 'draft', match: (l: MyListingRow) => l.status === 'DRAFT' },
+  { key: 'archived', match: (l: MyListingRow) => l.status === 'EXPIRED' || l.status === 'PAUSED' },
 ] as const
 
 // `dot`: colour of the status dot on the phone list line.
-const STATUS: Record<string, { label: string, cls: string, dot: string }> = {
-  APPROVED: { label: 'En ligne', cls: 'bg-tertiary-soft text-tertiary', dot: 'text-tertiary' },
-  PENDING_REVIEW: { label: 'En validation', cls: 'bg-amber-100 text-amber-800', dot: 'text-amber-600' },
-  REJECTED: { label: 'Refusée', cls: 'bg-primary-fixed text-primary', dot: 'text-primary' },
-  DRAFT: { label: 'Brouillon', cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
-  SOLD: { label: 'Vendue', cls: 'bg-blue-100 text-blue-800', dot: 'text-blue-700' },
-  EXPIRED: { label: 'Archivée', cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
-  PAUSED: { label: 'En pause', cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
+const STATUS: Record<string, { cls: string, dot: string }> = {
+  APPROVED: { cls: 'bg-tertiary-soft text-tertiary', dot: 'text-tertiary' },
+  PENDING_REVIEW: { cls: 'bg-amber-100 text-amber-800', dot: 'text-amber-600' },
+  REJECTED: { cls: 'bg-primary-fixed text-primary', dot: 'text-primary' },
+  DRAFT: { cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
+  SOLD: { cls: 'bg-blue-100 text-blue-800', dot: 'text-blue-700' },
+  EXPIRED: { cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
+  PAUSED: { cls: 'bg-surface-container-high text-on-surface-variant', dot: 'text-outline' },
 }
+// The status in words (current language); an unknown one as the server says it.
+const statusLabel = (s: string) => (STATUS[s] ? (myListings.t as (k: string) => string)(`status.${s}`) : s)
 
 function toCsv(rows: MyListingRow[]) {
-  const head = ['Titre', 'Statut', 'Prix', 'Devise', 'Catégorie', 'Ville', 'Vues', 'Favoris', 'Demandes', 'Publiée le']
+  const t = myListings.t
+  const head = [t('csv.title'), t('csv.status'), t('csv.price'), t('csv.currency'), t('csv.category'), t('csv.city'), t('csv.views'), t('csv.favourites'), t('csv.requests'), t('csv.published')]
   const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
-  const lines = rows.map(l => [l.title, STATUS[l.status]?.label ?? l.status, l.price ?? '', l.currency, l.category?.name, l.city, l.viewsCount, l.favoritesCount, l.contactsCount ?? 0, (l.publishedAt ?? l.createdAt).slice(0, 10)].map(esc).join(';'))
+  const lines = rows.map(l => [l.title, statusLabel(l.status), l.price ?? '', l.currency, l.category?.name, l.city, l.viewsCount, l.favoritesCount, l.contactsCount ?? 0, (l.publishedAt ?? l.createdAt).slice(0, 10)].map(esc).join(';'))
   return '﻿' + [head.map(esc).join(';'), ...lines].join('\n')
 }
 
 // "Mes annonces" (Seller Hub) mockup.
 export default function MyListings({ onNavigate, onSelectListing, onEditListing, currentUser, onLogout }: Props) {
+  const t = useT(myListings)
   const noCommission = useNoCommissionClaims()
   const { data, loading, refetch } = useQuery<{ myListings: { items: MyListingRow[] } }>(MY_LISTINGS_QUERY, { variables: { page: 1, pageSize: 200 } })
   const all = data?.myListings.items ?? []
@@ -130,7 +136,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
 
   const categories = useMemo(() => [...new Map(all.filter(l => l.category).map(l => [l.category!.slug, l.category!.name])).entries()], [all])
   const cities = useMemo(() => [...new Set(all.map(l => l.city).filter(Boolean) as string[])], [all])
-  const current = TABS.find(t => t.key === tab)!
+  const current = TABS.find(tb => tb.key === tab)!
   const rows = all
     .filter(current.match)
     .filter(l => !q || `${l.title} ${l.brand ?? ''}`.toLowerCase().includes(q.toLowerCase()))
@@ -152,7 +158,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
 
   const exportCsv = () => {
     const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a'); a.href = url; a.download = 'mes-annonces-dilchap.csv'; a.click(); URL.revokeObjectURL(url)
+    const a = document.createElement('a'); a.href = url; a.download = t('csv.fileName'); a.click(); URL.revokeObjectURL(url)
   }
   const [exiting, setExiting] = useState(false)
   // The reason picked: « Vendu sur Dilchap » asks « Vendu à qui ? » instead.
@@ -166,24 +172,24 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
       ? deleteListing({ variables: { id: l.id, reason } })
       : pauseListing({ variables: { id: l.id, reason } })
     void run
-      .then(() => { setExitFor(null); setFlash(action === 'delete' ? `« ${l.title} » est supprimée.` : `« ${l.title} » est en pause.`); return refetch() })
+      .then(() => { setExitFor(null); setFlash(action === 'delete' ? t('flash.deleted', { title: l.title }) : t('flash.paused', { title: l.title })); return refetch() })
       .catch((e: Error) => setExitError(e.message))
       .finally(() => setExiting(false))
   }
   const resume = (l: MyListingRow) => {
     void resumeListing({ variables: { id: l.id } })
-      .then(() => { setFlash(`« ${l.title} » est de nouveau en ligne.`); return refetch() })
+      .then(() => { setFlash(t('flash.resumed', { title: l.title })); return refetch() })
       .catch((e: Error) => setFlash(e.message))
   }
   const activeFilters = (cat ? 1 : 0) + (city ? 1 : 0) + (sort !== 'recent' ? 1 : 0)
   const filterSelects = (cls: string) => (
     <>
       <Select value={cat} onChange={e => { setCat(e.target.value); setPage(1) }} className={cls}>
-        <option value="">Toutes catégories</option>
+        <option value="">{t('filters.allCategories')}</option>
         {categories.map(([slug, name]) => <option key={slug} value={slug}>{name}</option>)}
       </Select>
       <Select value={city} onChange={e => { setCity(e.target.value); setPage(1) }} className={cls}>
-        <option value="">Toutes communes</option>
+        <option value="">{t('filters.allAreas')}</option>
         {cities.map(c => <option key={c}>{c}</option>)}
       </Select>
     </>
@@ -191,34 +197,34 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
   const spendCredit = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } })
     .then(r => { setFlash(null); if (r.data) proof.show(r.data.bumpListing); void refetch(); void refetchWallet() })
     .catch((e: Error) => setFlash(e.message))
-  const republish = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } }).then(() => { setFlash('Annonce remise en ligne.'); void refetch() })
+  const republish = (l: MyListingRow) => void bumpListing({ variables: { id: l.id } }).then(() => { setFlash(t('flash.republished')); void refetch() })
 
   return (
     <AccountLayout active="seller-listings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1160px] pb-6">
         {/* Breadcrumb, heading and CSV export are desktop-only: the mobile shell already titles the page. */}
-        <div className="mb-1 hidden text-label-sm uppercase text-on-surface-variant lg:block">Dilchap Seller › Vente directe</div>
+        <div className="mb-1 hidden text-label-sm uppercase text-on-surface-variant lg:block">{t('breadcrumb')}</div>
         <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
-            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">Mes annonces</h1>
-            <p className="m-0 mt-1 text-body-md text-on-surface-variant">Gérez votre catalogue de vente, suivez vos vues et boostez vos pépites auprès des acheteurs.</p>
+            <h1 className="m-0 text-headline-lg-mobile text-on-surface md:text-headline-lg">{t('title')}</h1>
+            <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('intro')}</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={exportCsv} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest"><Download size={17} /> Exporter (.csv)</button>
-            <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark"><PlusCircle size={18} /> Publier une nouvelle annonce</button>
+            <button onClick={exportCsv} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-container-high px-3 py-2.5 text-label-md text-on-surface hover:bg-surface-container-highest"><Download size={17} /> {t('export')}</button>
+            <button onClick={() => onNavigate('seller-post')} className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark"><PlusCircle size={18} /> {t('postNew')}</button>
           </div>
         </div>
 
         {/* Tabs */}
         <div className="relative mb-3 lg:mb-4">
-          <div onScroll={e => { const t = e.currentTarget; setTabsAtEnd(t.scrollLeft + t.clientWidth >= t.scrollWidth - 4) }} className="flex gap-1 overflow-x-auto rounded-xl bg-surface-container-low p-1 [scrollbar-width:none]">
-            {TABS.map(t => {
-              const n = all.filter(t.match).length
-              if (t.key === 'review' && n === 0) return null
-              const active = tab === t.key
+          <div onScroll={e => { const el = e.currentTarget; setTabsAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 4) }} className="flex gap-1 overflow-x-auto rounded-xl bg-surface-container-low p-1 [scrollbar-width:none]">
+            {TABS.map(tb => {
+              const n = all.filter(tb.match).length
+              if (tb.key === 'review' && n === 0) return null
+              const active = tab === tb.key
               return (
-                <button key={t.key} onClick={e => { setTab(t.key); setPage(1); e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none px-3 py-2 text-label-md ${active ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
-                  {t.label} <span className={`rounded-full px-1.5 text-label-sm ${active ? 'bg-primary-fixed text-primary' : 'bg-surface-container-high'}`}>{n}</span>
+                <button key={tb.key} onClick={e => { setTab(tb.key); setPage(1); e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none px-3 py-2 text-label-md ${active ? 'bg-surface-lowest text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
+                  {t(`tabs.${tb.key}` as const)} <span className={`rounded-full px-1.5 text-label-sm ${active ? 'bg-primary-fixed text-primary' : 'bg-surface-container-high'}`}>{n}</span>
                 </button>
               )
             })}
@@ -230,38 +236,38 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <div className="mb-3 flex items-center gap-2 rounded-xl lg:mb-4 lg:flex-wrap lg:bg-surface-lowest lg:p-2">
           <label className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2.5 lg:min-w-[200px] lg:py-2">
             <Search size={17} className="shrink-0 text-outline" />
-            <input value={q} onChange={e => { setQ(e.target.value); setPage(1) }} placeholder="Rechercher par titre, marque…" className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" />
+            <input value={q} onChange={e => { setQ(e.target.value); setPage(1) }} placeholder={t('searchPlaceholder')} className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" />
           </label>
-          <button onClick={() => setFiltersOpen(true)} aria-label="Filtrer et trier" className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-low text-on-surface lg:hidden">
+          <button onClick={() => setFiltersOpen(true)} aria-label={t('filterSort')} className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container-low text-on-surface lg:hidden">
             <Icon name="tune" size={20} />
             {activeFilters > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">{activeFilters}</span>}
           </button>
           <div className="hidden items-center gap-2 lg:flex">
             {filterSelects('cursor-pointer rounded-lg border-none bg-surface-container-low px-3 py-2 text-label-md text-on-surface outline-none')}
             <label className="flex items-center gap-1 text-label-md text-on-surface-variant">
-              Trier :
+              {t('sortLabel')}
               <Select value={sort} onChange={e => setSort(e.target.value as typeof sort)} className="cursor-pointer rounded-lg border-none bg-transparent py-2 text-label-md text-on-surface outline-none">
-                <option value="recent">Plus récentes</option>
-                <option value="views">Plus vues</option>
-                <option value="price-desc">Prix décroissant</option>
-                <option value="price-asc">Prix croissant</option>
+                <option value="recent">{t('sort.recent')}</option>
+                <option value="views">{t('sort.views')}</option>
+                <option value="price-desc">{t('sort.priceDesc')}</option>
+                <option value="price-asc">{t('sort.priceAsc')}</option>
               </Select>
             </label>
           </div>
         </div>
-        <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filtrer et trier"
+        <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title={t('filterSort')}
           footer={
             <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
-              <button onClick={() => { setCat(''); setCity(''); setSort('recent'); setPage(1) }} className="h-12 flex-1 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Réinitialiser</button>
-              <button onClick={() => setFiltersOpen(false)} className="h-12 flex-[1.4] cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary text-label-lg text-white">Voir {rows.length} annonce{rows.length > 1 ? 's' : ''}</button>
+              <button onClick={() => { setCat(''); setCity(''); setSort('recent'); setPage(1) }} className="h-12 flex-1 cursor-pointer whitespace-nowrap rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">{t('reset')}</button>
+              <button onClick={() => setFiltersOpen(false)} className="h-12 flex-[1.4] cursor-pointer whitespace-nowrap rounded-xl border-none bg-primary text-label-lg text-white">{t('seeResults', { count: rows.length, n: String(rows.length) })}</button>
             </div>
           }>
           <div className="flex flex-col gap-3">
-            <span className="text-label-md text-on-surface">Catégorie et commune</span>
+            <span className="text-label-md text-on-surface">{t('catArea')}</span>
             {filterSelects('w-full cursor-pointer rounded-lg border border-outline-variant bg-surface-container-low px-3 py-3 text-body-md text-on-surface outline-none')}
-            <span className="mt-1 text-label-md text-on-surface">Trier par</span>
+            <span className="mt-1 text-label-md text-on-surface">{t('sortBy')}</span>
             <div className="grid grid-cols-2 gap-2">
-              {([['recent', 'Plus récentes'], ['views', 'Plus vues'], ['price-desc', 'Prix décroissant'], ['price-asc', 'Prix croissant']] as const).map(([v, label]) => (
+              {([['recent', t('sort.recent')], ['views', t('sort.views')], ['price-desc', t('sort.priceDesc')], ['price-asc', t('sort.priceAsc')]] as const).map(([v, label]) => (
                 <button key={v} onClick={() => setSort(v)} aria-pressed={sort === v} className={`h-11 cursor-pointer whitespace-nowrap rounded-xl border-[1.5px] border-solid text-label-md ${sort === v ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>{label}</button>
               ))}
             </div>
@@ -272,19 +278,19 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <section className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary to-primary-container p-3 text-white lg:mb-5 lg:gap-4 lg:p-5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 lg:h-12 lg:w-12"><Rocket size={22} /></span>
           <div className="min-w-0 flex-1">
-            <div className="text-label-lg lg:text-headline-sm">Plus de visibilité</div>
-            <p className="m-0 text-body-sm text-white/90">Remontée, En vedette, Turbo, Urgent{flashPrice ? <> · dès {creditsLabel(flashPrice)}{creditValue > 0 && <> (≈ <Price amount={flashPrice * creditValue} />)</>}</> : null}</p>
+            <div className="text-label-lg lg:text-headline-sm">{t('visibility.title')}</div>
+            <p className="m-0 text-body-sm text-white/90">{flashPrice ? t.rich(creditValue > 0 ? 'visibility.formulasFromValue' : 'visibility.formulasFrom', { credits: creditsLabel(flashPrice), price: <Price amount={flashPrice * creditValue} /> }) : t('visibility.formulas')}</p>
           </div>
-          <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-white px-3 py-2 text-label-md text-primary lg:px-4 lg:py-2.5"><Rocket size={16} /> <span className="lg:hidden">Booster</span><span className="hidden lg:inline">Booster une annonce</span></button>
+          <button onClick={() => onNavigate('seller-premium')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-white px-3 py-2 text-label-md text-primary lg:px-4 lg:py-2.5"><Rocket size={16} /> <span className="lg:hidden">{t('visibility.boost')}</span><span className="hidden lg:inline">{t('visibility.boostListing')}</span></button>
         </section>
 
         {/* KPIs (desktop) */}
         <div className="mb-5 hidden grid-cols-4 gap-3 lg:grid">
           {[
-            { label: 'Valeur du stock actif', value: <><Price amount={stock} /></>, sub: noCommission ? <span className="flex items-center gap-1 text-tertiary"><CheckCircle2 size={13} /> 0 F de frais cachés</span> : null },
-            { label: 'Vues totales', value: views.toLocaleString('fr-FR'), sub: <span className="text-tertiary">+{views24} sur 24h</span> },
-            { label: 'Discussions en cours', value: <>{discussions} <span className="text-body-sm font-normal">acheteur{discussions > 1 ? 's' : ''}</span></>, sub: <span className="flex items-center gap-1"><Tag size={13} /> {pendingOffers} offre{pendingOffers > 1 ? 's' : ''} en attente</span> },
-            { label: 'Indice de réputation', value: rep?.reviewsCount ? <span className="text-tertiary">{rep.averageRating.toFixed(1)} / 5 <span className="text-body-sm font-normal text-on-surface-variant">({rep.reviewsCount} avis)</span></span> : '—', sub: <span className="flex items-center gap-1"><Star size={13} /> {currentUser?.badge ? BADGE_LABEL[currentUser.badge] : 'Avis des acheteurs'}</span> },
+            { label: t('kpi.stock'), value: <><Price amount={stock} /></>, sub: noCommission ? <span className="flex items-center gap-1 text-tertiary"><CheckCircle2 size={13} /> {t('kpi.noHiddenFees', { amount: fmtCfa(0) })}</span> : null },
+            { label: t('kpi.views'), value: fmtNumber(views), sub: <span className="text-tertiary">{t('kpi.views24', { n: String(views24) })}</span> },
+            { label: t('kpi.discussions'), value: <>{t.rich('kpi.buyers', { count: discussions, n: String(discussions), small: c => <span className="text-body-sm font-normal">{c}</span> })}</>, sub: <span className="flex items-center gap-1"><Tag size={13} /> {t('kpi.pendingOffers', { count: pendingOffers, n: String(pendingOffers) })}</span> },
+            { label: t('kpi.reputation'), value: rep?.reviewsCount ? <span className="text-tertiary">{t.rich('kpi.rating', { avg: rep.averageRating.toFixed(1), n: String(rep.reviewsCount), small: c => <span className="text-body-sm font-normal text-on-surface-variant">{c}</span> })}</span> : '—', sub: <span className="flex items-center gap-1"><Star size={13} /> {currentUser?.badge ? BADGE_LABEL[currentUser.badge] : t('kpi.buyerReviews')}</span> },
           ].map(k => (
             <div key={k.label} className="rounded-xl border border-outline-variant bg-surface-lowest p-3">
               <div className="text-label-sm uppercase text-on-surface-variant">{k.label}</div>
@@ -300,9 +306,9 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             top (price where a video's duration sits), the text underneath:
             two-line title with the ⋮ menu beside it, a status · place line,
             a stats line, then the one action that matters now. */}
-        {loading && <p className="text-on-surface-variant">Chargement…</p>}
+        {loading && <p className="text-on-surface-variant">{t('loading')}</p>}
         {!loading && shown.length === 0 && (
-          <EmptyState icon="empty-box" fallback="inventory_2" title="Aucune annonce ici" text="Publiez un article en quelques minutes : photos, prix et lieu de remise." action={{ label: 'Publier une annonce', onClick: () => onNavigate('seller-post') }} />
+          <EmptyState icon="empty-box" fallback="inventory_2" title={t('empty.title')} text={t('empty.text')} action={{ label: t('empty.action'), onClick: () => onNavigate('seller-post') }} />
         )}
         <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map(l => {
@@ -315,22 +321,22 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
             const chip = 'flex h-9 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-none px-4 text-label-md'
             // The one action that matters for this listing now; the rest is in ⋮.
             const primary = l.status === 'APPROVED' ? (offers > 0 ? (
-              <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className={`${chip} bg-tertiary text-white`}><MessageSquare size={15} /> Voir l'offre</button>
+              <button onClick={() => setOffersFor(offersFor === l.id ? null : l.id)} className={`${chip} bg-tertiary text-white`}><MessageSquare size={15} /> {t('card.seeOffer')}</button>
             ) : boosted ? (
-              <button onClick={() => setBoostFor(l)} className={`${chip} bg-primary-fixed text-primary`}><Rocket size={15} /> Prolonger le boost</button>
+              <button onClick={() => setBoostFor(l)} className={`${chip} bg-primary-fixed text-primary`}><Rocket size={15} /> {t('card.extendBoost')}</button>
             ) : (
               // Enough credits: spend them at once; otherwise the pay sheet offers to buy some.
-              <button disabled={flashPrice === undefined} onClick={() => setConfirm({ kind: credits >= (flashPrice ?? 0) ? 'bump' : 'boost', l })} className={`${chip} bg-primary text-white disabled:opacity-60`}><Rocket size={15} /> Remonter{flashPrice ? ` · ${creditsLabel(flashPrice)}` : ''}</button>
+              <button disabled={flashPrice === undefined} onClick={() => setConfirm({ kind: credits >= (flashPrice ?? 0) ? 'bump' : 'boost', l })} className={`${chip} bg-primary text-white disabled:opacity-60`}><Rocket size={15} /> {flashPrice ? t('card.bumpPrice', { credits: creditsLabel(flashPrice) }) : t('card.bump')}</button>
             )) : l.status === 'EXPIRED' ? (
-              <button onClick={() => republish(l)} className={`${chip} bg-primary text-white`}><Archive size={15} /> Remettre en ligne</button>
+              <button onClick={() => republish(l)} className={`${chip} bg-primary text-white`}><Archive size={15} /> {t('card.republish')}</button>
             ) : l.status === 'DRAFT' ? (
-              <button onClick={() => onEditListing(l.id)} className={`${chip} bg-primary text-white`}><Edit3 size={15} /> Compléter</button>
+              <button onClick={() => onEditListing(l.id)} className={`${chip} bg-primary text-white`}><Edit3 size={15} /> {t('card.complete')}</button>
             ) : null
             const item = 'flex w-full cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-label-md hover:bg-surface-container-low'
             return (
               <article key={l.id} className="min-w-0">
                 {/* Photo: 16:9, full width */}
-                <button onClick={() => onSelectListing(l.id)} aria-label={`Voir « ${l.title} »`} className="relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border-none bg-surface-container-low p-0">
+                <button onClick={() => onSelectListing(l.id)} aria-label={t('card.seeAria', { title: l.title })} className="relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border-none bg-surface-container-low p-0">
                   {/* Placeholder stays underneath; a missing card thumbnail falls back to the photo, a broken one hides itself. */}
                   <Icon name="image" size={36} className="text-outline" />
                   {l.coverImageUrl && <img src={thumbnailUrl(l.coverImageUrl)} alt="" loading="lazy" decoding="async" onError={e => { const img = e.currentTarget; if (l.coverImageUrl && !img.src.endsWith(l.coverImageUrl)) img.src = l.coverImageUrl; else img.style.display = 'none' }} className="absolute inset-0 h-full w-full object-cover" />}
@@ -338,7 +344,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                   {photos > 1 && <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] text-white"><Icon name="photo_library" size={12} /> {photos}</span>}
                   {/* The buyers' pill (En vedette, Turbo, Urgent, Remontée… in the BO's words); « Boost » until the API has one. */}
                   {l.promoBadge ? <PromoPill badge={l.promoBadge} className="absolute right-2 top-2" />
-                    : boosted && <span className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-bold text-white"><Rocket size={12} /> Boost</span>}
+                    : boosted && <span className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-bold text-white"><Rocket size={12} /> Boost</span> /* i18n-ignore: same word in English */}
                 </button>
 
                 {/* Text underneath */}
@@ -346,32 +352,32 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                   <div className="min-w-0 flex-1">
                     <button onClick={() => onSelectListing(l.id)} className="line-clamp-2 cursor-pointer border-none bg-transparent p-0 text-left text-label-lg leading-snug text-on-surface hover:text-primary">{l.title}</button>
                     <p className="m-0 mt-1 truncate text-body-sm text-on-surface-variant">
-                      <span className={status?.dot ?? ''}>●</span> {status?.label ?? l.status} · {l.locationLabel ? `${l.locationLabel}, ` : ''}{l.city}
+                      <span className={status?.dot ?? ''}>●</span> {statusLabel(l.status)} · {l.locationLabel ? `${l.locationLabel}, ` : ''}{l.city}
                     </p>
                     <p className="m-0 truncate text-body-sm text-on-surface-variant">
-                      {l.viewsCount.toLocaleString('fr-FR')} vue{l.viewsCount > 1 ? 's' : ''} · {l.favoritesCount} favori{l.favoritesCount > 1 ? 's' : ''}{contacts ? ` · ${contacts} demande${contacts > 1 ? 's' : ''}` : ''} · {formatRelativeDate(date).toLowerCase()}
+                      {t('card.views', { count: l.viewsCount, n: fmtNumber(l.viewsCount) })} · {t('card.favourites', { count: l.favoritesCount, n: String(l.favoritesCount) })}{contacts ? ` · ${t('card.requests', { count: contacts, n: String(contacts) })}` : ''} · {formatRelativeDate(date).toLowerCase()}
                     </p>
                     {l.status === 'APPROVED' && <BumpLine s={l} />}
                     {lastBoost.get(l.id) && <ReportLine report={lastBoost.get(l.id)!.report} className="mt-0.5" />}
-                    {l.staffEditedAt && <p className="m-0 truncate text-body-sm text-on-surface-variant" title="Corrigée par l’équipe Dilchap : le détail est dans vos notifications.">Modifiée par l’équipe Dilchap le {new Date(l.staffEditedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
+                    {l.staffEditedAt && <p className="m-0 truncate text-body-sm text-on-surface-variant" title={t('card.staffEditedTitle')}>{t('card.staffEdited', { date: fmtDate(l.staffEditedAt, { day: 'numeric', month: 'long', year: 'numeric' }) })}</p>}
                   </div>
                   <div className="relative shrink-0">
-                    <button onClick={() => setMenuFor(menuFor === l.id ? null : l.id)} title="Plus d'actions" aria-label="Plus d'actions" aria-expanded={menuFor === l.id} className="-mr-2 -mt-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface hover:bg-surface-container-high"><Icon name="more_vert" size={20} /></button>
+                    <button onClick={() => setMenuFor(menuFor === l.id ? null : l.id)} title={t('card.moreActions')} aria-label={t('card.moreActions')} aria-expanded={menuFor === l.id} className="-mr-2 -mt-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-on-surface hover:bg-surface-container-high"><Icon name="more_vert" size={20} /></button>
                     {menuFor === l.id && (
                       <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-float">
-                        <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className={`${item} text-on-surface`}><Eye size={16} /> Voir l'annonce</button>
-                        <button onClick={() => { setMenuFor(null); onEditListing(l.id) }} className={`${item} text-on-surface`}><Edit3 size={16} /> Modifier</button>
-                        <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className={`${item} text-on-surface`}><Tag size={16} /> Offres reçues</button>
-                        {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); requestOpenLink(`/?shortcut=seller-premium&boost=${l.id}`) }} className={`${item} text-on-surface`}><Icon name="history" size={16} /> Remontées & boosts</button>}
+                        <button onClick={() => { setMenuFor(null); onSelectListing(l.id) }} className={`${item} text-on-surface`}><Eye size={16} /> {t('menu.see')}</button>
+                        <button onClick={() => { setMenuFor(null); onEditListing(l.id) }} className={`${item} text-on-surface`}><Edit3 size={16} /> {t('menu.edit')}</button>
+                        <button onClick={() => { setMenuFor(null); setOffersFor(l.id) }} className={`${item} text-on-surface`}><Tag size={16} /> {t('menu.offers')}</button>
+                        {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); requestOpenLink(`/?shortcut=seller-premium&boost=${l.id}`) }} className={`${item} text-on-surface`}><Icon name="history" size={16} /> {t('menu.bumps')}</button>}
                         {qrEnabled && l.status !== 'DRAFT' && l.status !== 'REJECTED' && (() => {
                           const scans = qrScans.find(q => q.listingId === l.id)?.scanCount
-                          return <button onClick={() => { setMenuFor(null); setQrFor({ id: l.id, title: l.title }) }} className={`${item} text-on-surface`}><Icon name="qr_code_2" size={16} /> QR code de l’annonce{scans ? ` · ${scans} scan${scans > 1 ? 's' : ''}` : ''}</button>
+                          return <button onClick={() => { setMenuFor(null); setQrFor({ id: l.id, title: l.title }) }} className={`${item} text-on-surface`}><Icon name="qr_code_2" size={16} /> {scans ? t('menu.qrScans', { count: scans, n: String(scans) }) : t('menu.qr')}</button>
                         })()}
-                        {reelsOn && (l.status === 'APPROVED' || l.status === 'PENDING_REVIEW') && <button onClick={() => { setMenuFor(null); setReelFor(l) }} className={`${item} text-on-surface`}><Icon name="video_call" size={16} /> Ajouter un Reel (vidéo)</button>}
-                        {['APPROVED', 'PAUSED', 'EXPIRED'].includes(l.status) && <button onClick={() => { setMenuFor(null); setSoldFor(l) }} className={`${item} text-on-surface`}><Icon name="handshake" size={16} /> Marquer comme vendu</button>}
-                        {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'pause', l }) }} className={`${item} text-on-surface`}><Icon name="pause" size={16} /> Mettre en pause</button>}
-                        {l.status === 'PAUSED' && <button onClick={() => { setMenuFor(null); resume(l) }} className={`${item} text-on-surface`}><Icon name="play_arrow" size={16} /> Remettre en ligne</button>}
-                        <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'delete', l }) }} className={`${item} text-primary hover:bg-primary-fixed/40`}><Trash2 size={16} /> Supprimer</button>
+                        {reelsOn && (l.status === 'APPROVED' || l.status === 'PENDING_REVIEW') && <button onClick={() => { setMenuFor(null); setReelFor(l) }} className={`${item} text-on-surface`}><Icon name="video_call" size={16} /> {t('menu.addReel')}</button>}
+                        {['APPROVED', 'PAUSED', 'EXPIRED'].includes(l.status) && <button onClick={() => { setMenuFor(null); setSoldFor(l) }} className={`${item} text-on-surface`}><Icon name="handshake" size={16} /> {t('menu.markSold')}</button>}
+                        {l.status === 'APPROVED' && <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'pause', l }) }} className={`${item} text-on-surface`}><Icon name="pause" size={16} /> {t('menu.pause')}</button>}
+                        {l.status === 'PAUSED' && <button onClick={() => { setMenuFor(null); resume(l) }} className={`${item} text-on-surface`}><Icon name="play_arrow" size={16} /> {t('menu.resume')}</button>}
+                        <button onClick={() => { setMenuFor(null); setExitError(null); setExitFor({ action: 'delete', l }) }} className={`${item} text-primary hover:bg-primary-fixed/40`}><Trash2 size={16} /> {t('menu.delete')}</button>
                       </div>
                     )}
                   </div>
@@ -379,7 +385,7 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
                 {(primary || offers > 0) && (
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     {primary}
-                    {offers > 0 && l.status !== 'APPROVED' && <span className="flex h-9 items-center gap-1 rounded-full bg-tertiary-soft px-3 text-label-md text-tertiary"><Tag size={14} /> {offers} offre{offers > 1 ? 's' : ''}</span>}
+                    {offers > 0 && l.status !== 'APPROVED' && <span className="flex h-9 items-center gap-1 rounded-full bg-tertiary-soft px-3 text-label-md text-tertiary"><Tag size={14} /> {t('offers', { count: offers, n: String(offers) })}</span>}
                   </div>
                 )}
                 {offersFor === l.id && <div className="mt-3 rounded-2xl border border-outline-variant"><ListingOffersPanel listingId={l.id} /></div>}
@@ -405,42 +411,42 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
           open={!!soldFor}
           listingId={soldFor?.id ?? null}
           onClose={() => setSoldFor(null)}
-          onDone={status => { setFlash(status === 'SOLD' ? `« ${soldFor?.title ?? ''} » est marquée vendue.` : 'Vente enregistrée : le stock a été mis à jour.'); setSoldFor(null); void refetch() }}
+          onDone={status => { setFlash(status === 'SOLD' ? t('flash.soldMarked', { title: soldFor?.title ?? '' }) : t('flash.saleRecorded')); setSoldFor(null); void refetch() }}
         />
         <WalletPaySheet
           open={confirm?.kind === 'boost'}
-          title="Remontée"
+          title={t('bump.title')}
           amount={flashPrice ?? 0}
           request={confirm?.kind === 'boost' ? { kind: 'BOOST_PACK', product: 'BUMP_FLASH', listingId: confirm.l.id } : null}
           onClose={() => setConfirm(null)}
           onPaid={() => { if (confirm) proof.showFor(confirm.l.id); void refetch(); void refetchWallet() }}
         >
-          <b className="block text-label-lg text-on-surface">Remontée</b>
-          <span className="line-clamp-1">« {confirm?.l.title} »</span>
+          <b className="block text-label-lg text-on-surface">{t('bump.title')}</b>
+          <span className="line-clamp-1">{t('quoted', { title: confirm?.l.title })}</span>
         </WalletPaySheet>
 
         {boostFor && <BoostPicker open listing={boostFor} onClose={() => setBoostFor(null)} onDone={() => { void refetch(); void refetchWallet() }} />}
         <ConfirmSheet
           open={confirm?.kind === 'bump'}
-          title="Remonter l'annonce"
-          confirmLabel={`Utiliser ${creditsLabel(flashPrice ?? 0)}`}
+          title={t('bump.confirmTitle')}
+          confirmLabel={t('bump.use', { credits: creditsLabel(flashPrice ?? 0) })}
           loading={bumping}
           onConfirm={() => { if (confirm) { spendCredit(confirm.l); setConfirm(null) } }}
           onClose={() => setConfirm(null)}
         >
-          « {confirm?.l.title} » revient en tête des annonces récentes. <b className="text-on-surface">{creditsLabel(flashPrice ?? 0)}</b>{creditValue > 0 && flashPrice ? <> (≈ <Price amount={flashPrice * creditValue} />)</> : null}.
+          {t.rich(creditValue > 0 && flashPrice ? 'bump.textValue' : 'bump.text', { title: confirm?.l.title, credits: creditsLabel(flashPrice ?? 0), price: <Price amount={(flashPrice ?? 0) * creditValue} />, b: c => <b className="text-on-surface">{c}</b> })}
         </ConfirmSheet>
 
         {rows.length > 0 && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-body-sm text-on-surface-variant">Affichage de {(page - 1) * PAGE + 1}–{Math.min(page * PAGE, rows.length)} sur {rows.length} annonce{rows.length > 1 ? 's' : ''}</span>
+            <span className="text-body-sm text-on-surface-variant">{t('pagination.showing', { count: rows.length, from: String((page - 1) * PAGE + 1), to: String(Math.min(page * PAGE, rows.length)), n: String(rows.length) })}</span>
             {pages > 1 && (
               <div className="flex items-center gap-1">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} aria-label="Page précédente" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronLeft size={17} /></button>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} aria-label={t('pagination.prev')} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronLeft size={17} /></button>
                 {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
                   <button key={p} onClick={() => setPage(p)} className={`h-10 min-w-10 cursor-pointer rounded-lg border-none px-2 text-label-md ${p === page ? 'bg-primary text-white' : 'bg-transparent text-on-surface'}`}>{p}</button>
                 ))}
-                <button disabled={page === pages} onClick={() => setPage(p => p + 1)} aria-label="Page suivante" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronRight size={17} /></button>
+                <button disabled={page === pages} onClick={() => setPage(p => p + 1)} aria-label={t('pagination.next')} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent disabled:opacity-30"><ChevronRight size={17} /></button>
               </div>
             )}
           </div>
@@ -449,10 +455,10 @@ export default function MyListings({ onNavigate, onSelectListing, onEditListing,
         <section className="mt-6 flex flex-col gap-3 rounded-2xl bg-surface-container-low p-5 md:flex-row md:items-center">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><ShieldCheck size={22} /></span>
           <div className="flex-1">
-            <div className="text-headline-sm text-on-surface">Conseil vente sécurisée</div>
-            <p className="m-0 text-body-sm text-on-surface-variant">Privilégiez les remises en main propre dans des lieux publics animés (centres commerciaux, stations-service). Ne remettez jamais l'article avant d'avoir vérifié la réception du paiement.</p>
+            <div className="text-headline-sm text-on-surface">{t('safety.title')}</div>
+            <p className="m-0 text-body-sm text-on-surface-variant">{t('safety.text')}</p>
           </div>
-          <button onClick={() => onNavigate('seller-orders')} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">Voir mes ventes <ArrowRight size={15} /></button>
+          <button onClick={() => onNavigate('seller-orders')} className="flex shrink-0 cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary hover:underline">{t('safety.seeSales')} <ArrowRight size={15} /></button>
         </section>
       </div>
     </AccountLayout>

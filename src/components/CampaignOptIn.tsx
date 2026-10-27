@@ -10,6 +10,8 @@ import { WALLET_BALANCE_QUERY, type WalletBalance } from '../graphql/payments'
 import { applyOffer, offerLabel, usePriceOffers } from '../lib/priceOffers'
 import { usePriceVars } from '../lib/countries'
 import { campaignBlock } from '../lib/campaignActions'
+import { fmtDate, useT } from '../i18n'
+import campaignNs from '../i18n/ns/campaign'
 
 // "Vendre pour {campagne}" on the campaign page: the wizard opens with that
 // campaign ticked.
@@ -21,7 +23,7 @@ export type CampaignChoice = { campaign: OpenCampaign; discountPercent: number }
 // entry fee the first time.
 export const campaignCost = (c: OpenCampaign) => c.listingFee + (c.entryFeePaid ? 0 : c.entryFee)
 
-const dateFr = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+const dateFr = (iso: string) => fmtDate(iso, { day: 'numeric', month: 'long' })
 
 // "Participer à une campagne" in the listing wizard: the Dilchap campaigns
 // this seller may join, what it costs in credits (taken on publishing), the
@@ -45,6 +47,7 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
   // Wraps the block (e.g. in the wizard's card) when there is one to show.
   render?: (body: React.ReactNode) => React.ReactNode
 }) {
+  const t = useT(campaignNs)
   const { data } = useQuery<{ openShopCampaigns: OpenCampaign[] }>(OPEN_CAMPAIGNS_QUERY, { fetchPolicy: 'cache-and-network' })
   const offers = usePriceOffers()
   // What joining really costs, the live offer applied (as the server does).
@@ -108,29 +111,29 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
             <label className="flex cursor-pointer items-start gap-3">
               <input type="checkbox" checked={on} disabled={!price} onChange={e => onChange(e.target.checked ? { campaign: c, discountPercent: pct } : null)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--primary)]" />
               <span className="min-w-0 flex-1">
-                <span className="block text-label-lg text-on-surface">Participer à « {c.name} »</span>
+                <span className="block text-label-lg text-on-surface">{t('optin.join', { name: c.name })}</span>
                 <span className="block text-body-sm text-on-surface-variant">
-                  {c.state === 'LIVE' ? `En cours jusqu’au ${dateFr(c.endsAt)}` : `Du ${dateFr(c.startsAt)} au ${dateFr(c.endsAt)}`}
-                  {c.minDiscountPercent ? ` · remise minimale ${c.minDiscountPercent} %` : ''}
-                  {c.minPhotos ? ` · ${c.minPhotos} photos minimum` : ''}
+                  {c.state === 'LIVE' ? t('optin.liveUntil', { date: dateFr(c.endsAt) }) : t('fromTo', { from: dateFr(c.startsAt), to: dateFr(c.endsAt) })}
+                  {c.minDiscountPercent ? ` · ${t('optin.minDiscount', { n: c.minDiscountPercent })}` : ''}
+                  {c.minPhotos ? ` · ${t('optin.minPhotos', { n: c.minPhotos })}` : ''}
                 </span>
                 <span className="mt-1 block text-label-md text-on-surface">
-                  {quote.percent > 0 ? <>Coût : <s className="font-normal text-on-surface-variant"><Credits n={quote.base} unit={false} /></s> {fee > 0 ? <Credits n={fee} /> : 'gratuit'} <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary">{offerLabel(quote.percent)}</span></> : fee > 0 ? <>Coût : <Credits n={fee} />{!c.entryFeePaid && c.entryFee > 0 && c.listingFee > 0 ? <span className="text-body-sm text-on-surface-variant"> (frais d’entrée + article)</span> : null}</> : 'Participation gratuite'}
+                  {quote.percent > 0 ? t.rich('optin.costOffer', { s: ch => <s className="font-normal text-on-surface-variant">{ch}</s>, base: <Credits n={quote.base} unit={false} />, fee: fee > 0 ? <Credits n={fee} /> : t('optin.free'), offer: <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-1.5 text-label-sm text-tertiary">{offerLabel(quote.percent)}</span> }) : fee > 0 ? <>{t.rich('optin.cost', { fee: <Credits n={fee} /> })}{!c.entryFeePaid && c.entryFee > 0 && c.listingFee > 0 ? <span className="text-body-sm text-on-surface-variant"> {t('optin.feeDetail')}</span> : null}</> : t('fee.free')}
                 </span>
               </span>
             </label>
-            {!price && <p className="m-0 mt-2 pl-8 text-body-sm text-on-surface-variant">Indiquez d’abord un prix de vente.</p>}
+            {!price && <p className="m-0 mt-2 pl-8 text-body-sm text-on-surface-variant">{t('optin.priceFirst')}</p>}
             {on && (
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 pl-8">
                 <label className="flex items-center gap-2 text-label-md text-on-surface">
-                  Remise
+                  {t('optin.discount')}
                   <span className="flex items-center rounded-lg border border-outline-variant bg-surface-lowest pr-2">
-                    <input type="number" min={min} max={90} value={pct} onChange={e => onChange({ campaign: c, discountPercent: Math.min(90, Math.max(0, Math.floor(Number(e.target.value)) || 0)) })} aria-label="Remise en pourcentage" className="h-9 w-14 border-none bg-transparent text-center text-label-lg text-on-surface outline-none [appearance:textfield]" />
+                    <input type="number" min={min} max={90} value={pct} onChange={e => onChange({ campaign: c, discountPercent: Math.min(90, Math.max(0, Math.floor(Number(e.target.value)) || 0)) })} aria-label={t('optin.discountAria')} className="h-9 w-14 border-none bg-transparent text-center text-label-lg text-on-surface outline-none [appearance:textfield]" />
                     %
                   </span>
                 </label>
-                {promo != null && <span className="text-body-sm text-on-surface-variant">Prix en campagne : <b className="text-primary"><Price amount={promo} currency={currency} /></b></span>}
-                {pct < min && <span className="w-full text-body-sm text-primary">Remise minimale : {min} %</span>}
+                {promo != null && <span className="text-body-sm text-on-surface-variant">{t.rich('optin.campaignPrice', { b: ch => <b className="text-primary">{ch}</b>, price: <Price amount={promo} currency={currency} /> })}</span>}
+                {pct < min && <span className="w-full text-body-sm text-primary">{t('optin.minDiscountError', { n: min })}</span>}
               </div>
             )}
           </div>
@@ -141,10 +144,10 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
           <div className="flex items-start gap-3">
             <Icon name="lock_clock" size={20} className="mt-0.5 shrink-0 text-on-surface-variant" />
             <span className="min-w-0 flex-1">
-              <span className="block text-label-lg text-on-surface-variant">« {c.name} »</span>
+              <span className="block text-label-lg text-on-surface-variant">{t('optin.quoted', { name: c.name })}</span>
               <span className="block text-body-sm text-on-surface-variant">
-                {c.state === 'LIVE' ? `En cours jusqu’au ${dateFr(c.endsAt)}` : `Du ${dateFr(c.startsAt)} au ${dateFr(c.endsAt)}`}
-                {c.minDiscountPercent ? ` · remise minimale ${c.minDiscountPercent} %` : ''}
+                {c.state === 'LIVE' ? t('optin.liveUntil', { date: dateFr(c.endsAt) }) : t('fromTo', { from: dateFr(c.startsAt), to: dateFr(c.endsAt) })}
+                {c.minDiscountPercent ? ` · ${t('optin.minDiscount', { n: c.minDiscountPercent })}` : ''}
               </span>
               <span className="mt-1.5 block text-body-sm text-on-surface">{reason}</span>
             </span>
@@ -163,10 +166,10 @@ export default function CampaignOptIn({ price, currency, categoryId, subcategory
           <span className="flex items-center gap-2">
             <Icon name={missing ? 'error' : 'account_balance_wallet'} size={18} />
             {missing
-              ? <span>Il vous manque <b><CreditsF n={missing} /></b> (solde <Credits n={balance} />).</span>
-              : <span>Coût : <b><CreditsF n={cost} /></b>, débité à la publication (solde <Credits n={balance} />).</span>}
+              ? <span>{t.rich('optin.missing', { b: ch => <b>{ch}</b>, missing: <CreditsF n={missing} />, balance: <Credits n={balance} /> })}</span>
+              : <span>{t.rich('optin.debited', { b: ch => <b>{ch}</b>, cost: <CreditsF n={cost} />, balance: <Credits n={balance} /> })}</span>}
           </span>
-          {missing > 0 && <button type="button" onClick={() => setTopUp(true)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white">Acheter des crédits</button>}
+          {missing > 0 && <button type="button" onClick={() => setTopUp(true)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white">{t('optin.buyCredits')}</button>}
         </div>
       )}
       <BuyCreditsSheet open={topUp} suggested={missing} onClose={() => setTopUp(false)} onDone={() => { setTopUp(false); void refetch() }} />

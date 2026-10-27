@@ -1,3 +1,8 @@
+import LanguagePicker from '../../components/LanguagePicker'
+import { useSiteLocales } from '../../i18n/LocaleSync'
+import { fmtDate, getLocale, useT } from '../../i18n'
+import common from '../../i18n/ns/common'
+import settings from '../../i18n/ns/settings'
 import AdultConfirmationSetting from '../../components/AdultConfirmationSetting'
 import PersonalizeHomeSetting from '../../components/PersonalizeHomeSetting'
 import { requestOpenHelp } from '../../lib/navigation'
@@ -45,34 +50,45 @@ type SettingsData = {
 }
 
 // `short` labels keep the sticky tab strip readable on a phone.
+// Labels read at each render (getters): in the page's language.
+const tabDef = (id: 'profil' | 'alertes' | 'remise' | 'securite' | 'compte', icon: string) => ({
+  id, icon,
+  get label() { return settings.t(`tab.${id}`) },
+  get short() { return settings.t(`tab.${id}.short`) },
+})
 const TABS = [
-  { id: 'profil', icon: 'storefront', label: 'Profil Vendeur & Boutique', short: 'Profil' },
-  { id: 'alertes', icon: 'notifications_active', label: 'Notifications & Alertes', short: 'Alertes' },
-  { id: 'remise', icon: 'handshake', label: 'Remise & Paiements P2P', short: 'Remise' },
-  { id: 'securite', icon: 'verified_user', label: 'Sécurité & Identité', short: 'Sécurité' },
-  { id: 'compte', icon: 'tune', label: 'Gestion du compte', short: 'Compte' },
+  tabDef('profil', 'storefront'),
+  tabDef('alertes', 'notifications_active'),
+  tabDef('remise', 'handshake'),
+  tabDef('securite', 'verified_user'),
+  tabDef('compte', 'tune'),
 ]
 // `sms`: the categories the server may send by WhatsApp / SMS (Backend
 // channel-events: messages & offers, meet-ups & disputes). The others never do.
+const alertDef = (key: 'messages' | 'meetups' | 'boosts' | 'advice' | 'campaigns', sms: boolean, icon: string) => ({
+  key, sms, icon,
+  get title() { return settings.t(`alert.${key}.title`) },
+  get sub() { return settings.t(`alert.${key}.sub`) },
+})
 const ALERTS = [
-  { key: 'messages', sms: true, icon: 'forum', title: 'Nouveaux messages & Offres directes', sub: "Alerte instantanée dès qu'un acheteur négocie ou pose une question sur un article." },
-  { key: 'meetups', sms: true, icon: 'calendar_clock', title: 'Confirmations & Rappels Remises', sub: 'Rendez-vous proposés, confirmés et litiges sur vos remises.' },
-  { key: 'boosts', sms: false, icon: 'rocket_launch', title: 'Performance & Fin des Boosts', sub: "Fin d’un boost avec son bilan (affichages, vues, contacts) et chaque remontée automatique effectuée." },
-  { key: 'advice', sms: false, icon: 'insights', title: "Conseils & Pics d'affluence", sub: 'Nouvelles annonces correspondant à vos recherches et pics de recherche.' },
-  { key: 'campaigns', sms: false, icon: 'campaign', title: 'Campagnes promos Dilchap', sub: 'Opportunités de visibilité collective (Black Friday, braderies P2P).' },
+  alertDef('messages', true, 'forum'),
+  alertDef('meetups', true, 'calendar_clock'),
+  alertDef('boosts', false, 'rocket_launch'),
+  alertDef('advice', false, 'insights'),
+  alertDef('campaigns', false, 'campaign'),
 ]
-const NO_SMS_HINT = 'Pas de WhatsApp / SMS pour ces alertes : seuls les messages, offres, remises et litiges en envoient.'
+const noSmsHint = () => settings.t('noSmsHint')
+// « 21:00 » → « 21h00 » in French only.
+const hm = (s: string) => (getLocale() === 'fr' ? s.replace(':', 'h') : s)
 // Paid alerts (WhatsApp / SMS) wait for the morning when the member's own
 // quiet hours are off (Backend channels.service DEFAULT_QUIET_HOURS).
 const SMS_NIGHT = { start: '21:00', end: '07:00' }
 const DEFAULT_ALERTS: Alerts = Object.fromEntries(ALERTS.map(a => [a.key, { push: true, whatsapp: false, email: a.key !== 'advice' }]))
 // Payment methods of the member's country (« Pays »), cash last.
-const PAYMENT_SUB: Partial<Record<PaymentMethodCode, string>> = {
-  WAVE: 'QR code ou transfert direct',
-  CASH: 'Appoint exact recommandé lors de la remise',
-}
+const paymentSub = (code: PaymentMethodCode) =>
+  code === 'WAVE' ? settings.t('payment.waveSub') : code === 'CASH' ? settings.t('payment.cashSub') : settings.t('payment.defaultSub')
 const paymentsFor = (methods: PaymentMethodCode[]) => [...methods.filter(m => m !== 'CASH'), 'CASH' as const].map(code => ({
-  code, title: code === 'CASH' ? 'Espèces en main' : METHOD_LABELS[code], sub: PAYMENT_SUB[code] ?? 'Transfert direct au numéro du vendeur',
+  code, title: code === 'CASH' ? settings.t('payment.cashTitle') : METHOD_LABELS[code], sub: paymentSub(code),
 }))
 
 function Toggle({ on, onChange, label, tone = 'primary', disabled, title }: { on: boolean; onChange: (v: boolean) => void; label: string; tone?: 'primary' | 'tertiary'; disabled?: boolean; title?: string }) {
@@ -80,6 +96,18 @@ function Toggle({ on, onChange, label, tone = 'primary', disabled, title }: { on
     <button role="switch" aria-checked={on} aria-label={label} title={title} disabled={disabled} onClick={() => onChange(!on)} className={`relative h-6 w-11 shrink-0 rounded-full border-none p-0 transition-colors ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} ${on ? (tone === 'tertiary' ? 'bg-tertiary' : 'bg-primary') : 'bg-surface-container-high'}`}>
       <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? 'left-[22px]' : 'left-0.5'}`} />
     </button>
+  )
+}
+
+// « Langue »: only when the member's country offers several languages.
+function LanguageCard() {
+  const t = useT(common)
+  const { enabled } = useSiteLocales()
+  if (enabled.length < 2) return null
+  return (
+    <Card id="langue" icon="language" title={t('language')} sub={t('languageHint')}>
+      <LanguagePicker variant="settings" />
+    </Card>
   )
 }
 
@@ -102,18 +130,20 @@ function Card({ id, icon, iconCls = 'bg-primary-fixed text-primary', title, sub,
 }
 
 const field = 'w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2.5 text-body-md text-on-surface outline-none focus:border-primary'
-const sinceLabel = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '')
+const sinceLabel = (iso?: string) => (iso ? fmtDate(iso, { month: 'long', year: 'numeric' }) : '')
 const deviceLabel = (ua: string | null) => {
-  if (!ua) return { icon: 'devices', name: 'Appareil non identifié' }
+  if (!ua) return { icon: 'devices', name: settings.t('device.unknown') }
   const mobile = /iPhone|Android|Mobile/i.test(ua)
-  const os = /iPhone|iPad/.test(ua) ? 'iPhone / iPad' : /Android/.test(ua) ? 'Android' : /Mac OS/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Appareil'
-  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Navigateur'
+  const os = /iPhone|iPad/.test(ua) ? 'iPhone / iPad' : /Android/.test(ua) ? 'Android' : /Mac OS/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : settings.t('device.generic')
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : settings.t('device.browser')
   return { icon: mobile ? 'smartphone' : 'laptop_mac', name: `${os} • ${browser}` }
 }
 
 // Short public address dilchap.com/@handle, saved on its own (changeable
 // once per 30 days; brand names are protected).
 function HandleCard({ handle, changedAt, onSaved }: { handle: string | null | undefined; changedAt: string | null | undefined; onSaved: () => void }) {
+  const t = useT(settings)
+  const tc = useT(common)
   const [v, setV] = useState(handle ?? '')
   // Saved (or refetched): the field shows the address now in use.
   useEffect(() => { setV(handle ?? '') }, [handle])
@@ -124,12 +154,12 @@ function HandleCard({ handle, changedAt, onSaved }: { handle: string | null | un
   const clean = v.trim().replace(/^@+/, '').toLowerCase()
   const next = changedAt ? new Date(new Date(changedAt).getTime() + 30 * 86_400_000) : null
   const locked = !!next && next > new Date()
-  const format = !clean || /^[a-z0-9](?:[a-z0-9_-]{1,28})[a-z0-9]$/.test(clean) ? null : 'Lettres sans accent, chiffres, « _ » ou « - », 3 à 30 caractères.'
+  const format = !clean || /^[a-z0-9](?:[a-z0-9_-]{1,28})[a-z0-9]$/.test(clean) ? null : t('handle.formatError')
   const link = handle ? `${window.location.origin}/@${handle}` : ''
   const save = () => {
     setMsg(null)
     void update({ variables: { input: { handle: clean } } })
-      .then(() => { setMsg({ ok: true, text: 'Adresse enregistrée : partagez-la à vos clients.' }); onSaved() })
+      .then(() => { setMsg({ ok: true, text: t('handle.saved') }); onSaved() })
       .catch((e: Error) => setMsg({ ok: false, text: e.message }))
   }
   const copy = async () => {
@@ -138,24 +168,24 @@ function HandleCard({ handle, changedAt, onSaved }: { handle: string | null | un
     await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
   return (
-    <Card id="adresse" icon="link" title="Adresse de votre page" sub="Un lien court à partager à vos clients (WhatsApp, cartes de visite, réseaux).">
+    <Card id="adresse" icon="link" title={t('handle.title')} sub={t('handle.sub')}>
       {handle && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-surface-container-low p-3">
           <span className="min-w-0 flex-1 break-all text-label-lg text-on-surface">{host}/@{handle}</span>
-          <button type="button" onClick={() => void copy()} className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name={copied ? 'check' : 'content_copy'} size={16} /> {copied ? 'Copié' : 'Copier le lien'}</button>
+          <button type="button" onClick={() => void copy()} className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name={copied ? 'check' : 'content_copy'} size={16} /> {copied ? tc('copied') : t('handle.copyLink')}</button>
         </div>
       )}
-      <label className="block"><span className="mb-1.5 block text-label-md text-on-surface">Personnaliser</span>
+      <label className="block"><span className="mb-1.5 block text-label-md text-on-surface">{t('handle.customise')}</span>
         <span className="flex h-11 items-center overflow-hidden rounded-xl bg-surface-container-low focus-within:outline focus-within:outline-2 focus-within:outline-primary">
           <span className="shrink-0 pl-3 text-body-md text-on-surface-variant">{host}/@</span>
-          <input value={v} disabled={locked} onChange={e => setV(e.target.value.replace(/\s/g, '').slice(0, 30))} placeholder="nom-de-votre-boutique" aria-label="Adresse de votre page" className="h-full min-w-0 flex-1 border-none bg-transparent pr-3 text-body-md text-on-surface outline-none disabled:opacity-60" />
+          <input value={v} disabled={locked} onChange={e => setV(e.target.value.replace(/\s/g, '').slice(0, 30))} placeholder={t('handle.placeholder')} aria-label={t('handle.title')} className="h-full min-w-0 flex-1 border-none bg-transparent pr-3 text-body-md text-on-surface outline-none disabled:opacity-60" />
         </span>
       </label>
-      <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{locked ? `Modifiable à nouveau le ${next!.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.` : 'Modifiable une fois tous les 30 jours. L’ancienne adresse continue de mener à votre page. Les noms de marques sont réservés à leurs titulaires.'} <HelpLink article="mon-adresse-pseudo" className="ml-1 align-middle" /></p>
+      <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">{locked ? t('handle.lockedUntil', { date: fmtDate(next!, { day: 'numeric', month: 'long' }) }) : t('handle.rule')} <HelpLink article="mon-adresse-pseudo" className="ml-1 align-middle" /></p>
       {format && <p className="m-0 mt-1 text-body-sm text-primary">{format}</p>}
       {msg && <p className={`m-0 mt-2 text-body-sm ${msg.ok ? 'text-tertiary' : 'text-primary'}`}>{msg.text}</p>}
       <div className="mt-3 flex justify-end">
-        <button type="button" disabled={loading || locked || !!format || !clean || clean === handle} onClick={save} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50"><Icon name="save" size={17} /> Enregistrer l’adresse</button>
+        <button type="button" disabled={loading || locked || !!format || !clean || clean === handle} onClick={save} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50"><Icon name="save" size={17} /> {t('handle.save')}</button>
       </div>
     </Card>
   )
@@ -169,6 +199,7 @@ function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
   onSaved: () => void
   onUpgrade: () => void
 }) {
+  const t = useT(settings)
   const [v, setV] = useState({ coverUrl: me.coverUrl ?? '', website: me.website ?? '', facebook: me.facebook ?? '', instagram: me.instagram ?? '', tiktok: me.tiktok ?? '' })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -182,18 +213,18 @@ function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
   }
   const save = () => {
     setMsg(null)
-    void update({ variables: { input: v } }).then(() => { setMsg({ ok: true, text: 'Page vendeur mise à jour.' }); onSaved() }).catch((e: Error) => setMsg({ ok: false, text: e.message }))
+    void update({ variables: { input: v } }).then(() => { setMsg({ ok: true, text: t('page.saved') }); onSaved() }).catch((e: Error) => setMsg({ ok: false, text: e.message }))
   }
   return (
-    <Card id="page" icon="palette" iconCls="bg-tertiary-soft text-tertiary" title="Page vendeur personnalisée" sub="Photo de couverture et liens vers votre site et vos réseaux, affichés sur votre profil public."
-      aside={certified ? undefined : <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="lock" size={14} /> Vendeur certifié</span>}>
+    <Card id="page" icon="palette" iconCls="bg-tertiary-soft text-tertiary" title={t('page.title')} sub={t('page.sub')}
+      aside={certified ? undefined : <span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="lock" size={14} /> {t('page.certified')}</span>}>
       <input ref={input} type="file" accept="image/*" hidden onChange={e => { void pick(e.target.files); e.target.value = '' }} />
       <div className="relative h-28 overflow-hidden rounded-xl bg-surface-container">
         {v.coverUrl && <img src={v.coverUrl} alt="" className="h-full w-full object-cover" />}
-        <button type="button" disabled={!certified || busy} onClick={() => input.current?.click()} className="absolute bottom-2 right-2 flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface shadow-sm disabled:opacity-60"><Icon name={busy ? 'progress_activity' : 'photo_camera'} size={17} className={busy ? 'animate-spin' : ''} /> {v.coverUrl ? 'Changer la couverture' : 'Ajouter une couverture'}</button>
+        <button type="button" disabled={!certified || busy} onClick={() => input.current?.click()} className="absolute bottom-2 right-2 flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface shadow-sm disabled:opacity-60"><Icon name={busy ? 'progress_activity' : 'photo_camera'} size={17} className={busy ? 'animate-spin' : ''} /> {v.coverUrl ? t('page.changeCover') : t('page.addCover')}</button>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-        {([['website', 'language', 'Site web', 'www.maboutique.com'], ['facebook', 'thumb_up', 'Facebook', 'facebook.com/maboutique'], ['instagram', 'photo_camera', 'Instagram', 'instagram.com/maboutique'], ['tiktok', 'music_note', 'TikTok', 'tiktok.com/@maboutique']] as const).map(([k, icon, label, ph]) => (
+        {([['website', 'language', t('page.website'), t('page.websitePh')], ['facebook', 'thumb_up', 'Facebook', t('page.facebookPh')], ['instagram', 'photo_camera', 'Instagram', t('page.instagramPh')], ['tiktok', 'music_note', 'TikTok', t('page.tiktokPh')]] as const).map(([k, icon, label, ph]) => (
           <label key={k} className="block"><span className="mb-1.5 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name={icon} size={16} className="text-on-surface-variant" /> {label}</span>
             <input value={v[k]} disabled={!certified} onChange={e => setV(x => ({ ...x, [k]: e.target.value.slice(0, 200) }))} placeholder={ph} className={field} />
           </label>
@@ -202,8 +233,8 @@ function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
       {msg && <p className={`m-0 mt-3 text-body-sm ${msg.ok ? 'text-tertiary' : 'text-primary'}`}>{msg.text}</p>}
       <div className="mt-3 flex justify-end">
         {certified
-          ? <button type="button" disabled={loading || busy} onClick={save} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50"><Icon name="save" size={17} /> Enregistrer la page</button>
-          : <button type="button" onClick={onUpgrade} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-tertiary px-4 text-label-md text-white"><Icon name="verified" size={17} fill /> Devenir Vendeur certifié</button>}
+          ? <button type="button" disabled={loading || busy} onClick={save} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-50"><Icon name="save" size={17} /> {t('page.save')}</button>
+          : <button type="button" onClick={onUpgrade} className="flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-tertiary px-4 text-label-md text-white"><Icon name="verified" size={17} fill /> {t('page.upgrade')}</button>}
       </div>
     </Card>
   )
@@ -213,6 +244,8 @@ function SellerPageCard({ me, certified, onSaved, onUpgrade }: {
 // les modifications" / unsaved-changes bar), plus the security & account
 // actions that apply immediately.
 export default function Settings({ onNavigate, currentUser, onLogout, onProfileUpdated, dark, onToggleDark, onViewShop }: Props) {
+  const t = useT(settings)
+  const tc = useT(common)
   const { data, refetch } = useQuery<SettingsData>(SELLER_SETTINGS_QUERY)
   const me = data?.me
   const rep = data?.myReputation
@@ -278,8 +311,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
 
   useEffect(() => {
     if (!saveMsg?.ok) return
-    const t = setTimeout(() => setSaveMsg(null), 3000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setSaveMsg(null), 3000)
+    return () => clearTimeout(timer)
   }, [saveMsg])
 
   const save = async () => {
@@ -300,9 +333,9 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
       await refetch()
       setEmailPw('')
       setAddingEmail(false)
-      setSaveMsg({ ok: true, text: 'Paramètres enregistrés.' })
+      setSaveMsg({ ok: true, text: settings.t('saved') })
     } catch (e) {
-      setSaveMsg({ ok: false, text: e instanceof Error ? e.message : "L'enregistrement a échoué." })
+      setSaveMsg({ ok: false, text: e instanceof Error ? e.message : settings.t('saveFailed') })
     }
   }
 
@@ -344,19 +377,19 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
     <AccountLayout active="buyer-settings" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-[1180px] pb-28">
         <nav className="mb-2 hidden items-center gap-1 text-label-sm text-on-surface-variant md:flex">
-          <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />
-          <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">Tableau de bord</button>
-          <Icon name="chevron_right" size={14} /><span className="text-on-surface">Paramètres &amp; Préférences</span>
+          <span>Dilchap Seller</span><Icon name="chevron_right" size={14} />{/* i18n-ignore */}
+          <button onClick={() => onNavigate('buyer-dashboard')} className="cursor-pointer border-none bg-transparent p-0 text-label-sm text-on-surface-variant hover:text-primary">{t('crumb.dashboard')}</button>
+          <Icon name="chevron_right" size={14} /><span className="text-on-surface">{t('crumb.current')}</span>
         </nav>
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3 md:mb-4">
           <div className="max-w-2xl">
             {/* Mobile: the account header already shows the title */}
-            <h1 className="m-0 hidden text-headline-lg text-on-surface md:block">Paramètres &amp; Notifications</h1>
-            <p className="m-0 text-body-sm text-on-surface-variant md:mt-1 md:text-body-md"><span className="md:hidden">Profil, alertes, remises et sécurité du compte.</span><span className="max-md:hidden">Gérez vos informations de vendeur, vos préférences de contact, la sécurité de votre compte et vos alertes de transactions.</span></p>
+            <h1 className="m-0 hidden text-headline-lg text-on-surface md:block">{t('title')}</h1>
+            <p className="m-0 text-body-sm text-on-surface-variant md:mt-1 md:text-body-md"><span className="md:hidden">{t('intro.short')}</span><span className="max-md:hidden">{t('intro.long')}</span></p>
           </div>
           <div className="hidden gap-2 md:flex">
-            <button onClick={() => onNavigate('seller-wallet')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-surface-container-high px-4 py-2.5 text-label-md text-on-surface"><Icon name="history" size={18} /> Historique d'activité</button>
-            <button onClick={() => void save()} disabled={!dirty || saving} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark disabled:opacity-50"><Icon name="check" size={18} /> Enregistrer les modifications</button>
+            <button onClick={() => onNavigate('seller-wallet')} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-surface-container-high px-4 py-2.5 text-label-md text-on-surface"><Icon name="history" size={18} /> {t('activityHistory')}</button>
+            <button onClick={() => void save()} disabled={!dirty || saving} className="flex cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white hover:bg-primary-dark disabled:opacity-50"><Icon name="check" size={18} /> {t('saveChanges')}</button>
           </div>
         </div>
 
@@ -366,81 +399,81 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
             sticky element inside main's top padding let text show above it. */}
         <div className="sticky -top-4 z-20 -mx-4 -mt-3 mb-3 bg-surface px-3 pb-2 pt-4 lg:-top-6 lg:-mx-8 lg:-mt-4 lg:mb-4 lg:px-7 lg:pt-6">
           <div className="flex gap-1 overflow-x-auto rounded-2xl bg-surface-lowest p-1.5 shadow-sm [scrollbar-width:none] max-md:[mask-image:linear-gradient(to_right,#000_85%,transparent)]">
-            {TABS.map(t => (
-              <button key={t.id} onClick={() => goTab(t.id)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none px-3 py-2 text-label-md ${tab === t.id ? 'bg-surface-container-low text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
-                <Icon name={t.icon} size={17} /> <span className="md:hidden">{t.short}</span><span className="max-md:hidden">{t.label}</span>
+            {TABS.map(x => (
+              <button key={x.id} onClick={() => goTab(x.id)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none px-3 py-2 text-label-md ${tab === x.id ? 'bg-surface-container-low text-primary shadow-sm' : 'bg-transparent text-on-surface-variant hover:text-on-surface'}`}>
+                <Icon name={x.icon} size={17} /> <span className="md:hidden">{x.short}</span><span className="max-md:hidden">{x.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {!form || !me ? <p className="text-body-md text-on-surface-variant">Chargement…</p> : (
+        {!form || !me ? <p className="text-body-md text-on-surface-variant">{tc('loading')}</p> : (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-w-0 flex-col gap-5">
               {/* Profil */}
-              <Card id="profil" icon="store" title="Profil public du vendeur" sub={`Visible par les acheteurs sur vos ${rep?.activeListings ?? 0} annonce${(rep?.activeListings ?? 0) > 1 ? 's' : ''} en ligne.`}
+              <Card id="profil" icon="store" title={t('profile.title')} sub={t('profile.sub', { count: rep?.activeListings ?? 0 })}
                 aside={me.badge ? <SellerBadge tier={me.badge} variant="pill" size={16} /> : undefined}>
                 <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-surface-container-low p-4">
                   <div className="relative">
                     <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-solid border-surface-lowest bg-primary text-headline-md text-white">
                       {form.avatarUrl ? <img src={form.avatarUrl} alt="" className="h-full w-full object-cover" /> : form.fullName.charAt(0).toUpperCase()}
                     </span>
-                    <button onClick={() => avatarInput.current?.click()} disabled={uploading} className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-primary text-white" aria-label="Changer la photo"><Icon name={uploading ? 'progress_activity' : 'photo_camera'} size={16} /></button>
+                    <button onClick={() => avatarInput.current?.click()} disabled={uploading} className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-primary text-white" aria-label={t('profile.changePhoto')}><Icon name={uploading ? 'progress_activity' : 'photo_camera'} size={16} /></button>
                     <input ref={avatarInput} type="file" accept="image/*" hidden onChange={e => { void pickAvatar(e.target.files); e.target.value = '' }} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1 text-headline-sm text-on-surface">{form.fullName}<SellerBadge tier={me.badge} size={18} /></div>
-                    <div className="text-body-sm text-on-surface-variant">Membre depuis {sinceLabel(me.createdAt)}{rep?.reviewsCount ? ` • ${Math.round(rep.satisfactionRate ?? 0)} % d'avis positifs` : ''}{rep?.salesCount ? ` (${rep.salesCount} vente${rep.salesCount > 1 ? 's' : ''})` : ''}</div>
+                    <div className="text-body-sm text-on-surface-variant">{t('profile.memberSince', { date: sinceLabel(me.createdAt) })}{rep?.reviewsCount ? ` • ${t('profile.positiveReviews', { pct: String(Math.round(rep.satisfactionRate ?? 0)) })}` : ''}{rep?.salesCount ? ` (${t('profile.sales', { count: rep.salesCount })})` : ''}</div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {me.isVerified && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="check_circle" size={13} className="text-tertiary" /> Identité validée</span>}
-                      {me.phone && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="phone_android" size={13} /> Numéro renseigné</span>}
-                      {rep?.responseTimeMinutes != null && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="bolt" size={13} className="text-primary" /> Répond en {rep.responseTimeMinutes < 60 ? `${rep.responseTimeMinutes} min` : `${Math.round(rep.responseTimeMinutes / 60)} h`}</span>}
+                      {me.isVerified && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="check_circle" size={13} className="text-tertiary" /> {t('profile.idValidated')}</span>}
+                      {me.phone && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="phone_android" size={13} /> {t('profile.phoneSet')}</span>}
+                      {rep?.responseTimeMinutes != null && <span className="flex items-center gap-1 rounded bg-surface-lowest px-1.5 py-0.5 text-label-sm text-on-surface"><Icon name="bolt" size={13} className="text-primary" /> {rep.responseTimeMinutes < 60 ? t('profile.respondsMin', { n: String(rep.responseTimeMinutes) }) : t('profile.respondsHours', { n: String(Math.round(rep.responseTimeMinutes / 60)) })}</span>}
                     </div>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 md:hidden">
-                  <button onClick={() => document.getElementById('settings-profil-form')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="edit" size={17} /> Modifier profil</button>
-                  <button onClick={() => currentUser && onViewShop?.(currentUser.id)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary-fixed py-2.5 text-label-md text-primary"><Icon name="storefront" size={17} /> Voir boutique</button>
+                  <button onClick={() => document.getElementById('settings-profil-form')?.scrollIntoView({ behavior: 'smooth' })} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface"><Icon name="edit" size={17} /> {t('profile.edit')}</button>
+                  <button onClick={() => currentUser && onViewShop?.(currentUser.id)} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary-fixed py-2.5 text-label-md text-primary"><Icon name="storefront" size={17} /> {t('profile.viewShop')}</button>
                 </div>
                 <div id="settings-profil-form" className="mt-4 grid scroll-mt-24 gap-4 sm:grid-cols-2">
-                  <label className="text-label-md text-on-surface">Nom officiel de la boutique<input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={`${field} mt-1`} /></label>
-                  <label className="text-label-md text-on-surface">Pays
+                  <label className="text-label-md text-on-surface">{t('profile.shopName')}<input value={form.fullName} onChange={e => set('fullName', e.target.value)} className={`${field} mt-1`} /></label>
+                  <label className="text-label-md text-on-surface">{t('profile.country')}
                     <Select value={form.countryCode} onChange={e => changeCountry(e.target.value)} className={`${field} mt-1`}>
                       {!countries.some(c => c.code === form.countryCode) && <option value={form.countryCode}>{country?.name ?? form.countryCode}</option>}
                       {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                     </Select>
                   </label>
-                  <label className="text-label-md text-on-surface">Ville / commune principale
+                  <label className="text-label-md text-on-surface">{t('profile.city')}
                     <Select value={form.city} onChange={e => set('city', e.target.value)} className={`${field} mt-1`}>
                       <option value="">—</option>
                       {[...new Set([form.city, ...placeOptions(lists)].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
                     </Select>
                   </label>
-                  <label className="text-label-md text-on-surface sm:col-span-2">Description / Bio publique de la boutique
+                  <label className="text-label-md text-on-surface sm:col-span-2">{t('profile.bio')}
                     <textarea value={form.bio} maxLength={250} rows={3} onChange={e => set('bio', e.target.value)} className={`${field} mt-1 resize-none`} />
-                    <span className="block text-right text-label-sm text-on-surface-variant">{form.bio.length}/250 caractères</span>
+                    <span className="block text-right text-label-sm text-on-surface-variant">{t('profile.bioCount', { n: form.bio.length })}</span>
                   </label>
-                  <label className="text-label-md text-on-surface">Numéro WhatsApp &amp; Appels
+                  <label className="text-label-md text-on-surface">{t('profile.phone')}
                     <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="chat" size={18} className="text-tertiary" /><input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder={country ? `+${country.dialCode} ${country.phoneExample}` : ''} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
-                    {noEmail && <span className="mt-1 block text-body-sm text-on-surface-variant">Il sert à vous connecter : le changer demande votre mot de passe.</span>}
+                    {noEmail && <span className="mt-1 block text-body-sm text-on-surface-variant">{t('profile.phoneLoginHint')}</span>}
                   </label>
                   {noEmail && !addingEmail && !emailChanged ? (
-                    <div className="text-label-md text-on-surface">Adresse e-mail
+                    <div className="text-label-md text-on-surface">{t('profile.email')}
                       <div className="mt-1 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-3 py-2">
                         <Icon name="mail" size={18} className="text-on-surface-variant" />
-                        <span className="min-w-0 flex-1 text-body-md text-on-surface-variant">Pas d’e-mail</span>
-                        <button type="button" onClick={() => setAddingEmail(true)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary-fixed px-2.5 py-1.5 text-label-md text-primary"><Icon name="add" size={16} /> Ajouter un e-mail</button>
+                        <span className="min-w-0 flex-1 text-body-md text-on-surface-variant">{t('profile.noEmail')}</span>
+                        <button type="button" onClick={() => setAddingEmail(true)} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary-fixed px-2.5 py-1.5 text-label-md text-primary"><Icon name="add" size={16} /> {t('profile.addEmail')}</button>
                       </div>
                     </div>
                   ) : (
-                    <label className="text-label-md text-on-surface">{noEmail ? 'Nouvelle adresse e-mail' : 'Adresse e-mail transactionnelle'}
-                      <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="mail" size={18} className="text-on-surface-variant" /><input type="email" value={form.email} autoFocus={addingEmail} autoComplete="email" placeholder="nom@exemple.com" onChange={e => set('email', e.target.value)} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
-                      {noEmail && <span className="mt-1 block text-body-sm text-on-surface-variant">Un lien de confirmation lui sera envoyé à l’enregistrement.</span>}
+                    <label className="text-label-md text-on-surface">{noEmail ? t('profile.newEmail') : t('profile.transactionalEmail')}
+                      <span className="mt-1 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3"><Icon name="mail" size={18} className="text-on-surface-variant" /><input type="email" value={form.email} autoFocus={addingEmail} autoComplete="email" placeholder={t('profile.emailPh')} onChange={e => set('email', e.target.value)} className="w-full border-none bg-transparent py-2.5 text-body-md text-on-surface outline-none" /></span>
+                      {noEmail && <span className="mt-1 block text-body-sm text-on-surface-variant">{t('profile.emailConfirmHint')}</span>}
                     </label>
                   )}
                   {needsPw && (
-                    <label className="text-label-md text-on-surface">Mot de passe actuel
-                      <input type="password" autoComplete="current-password" value={emailPw} onChange={e => setEmailPw(e.target.value)} placeholder={emailChanged ? 'Requis pour changer d’adresse e-mail' : 'Requis pour changer de numéro'} className={`${field} mt-1`} />
+                    <label className="text-label-md text-on-surface">{t('profile.currentPassword')}
+                      <input type="password" autoComplete="current-password" value={emailPw} onChange={e => setEmailPw(e.target.value)} placeholder={emailChanged ? t('profile.pwForEmail') : t('profile.pwForPhone')} className={`${field} mt-1`} />
                     </label>
                   )}
                 </div>
@@ -450,13 +483,15 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
 
               {me && <SellerPageCard key={me.id} me={me} certified={currentUser?.badge === 'CERTIFIED'} onSaved={() => void refetch()} onUpgrade={() => onNavigate('seller-badge')} />}
 
+              <LanguageCard />
+
               {/* Alertes */}
-              <Card id="alertes" icon="notifications_active" title="Gestion des Notifications & Alertes" sub="Choisissez comment et quand vous souhaitez être prévenu des opportunités de vente."
-                aside={<button onClick={() => set('alerts', Object.fromEntries(ALERTS.map(a => [a.key, { push: !allOn, whatsapp: form.alerts[a.key]?.whatsapp ?? false, email: !allOn }])))} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">{allOn ? 'Tout désactiver' : 'Activer tout par défaut'}</button>}>
+              <Card id="alertes" icon="notifications_active" title={t('alerts.title')} sub={t('alerts.sub')}
+                aside={<button onClick={() => set('alerts', Object.fromEntries(ALERTS.map(a => [a.key, { push: !allOn, whatsapp: form.alerts[a.key]?.whatsapp ?? false, email: !allOn }])))} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">{allOn ? t('alerts.allOff') : t('alerts.allOn')}</button>}>
                 <div className={`mb-3 flex items-center gap-3 rounded-xl p-3 ${pushStatus === 'subscribed' ? 'bg-tertiary-soft' : 'bg-surface-container-low'}`}>
                   <Icon name="phonelink_ring" size={20} className={pushStatus === 'subscribed' ? 'text-tertiary' : 'text-on-surface-variant'} />
-                  <span className="flex-1 text-body-sm text-on-surface">{pushStatus === 'subscribed' ? 'Notifications push actives sur cet appareil.' : pushStatus === 'permission-denied' ? 'Notifications bloquées dans le navigateur — autorisez-les dans ses réglages.' : pushStatus === 'ios-install-required' ? "Sur iPhone, ajoutez Dilchap à l'écran d'accueil pour recevoir les notifications." : 'Notifications push non activées sur cet appareil.'}</span>
-                  {['available', 'permission-required', 'error'].includes(pushStatus) && <button onClick={() => void subscribeToPush(true).then(setPushStatus)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white">Activer</button>}
+                  <span className="flex-1 text-body-sm text-on-surface">{pushStatus === 'subscribed' ? t('push.subscribed') : pushStatus === 'permission-denied' ? t('push.denied') : pushStatus === 'ios-install-required' ? t('push.ios') : t('push.off')}</span>
+                  {['available', 'permission-required', 'error'].includes(pushStatus) && <button onClick={() => void subscribeToPush(true).then(setPushStatus)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white">{t('push.enable')}</button>}
                 </div>
                 <PhoneVerifyCard wantsSms={ALERTS.some(a => a.sms && form.alerts[a.key]?.whatsapp)} unsavedPhone={form.phone.trim() !== (me.phone ?? '')} />
                 {/* The card adapts to its own width (container query): full channel
@@ -470,12 +505,12 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                         <div className="min-w-0 flex-1"><div className="text-label-md text-on-surface">{a.title}</div><div className="text-body-sm text-on-surface-variant max-md:hidden">{a.sub}</div></div>
                       </div>
                       <div className="mt-2 grid grid-cols-3 gap-2 sm:pl-12">
-                        {([['push', 'Push'], ['whatsapp', 'WhatsApp'], ['email', 'E-mail']] as [Channel, string][]).map(([ch, label]) => (
+                        {([['push', t('channel.push')], ['whatsapp', 'WhatsApp'], ['email', t('channel.email')]] as [Channel, string][]).map(([ch, label]) => (
                           <label key={ch} className="flex min-w-0 flex-col items-center gap-1.5 whitespace-nowrap rounded-lg bg-surface-container-low px-1 py-2 text-label-sm text-on-surface-variant sm:flex-row sm:justify-between sm:gap-2 sm:px-2.5 sm:py-1.5">
                             {label}
                             {ch === 'whatsapp' && !a.sms
-                              ? <Toggle label={`${a.title} — ${label} : non disponible`} title={NO_SMS_HINT} disabled on={false} onChange={() => {}} />
-                              : <Toggle label={`${a.title} — ${label}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />}
+                              ? <Toggle label={t('channel.unavailable', { alert: a.title, channel: label })} title={noSmsHint()} disabled on={false} onChange={() => {}} />
+                              : <Toggle label={t('channel.toggle', { alert: a.title, channel: label })} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />}
                           </label>
                         ))}
                       </div>
@@ -486,8 +521,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-surface-container-low text-label-sm uppercase text-on-surface-variant">
-                        <th className="rounded-l-xl px-3 py-2.5 text-left font-semibold">Type d'alerte transactionnelle</th>
-                        <th className="px-3 py-2.5 font-semibold">App Push</th><th className="px-3 py-2.5 font-semibold">WhatsApp / SMS</th><th className="rounded-r-xl px-3 py-2.5 font-semibold">E-mail</th>
+                        <th className="rounded-l-xl px-3 py-2.5 text-left font-semibold">{t('alerts.colType')}</th>
+                        <th className="px-3 py-2.5 font-semibold">{t('alerts.colPush')}</th><th className="px-3 py-2.5 font-semibold">WhatsApp / SMS</th><th className="rounded-r-xl px-3 py-2.5 font-semibold">{t('alerts.colEmail')}</th>{/* i18n-ignore */}
                       </tr>
                     </thead>
                     <tbody>
@@ -500,8 +535,8 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                           {(['push', 'whatsapp', 'email'] as Channel[]).map(ch => (
                             <td key={ch} className="px-3 py-3 text-center">
                               <span className="inline-flex">{ch === 'whatsapp' && !a.sms
-                                ? <Toggle label={`${a.title} — WhatsApp / SMS : non disponible`} title={NO_SMS_HINT} disabled on={false} onChange={() => {}} />
-                                : <Toggle label={`${a.title} — ${ch}`} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />}</span>
+                                ? <Toggle label={t('channel.unavailable', { alert: a.title, channel: 'WhatsApp / SMS' })} title={noSmsHint()} disabled on={false} onChange={() => {}} />
+                                : <Toggle label={t('channel.toggle', { alert: a.title, channel: ch })} tone={ch === 'whatsapp' ? 'tertiary' : 'primary'} on={!!form.alerts[a.key]?.[ch]} onChange={v => set('alerts', { ...form.alerts, [a.key]: { ...form.alerts[a.key], [ch]: v } })} />}</span>
                             </td>
                           ))}
                         </tr>
@@ -510,32 +545,32 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   </table>
                 </div>
                 </div>
-                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">Push et e-mail suivent ces choix (au plus un e-mail par jour pour les messages en attente) ; WhatsApp/SMS vers votre numéro vérifié, uniquement pour les messages, offres, remises et litiges (un seul SMS par conversation à la fois) : les boosts, conseils et campagnes n'en envoient jamais. Les e-mails de sécurité et les reçus d'achat sont toujours envoyés.</p>
+                <p className="m-0 mt-2 text-label-sm text-on-surface-variant">{t('alerts.footnote')}</p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="bedtime" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1">
-                    <div className="text-label-md text-on-surface">Plage horaire silencieuse (Ne pas déranger)</div>
+                    <div className="text-label-md text-on-surface">{t('quiet.title')}</div>
                     <div className="text-body-sm text-on-surface-variant">
                       {form.quiet.enabled
-                        ? `Notifications push et alertes WhatsApp / SMS retenues entre ${form.quiet.start.replace(':', 'h')} et ${form.quiet.end.replace(':', 'h')} (heure locale), puis envoyées à la fin de la plage.`
-                        : `Désactivée : les notifications push arrivent à toute heure. Les alertes WhatsApp / SMS restent retenues la nuit, de ${SMS_NIGHT.start.replace(':', 'h')} à ${SMS_NIGHT.end.replace(':', 'h')} (heure locale).`}
+                        ? t('quiet.on', { start: hm(form.quiet.start), end: hm(form.quiet.end) })
+                        : t('quiet.off', { start: hm(SMS_NIGHT.start), end: hm(SMS_NIGHT.end) })}
                     </div>
                   </div>
                   <span className="flex items-center gap-1 rounded-lg bg-surface-lowest px-2 py-1 text-label-sm">
-                    <input type="time" aria-label="Début de la plage silencieuse" value={form.quiet.start} onChange={e => set('quiet', { ...form.quiet, start: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" /> –
-                    <input type="time" aria-label="Fin de la plage silencieuse" value={form.quiet.end} onChange={e => set('quiet', { ...form.quiet, end: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" />
+                    <input type="time" aria-label={t('quiet.startAria')} value={form.quiet.start} onChange={e => set('quiet', { ...form.quiet, start: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" /> –
+                    <input type="time" aria-label={t('quiet.endAria')} value={form.quiet.end} onChange={e => set('quiet', { ...form.quiet, end: e.target.value })} className="border-none bg-transparent text-label-sm text-on-surface" />
                   </span>
-                  <Toggle label="Plage silencieuse" on={form.quiet.enabled} onChange={v => set('quiet', { ...form.quiet, enabled: v })} />
+                  <Toggle label={t('quiet.toggle')} on={form.quiet.enabled} onChange={v => set('quiet', { ...form.quiet, enabled: v })} />
                 </div>
               </Card>
 
               {/* Remise & paiements */}
-              <Card id="remise" icon="handshake" iconCls="bg-tertiary-soft text-tertiary" title="Lieux de Remise & Moyens de Paiement" sub="Paramétrez vos points de rendez-vous sécurisés et vos canaux de paiement directs."
-                aside={<Claim><span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="savings" size={15} /> 0% Commission Dilchap</span></Claim>}>
-                <div className="text-label-md text-on-surface">Points de remise en main propre favoris</div>
-                <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">Proposés aux acheteurs lors de la prise de rendez-vous :</p>
+              <Card id="remise" icon="handshake" iconCls="bg-tertiary-soft text-tertiary" title={t('handover.title')} sub={t('handover.sub')}
+                aside={<Claim><span className="flex items-center gap-1 rounded-full bg-tertiary-soft px-2.5 py-1 text-label-sm text-tertiary"><Icon name="savings" size={15} /> {t('handover.noCommission')}</span></Claim>}>
+                <div className="text-label-md text-on-surface">{t('handover.spots')}</div>
+                <p className="m-0 mt-0.5 text-body-sm text-on-surface-variant">{t('handover.spotsHint')}</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {[...lists.meetupSpots, ...form.meetupSpots.filter(s => !lists.meetupSpots.some(x => x.name === s)).map(name => ({ name, sub: 'Repère personnalisé' }))].map(s => {
+                  {[...lists.meetupSpots, ...form.meetupSpots.filter(s => !lists.meetupSpots.some(x => x.name === s)).map(name => ({ name, sub: t('handover.customSpot') }))].map(s => {
                     const on = form.meetupSpots.includes(s.name)
                     return (
                       <label key={s.name} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${on ? 'border-primary/40 bg-primary-fixed/20' : 'border-outline-variant bg-surface-container-low'}`}>
@@ -545,11 +580,11 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                     )
                   })}
                   <div className="flex items-center gap-2 rounded-xl border border-dashed border-outline-variant p-2">
-                    <input value={newSpot} onChange={e => setNewSpot(e.target.value)} placeholder="Ajouter un autre repère sécurisé" aria-label="Ajouter un autre repère sécurisé" className="min-w-0 flex-1 border-none bg-transparent px-1 text-body-sm text-on-surface outline-none" />
-                    <button disabled={!newSpot.trim()} onClick={() => { set('meetupSpots', [...new Set([...form.meetupSpots, newSpot.trim()])]); setNewSpot('') }} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-2.5 py-1.5 text-label-sm text-on-surface disabled:opacity-50">+ Ajouter</button>
+                    <input value={newSpot} onChange={e => setNewSpot(e.target.value)} placeholder={t('handover.addSpotPh')} aria-label={t('handover.addSpotPh')} className="min-w-0 flex-1 border-none bg-transparent px-1 text-body-sm text-on-surface outline-none" />
+                    <button disabled={!newSpot.trim()} onClick={() => { set('meetupSpots', [...new Set([...form.meetupSpots, newSpot.trim()])]); setNewSpot('') }} className="cursor-pointer rounded-lg border-none bg-surface-container-high px-2.5 py-1.5 text-label-sm text-on-surface disabled:opacity-50">{t('handover.add')}</button>
                   </div>
                 </div>
-                <div className="mt-5 text-label-md text-on-surface">Modes de règlement acceptés à la remise</div>
+                <div className="mt-5 text-label-md text-on-surface">{t('handover.methods')}</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                   {payments.map(p => {
                     const on = form.paymentMethods.includes(p.code)
@@ -564,97 +599,97 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                 </div>
                 <Claim><div className="mt-4 flex gap-3 rounded-xl bg-tertiary-soft p-3">
                   <Icon name="shield" size={22} className="shrink-0 text-tertiary" />
-                  <p className="m-0 text-body-sm text-on-surface"><b>Dilchap ne prélève aucune commission sur vos transactions directes.</b> 100% du prix convenu vous revient. Nos revenus proviennent uniquement des options de mise en avant (Boosts).</p>
+                  <p className="m-0 text-body-sm text-on-surface">{t.rich('handover.commissionNote', { b: c => <b>{c}</b> })}</p>
                 </div></Claim>
               </Card>
 
               {/* Sécurité */}
-              <Card id="securite" icon="security" title="Sécurité & Connexions" sub="Surveillez l'accès à votre compte et vos validations d'identité."
-                aside={<span className="flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface"><Icon name="lock" size={14} /> {me.isVerified ? 'Identité vérifiée' : 'Identité non vérifiée'}</span>}>
+              <Card id="securite" icon="security" title={t('security.title')} sub={t('security.sub')}
+                aside={<span className="flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface"><Icon name="lock" size={14} /> {me.isVerified ? t('security.verified') : t('security.notVerified')}</span>}>
                 <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="badge" size={22} className={me.isVerified ? 'text-tertiary' : 'text-on-surface-variant'} />
                   <div className="min-w-[12rem] flex-1">
-                    <div className="text-label-md text-on-surface">Vérification d'identité (CNI)</div>
-                    <div className="text-body-sm text-on-surface-variant">{me.isVerified ? `Validée le ${new Date(me.verifiedAt ?? rep?.verifiedAt ?? me.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} par l'équipe Dilchap.` : 'Envoyez une photo de votre pièce et un selfie : c’est le prérequis des badges « Compte vérifié » et « Vendeur certifié ».'}</div>
+                    <div className="text-label-md text-on-surface">{t('security.kycTitle')}</div>
+                    <div className="text-body-sm text-on-surface-variant">{me.isVerified ? t('security.kycValidated', { date: fmtDate(me.verifiedAt ?? rep?.verifiedAt ?? me.createdAt, { day: 'numeric', month: 'long', year: 'numeric' }) }) : t('security.kycPrompt')}</div>
                   </div>
                   <button onClick={() => onNavigate('seller-kyc')} className={`flex cursor-pointer items-center gap-1.5 rounded-lg border-none px-3 py-1.5 text-label-md ${me.isVerified ? 'bg-surface-lowest text-on-surface' : 'bg-primary text-white'}`}>
-                    <Icon name={me.isVerified ? 'visibility' : 'verified_user'} size={16} /> {me.isVerified ? 'Voir' : 'Vérifier mon identité'}
+                    <Icon name={me.isVerified ? 'visibility' : 'verified_user'} size={16} /> {me.isVerified ? t('security.view') : t('security.verify')}
                   </button>
                 </div>
                 <LoginMethodsCard />
                 {hasPassword && <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="password" size={22} className="text-on-surface-variant" />
                   <div className="min-w-[12rem] flex-1">
-                    <div className="text-label-md text-on-surface">Mot de passe</div>
-                    <div className="text-body-sm text-on-surface-variant">Utilisez au moins 8 caractères, différents de vos autres comptes.</div>
+                    <div className="text-label-md text-on-surface">{t('security.password')}</div>
+                    <div className="text-body-sm text-on-surface-variant">{t('security.passwordHint')}</div>
                   </div>
-                  {!pwOpen && <button onClick={() => { setPwOpen(true); setPwMsg(null) }} className="cursor-pointer rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface">Modifier</button>}
+                  {!pwOpen && <button onClick={() => { setPwOpen(true); setPwMsg(null) }} className="cursor-pointer rounded-lg border border-outline-variant bg-surface-lowest px-3 py-1.5 text-label-md text-on-surface">{tc('edit')}</button>}
                   {pwOpen && (
                     <div className="flex w-full flex-col gap-2 sm:flex-row">
-                      <input type="password" placeholder="Mot de passe actuel" value={pw.current} onChange={e => setPw({ ...pw, current: e.target.value })} className={field} />
-                      <input type="password" placeholder="Nouveau (8 caractères min.)" value={pw.next} onChange={e => setPw({ ...pw, next: e.target.value })} className={field} />
-                      <button disabled={changingPw || !pw.current || pw.next.length < 8} onClick={() => void changePassword({ variables: { input: { currentPassword: pw.current, newPassword: pw.next } } }).then(() => refreshAccessToken()).then(() => { void refetchSessions(); setPwMsg({ ok: true, text: 'Mot de passe mis à jour.' }); setPwOpen(false); setPw({ current: '', next: '' }) }).catch(e => setPwMsg({ ok: false, text: e.message }))} className="shrink-0 cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50">Confirmer</button>
+                      <input type="password" placeholder={t('profile.currentPassword')} value={pw.current} onChange={e => setPw({ ...pw, current: e.target.value })} className={field} />
+                      <input type="password" placeholder={t('security.newPasswordPh')} value={pw.next} onChange={e => setPw({ ...pw, next: e.target.value })} className={field} />
+                      <button disabled={changingPw || !pw.current || pw.next.length < 8} onClick={() => void changePassword({ variables: { input: { currentPassword: pw.current, newPassword: pw.next } } }).then(() => refreshAccessToken()).then(() => { void refetchSessions(); setPwMsg({ ok: true, text: settings.t('security.passwordUpdated') }); setPwOpen(false); setPw({ current: '', next: '' }) }).catch(e => setPwMsg({ ok: false, text: e.message }))} className="shrink-0 cursor-pointer rounded-xl border-none bg-primary px-4 py-2 text-label-md text-white disabled:opacity-50">{tc('confirm')}</button>
                     </div>
                   )}
                   {pwMsg && <p className={`m-0 w-full text-body-sm ${pwMsg.ok ? 'text-tertiary' : 'text-primary'}`}>{pwMsg.text}</p>}
                 </div>}
                 <AdultConfirmationSetting />
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-label-md text-on-surface">Sessions et appareils actuellement connectés</div>
-                  {sessions.some(x => x.current) && sessions.length > 1 && <button disabled={revokingOthers} onClick={() => void revokeOthers().then(() => refetchSessions())} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary"><span className="md:hidden">Déconnecter les autres</span><span className="max-md:hidden">Déconnecter tous les autres appareils</span></button>}
+                  <div className="text-label-md text-on-surface">{t('security.sessions')}</div>
+                  {sessions.some(x => x.current) && sessions.length > 1 && <button disabled={revokingOthers} onClick={() => void revokeOthers().then(() => refetchSessions())} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary"><span className="md:hidden">{t('security.signOutOthersShort')}</span><span className="max-md:hidden">{t('security.signOutOthers')}</span></button>}
                 </div>
                 <div className="mt-2 flex flex-col gap-2">
                   {sessionGroups.map(g => (
                     <div key={g.key} className="flex items-center gap-3 rounded-xl border border-outline-variant p-3">
                       <Icon name={g.d.icon} size={22} className="shrink-0 text-on-surface-variant" />
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 text-label-md text-on-surface">{g.d.name}{g.current && <span className="rounded bg-tertiary-soft px-1.5 text-label-sm text-tertiary">Cet appareil</span>}{g.ids.length > 1 && <span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">{g.ids.length} sessions</span>}</div>
-                        <div className="text-body-sm text-on-surface-variant">{g.ids.length > 1 ? 'Dernière connexion le' : 'Connecté le'} {new Date(g.last).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                        <div className="flex flex-wrap items-center gap-2 text-label-md text-on-surface">{g.d.name}{g.current && <span className="rounded bg-tertiary-soft px-1.5 text-label-sm text-tertiary">{t('security.thisDevice')}</span>}{g.ids.length > 1 && <span className="rounded bg-surface-container px-1.5 text-label-sm text-on-surface-variant">{t('security.sessionCount', { n: g.ids.length })}</span>}</div>
+                        <div className="text-body-sm text-on-surface-variant">{t(g.ids.length > 1 ? 'security.lastLogin' : 'security.connectedOn', { date: fmtDate(g.last, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })}</div>
                       </div>
-                      {g.current ? <Icon name="check_circle" size={20} className="shrink-0 text-tertiary" /> : <button onClick={() => void Promise.all(g.ids.map(id => revokeSession({ variables: { sessionId: id } }))).then(() => refetchSessions())} className="shrink-0 cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container-high px-3 py-1.5 text-label-md text-on-surface">Déconnecter</button>}
+                      {g.current ? <Icon name="check_circle" size={20} className="shrink-0 text-tertiary" /> : <button onClick={() => void Promise.all(g.ids.map(id => revokeSession({ variables: { sessionId: id } }))).then(() => refetchSessions())} className="shrink-0 cursor-pointer whitespace-nowrap rounded-lg border-none bg-surface-container-high px-3 py-1.5 text-label-md text-on-surface">{t('security.signOut')}</button>}
                     </div>
                   ))}
                 </div>
               </Card>
 
               {/* Compte */}
-              <Card id="compte" icon="warning" title="Gestion du Compte & Zone Sensible" sub="Mettez en pause vos ventes ou gérez la fermeture de votre profil Dilchap.">
+              <Card id="compte" icon="warning" title={t('account.title')} sub={t('account.sub')}>
                 <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <div className="min-w-[12rem] flex-1">
-                    <div className="text-label-md text-on-surface">Mode Vacances / Pause de la boutique</div>
-                    <div className="text-body-sm text-on-surface-variant">Masque instantanément vos {rep?.activeListings ?? 0} annonce{(rep?.activeListings ?? 0) > 1 ? 's' : ''} des résultats de recherche sans perdre vos favoris ni vos avis.</div>
+                    <div className="text-label-md text-on-surface">{t('account.vacation')}</div>
+                    <div className="text-body-sm text-on-surface-variant">{t('account.vacationHint', { count: rep?.activeListings ?? 0 })}</div>
                   </div>
-                  <Toggle label="Mode vacances" on={me.vacationMode} onChange={v => void setVacation(v)} />
+                  <Toggle label={t('account.vacationToggle')} on={me.vacationMode} onChange={v => void setVacation(v)} />
                   {vacationSaving && <Icon name="progress_activity" size={18} className="animate-spin text-on-surface-variant" />}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name={dark ? 'dark_mode' : 'light_mode'} size={22} className="text-on-surface-variant" />
-                  <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">Apparence</div><div className="text-body-sm text-on-surface-variant">{dark ? 'Mode sombre activé' : 'Mode clair activé'}</div></div>
-                  <Toggle label="Mode sombre" on={dark} onChange={onToggleDark} />
+                  <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">{t('account.appearance')}</div><div className="text-body-sm text-on-surface-variant">{dark ? t('account.darkOn') : t('account.lightOn')}</div></div>
+                  <Toggle label={t('account.darkToggle')} on={dark} onChange={onToggleDark} />
                 </div>
                 <PersonalizeHomeSetting className="mt-3" prefs={me.notificationPreferences}
                   onHelp={() => requestOpenHelp('accueil-personnalise')}
                   onSaved={(p) => { void refetch(); if (currentUser) onProfileUpdated({ ...currentUser, notificationPreferences: p as AuthUser['notificationPreferences'] }) }} />
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-3">
                   <Icon name="menu_book" size={22} className="text-on-surface-variant" />
-                  <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">Visite guidée</div><div className="text-body-sm text-on-surface-variant">Revoyez les essentiels de Dilchap, et les nouveautés déjà présentées.</div></div>
-                  <button onClick={() => void replayTours()} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container"><Icon name="replay" size={17} /> Revoir la visite guidée</button>
+                  <div className="min-w-[12rem] flex-1"><div className="text-label-md text-on-surface">{t('account.tour')}</div><div className="text-body-sm text-on-surface-variant">{t('account.tourHint')}</div></div>
+                  <button onClick={() => void replayTours()} className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 py-2 text-label-md text-on-surface shadow-sm hover:bg-surface-container"><Icon name="replay" size={17} /> {t('account.tourReplay')}</button>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary-fixed/30 p-3">
                   <div className="min-w-[12rem] flex-1">
-                    <div className="text-label-md text-primary">Supprimer définitivement la boutique</div>
-                    <div className="text-body-sm text-on-surface-variant">Vos annonces sont retirées, vos données personnelles effacées et toutes vos sessions fermées.</div>
+                    <div className="text-label-md text-primary">{t('account.deleteTitle')}</div>
+                    <div className="text-body-sm text-on-surface-variant">{t('account.deleteHint')}</div>
                   </div>
-                  <button onClick={() => setDeleteOpen(true)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white">Supprimer mon compte</button>
+                  <button onClick={() => setDeleteOpen(true)} className="cursor-pointer rounded-lg border-none bg-primary px-3 py-2 text-label-md text-white">{t('account.deleteMine')}</button>
                 </div>
               </Card>
-              <button onClick={onLogout} className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-surface-container-high py-3.5 text-label-lg text-on-surface md:hidden"><Icon name="logout" size={19} /> Se déconnecter de Dilchap</button>
+              <button onClick={onLogout} className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-none bg-surface-container-high py-3.5 text-label-lg text-on-surface md:hidden"><Icon name="logout" size={19} /> {t('account.signOut')}</button>
             </div>
 
             {/* Aside */}
             <aside className="order-first hidden grid-cols-[minmax(0,1fr)] content-start gap-4 md:grid md:grid-cols-3 2xl:sticky 2xl:top-24 2xl:order-none 2xl:flex 2xl:flex-col 2xl:self-start">
               <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                <div className="flex items-center justify-between text-label-sm uppercase text-on-surface-variant">Aperçu badge acheteur <span className="h-2 w-2 rounded-full bg-tertiary" /></div>
+                <div className="flex items-center justify-between text-label-sm uppercase text-on-surface-variant">{t('aside.badgePreview')} <span className="h-2 w-2 rounded-full bg-tertiary" /></div>
                 <div className="mt-3 rounded-xl bg-surface-container-low p-3">
                   <div className="flex items-center gap-2">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-label-md text-white">{form.avatarUrl ? <img src={form.avatarUrl} alt="" className="h-full w-full object-cover" /> : form.fullName.charAt(0)}</span>
@@ -667,27 +702,27 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
                   {form.bio && <p className="m-0 mt-2 line-clamp-3 text-body-sm italic text-on-surface-variant">« {form.bio} »</p>}
                 </div>
                 <dl className="m-0 mt-3 flex flex-col gap-2 text-body-sm">
-                  <div className="flex justify-between"><dt className="text-on-surface-variant">Score de confiance :</dt><dd className="m-0 font-bold text-tertiary">{rep?.trustScore ?? '—'} / 100</dd></div>
-                  <div className="flex justify-between"><dt className="text-on-surface-variant">Délai moyen de réponse :</dt><dd className="m-0 font-semibold text-on-surface">{rep?.responseTimeMinutes != null ? `${rep.responseTimeMinutes} minutes` : '—'}</dd></div>
-                  <div className="flex justify-between"><dt className="text-on-surface-variant">Validation identité :</dt><dd className="m-0 font-semibold text-on-surface">{me.verifiedAt ? new Date(me.verifiedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Non vérifiée'}</dd></div>
+                  <div className="flex justify-between"><dt className="text-on-surface-variant">{t('aside.trustScore')}</dt><dd className="m-0 font-bold text-tertiary">{rep?.trustScore ?? '—'} / 100</dd></div>
+                  <div className="flex justify-between"><dt className="text-on-surface-variant">{t('aside.responseTime')}</dt><dd className="m-0 font-semibold text-on-surface">{rep?.responseTimeMinutes != null ? t('aside.minutes', { n: String(rep.responseTimeMinutes) }) : '—'}</dd></div>
+                  <div className="flex justify-between"><dt className="text-on-surface-variant">{t('aside.idValidation')}</dt><dd className="m-0 font-semibold text-on-surface">{me.verifiedAt ? fmtDate(me.verifiedAt, { day: 'numeric', month: 'long', year: 'numeric' }) : t('aside.notVerified')}</dd></div>
                 </dl>
               </div>
               <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                <div className="flex items-center gap-2 text-label-lg text-primary"><Icon name="lightbulb" size={20} /> Règles d'or Dilchap</div>
+                <div className="flex items-center gap-2 text-label-lg text-primary"><Icon name="lightbulb" size={20} /> {t('aside.goldenRules')}</div>
                 <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
-                  {['Fixez toujours les remises dans des lieux publics très éclairés (centres commerciaux, stations-service…).', 'Encouragez le paiement Mobile Money instantané sur place après examen de l’objet par l’acheteur.', 'Ne livrez jamais sans acompte dans des lieux isolés.'].map(r => (
+                  {[t('aside.rule1'), t('aside.rule2'), t('aside.rule3')].map(r => (
                     <li key={r} className="flex gap-1.5"><Icon name="check" size={16} className="shrink-0 text-tertiary" /> {r}</li>
                   ))}
                 </ul>
               </div>
               <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-                <div className="text-label-md text-on-surface">Réactivité Vendeur (7 derniers jours)</div>
+                <div className="text-label-md text-on-surface">{t('aside.reactivity')}</div>
                 <div className="mt-1 flex items-baseline gap-2">
                   <span className="text-headline-lg font-extrabold text-on-surface">{rep?.reactivity != null ? `${Math.round(rep.reactivity)}%` : '—'}</span>
-                  {reactivityDelta != null && <span className={`text-label-sm ${reactivityDelta >= 0 ? 'text-tertiary' : 'text-primary'}`}>{reactivityDelta >= 0 ? '+' : ''}{Math.round(reactivityDelta)}% vs semaine passée</span>}
+                  {reactivityDelta != null && <span className={`text-label-sm ${reactivityDelta >= 0 ? 'text-tertiary' : 'text-primary'}`}>{t('aside.reactivityDelta', { delta: `${reactivityDelta >= 0 ? '+' : ''}${Math.round(reactivityDelta)}` })}</span>}
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full bg-tertiary" style={{ width: `${rep?.reactivity ?? 0}%` }} /></div>
-                <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Part des discussions ouvertes par des acheteurs auxquelles vous avez répondu. Les vendeurs réactifs vendent nettement plus vite.</p>
+                <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{t('aside.reactivityHint')}</p>
               </div>
             </aside>
           </div>
@@ -706,9 +741,9 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
         <div className="fixed inset-x-0 bottom-16 z-[60] flex justify-center px-4 lg:bottom-6">
           <div className="flex w-full max-w-xl items-center gap-3 rounded-2xl bg-inverse-surface px-4 py-3 text-white shadow-float">
             <Icon name="edit_note" size={20} />
-            <span className="flex-1 text-label-md">Modifications non enregistrées</span>
-            <button onClick={() => setForm(initial)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-white/80">Annuler</button>
-            <button onClick={() => void save()} disabled={saving} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white"><Icon name="check" size={16} /> Sauvegarder</button>
+            <span className="flex-1 text-label-md">{t('unsaved')}</span>
+            <button onClick={() => setForm(initial)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-white/80">{tc('cancel')}</button>
+            <button onClick={() => void save()} disabled={saving} className="flex cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-3 py-1.5 text-label-md text-white"><Icon name="check" size={16} /> {t('saveShort')}</button>
           </div>
         </div>
       )}
@@ -716,13 +751,13 @@ export default function Settings({ onNavigate, currentUser, onLogout, onProfileU
       {deleteOpen && (
         <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setDeleteOpen(false)}>
           <div className="w-full max-w-md rounded-t-2xl bg-surface-lowest p-5 sm:rounded-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="m-0 flex items-center gap-2 text-headline-sm text-primary"><Icon name="warning" size={22} /> Supprimer mon compte</h3>
-            <p className="m-0 mt-2 text-body-md text-on-surface-variant">{hasPassword ? 'Cette action est irréversible. Confirmez avec votre mot de passe.' : 'Cette action est irréversible. Votre compte n’a pas de mot de passe : une connexion de moins de 30 minutes la confirme.'}</p>
-            {hasPassword && <input type="password" value={deletePw} onChange={e => setDeletePw(e.target.value)} placeholder="Mot de passe" className={`${field} mt-3`} />}
+            <h3 className="m-0 flex items-center gap-2 text-headline-sm text-primary"><Icon name="warning" size={22} /> {t('delete.title')}</h3>
+            <p className="m-0 mt-2 text-body-md text-on-surface-variant">{hasPassword ? t('delete.withPassword') : t('delete.noPassword')}</p>
+            {hasPassword && <input type="password" value={deletePw} onChange={e => setDeletePw(e.target.value)} placeholder={t('delete.passwordPh')} className={`${field} mt-3`} />}
             {deleteError && <p className="m-0 mt-1 text-body-sm text-primary">{deleteError.message}</p>}
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setDeleteOpen(false)} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface">Annuler</button>
-              <button disabled={(hasPassword && !deletePw) || deleting} onClick={() => void deleteAccount({ variables: { password: hasPassword ? deletePw : null } }).then(() => onLogout())} className="flex-1 cursor-pointer rounded-xl border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-50">Supprimer définitivement</button>
+              <button onClick={() => setDeleteOpen(false)} className="flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high py-2.5 text-label-md text-on-surface">{tc('cancel')}</button>
+              <button disabled={(hasPassword && !deletePw) || deleting} onClick={() => void deleteAccount({ variables: { password: hasPassword ? deletePw : null } }).then(() => onLogout())} className="flex-1 cursor-pointer rounded-xl border-none bg-primary py-2.5 text-label-md text-white disabled:opacity-50">{t('delete.confirm')}</button>
             </div>
           </div>
         </div>

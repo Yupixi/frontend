@@ -16,6 +16,9 @@ import { feeOptions, feeText } from '../lib/campaignFees'
 import { OPEN_CAMPAIGNS_QUERY, type OpenCampaign } from '../graphql/shops'
 import InfiniteLoader from '../components/InfiniteLoader'
 import { useLoadMore } from '../lib/useLoadMore'
+import { useT } from '../i18n'
+import campaignNs from '../i18n/ns/campaign'
+import common from '../i18n/ns/common'
 
 type FlashOffersProps = {
   // '' = the newest live campaign.
@@ -30,8 +33,8 @@ type FlashOffersProps = {
 }
 
 type Sort = 'DISCOUNT_DESC' | 'RECENT' | 'PRICE_ASC' | 'PRICE_DESC'
-const SORTS: [Sort, string][] = [['DISCOUNT_DESC', 'Meilleures remises'], ['RECENT', 'Nouveautés'], ['PRICE_ASC', 'Prix croissant'], ['PRICE_DESC', 'Prix décroissant']]
-const DISCOUNTS: [number, string][] = [[0, 'Toutes remises'], [10, '-10 % et +'], [20, '-20 % et +'], [30, '-30 % et +'], [50, '-50 % et +']]
+const SORTS: [Sort, 'page.sort.DISCOUNT_DESC' | 'page.sort.RECENT' | 'page.sort.PRICE_ASC' | 'page.sort.PRICE_DESC'][] = [['DISCOUNT_DESC', 'page.sort.DISCOUNT_DESC'], ['RECENT', 'page.sort.RECENT'], ['PRICE_ASC', 'page.sort.PRICE_ASC'], ['PRICE_DESC', 'page.sort.PRICE_DESC']]
+const DISCOUNTS = [0, 10, 20, 30, 50]
 const PAGE_SIZE = 20
 
 const select = 'h-10 shrink-0 cursor-pointer rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3 text-label-md text-on-surface outline-none focus:border-primary'
@@ -41,6 +44,8 @@ const select = 'h-10 shrink-0 cursor-pointer rounded-xl border border-solid bord
 // the campaign, top discounts, every offer, the sellers' invitation, and
 // the other live campaigns.
 export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavigate, onSelectListing, favorites, onToggleFavorite, onContactSeller, isLoggedIn }: FlashOffersProps) {
+  const t = useT(campaignNs)
+  const tc = useT(common)
   const { data: liveData, loading: liveLoading } = useQuery<{ activeCampaigns: LiveCampaign[] }>(LIVE_CAMPAIGNS_QUERY, { variables: useMarketVars(), fetchPolicy: 'cache-and-network' })
   const live = (liveData?.activeCampaigns ?? []).filter(isLive)
   const slug = campaignSlug || live[0]?.slug || ''
@@ -101,11 +106,11 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-6 py-20 text-center">
         <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-container text-on-surface-variant"><Icon name="local_offer" size={30} /></span>
-        <h1 className="m-0 text-headline-md text-on-surface">{campaignSlug ? 'Cette campagne est terminée' : 'Pas de campagne en cours'}</h1>
-        <p className="m-0 mt-2 text-body-md text-on-surface-variant">Les prochaines promotions Dilchap apparaîtront ici.</p>
+        <h1 className="m-0 text-headline-md text-on-surface">{campaignSlug ? t('page.ended') : t('page.none')}</h1>
+        <p className="m-0 mt-2 text-body-md text-on-surface-variant">{t('page.nextHere')}</p>
         {live.length > 0 && campaignSlug
-          ? <button onClick={() => onOpenCampaign('')} className="mt-6 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-lg text-white">Voir les promotions en cours</button>
-          : <button onClick={() => onNavigate('home')} className="mt-6 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-lg text-white">Retour à l’accueil</button>}
+          ? <button onClick={() => onOpenCampaign('')} className="mt-6 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-lg text-white">{t('page.seeCurrent')}</button>
+          : <button onClick={() => onNavigate('home')} className="mt-6 cursor-pointer rounded-xl border-none bg-primary px-5 py-3 text-label-lg text-white">{t('page.backHome')}</button>}
       </div>
     )
   }
@@ -122,11 +127,11 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
     <div className="mx-auto max-w-[1320px] px-4 pb-16 pt-4 md:px-8 md:pt-6">
       <nav className="mb-3 flex items-center justify-between gap-2 text-label-md text-on-surface-variant md:mb-4">
         <span className="flex min-w-0 items-center gap-1">
-          <button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary">Accueil</button>
+          <button onClick={() => onNavigate('home')} className="cursor-pointer border-none bg-transparent p-0 text-on-surface-variant hover:text-primary">{t('page.home')}</button>
           <Icon name="chevron_right" size={16} />
           <span className="truncate text-on-surface">{campaign.name}</span>
         </span>
-        <button onClick={share} aria-label="Partager la campagne" className="flex cursor-pointer items-center gap-1 rounded-full border-none bg-surface-container-low px-3 py-1.5 text-label-md text-on-surface"><Icon name="share" size={16} /> Partager</button>
+        <button onClick={share} aria-label={t('page.shareAria')} className="flex cursor-pointer items-center gap-1 rounded-full border-none bg-surface-container-low px-3 py-1.5 text-label-md text-on-surface"><Icon name="share" size={16} /> {tc('share')}</button>
       </nav>
 
       <CampaignHero campaign={campaign} />
@@ -136,24 +141,24 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
         <div className="flex flex-wrap items-center gap-2 max-md:flex-nowrap max-md:flex-col max-md:items-stretch">
           <label className="flex h-10 min-w-0 flex-1 basis-60 items-center max-md:basis-auto max-md:flex-none gap-2 rounded-xl border border-solid border-outline-variant bg-surface-lowest px-3">
             <Icon name="search" size={18} className="text-outline" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher dans cette campagne" aria-label="Rechercher dans cette campagne" className="min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('page.searchPlaceholder')} aria-label={t('page.searchPlaceholder')} className="min-w-0 flex-1 border-none bg-transparent text-body-md text-on-surface outline-none" />
           </label>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] md:contents">
-          <select aria-label="Commune" value={city} onChange={e => setCity(e.target.value)} className={select}>
-            <option value="">Commune : toutes</option>
+          <select aria-label={t('page.place')} value={city} onChange={e => setCity(e.target.value)} className={select}>
+            <option value="">{t('page.placeAll')}</option>
             {places.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
-          <select aria-label="Remise" value={minDiscount} onChange={e => setMinDiscount(Number(e.target.value))} className={select}>
-            {DISCOUNTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          <select aria-label={t('optin.discount')} value={minDiscount} onChange={e => setMinDiscount(Number(e.target.value))} className={select}>
+            {DISCOUNTS.map(v => <option key={v} value={v}>{v ? t('page.discountMin', { n: v }) : t('page.discountAll')}</option>)}
           </select>
-          <select aria-label="Trier" value={sort} onChange={e => setSort(e.target.value as Sort)} className={select}>
-            {SORTS.map(([v, l]) => <option key={v} value={v}>Trier : {l}</option>)}
+          <select aria-label={t('page.sortAria')} value={sort} onChange={e => setSort(e.target.value as Sort)} className={select}>
+            {SORTS.map(([v, l]) => <option key={v} value={v}>{t('page.sortOption', { label: t(l) })}</option>)}
           </select>
           </div>
         </div>
         {campaign.categoryCounts.length > 1 && (
           <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
-            {[{ slug: '', name: 'Tous', icon: null, count: campaign.listingsCount }, ...campaign.categoryCounts].map(c => (
+            {[{ slug: '', name: t('page.all'), icon: null, count: campaign.listingsCount }, ...campaign.categoryCounts].map(c => (
               <button key={c.slug || 'all'} onClick={() => setCategory(c.slug)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-none px-3.5 py-2 text-label-md ${category === c.slug ? 'bg-on-surface text-surface' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
                 {c.icon && <CategoryIcon icon={c.icon} size={16} />} {c.name} <span className="opacity-60">({c.count})</span>
               </button>
@@ -165,9 +170,9 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
       {/* Top discounts */}
       {!filtered && top.length > 2 && (
         <section className="mt-8">
-          <p className="m-0 flex items-center gap-1.5 text-label-sm font-bold uppercase tracking-wider text-primary"><Icon name="local_fire_department" size={15} /> Incontournables</p>
+          <p className="m-0 flex items-center gap-1.5 text-label-sm font-bold uppercase tracking-wider text-primary"><Icon name="local_fire_department" size={15} /> {t('page.mustHave')}</p>
           <div className="mb-3 flex items-end justify-between gap-3">
-            <h2 className="m-0 text-headline-md font-bold text-on-surface md:text-headline-lg">Top remises</h2>
+            <h2 className="m-0 text-headline-md font-bold text-on-surface md:text-headline-lg">{t('page.topDiscounts')}</h2>
           </div>
           <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-4 md:gap-5 md:overflow-visible md:px-0">
             {top.slice(0, 8).map((l, i) => <div key={l.id} className={`w-[46%] shrink-0 snap-start md:w-auto ${i >= 4 ? 'md:hidden' : ''}`}>{card(l)}</div>)}
@@ -181,8 +186,8 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
       {/* Every offer */}
       <section id="offres" className="mt-8">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="m-0 text-headline-md font-bold text-on-surface md:text-headline-lg">{filtered ? 'Résultats' : 'Toutes les offres'}</h2>
-          <span className="text-label-md text-on-surface-variant">{offers.length} affichée{offers.length > 1 ? 's' : ''} sur {total}</span>
+          <h2 className="m-0 text-headline-md font-bold text-on-surface md:text-headline-lg">{filtered ? t('page.results') : t('page.allOffers')}</h2>
+          <span className="text-label-md text-on-surface-variant">{t('page.shown', { count: offers.length, n: String(offers.length), total: String(total) })}</span>
         </div>
         {offers.length ? (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5 xl:grid-cols-5">{offers.map(card)}</div>
@@ -190,11 +195,11 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5 xl:grid-cols-5">{Array.from({ length: 8 }, (_, i) => <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-surface-container" />)}</div>
         ) : (
           <div className="rounded-2xl bg-surface-container-low px-6 py-12 text-center">
-            <p className="m-0 text-headline-sm text-on-surface">Aucune offre ne correspond</p>
-            {filtered && <button onClick={() => { setSearch(''); setCategory(''); setCity(''); setMinDiscount(0) }} className="mt-3 cursor-pointer rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white">Effacer les filtres</button>}
+            <p className="m-0 text-headline-sm text-on-surface">{t('page.noMatch')}</p>
+            {filtered && <button onClick={() => { setSearch(''); setCategory(''); setCity(''); setMinDiscount(0) }} className="mt-3 cursor-pointer rounded-xl border-none bg-primary px-4 py-2.5 text-label-md text-white">{t('page.clearFilters')}</button>}
           </div>
         )}
-        {offersData && <InfiniteLoader key={JSON.stringify([filter, sort])} list={nextOffers} pageSize={PAGE_SIZE} label="Charger plus d’articles" endLabel={offers.length > PAGE_SIZE ? 'Vous avez tout vu' : null} />}
+        {offersData && <InfiniteLoader key={JSON.stringify([filter, sort])} list={nextOffers} pageSize={PAGE_SIZE} label={t('page.loadMore')} endLabel={offers.length > PAGE_SIZE ? t('page.allSeen') : null} />}
       </section>
 
       {/* Sellers' invitation */}
@@ -203,29 +208,29 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="storefront" size={22} /></span>
             <div>
-              <p className="m-0 text-label-sm font-bold uppercase tracking-wider text-primary">Espace vendeurs</p>
-              <h2 className="m-0 text-headline-sm font-bold text-on-surface">{market ? `Vous vendez à ${market.mainCity} ?` : 'Vous vendez ?'}</h2>
+              <p className="m-0 text-label-sm font-bold uppercase tracking-wider text-primary">{t('page.sellers')}</p>
+              <h2 className="m-0 text-headline-sm font-bold text-on-surface">{market ? t('page.sellIn', { city: market.mainCity }) : t('page.sell')}</h2>
               <p className="m-0 mt-1 max-w-2xl text-body-sm text-on-surface-variant">
-                Participez à « {campaign.name} » et mettez vos articles devant tous les acheteurs de la campagne{campaign.minDiscountPercent ? `, avec une remise d’au moins ${campaign.minDiscountPercent} %` : ''}.
+                {campaign.minDiscountPercent ? t('page.inviteMin', { name: campaign.name, n: campaign.minDiscountPercent }) : t('page.invite', { name: campaign.name })}
               </p>
               <div className="mt-2 max-w-2xl rounded-xl bg-surface-container-low px-3 py-2 text-body-sm">
                 {mine ? (
-                  <p className="m-0 text-on-surface"><b className="font-semibold">Votre tarif :</b> {feeText(mine)}{mine.entryFeePaid && mine.entryFee > 0 ? ' (participation déjà réglée)' : ''}</p>
+                  <p className="m-0 text-on-surface">{t.rich(mine.entryFeePaid && mine.entryFee > 0 ? 'page.yourRatePaid' : 'page.yourRate', { b: c => <b className="font-semibold">{c}</b>, fee: feeText(mine) })}</p>
                 ) : fees.single ? (
-                  <p className="m-0 text-on-surface"><b className="font-semibold">Tarif :</b> {feeText(fees.cheapest)}</p>
+                  <p className="m-0 text-on-surface">{t.rich('page.rate', { b: c => <b className="font-semibold">{c}</b>, fee: feeText(fees.cheapest) })}</p>
                 ) : (
                   <>
-                    <p className="m-0 text-on-surface"><b className="font-semibold">Tarif selon votre statut de vendeur</b>, {fees.cheapest.entryFee + fees.cheapest.listingFee > 0 ? `à partir de ${feeText(fees.cheapest).replace(/^Participation /, '')}` : 'gratuit pour certains statuts'}{isLoggedIn ? '' : ' — connectez-vous pour voir le vôtre'} :</p>
+                    <p className="m-0 text-on-surface">{t.rich(isLoggedIn ? 'page.tierRate' : 'page.tierRateLogin', { b: c => <b className="font-semibold">{c}</b>, from: fees.cheapest.entryFee + fees.cheapest.listingFee > 0 ? t('page.fromFee', { fee: feeText(fees.cheapest).replace(/^Participation /, '') }) : t('page.freeForSome') })}</p>
                     <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-on-surface-variant">
-                      {fees.lines.map(l => <li key={l.label}>{l.label} : {l.text}</li>)}
+                      {fees.lines.map(l => <li key={l.label}>{t('page.feeLine', { label: l.label, text: l.text })}</li>)}
                     </ul>
                   </>
                 )}
-                {(mine ? mine.entryFee + mine.listingFee > 0 : fees.anyPaid) && <p className="m-0 mt-1 text-on-surface-variant">À régler en crédits, uniquement pour les articles acceptés.</p>}
+                {(mine ? mine.entryFee + mine.listingFee > 0 : fees.anyPaid) && <p className="m-0 mt-1 text-on-surface-variant">{t('page.payInCredits')}</p>}
               </div>
               {campaign.sellerConditions.length > 0 && (
                 <details className="mt-2 max-w-2xl text-body-sm">
-                  <summary className="cursor-pointer text-label-md text-primary">Conditions de participation</summary>
+                  <summary className="cursor-pointer text-label-md text-primary">{t('page.conditions')}</summary>
                   <ul className="m-0 mt-1.5 list-none space-y-1 p-0 text-on-surface-variant">
                     {campaign.sellerConditions.map(l => <li key={l} className="flex items-start gap-1.5"><Icon name="check" size={15} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0">{l}</span></li>)}
                   </ul>
@@ -238,7 +243,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
             onClick={() => { try { sessionStorage.setItem(POST_CAMPAIGN_KEY, campaign.id) } catch { /* private mode */ } onNavigate('seller-post') }}
             className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 py-3 text-label-lg font-bold text-white hover:bg-primary-dark"
           >
-            <Icon name="add_circle" size={19} /> <span className="max-[380px]:hidden">Vendre pour cette campagne</span><span className="min-[381px]:hidden">Participer</span>
+            <Icon name="add_circle" size={19} /> <span className="max-[380px]:hidden">{t('page.sellFor')}</span><span className="min-[381px]:hidden">{t('page.participate')}</span>
           </button>
         </section>
       )}
@@ -246,7 +251,7 @@ export default function FlashOffers({ campaignSlug = '', onOpenCampaign, onNavig
       {/* Other live campaigns */}
       {others.length > 0 && (
         <section className="mt-10">
-          <h2 className="m-0 mb-3 text-headline-md font-bold text-on-surface">Autres campagnes en cours</h2>
+          <h2 className="m-0 mb-3 text-headline-md font-bold text-on-surface">{t('page.others')}</h2>
           <div className="grid gap-4 md:grid-cols-3">{others.slice(0, 6).map(c => <CampaignCompact key={c.id} c={c} />)}</div>
         </section>
       )}

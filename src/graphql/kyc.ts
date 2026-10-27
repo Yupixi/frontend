@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import kyc from '../i18n/ns/kyc'
 
 // Identity verification (KYC) — "Vendeur certifié" badge.
 export type KycDocType = 'CNI' | 'PASSPORT' | 'DRIVING_LICENSE' | 'RESIDENT_CARD'
@@ -34,21 +35,28 @@ export const SUBMIT_KYC_MUTATION = gql`
   mutation SubmitKyc($input: SubmitKycInput!) { submitKyc(input: $input) { ${SUBMISSION_FIELDS} } }
 `
 
+// Labels read at each use (getters): in the page's language.
+const kycDoc = (key: KycDocType, icon: string, back: boolean) => ({
+  key, icon, back,
+  get label() { return kyc.t(`doc.${key}.label`) },
+  get sub() { return kyc.t(`doc.${key}.sub`) },
+  get text() { return kyc.t(`doc.${key}.text`) },
+})
 export const KYC_DOCS: { key: KycDocType; icon: string; label: string; sub: string; text: string; back: boolean }[] = [
-  { key: 'CNI', icon: 'badge', label: 'Carte nationale d’identité', sub: 'CNI', text: 'Carte nationale d’identité de votre pays, en cours de validité.', back: true },
-  { key: 'PASSPORT', icon: 'menu_book', label: 'Passeport', sub: 'Biométrique', text: 'Passeport de n’importe quel pays, en cours de validité (page photo).', back: false },
-  { key: 'DRIVING_LICENSE', icon: 'directions_car', label: 'Permis de conduire', sub: 'Format carte', text: 'Permis de conduire au format carte, en cours de validité.', back: true },
-  { key: 'RESIDENT_CARD', icon: 'contact_emergency', label: 'Carte de résident ou consulaire', sub: 'Titre de séjour', text: 'Carte de résident, titre de séjour ou carte consulaire en cours de validité.', back: true },
+  kycDoc('CNI', 'badge', true),
+  kycDoc('PASSPORT', 'menu_book', false),
+  kycDoc('DRIVING_LICENSE', 'directions_car', true),
+  kycDoc('RESIDENT_CARD', 'contact_emergency', true),
 ]
 
 export const KYC_REJECT_LABELS: Record<KycRejectReason, string> = {
-  BLURRY: 'Photo floue ou illisible',
-  GLARE: 'Reflet gênant sur la pièce',
-  EXPIRED: 'Pièce expirée',
-  NAME_MISMATCH: 'Nom différent de celui de la pièce',
-  SELFIE_MISMATCH: 'Selfie ne correspondant pas à la pièce',
-  INCOMPLETE: 'Pièce incomplète (coins ou informations coupés)',
-  UNSUPPORTED_DOCUMENT: 'Document non accepté',
-  SUSPECTED_FRAUD: 'Document suspect',
-  OTHER: 'Autre motif',
+  get BLURRY() { return kyc.t('reject.BLURRY') },
+  get GLARE() { return kyc.t('reject.GLARE') },
+  get EXPIRED() { return kyc.t('reject.EXPIRED') },
+  get NAME_MISMATCH() { return kyc.t('reject.NAME_MISMATCH') },
+  get SELFIE_MISMATCH() { return kyc.t('reject.SELFIE_MISMATCH') },
+  get INCOMPLETE() { return kyc.t('reject.INCOMPLETE') },
+  get UNSUPPORTED_DOCUMENT() { return kyc.t('reject.UNSUPPORTED_DOCUMENT') },
+  get SUSPECTED_FRAUD() { return kyc.t('reject.SUSPECTED_FRAUD') },
+  get OTHER() { return kyc.t('reject.OTHER') },
 }

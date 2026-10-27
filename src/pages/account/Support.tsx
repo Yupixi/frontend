@@ -8,6 +8,8 @@ import { delayText, useRules } from '../../lib/rules'
 import { useMemberCountryCode } from '../../lib/countries'
 import { useEffect, useState } from 'react'
 import { OPEN_SUPPORT_EVENT, requestOpenHelp, type SupportAbout } from '../../lib/navigation'
+import { useT } from '../../i18n'
+import supportNs from '../../i18n/ns/support'
 
 type Props = { onNavigate: (p: any) => void; focusTicketId?: string | null; currentUser?: AuthUser | null; onLogout: () => void }
 
@@ -15,6 +17,7 @@ const card = 'rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5'
 // "Aide & support": requests to the Dilchap team, answered in the BO. The
 // response target depends on the paid badge.
 export default function Support({ onNavigate, focusTicketId, currentUser, onLogout }: Props) {
+  const t = useT(supportNs)
   const badge = currentUser?.badge ?? null
   // Response target from « Règles de la marketplace », of the member's
   // account country.
@@ -29,9 +32,9 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
     return () => window.removeEventListener(OPEN_SUPPORT_EVENT, onRequest)
   }, [])
   return (
-    <AccountLayout active="support" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title="Aide & support">
-      <h1 className="m-0 text-headline-lg text-on-surface">Aide & support</h1>
-      <p className="m-0 mt-1 text-body-md text-on-surface-variant">Écrivez à l’équipe Dilchap comme dans une messagerie : réponse ici et par notification. L’onglet « Support » est aussi disponible sur toutes les pages.</p>
+    <AccountLayout active="support" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title={t('page.title')}>
+      <h1 className="m-0 text-headline-lg text-on-surface">{t('page.title')}</h1>
+      <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('page.intro')}</p>
 
       {/* The guides often answer before the team does. */}
       <a
@@ -41,8 +44,8 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
       >
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="menu_book" size={24} /></span>
         <span className="min-w-0 flex-1">
-          <span className="block text-label-lg text-on-surface">Centre d’aide</span>
-          <span className="block text-body-sm text-on-surface-variant">Des guides pas à pas pour vendre, acheter, payer et se retrouver.</span>
+          <span className="block text-label-lg text-on-surface">{t('page.helpCentre')}</span>
+          <span className="block text-body-sm text-on-surface-variant">{t('page.helpCentreText')}</span>
         </span>
         <Icon name="chevron_right" size={20} className="shrink-0 text-on-surface-variant" />
       </a>
@@ -50,10 +53,10 @@ export default function Support({ onNavigate, focusTicketId, currentUser, onLogo
       <section className={`${card} mt-4 flex flex-col gap-3 sm:flex-row sm:items-center`}>
         <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${badge === 'CERTIFIED' ? 'bg-tertiary-soft text-tertiary' : badge ? 'bg-verified-soft text-verified' : 'bg-surface-container text-on-surface-variant'}`}><Icon name="support_agent" size={26} /></span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5 text-label-lg text-on-surface">Délai de réponse : {delayText(hours)} {badge && <SellerBadge tier={badge} variant="pill" short />}</div>
-          <div className="text-body-sm text-on-surface-variant">{badge === 'CERTIFIED' ? 'Support ultra-prioritaire inclus dans votre badge Vendeur certifié.' : badge ? `Support prioritaire inclus dans votre badge ${BADGE_LABEL[badge]}.` : `Avec un badge : réponse en ${delayText(rules.SUPPORT_SLA_HIGH_HOURS)} (Compte vérifié) ou ${delayText(rules.SUPPORT_SLA_URGENT_HOURS)} (Vendeur certifié).`}</div>
+          <div className="flex flex-wrap items-center gap-1.5 text-label-lg text-on-surface">{t('page.delay', { delay: delayText(hours) })} {badge && <SellerBadge tier={badge} variant="pill" short />}</div>
+          <div className="text-body-sm text-on-surface-variant">{badge === 'CERTIFIED' ? t('page.certified') : badge ? t('page.priority', { badge: BADGE_LABEL[badge] }) : t('page.withBadge', { high: delayText(rules.SUPPORT_SLA_HIGH_HOURS), urgent: delayText(rules.SUPPORT_SLA_URGENT_HOURS) })}</div>
         </div>
-        {!badge && <button onClick={() => onNavigate('seller-badge')} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="verified" size={17} fill className="text-verified" /> Voir les badges</button>}
+        {!badge && <button onClick={() => onNavigate('seller-badge')} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="verified" size={17} fill className="text-verified" /> {t('page.seeBadges')}</button>}
       </section>
 
       {/* The same conversations as the « Support » tab of every page. */}

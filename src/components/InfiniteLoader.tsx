@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import { Loader2 } from './icons'
+import { useT } from '../i18n'
+import common from '../i18n/ns/common'
+import layout from '../i18n/ns/layout'
 
 // How many items load on their own as the visitor scrolls, before a
 // « Charger plus » button takes over (and again after each click): what
@@ -34,7 +37,10 @@ type Props = {
 // the « Charger plus » button once AUTO_LOAD_ITEMS have loaded on their own.
 // Keyboard and screen-reader users get the same button while loading is
 // automatic (hidden until focused: the scroll isn't theirs to rely on).
-export default function InfiniteLoader({ list: { hasMore, loading, error, loadMore: onLoadMore }, pageSize, label = 'Charger plus d’annonces', endLabel = null, className = '' }: Props) {
+export default function InfiniteLoader({ list: { hasMore, loading, error, loadMore: onLoadMore }, pageSize, label: labelProp, endLabel = null, className = '' }: Props) {
+  const t = useT(layout)
+  const tc = useT(common)
+  const label = labelProp ?? t('loader.more')
   const autoPages = Math.max(1, Math.ceil(AUTO_LOAD_ITEMS / Math.max(1, pageSize)))
   const [autoLeft, setAutoLeft] = useState(autoPages)
   const auto = hasMore && !loading && !error && autoLeft > 0
@@ -69,12 +75,12 @@ export default function InfiniteLoader({ list: { hasMore, loading, error, loadMo
       <div ref={sentinel} aria-hidden="true" className="h-px w-full" />
       {loading ? (
         <span role="status" className="flex h-12 items-center gap-2 text-body-sm text-on-surface-variant">
-          <Loader2 size={20} className="animate-spin text-outline" /><span className="sr-only">Chargement de la suite…</span>
+          <Loader2 size={20} className="animate-spin text-outline" /><span className="sr-only">{t('loader.loading')}</span>
         </span>
       ) : error ? (
         <div role="alert" className="flex flex-col items-center gap-2 text-center">
-          <p className="m-0 text-body-sm text-on-surface-variant">La suite n’a pas pu être chargée.</p>
-          <button type="button" onClick={onLoadMore} className={button}><Icon name="refresh" size={18} /> Réessayer</button>
+          <p className="m-0 text-body-sm text-on-surface-variant">{t('loader.error')}</p>
+          <button type="button" onClick={onLoadMore} className={button}><Icon name="refresh" size={18} /> {tc('retry')}</button>
         </div>
       ) : autoLeft > 0 ? (
         <button type="button" onClick={more} className={`sr-only focus:not-sr-only ${button}`}>{label}</button>

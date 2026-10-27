@@ -12,6 +12,8 @@ import { rotationSeed } from '../lib/rotationSeed'
 import { formatNumber } from '../lib/format'
 import { usePageTitle } from '../lib/site'
 import type { RemoteListing } from '../graphql/listings'
+import { useT } from '../i18n'
+import adultNs from '../i18n/ns/adult'
 
 // « Section Adultes » — the home page of its own marketplace (/adultes):
 // its rayons, « À la une » (the team's picks, then the section's boosts),
@@ -74,7 +76,8 @@ function Heading({ icon, title, action }: { icon: string; title: string; action?
 const rail = '-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 pt-1 [scrollbar-width:none] md:-mx-8 md:scroll-px-8 md:px-8'
 
 export default function AdultHome({ onNavigate, onSelectListing, favorites, onToggleFavorite, onOpenRubric, onSearch, onLeave, currentUserId, isLoggedIn, onContactSeller }: Props) {
-  usePageTitle('Section Adultes')
+  const t = useT(adultNs)
+  usePageTitle(t('section'))
   const countryCode = useMarketCode()
   const { access, loading: accessLoading } = useAdultAccessState()
   const { data, previousData, error, refetch } = useQuery<{ adultHome: AdultHomeData }>(ADULT_HOME_QUERY, {
@@ -95,21 +98,21 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
   const hero = (
     <section className="mb-6 overflow-hidden rounded-2xl bg-surface-container-low p-5 md:p-8">
       <p className="m-0 flex items-center gap-2 text-label-sm uppercase tracking-wide text-on-surface-variant">
-        <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-4 text-white">18+</span> Espace réservé aux membres majeurs
+        <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-4 text-white">18+</span> {t('home.kicker')}
       </p>
-      <h1 className="m-0 mt-2 text-headline-lg-mobile text-on-surface md:text-headline-lg">{home?.title ?? 'Section Adultes'}</h1>
+      <h1 className="m-0 mt-2 text-headline-lg-mobile text-on-surface md:text-headline-lg">{home?.title ?? t('section')}</h1>
       {home?.intro && <p className="m-0 mt-2 max-w-2xl text-body-md text-on-surface-variant">{home.intro}</p>}
       <form className="mt-4 flex max-w-xl gap-2" role="search" onSubmit={e => { e.preventDefault(); onSearch(words) }}>
         <label className="relative flex h-12 min-w-0 flex-1 items-center rounded-xl border border-solid border-outline-variant bg-surface-lowest">
           <Icon name="search" size={20} className="pointer-events-none absolute left-3.5 text-primary" />
-          <input type="search" enterKeyHint="search" value={words} onChange={e => setWords(e.target.value)} placeholder="Rechercher dans la section" aria-label="Rechercher dans la Section Adultes"
+          <input type="search" enterKeyHint="search" value={words} onChange={e => setWords(e.target.value)} placeholder={t('home.searchPlaceholder')} aria-label={t('home.searchAria')}
             className="h-full w-full min-w-0 rounded-xl border-none bg-transparent pl-11 pr-3 text-body-md text-on-surface outline-none placeholder:text-on-surface-variant/80" />
         </label>
         <button type="submit" className="flex h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white">
-          <span className="max-sm:hidden">Rechercher</span><span className="flex sm:hidden"><Icon name="arrow_forward" size={18} /></span>
+          <span className="max-sm:hidden">{t('home.search')}</span><span className="flex sm:hidden"><Icon name="arrow_forward" size={18} /></span>
         </button>
       </form>
-      {home && <p className="m-0 mt-3 text-body-sm text-on-surface-variant"><b className="text-on-surface">{formatNumber(home.total, 0)}</b> annonce{home.total > 1 ? 's' : ''} en ligne dans la section</p>}
+      {home && <p className="m-0 mt-3 text-body-sm text-on-surface-variant">{t.rich('home.total', { count: home.total, n: formatNumber(home.total, 0), b: c => <b className="text-on-surface">{c}</b> })}</p>}
     </section>
   )
 
@@ -123,7 +126,7 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
   if (gateReason) return (
     <div className="mx-auto max-w-[720px] px-4 py-10">
       <AdultGate reason={gateReason} onNavigate={onNavigate} onConfirmed={() => { void refetch() }} />
-      <p className="m-0 mt-6 text-center"><button type="button" onClick={onLeave} className="cursor-pointer border-none bg-transparent text-label-md text-primary">Retour à Dilchap</button></p>
+      <p className="m-0 mt-6 text-center"><button type="button" onClick={onLeave} className="cursor-pointer border-none bg-transparent text-label-md text-primary">{t('home.backToDilchap')}</button></p>
     </div>
   )
 
@@ -135,7 +138,7 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
 
         {!home ? <><RailSkeleton featured /><GridSkeleton count={6} className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 lg:grid-cols-4" /></> : <>
           {rubrics.length > 0 && (
-            <nav aria-label="Rayons de la section" className="-mx-4 mb-7 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-8 md:flex-wrap md:px-8">
+            <nav aria-label={t('home.rubricsAria')} className="-mx-4 mb-7 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-8 md:flex-wrap md:px-8">
               {rubrics.map(r => (
                 <a key={r.slug} href={`/adultes/${r.slug}`} onClick={e => { e.preventDefault(); onOpenRubric(r.slug) }}
                   className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-solid border-outline-variant bg-surface-lowest px-3.5 py-2 text-label-md text-on-surface no-underline hover:text-primary">
@@ -147,7 +150,7 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
 
           {home.featured.length > 0 && (
             <section className="mb-8">
-              <Heading icon="local_fire_department" title="À la une de la section" />
+              <Heading icon="local_fire_department" title={t('home.featured')} />
               <div className={rail}>
                 <ImpressionScope placement="CATEGORY">{home.featured.map((l, i) => <div key={l.id} className="w-[220px] shrink-0 snap-start md:w-[250px]">{card(l, i)}</div>)}</ImpressionScope>
               </div>
@@ -156,7 +159,7 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
 
           {home.popular.length > 0 && (
             <section className="mb-8">
-              <Heading icon="trending_up" title="Recherches de la section" />
+              <Heading icon="trending_up" title={t('home.popular')} />
               <div className="flex flex-wrap gap-2">
                 {home.popular.map(p => (
                   <button key={p.term} type="button" onClick={() => onSearch(p.term)} className="cursor-pointer rounded-full border-none bg-surface-container-low px-3.5 py-2 text-label-md text-on-surface hover:text-primary">{p.term}</button>
@@ -168,7 +171,7 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
           {home.rails.map(r => (
             <section key={r.slug} className="mb-8">
               <Heading icon="category" title={r.title} action={
-                <a href={`/adultes/${r.slug}`} onClick={e => { e.preventDefault(); onOpenRubric(r.slug) }} className="shrink-0 whitespace-nowrap text-label-md font-semibold text-primary no-underline">Tout voir ({formatNumber(r.total, 0)})</a>
+                <a href={`/adultes/${r.slug}`} onClick={e => { e.preventDefault(); onOpenRubric(r.slug) }} className="shrink-0 whitespace-nowrap text-label-md font-semibold text-primary no-underline">{t('home.seeAll', { n: formatNumber(r.total, 0) })}</a>
               } />
               <div className={rail}>
                 <ImpressionScope placement="CATEGORY">{r.listings.map(l => <div key={l.id} className="w-[180px] shrink-0 snap-start md:w-[220px]">{card(l)}</div>)}</ImpressionScope>
@@ -177,14 +180,14 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
           ))}
 
           <section className="mb-8">
-            <Heading icon="new_releases" title="Nouveautés de la section" action={
-              <button type="button" onClick={() => onSearch()} className="shrink-0 cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">Toute la section</button>
+            <Heading icon="new_releases" title={t('home.latest')} action={
+              <button type="button" onClick={() => onSearch()} className="shrink-0 cursor-pointer whitespace-nowrap border-none bg-transparent p-0 text-label-md font-semibold text-primary">{t('home.wholeSection')}</button>
             } />
             {home.latest.length ? (
               <div className="grid grid-cols-2 items-start gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
                 <ImpressionScope placement="CATEGORY">{home.latest.map(l => <div key={l.id}>{card(l)}</div>)}</ImpressionScope>
               </div>
-            ) : <p className="m-0 rounded-xl bg-surface-container-low p-5 text-center text-body-md text-on-surface-variant">Aucune annonce pour le moment dans la section.</p>}
+            ) : <p className="m-0 rounded-xl bg-surface-container-low p-5 text-center text-body-md text-on-surface-variant">{t('home.empty')}</p>}
           </section>
         </>}
 
@@ -192,16 +195,16 @@ export default function AdultHome({ onNavigate, onSelectListing, favorites, onTo
           <div className="flex items-center gap-4">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="sell" size={22} /></span>
             <div>
-              <div className="text-headline-sm text-on-surface">Vendre dans la section</div>
-              <p className="m-0 text-body-sm text-on-surface-variant">Votre annonce est publiée ici seulement, après modération. Rien n’apparaît ailleurs sur Dilchap.</p>
+              <div className="text-headline-sm text-on-surface">{t('home.sell.title')}</div>
+              <p className="m-0 text-body-sm text-on-surface-variant">{t('home.sell.text')}</p>
             </div>
           </div>
           <button type="button" onClick={() => onNavigate('seller-post')} className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 py-2.5 text-label-md text-white">
-            <Icon name="add" size={18} /> Déposer une annonce
+            <Icon name="add" size={18} /> {t('home.sell.button')}
           </button>
         </section>
         <p className="m-0 mt-5 text-center">
-          <button type="button" onClick={onLeave} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="logout" size={16} /> Quitter la section</button>
+          <button type="button" onClick={onLeave} className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="logout" size={16} /> {t('home.leave')}</button>
         </p>
       </div>
     </AdultSectionContext.Provider>

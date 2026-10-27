@@ -24,6 +24,9 @@ import { useRules } from '../../lib/rules'
 import RichTextEditor from '../../components/RichTextEditor'
 import { plainText } from '../../lib/format'
 import { MY_SHOP_QR_CODES_QUERY, MY_SHOP_QR_DOWNLOAD_QUERY, saveQrFile, type MyShopQr, type QrFile } from '../../graphql/shopQr'
+import { fmtDate, useT } from '../../i18n'
+import common from '../../i18n/ns/common'
+import myShop from '../../i18n/ns/myShop'
 
 type Props = {
   onNavigate: (p: any) => void
@@ -32,7 +35,7 @@ type Props = {
   onOpenShop: (slug: string) => void
 }
 
-const fdate = (iso: string, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }) => new Date(iso).toLocaleDateString('fr-FR', opts)
+const fdate = (iso: string, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }) => fmtDate(iso, opts)
 const ref = (id: string) => `BTQ-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
 const DOC_REASONS: ShopRejectReason[] = ['DOC_UNREADABLE', 'DOC_INVALID', 'NUMBER_MISMATCH', 'OWNER_MISMATCH']
 const IDENTITY_REASONS: ShopRejectReason[] = ['NAME_MISMATCH', 'BRAND_MISUSE']
@@ -90,6 +93,7 @@ function IconInput({ icon, ...p }: { icon: string } & React.InputHTMLAttributes<
 
 // Logo / banner picker (public images, like listing photos).
 function ImagePick({ value, onChange, kind }: { value: string, onChange: (url: string) => void, kind: 'logo' | 'banner' }) {
+  const t = useT(myShop)
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -103,7 +107,7 @@ function ImagePick({ value, onChange, kind }: { value: string, onChange: (url: s
       <input ref={input} type="file" accept="image/*" hidden onChange={e => { void pick(e.target.files?.[0]); e.target.value = '' }} />
       <button type="button" onClick={() => input.current?.click()} className={`relative flex cursor-pointer items-center justify-center overflow-hidden border-none bg-surface-container p-0 text-on-surface-variant ${kind === 'logo' ? 'h-20 w-20 shrink-0 rounded-2xl border-4 border-solid border-surface-lowest shadow-sm' : 'h-32 w-full rounded-2xl md:h-40'}`}>
         {value ? <img src={value} alt="" className="h-full w-full object-cover" /> : (
-          <span className="flex flex-col items-center gap-1 px-2 text-center text-label-sm"><Icon name={kind === 'logo' ? 'add_photo_alternate' : 'panorama'} size={kind === 'logo' ? 24 : 28} />{kind === 'banner' && 'Bannière (format large)'}</span>
+          <span className="flex flex-col items-center gap-1 px-2 text-center text-label-sm"><Icon name={kind === 'logo' ? 'add_photo_alternate' : 'panorama'} size={kind === 'logo' ? 24 : 28} />{kind === 'banner' && t('image.banner')}</span>
         )}
         {busy && <span className="absolute inset-0 flex items-center justify-center bg-black/40"><Icon name="progress_activity" size={26} className="animate-spin text-white" /></span>}
         {value && !busy && <span className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-surface-lowest/95 text-on-surface"><Icon name="edit" size={15} /></span>}
@@ -114,6 +118,7 @@ function ImagePick({ value, onChange, kind }: { value: string, onChange: (url: s
 }
 
 function HoursEditor({ hours, onChange }: { hours: (OpeningHours | null)[], onChange: (h: (OpeningHours | null)[]) => void }) {
+  const t = useT(myShop)
   const set = (i: number, v: OpeningHours | null) => onChange(hours.map((h, j) => (j === i ? v : h)))
   return (
     <div className="flex flex-col gap-2">
@@ -124,18 +129,18 @@ function HoursEditor({ hours, onChange }: { hours: (OpeningHours | null)[], onCh
           <div key={d} className="rounded-xl bg-surface-container-low p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-label-md text-on-surface">{d}</span>
-              <button type="button" role="switch" aria-checked={!!h} aria-label={`${d} ouvert`} onClick={() => set(i, h ? null : { day: i, open: '09:00', close: '19:00' })} className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-none transition-colors ${h ? 'bg-primary' : 'bg-outline-variant'}`}>
+              <button type="button" role="switch" aria-checked={!!h} aria-label={t('hours.openAria', { day: d })} onClick={() => set(i, h ? null : { day: i, open: '09:00', close: '19:00' })} className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-none transition-colors ${h ? 'bg-primary' : 'bg-outline-variant'}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-[left] ${h ? 'left-[22px]' : 'left-0.5'}`} />
               </button>
             </div>
             {h ? (
               <div className="mt-2 flex items-center gap-2">
-                <input type="time" value={h.open} onChange={e => set(i, { ...h, open: e.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border-none bg-surface-lowest px-2 text-body-md text-on-surface outline-none" aria-label={`${d} ouverture`} />
-                <span className="text-body-sm text-on-surface-variant">à</span>
-                <input type="time" value={h.close} onChange={e => set(i, { ...h, close: e.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border-none bg-surface-lowest px-2 text-body-md text-on-surface outline-none" aria-label={`${d} fermeture`} />
+                <input type="time" value={h.open} onChange={e => set(i, { ...h, open: e.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border-none bg-surface-lowest px-2 text-body-md text-on-surface outline-none" aria-label={t('hours.openingAria', { day: d })} />
+                <span className="text-body-sm text-on-surface-variant">{t('hours.to')}</span>
+                <input type="time" value={h.close} onChange={e => set(i, { ...h, close: e.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border-none bg-surface-lowest px-2 text-body-md text-on-surface outline-none" aria-label={t('hours.closingAria', { day: d })} />
               </div>
-            ) : <p className="m-0 mt-1 text-body-sm italic text-on-surface-variant">Fermé toute la journée</p>}
-            {bad && <p className="m-0 mt-1 text-body-sm text-primary">L’heure de fermeture doit suivre l’ouverture.</p>}
+            ) : <p className="m-0 mt-1 text-body-sm italic text-on-surface-variant">{t('hours.closedAllDay')}</p>}
+            {bad && <p className="m-0 mt-1 text-body-sm text-primary">{t('hours.closeAfterOpen')}</p>}
           </div>
         )
       })}
@@ -148,44 +153,45 @@ function IdentityFields({ form, set, categories, withName }: { form: Form, set: 
   const country = useHomeCountry()
   const lists = useLists(country.code)
   const inMain = form.city === lists.mainCity
+  const t = useT(myShop)
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <div className="mb-1.5 flex items-center justify-between text-label-md text-on-surface">Habillage de votre vitrine <span className="text-label-sm text-on-surface-variant">Logo carré, bannière large</span></div>
+        <div className="mb-1.5 flex items-center justify-between text-label-md text-on-surface">{t('identity.look')} <span className="text-label-sm text-on-surface-variant">{t('identity.lookHint')}</span></div>
         <div className="relative">
           <ImagePick kind="banner" value={form.bannerUrl} onChange={bannerUrl => set({ bannerUrl })} />
           <div className="-mt-10 ml-4 flex items-end gap-3">
             <ImagePick kind="logo" value={form.logoUrl} onChange={logoUrl => set({ logoUrl })} />
-            <span className="pb-1 text-body-sm text-on-surface-variant">Logo de l’enseigne</span>
+            <span className="pb-1 text-body-sm text-on-surface-variant">{t('identity.logo')}</span>
           </div>
         </div>
       </div>
       {withName && (
-        <Field label="Nom commercial officiel" required hint="Tel qu’enregistré">
-          <IconInput icon="storefront" value={form.name} onChange={e => set({ name: e.target.value })} placeholder="Ex : Kicks Station" maxLength={60} />
+        <Field label={t('identity.name')} required hint={t('identity.nameHint')}>
+          <IconInput icon="storefront" value={form.name} onChange={e => set({ name: e.target.value })} placeholder={t('identity.namePlaceholder')} maxLength={60} />
         </Field>
       )}
-      <Field label="Secteur d’activité" required>
+      <Field label={t('identity.sector')} required>
         <Select value={form.categoryId} onChange={e => set({ categoryId: e.target.value })} className={`${inputCls} cursor-pointer`}>
-          <option value="">Sélectionnez un secteur</option>
+          <option value="">{t('identity.sectorPick')}</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
       </Field>
       {/* Not a <label>: its toolbar buttons would take the clicks. */}
       <div>
-        <span className="mb-1.5 flex items-center justify-between gap-2 text-label-md text-on-surface"><span>Description de la boutique<span className="text-primary"> *</span></span><span className="text-label-sm text-on-surface-variant">20 caractères minimum</span></span>
-        <RichTextEditor compact content={form.description} onChange={v => set({ description: v })} maxChars={1500} minHeight={120} label="Description de la boutique" placeholder="Présentez votre boutique, vos marques distribuées, vos engagements (garantie, service après-vente…)" />
+        <span className="mb-1.5 flex items-center justify-between gap-2 text-label-md text-on-surface"><span>{t('identity.description')}<span className="text-primary"> *</span></span><span className="text-label-sm text-on-surface-variant">{t('identity.descriptionMin')}</span></span>
+        <RichTextEditor compact content={form.description} onChange={v => set({ description: v })} maxChars={1500} minHeight={120} label={t('identity.description')} placeholder={t('identity.descriptionPlaceholder')} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Ville" required>
+        <Field label={t('identity.city')} required>
           <Select value={form.city} onChange={e => set({ city: e.target.value, commune: e.target.value === lists.mainCity ? form.commune : '' })} className={`${inputCls} cursor-pointer`}>
             {[...new Set([form.city, ...lists.cities].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
         </Field>
-        <Field label={inMain && country.code === 'CI' ? 'Commune' : 'Quartier'}>
+        <Field label={inMain && country.code === 'CI' ? t('identity.commune') : t('identity.district')}>
           {inMain && lists.communes.length > 0 ? (
             <Select value={form.commune} onChange={e => set({ commune: e.target.value })} className={`${inputCls} cursor-pointer`}>
-              <option value="">Choisir</option>
+              <option value="">{t('identity.choose')}</option>
               {[...new Set([form.commune, ...lists.communes].filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
             </Select>
           ) : <input value={form.commune} onChange={e => set({ commune: e.target.value })} className={inputCls} maxLength={60} />}
@@ -197,25 +203,26 @@ function IdentityFields({ form, set, categories, withName }: { form: Form, set: 
 
 function ContactFields({ form, set }: { form: Form, set: (p: Partial<Form>) => void }) {
   const country = useHomeCountry()
+  const t = useT(myShop)
   return (
     <div className="flex flex-col gap-4">
       <section className="flex flex-col gap-3 rounded-2xl bg-surface-lowest/60 p-4 shadow-sm">
-        <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="storefront" size={19} className="text-primary" /> Coordonnées</h3>
-        <Field label="Adresse du magasin / showroom"><IconInput icon="location_on" value={form.address} onChange={e => set({ address: e.target.value })} placeholder="Rue, quartier, point de repère" maxLength={200} /></Field>
-        <Field label="Téléphone"><IconInput icon="call" type="tel" value={form.phone} onChange={e => set({ phone: e.target.value })} placeholder={country.phoneExample} maxLength={20} /></Field>
+        <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="storefront" size={19} className="text-primary" /> {t('contact.title')}</h3>
+        <Field label={t('contact.address')}><IconInput icon="location_on" value={form.address} onChange={e => set({ address: e.target.value })} placeholder={t('contact.addressPlaceholder')} maxLength={200} /></Field>
+        <Field label={t('contact.phone')}><IconInput icon="call" type="tel" value={form.phone} onChange={e => set({ phone: e.target.value })} placeholder={country.phoneExample} maxLength={20} /></Field>
         <Field label="WhatsApp"><IconInput icon="chat" type="tel" value={form.whatsapp} onChange={e => set({ whatsapp: e.target.value })} placeholder={`+${country.dialCode} ${country.phoneExample}`} maxLength={20} /></Field>
-        <Field label="E-mail"><IconInput icon="mail" type="email" value={form.email} onChange={e => set({ email: e.target.value })} placeholder="contact@maboutique.com" /></Field>
-        <Field label="Site web" hint="Facultatif"><IconInput icon="language" value={form.website} onChange={e => set({ website: e.target.value })} placeholder="www.maboutique.com" maxLength={200} /></Field>
+        <Field label={t('contact.email')}><IconInput icon="mail" type="email" value={form.email} onChange={e => set({ email: e.target.value })} placeholder={t('contact.emailPlaceholder')} /></Field>
+        <Field label={t('contact.website')} hint={t('contact.optional')}><IconInput icon="language" value={form.website} onChange={e => set({ website: e.target.value })} placeholder={t('contact.websitePlaceholder')} maxLength={200} /></Field>
       </section>
       <section className="flex flex-col gap-3 rounded-2xl bg-surface-lowest/60 p-4 shadow-sm">
-        <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="share" size={19} className="text-primary" /> Réseaux sociaux</h3>
-        <Field label="Instagram"><IconInput icon="photo_camera" value={form.instagram} onChange={e => set({ instagram: e.target.value })} placeholder="@maboutique" maxLength={200} /></Field>
-        <Field label="Facebook"><IconInput icon="public" value={form.facebook} onChange={e => set({ facebook: e.target.value })} placeholder="facebook.com/maboutique" maxLength={200} /></Field>
-        <Field label="TikTok"><IconInput icon="music_note" value={form.tiktok} onChange={e => set({ tiktok: e.target.value })} placeholder="@maboutique" maxLength={200} /></Field>
+        <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="share" size={19} className="text-primary" /> {t('contact.social')}</h3>
+        <Field label="Instagram"><IconInput icon="photo_camera" value={form.instagram} onChange={e => set({ instagram: e.target.value })} placeholder={t('contact.handlePlaceholder')} maxLength={200} /></Field>
+        <Field label="Facebook"><IconInput icon="public" value={form.facebook} onChange={e => set({ facebook: e.target.value })} placeholder={t('contact.facebookPlaceholder')} maxLength={200} /></Field>
+        <Field label="TikTok"><IconInput icon="music_note" value={form.tiktok} onChange={e => set({ tiktok: e.target.value })} placeholder={t('contact.handlePlaceholder')} maxLength={200} /></Field>
       </section>
       <section className="rounded-2xl bg-surface-lowest/60 p-4 shadow-sm">
-        <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="schedule" size={19} className="text-primary" /> Horaires d’ouverture</h3>
-        <p className="m-0 mb-3 mt-1 text-body-sm text-on-surface-variant">Affichés sur votre page et utilisés pour indiquer « Ouvert » ou « Fermé ».</p>
+        <h3 className="m-0 flex items-center gap-2 text-label-lg text-on-surface"><Icon name="schedule" size={19} className="text-primary" /> {t('contact.hours')}</h3>
+        <p className="m-0 mb-3 mt-1 text-body-sm text-on-surface-variant">{t('contact.hoursHint')}</p>
         <HoursEditor hours={form.hours} onChange={hours => set({ hours })} />
       </section>
     </div>
@@ -247,17 +254,16 @@ function ShopSummary({ shop }: { shop: MyShopT }) {
   )
 }
 
-const BENEFITS: [string, string, string][] = [
-  ['verified', 'Badge Boutique officielle', 'Distinct du badge Vendeur certifié, sur votre page et toutes vos annonces.'],
-  ['storefront', 'Visibilité renforcée', 'Présence dans l’annuaire des boutiques et sur l’accueil.'],
-  ['category', 'Rayons personnalisés', 'Organisez vos articles en rayons sur votre page.'],
-  ['push_pin', 'Articles phares', 'Épinglez vos meilleurs articles en tête de votre vitrine.'],
-  ['inventory_2', 'Gestion du stock', 'Plusieurs exemplaires par annonce, décomptés à chaque vente conclue.'],
-  ['monitoring', 'Statistiques boutique', 'Visites de votre page, abonnés gagnés, articles les plus vus.'],
-]
+// Icon + key: benefit.<key>.title / benefit.<key>.text.
+const BENEFITS = [
+  ['verified', 'badge'], ['storefront', 'visibility'], ['category', 'aisles'],
+  ['push_pin', 'featured'], ['inventory_2', 'stock'], ['monitoring', 'stats'],
+] as const
 
 export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }: Props) {
   const { data, loading, refetch } = useQuery<MyShopData>(MY_SHOP_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
+  const t = useT(myShop)
+  const tc = useT(common)
   const [wizard, setWizard] = useState(false)
   const [step, setStep] = useState(0)
   const owner = useHomeCountry()
@@ -282,21 +288,21 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
   const back = () => (step === 0 ? setWizard(false) : setStep(s => s - 1))
 
   const layout = (children: React.ReactNode, opts: { hideNav?: boolean, wide?: boolean } = {}) => (
-    <AccountLayout active="seller-shop" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title="Ma Boutique officielle" hideBottomNav={opts.hideNav} onBack={wizard ? back : undefined}>
+    <AccountLayout active="seller-shop" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title={t('title')} hideBottomNav={opts.hideNav} onBack={wizard ? back : undefined}>
       <div ref={top} className={`mx-auto pb-28 lg:pb-8 ${opts.wide ? 'max-w-[1200px]' : 'max-w-[760px]'}`}>{children}</div>
     </AccountLayout>
   )
-  if (loading && !me) return layout(<p className="text-body-md text-on-surface-variant">Chargement…</p>)
-  if (!me || !plan) return layout(<p className="text-body-md text-on-surface-variant">Impossible de charger votre boutique. Réessayez plus tard.</p>)
+  if (loading && !me) return layout(<p className="text-body-md text-on-surface-variant">{tc('loading')}</p>)
+  if (!me || !plan) return layout(<p className="text-body-md text-on-surface-variant">{t('loadError')}</p>)
 
   const pay = (
     <WalletPaySheet
       open={paying}
-      title="Abonnement Boutique officielle"
+      title={t('plan.title')}
       amount={plan.price}
       request={paying ? { kind: 'SHOP_SUBSCRIPTION', product: 'MONTHLY' } : null}
       onClose={() => setPaying(false)}
-      onPaid={() => { setPaying(false); setPaidMsg(`Abonnement actif : ${plan.credits} crédits offerts ajoutés à votre porte-monnaie.`); void refetch() }}
+      onPaid={() => { setPaying(false); setPaidMsg(myShop.t('plan.paid', { n: plan.credits })); void refetch() }}
     />
   )
 
@@ -309,7 +315,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
     ]
     const pickDoc = async (f?: File) => {
       if (!f) return
-      if (f.size > 12 * 1024 * 1024) { setError('Fichier trop lourd (12 Mo maximum).'); return }
+      if (f.size > 12 * 1024 * 1024) { setError(t('doc.tooBig')); return }
       setDocBusy(true); setError('')
       try { set({ legalDocKey: await uploadShopDocument(f), legalDocName: f.name }) } catch (e) { setError((e as Error).message) } finally { setDocBusy(false) }
     }
@@ -324,7 +330,7 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
         },
       }).then(() => { setWizard(false); void refetch() }).catch((e: Error) => setError(e.message))
     }
-    const labels = ['Identité', 'Contacts & horaires', 'Document légal']
+    const labels = [t('wizard.step.identity'), t('wizard.step.contacts'), t('wizard.step.doc')]
     return layout(<>
       <div className="mb-5 flex items-center">
         {labels.map((l, i) => (
@@ -338,18 +344,18 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
         ))}
       </div>
       {step === 0 && <>
-        <h1 className="m-0 text-headline-lg text-on-surface">Identité de la boutique</h1>
-        <p className="m-0 mb-4 mt-1 text-body-md text-on-surface-variant">Ce que les acheteurs verront sur votre vitrine officielle.</p>
+        <h1 className="m-0 text-headline-lg text-on-surface">{t('wizard.identityTitle')}</h1>
+        <p className="m-0 mb-4 mt-1 text-body-md text-on-surface-variant">{t('wizard.identityText')}</p>
         <IdentityFields form={form} set={set} categories={categories} withName />
       </>}
       {step === 1 && <>
-        <h1 className="m-0 text-headline-lg text-on-surface">Contacts & horaires</h1>
-        <p className="m-0 mb-4 mt-1 text-body-md text-on-surface-variant">Coordonnées de votre point de vente, affichées sur votre page.</p>
+        <h1 className="m-0 text-headline-lg text-on-surface">{t('wizard.step.contacts')}</h1>
+        <p className="m-0 mb-4 mt-1 text-body-md text-on-surface-variant">{t('wizard.contactsText')}</p>
         <ContactFields form={form} set={set} />
       </>}
       {step === 2 && <>
-        <h1 className="m-0 text-headline-lg text-on-surface">Document légal d’entreprise</h1>
-        <p className="m-0 mb-4 mt-1 text-body-md text-on-surface-variant">Le justificatif d’immatriculation de votre entreprise, vérifié par l’équipe Dilchap.</p>
+        <h1 className="m-0 text-headline-lg text-on-surface">{t('wizard.docTitle')}</h1>
+        <p className="m-0 mb-4 mt-1 text-body-md text-on-surface-variant">{t('wizard.docText')}</p>
         <div role="radiogroup" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-container p-1">
           {(['RCCM', owner.taxId] as const).map(t => (
             <button key={t} role="radio" aria-checked={form.legalIdType === t} type="button" onClick={() => set({ legalIdType: t })} className={`flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-none text-label-lg ${form.legalIdType === t ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>
@@ -357,53 +363,53 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
             </button>
           ))}
         </div>
-        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{form.legalIdType === 'RCCM' ? `Registre du Commerce et du Crédit Mobilier (ex. ${rccmExample(owner)}).` : `${owner.taxIdLabel}, tel qu’indiqué sur votre attestation fiscale.`}</p>
-        <div className="mt-4"><Field label={`Numéro ${form.legalIdType}`} required>
-          <IconInput icon="badge" value={form.legalIdNumber} onChange={e => set({ legalIdNumber: e.target.value.toUpperCase() })} placeholder={form.legalIdType === 'RCCM' ? rccmExample(owner) : `Numéro ${owner.taxId}`} maxLength={40} autoComplete="off" />
+        <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{form.legalIdType === 'RCCM' ? t('doc.rccmHint', { example: rccmExample(owner) }) : t('doc.taxHint', { label: owner.taxIdLabel })}</p>
+        <div className="mt-4"><Field label={t('doc.number', { type: form.legalIdType })} required>
+          <IconInput icon="badge" value={form.legalIdNumber} onChange={e => set({ legalIdNumber: e.target.value.toUpperCase() })} placeholder={form.legalIdType === 'RCCM' ? rccmExample(owner) : t('doc.number', { type: owner.taxId })} maxLength={40} autoComplete="off" />
         </Field></div>
-        <div className="mb-1.5 mt-4 flex items-center justify-between text-label-md text-on-surface">Justificatif <span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="lock" size={14} /> Stockage privé</span></div>
+        <div className="mb-1.5 mt-4 flex items-center justify-between text-label-md text-on-surface">{t('doc.proof')} <span className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="lock" size={14} /> {t('doc.private')}</span></div>
         <input ref={docInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic" hidden onChange={e => { void pickDoc(e.target.files?.[0]); e.target.value = '' }} />
         {form.legalDocKey ? (
           <div className="flex items-center gap-3 rounded-xl bg-surface-lowest p-3 shadow-sm">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-fixed text-primary"><Icon name={form.legalDocName.toLowerCase().endsWith('.pdf') ? 'picture_as_pdf' : 'image'} size={22} /></span>
-            <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{form.legalDocName}</div><div className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="check_circle" size={14} /> Fichier envoyé</div></div>
-            <button type="button" onClick={() => docInput.current?.click()} className="flex h-9 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface">Remplacer</button>
+            <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{form.legalDocName}</div><div className="flex items-center gap-1 text-label-sm text-tertiary"><Icon name="check_circle" size={14} /> {t('doc.sent')}</div></div>
+            <button type="button" onClick={() => docInput.current?.click()} className="flex h-9 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface">{t('doc.replace')}</button>
           </div>
         ) : (
           <button type="button" disabled={docBusy} onClick={() => docInput.current?.click()} className="flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-lowest px-4 py-6 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed text-primary"><Icon name={docBusy ? 'progress_activity' : 'upload_file'} size={24} className={docBusy ? 'animate-spin' : ''} /></span>
-            <span className="text-label-lg text-on-surface">{docBusy ? 'Envoi…' : 'Importer le document'}</span>
-            <span className="text-body-sm text-on-surface-variant">PDF, JPG ou PNG — 12 Mo maximum. Tout le document, lisible.</span>
+            <span className="text-label-lg text-on-surface">{docBusy ? t('sending') : t('doc.import')}</span>
+            <span className="text-body-sm text-on-surface-variant">{t('doc.importHint')}</span>
           </button>
         )}
         <div className="mt-5 rounded-2xl bg-surface-container-low p-4">
-          <div className="mb-3 text-label-sm uppercase text-on-surface-variant">Récapitulatif de votre demande</div>
+          <div className="mb-3 text-label-sm uppercase text-on-surface-variant">{t('summary.title')}</div>
           <div className="flex items-center gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-lowest text-primary">{form.logoUrl ? <img src={form.logoUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="storefront" size={24} />}</span>
             <div className="min-w-0"><div className="truncate text-label-lg text-on-surface">{form.name}</div><div className="truncate text-body-sm text-on-surface-variant">{categories.find(c => c.id === form.categoryId)?.name}</div></div>
           </div>
           <dl className="m-0 mt-3 flex flex-col gap-2 rounded-xl bg-surface-lowest p-3 text-body-sm">
-            <div className="flex justify-between gap-3"><dt className="text-on-surface-variant">Emplacement</dt><dd className="m-0 text-right text-on-surface">{[form.commune, form.city].filter(Boolean).join(', ')}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-on-surface-variant">Abonnement</dt><dd className="m-0 whitespace-nowrap text-primary"><OfferCredits op="SHOP" n={plan.price} /> / mois</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-on-surface-variant">{t('summary.location')}</dt><dd className="m-0 text-right text-on-surface">{[form.commune, form.city].filter(Boolean).join(', ')}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-on-surface-variant">{t('summary.plan')}</dt><dd className="m-0 whitespace-nowrap text-primary">{t.rich('perMonth', { price: <OfferCredits op="SHOP" n={plan.price} /> })}</dd></div>
           </dl>
-          <p className="m-0 mt-2 flex items-start gap-1.5 text-body-sm text-tertiary"><Icon name="verified_user" size={16} className="mt-0.5 shrink-0" /> Rien à payer maintenant : l’abonnement se règle une fois la boutique validée.</p>
+          <p className="m-0 mt-2 flex items-start gap-1.5 text-body-sm text-tertiary"><Icon name="verified_user" size={16} className="mt-0.5 shrink-0" /> {t('summary.nothingNow')}</p>
         </div>
         <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <input type="checkbox" checked={form.consent} onChange={e => set({ consent: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-primary" />
-          <span className="text-body-sm text-on-surface">Je certifie sur l’honneur l’authenticité des informations et du document transmis, et être habilité(e) à représenter cette entreprise sur Dilchap.</span>
+          <span className="text-body-sm text-on-surface">{t('summary.consent')}</span>
         </label>
       </>}
       {error && <p className="m-0 mt-4 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {error}</p>}
       <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 lg:static lg:mt-6 lg:border-none lg:bg-transparent lg:p-0">
         <div className="mx-auto flex max-w-[760px] gap-3">
-          <button onClick={back} className="flex h-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">{step === 0 ? 'Annuler' : 'Retour'}</button>
+          <button onClick={back} className="flex h-12 shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">{step === 0 ? tc('cancel') : tc('back')}</button>
           {step < 2 ? (
             <button disabled={!stepOk[step]} onClick={() => setStep(s => s + 1)} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 text-label-lg text-white disabled:cursor-not-allowed disabled:opacity-45">
-              <span className="truncate">Continuer</span> <Icon name="arrow_forward" size={19} />
+              <span className="truncate">{tc('continue')}</span> <Icon name="arrow_forward" size={19} />
             </button>
           ) : (
             <button disabled={!stepOk[2] || sending || docBusy} onClick={send} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-4 text-label-lg text-white disabled:cursor-not-allowed disabled:opacity-45">
-              <span className="truncate">{sending ? 'Envoi…' : 'Envoyer ma demande'}</span> <Icon name="send" size={19} />
+              <span className="truncate">{sending ? t('sending') : t('wizard.send')}</span> <Icon name="send" size={19} />
             </button>
           )}
         </div>
@@ -415,95 +421,95 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
   if (!shop) {
     return layout(<>
       <div className="text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified" size={15} fill /> Boutique officielle</span>
-        <h1 className="m-0 mt-3 text-headline-lg text-on-surface">Ouvrir ma Boutique officielle</h1>
-        <p className="m-0 mx-auto mt-1 max-w-lg text-body-md text-on-surface-variant">Pour les entreprises et marques déclarées : une vitrine à votre nom, vérifiée par Dilchap.</p>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-tertiary-soft px-3 py-1 text-label-sm uppercase text-tertiary"><Icon name="verified" size={15} fill /> {t('offer.badge')}</span>
+        <h1 className="m-0 mt-3 text-headline-lg text-on-surface">{t('offer.title')}</h1>
+        <p className="m-0 mx-auto mt-1 max-w-lg text-body-md text-on-surface-variant">{t('offer.text')}</p>
       </div>
       <PlanCard plan={plan} />
-      <div className="mt-6 flex items-center justify-between"><h2 className="m-0 text-headline-sm text-on-surface">Ce que vous obtenez</h2></div>
+      <div className="mt-6 flex items-center justify-between"><h2 className="m-0 text-headline-sm text-on-surface">{t('offer.benefits')}</h2></div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {BENEFITS.map(([icon, t, d]) => (
-          <div key={t} className="flex items-start gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
+        {BENEFITS.map(([icon, k]) => (
+          <div key={k} className="flex items-start gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name={icon} size={20} /></span>
-            <div><div className="text-label-lg text-on-surface">{t}</div><div className="text-body-sm text-on-surface-variant">{d}</div></div>
+            <div><div className="text-label-lg text-on-surface">{t(`benefit.${k}.title`)}</div><div className="text-body-sm text-on-surface-variant">{t(`benefit.${k}.text`)}</div></div>
           </div>
         ))}
       </div>
-      <h2 className="m-0 mt-6 text-headline-sm text-on-surface">Prérequis</h2>
+      <h2 className="m-0 mt-6 text-headline-sm text-on-surface">{t('offer.prereq')}</h2>
       <div className="mt-3 flex flex-col gap-2">
         <div className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${me.identityVerified ? 'bg-tertiary text-white' : 'bg-primary-fixed text-primary'}`}><Icon name={me.identityVerified ? 'check' : 'badge'} size={20} /></span>
-          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Identité du gérant</div><div className={`text-body-sm ${me.identityVerified ? 'text-tertiary' : 'text-primary'}`}>{me.identityVerified ? 'Vérifiée' : 'Non vérifiée — à faire avant la demande'}</div></div>
-          {!me.identityVerified && <button onClick={() => onNavigate('seller-kyc')} className="flex h-10 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface">Vérifier</button>}
+          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">{t('offer.ownerId')}</div><div className={`text-body-sm ${me.identityVerified ? 'text-tertiary' : 'text-primary'}`}>{me.identityVerified ? t('offer.verified') : t('offer.notVerified')}</div></div>
+          {!me.identityVerified && <button onClick={() => onNavigate('seller-kyc')} className="flex h-10 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface">{t('offer.verify')}</button>}
         </div>
         <div className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container text-on-surface-variant"><Icon name="description" size={20} /></span>
-          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">Document d’entreprise</div><div className="text-body-sm text-on-surface-variant">Extrait RCCM ou attestation {owner.taxId}, à importer pendant la demande (PDF ou photo).</div></div>
+          <div className="min-w-0 flex-1"><div className="text-label-lg text-on-surface">{t('offer.companyDoc')}</div><div className="text-body-sm text-on-surface-variant">{t('offer.companyDocText', { taxId: owner.taxId })}</div></div>
         </div>
       </div>
       <button disabled={!me.identityVerified} onClick={start} className="mt-6 flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary py-3.5 text-label-lg text-white shadow-md disabled:cursor-not-allowed disabled:opacity-45">
-        Commencer ma demande <Icon name="arrow_forward" size={19} />
+        {t('offer.start')} <Icon name="arrow_forward" size={19} />
       </button>
-      {!me.identityVerified && <p className="m-0 mt-2 text-center text-body-sm text-on-surface-variant">Vérifiez d’abord votre identité : la boutique est rattachée à un gérant vérifié.</p>}
+      {!me.identityVerified && <p className="m-0 mt-2 text-center text-body-sm text-on-surface-variant">{t('offer.verifyFirst')}</p>}
     </>)
   }
 
   // ─── Application states ───────────────────────────────────────────────
   if (shop.status === 'PENDING') {
     return layout(<>
-      <StatusHero icon="pending_actions" tone="wait" badge="Dossier en traitement" title="Demande en cours d’examen" text="Votre dossier a bien été transmis. L’équipe Dilchap vérifie votre document légal et les informations de votre boutique." />
+      <StatusHero icon="pending_actions" tone="wait" badge={t('pending.badge')} title={t('pending.title')} text={t('pending.text')} />
       <dl className="m-0 mt-5 flex flex-col gap-3 rounded-2xl bg-surface-lowest p-5 text-body-md shadow-sm">
-        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">Référence</dt><dd className="m-0 font-mono text-label-md text-on-surface">{ref(shop.id)}</dd></div>
-        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">Envoyée le</dt><dd className="m-0 text-right text-on-surface">{new Date(shop.submittedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</dd></div>
-        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">Document</dt><dd className="m-0 text-on-surface">{shop.legalIdType} n° {shop.legalIdNumber}</dd></div>
-        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">Statut</dt><dd className="m-0 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-fixed/60 px-3 py-1 text-label-md text-primary"><Icon name="hourglass_top" size={16} /> En cours d’examen</dd></div>
+        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">{t('pending.ref')}</dt><dd className="m-0 font-mono text-label-md text-on-surface">{ref(shop.id)}</dd></div>
+        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">{t('pending.sentOn')}</dt><dd className="m-0 text-right text-on-surface">{fmtDate(shop.submittedAt, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</dd></div>
+        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">{t('pending.doc')}</dt><dd className="m-0 text-on-surface">{t('pending.docValue', { type: shop.legalIdType, number: shop.legalIdNumber })}</dd></div>
+        <div className="flex items-center justify-between gap-3"><dt className="text-on-surface-variant">{t('pending.status')}</dt><dd className="m-0 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-fixed/60 px-3 py-1 text-label-md text-primary"><Icon name="hourglass_top" size={16} /> {t('pending.reviewing')}</dd></div>
       </dl>
       <div className="mt-4 rounded-2xl bg-surface-lowest p-5 shadow-sm">
-        <div className="flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="task_alt" size={22} className="text-tertiary" /> Étapes de validation</div>
+        <div className="flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="task_alt" size={22} className="text-tertiary" /> {t('pending.steps')}</div>
         <ol className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
           {[
-            ['check', 'Réception du dossier', 'Informations et document reçus.', 'Fait', 'done'],
-            ['sync', 'Vérification', 'Contrôle du document d’immatriculation et du nom commercial.', 'En cours', 'now'],
-            ['schedule', 'Activation de la vitrine', 'Après validation, réglez l’abonnement pour afficher le badge.', 'À venir', 'next'],
-          ].map(([icon, t, d, s, k]) => (
-            <li key={t} className="flex items-start gap-3">
+            ['check', t('pending.step1.title'), t('pending.step1.text'), t('pending.step1.state'), 'done'],
+            ['sync', t('pending.step2.title'), t('pending.step2.text'), t('pending.step2.state'), 'now'],
+            ['schedule', t('pending.step3.title'), t('pending.step3.text'), t('pending.step3.state'), 'next'],
+          ].map(([icon, title, d, s, k]) => (
+            <li key={k} className="flex items-start gap-3">
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${k === 'done' ? 'bg-tertiary text-white' : k === 'now' ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}><Icon name={icon} size={17} /></span>
-              <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="text-label-lg text-on-surface">{t}</span><span className={`whitespace-nowrap text-label-sm ${k === 'done' ? 'text-tertiary' : k === 'now' ? 'text-primary' : 'text-on-surface-variant'}`}>{s}</span></div><div className="text-body-sm text-on-surface-variant">{d}</div></div>
+              <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="text-label-lg text-on-surface">{title}</span><span className={`whitespace-nowrap text-label-sm ${k === 'done' ? 'text-tertiary' : k === 'now' ? 'text-primary' : 'text-on-surface-variant'}`}>{s}</span></div><div className="text-body-sm text-on-surface-variant">{d}</div></div>
             </li>
           ))}
         </ol>
       </div>
-      <div className="mt-4 rounded-2xl bg-surface-lowest p-5 shadow-sm"><div className="mb-3 text-label-lg text-on-surface">Boutique soumise</div><ShopSummary shop={shop} /></div>
-      <p className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="notifications" size={18} className="mt-0.5 shrink-0" /> Aucune action requise : vous recevrez une notification dès la décision.</p>
-      <button onClick={() => void refetch()} className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container text-label-lg text-on-surface"><Icon name="refresh" size={19} /> Actualiser le statut</button>
+      <div className="mt-4 rounded-2xl bg-surface-lowest p-5 shadow-sm"><div className="mb-3 text-label-lg text-on-surface">{t('pending.submitted')}</div><ShopSummary shop={shop} /></div>
+      <p className="m-0 mt-4 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="notifications" size={18} className="mt-0.5 shrink-0" /> {t('pending.noAction')}</p>
+      <button onClick={() => void refetch()} className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-surface-container text-label-lg text-on-surface"><Icon name="refresh" size={19} /> {t('pending.refresh')}</button>
     </>)
   }
 
   if (shop.status === 'REJECTED') {
     const r = shop.rejectReason
     const parts: [string, string, string, boolean][] = [
-      ['storefront', 'Identité de la boutique', 'Nom, secteur, description', !!r && IDENTITY_REASONS.includes(r)],
-      ['location_on', 'Contacts & horaires', 'Adresse, téléphone, horaires', false],
-      ['description', `Document légal (${shop.legalIdType})`, 'Numéro et justificatif', !!r && DOC_REASONS.includes(r)],
+      ['storefront', t('wizard.identityTitle'), t('rejected.part.identity'), !!r && IDENTITY_REASONS.includes(r)],
+      ['location_on', t('wizard.step.contacts'), t('rejected.part.contacts'), false],
+      ['description', t('rejected.part.docTitle', { type: shop.legalIdType }), t('rejected.part.doc'), !!r && DOC_REASONS.includes(r)],
     ]
     const flagged = parts.some(p => p[3])
     return layout(<>
-      <StatusHero icon="error" tone="bad" badge="Action requise" title="Demande à corriger" text="Des éléments de votre dossier doivent être mis à jour avant la validation de votre Boutique officielle." />
+      <StatusHero icon="error" tone="bad" badge={t('rejected.badge')} title={t('rejected.title')} text={t('rejected.text')} />
       <div className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
-        <div className="flex items-center gap-2 text-label-md text-primary"><Icon name="warning" size={18} /> Motif signalé par l’équipe de vérification</div>
+        <div className="flex items-center gap-2 text-label-md text-primary"><Icon name="warning" size={18} /> {t('rejected.reason')}</div>
         <div className="mt-2 rounded-xl bg-surface-container-low p-3">
-          <div className="text-label-lg text-on-surface">{r ? REJECT_LABELS[r] : 'Demande refusée'}</div>
+          <div className="text-label-lg text-on-surface">{r ? REJECT_LABELS[r] : t('rejected.refused')}</div>
           {shop.rejectComment && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{shop.rejectComment}</p>}
         </div>
         {flagged && (
           <>
-            <div className="mt-4 text-label-sm uppercase text-on-surface-variant">État des pièces du dossier</div>
+            <div className="mt-4 text-label-sm uppercase text-on-surface-variant">{t('rejected.parts')}</div>
             <div className="mt-2 flex flex-col gap-2">
-              {parts.map(([icon, t, d, redo]) => (
-                <div key={t} className={`flex items-center gap-3 rounded-xl p-3 ${redo ? 'bg-primary-fixed/50' : 'bg-surface-container-low'}`}>
+              {parts.map(([icon, title, d, redo]) => (
+                <div key={icon} className={`flex items-center gap-3 rounded-xl p-3 ${redo ? 'bg-primary-fixed/50' : 'bg-surface-container-low'}`}>
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${redo ? 'bg-primary-fixed text-primary' : 'bg-tertiary-soft text-tertiary'}`}><Icon name={icon} size={19} /></span>
-                  <div className="min-w-0 flex-1"><div className="text-label-md leading-tight text-on-surface">{t}</div><div className="text-body-sm text-on-surface-variant">{d}</div></div>
-                  <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-label-sm ${redo ? 'bg-primary text-white' : 'bg-tertiary-soft text-tertiary'}`}>{redo ? 'À modifier' : 'Conforme'}</span>
+                  <div className="min-w-0 flex-1"><div className="text-label-md leading-tight text-on-surface">{title}</div><div className="text-body-sm text-on-surface-variant">{d}</div></div>
+                  <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-label-sm ${redo ? 'bg-primary text-white' : 'bg-tertiary-soft text-tertiary'}`}>{redo ? t('rejected.toFix') : t('rejected.ok')}</span>
                 </div>
               ))}
             </div>
@@ -511,21 +517,21 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
         )}
       </div>
       <div className="mt-4 rounded-2xl bg-surface-container-low p-5">
-        <div className="flex items-center gap-2 text-label-lg text-on-surface"><Icon name="lightbulb" size={20} className="text-tertiary" /> Conseils pour votre renvoi</div>
+        <div className="flex items-center gap-2 text-label-lg text-on-surface"><Icon name="lightbulb" size={20} className="text-tertiary" /> {t('rejected.tips')}</div>
         <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface">
-          {['Importez le document complet (toutes les pages utiles), net et sans reflet.', 'Recopiez le numéro exactement comme sur le document.', 'Le nom commercial doit correspondre à celui de l’entreprise enregistrée.'].map(t => (
-            <li key={t} className="flex items-start gap-2"><Icon name="check" size={16} className="mt-0.5 shrink-0 text-tertiary" />{t}</li>
+          {[t('rejected.tip1'), t('rejected.tip2'), t('rejected.tip3')].map(tip => (
+            <li key={tip} className="flex items-start gap-2"><Icon name="check" size={16} className="mt-0.5 shrink-0 text-tertiary" />{tip}</li>
           ))}
         </ul>
       </div>
-      <button onClick={start} className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="edit_note" size={20} /> Corriger et renvoyer</button>
+      <button onClick={start} className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white"><Icon name="edit_note" size={20} /> {t('rejected.resend')}</button>
     </>)
   }
 
   if (shop.status === 'SUSPENDED') {
     return layout(<>
-      <StatusHero icon="block" tone="bad" badge="Boutique suspendue" title="Votre boutique est suspendue" text="Elle n’est plus visible dans l’annuaire ni sur l’accueil. Vos annonces restent gérables depuis « Mes annonces »." />
-      {shop.rejectComment && <p className="m-0 mt-5 rounded-2xl bg-surface-lowest p-5 text-body-md text-on-surface shadow-sm"><b className="block text-label-sm uppercase text-primary">Motif</b>{shop.rejectComment}</p>}
+      <StatusHero icon="block" tone="bad" badge={t('suspended.badge')} title={t('suspended.title')} text={t('suspended.text')} />
+      {shop.rejectComment && <p className="m-0 mt-5 rounded-2xl bg-surface-lowest p-5 text-body-md text-on-surface shadow-sm"><b className="block text-label-sm uppercase text-primary">{t('suspended.reason')}</b>{shop.rejectComment}</p>}
     </>)
   }
 
@@ -534,22 +540,22 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
   if (!active) {
     const lapsed = !!shop.paidUntil
     return layout(<>
-      <StatusHero icon="workspace_premium" tone="good" badge={lapsed ? 'Abonnement expiré' : 'Dossier vérifié'} title={lapsed ? 'Réactivez votre boutique' : 'Boutique officielle validée'} text={lapsed ? `Votre abonnement a pris fin le ${fdate(shop.paidUntil!)}. Renouvelez-le pour retrouver le badge et votre place dans l’annuaire.` : 'Félicitations, votre entreprise a été vérifiée. Activez l’abonnement pour mettre votre vitrine en ligne.'} />
+      <StatusHero icon="workspace_premium" tone="good" badge={lapsed ? t('activate.lapsedBadge') : t('activate.badge')} title={lapsed ? t('activate.lapsedTitle') : t('activate.title')} text={lapsed ? t('activate.lapsedText', { date: fdate(shop.paidUntil!) }) : t('activate.text')} />
       <div className="mt-5 rounded-2xl bg-surface-lowest p-5 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-2"><span className="text-label-sm uppercase text-on-surface-variant">Aperçu de votre vitrine</span><span className="flex items-center gap-1 whitespace-nowrap text-label-sm text-tertiary"><Icon name="check_circle" size={15} /> Prête</span></div>
+        <div className="mb-3 flex items-center justify-between gap-2"><span className="text-label-sm uppercase text-on-surface-variant">{t('activate.preview')}</span><span className="flex items-center gap-1 whitespace-nowrap text-label-sm text-tertiary"><Icon name="check_circle" size={15} /> {t('activate.ready')}</span></div>
         <ShopSummary shop={shop} />
       </div>
       <PlanCard plan={plan} withMethods />
       <div className="mt-4 rounded-2xl bg-surface-lowest p-5 shadow-sm">
-        <div className="text-headline-sm text-on-surface">Activé dès le paiement</div>
+        <div className="text-headline-sm text-on-surface">{t('activate.onPayment')}</div>
         <ul className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
-          {[['storefront', 'Votre vitrine officielle en ligne', 'Page boutique, rayons et articles phares.'], ['verified', 'Badge Boutique officielle', 'Sur votre page et toutes vos annonces.'], ['rocket_launch', `${plan.credits} crédits offerts`, 'Dans votre porte-monnaie, à utiliser sur vos annonces.']].map(([i, t, d]) => (
-            <li key={t} className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name={i} size={18} /></span><div><div className="text-label-lg text-on-surface">{t}</div><div className="text-body-sm text-on-surface-variant">{d}</div></div></li>
+          {[['storefront', t('activate.perk.page'), t('activate.perk.pageText')], ['verified', t('benefit.badge.title'), t('activate.perk.badgeText')], ['rocket_launch', t('activate.perk.credits', { n: plan.credits }), t('activate.perk.creditsText')]].map(([i, title, d]) => (
+            <li key={i} className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><Icon name={i} size={18} /></span><div><div className="text-label-lg text-on-surface">{title}</div><div className="text-body-sm text-on-surface-variant">{d}</div></div></li>
           ))}
         </ul>
       </div>
-      <button onClick={() => setPaying(true)} className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white shadow-md"><Icon name="payments" size={20} /> Activer l’abonnement — <OfferCredits op="SHOP" n={plan.price} /></button>
-      <p className="m-0 mt-2 flex items-center justify-center gap-1.5 text-center text-body-sm text-on-surface-variant"><Icon name="lock" size={15} /> Payé en crédits. Sans engagement : aucun renouvellement automatique.</p>
+      <button onClick={() => setPaying(true)} className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white shadow-md"><Icon name="payments" size={20} /> {t.rich('activate.cta', { price: <OfferCredits op="SHOP" n={plan.price} /> })}</button>
+      <p className="m-0 mt-2 flex items-center justify-center gap-1.5 text-center text-body-sm text-on-surface-variant"><Icon name="lock" size={15} /> {t('activate.note')}</p>
       {pay}
     </>)
   }
@@ -558,15 +564,16 @@ export default function MyShop({ onNavigate, currentUser, onLogout, onOpenShop }
 }
 
 function PlanCard({ plan, withMethods }: { plan: ShopPlan, withMethods?: boolean }) {
+  const t = useT(myShop)
   return (
     <div className="relative mt-5 overflow-hidden rounded-2xl bg-surface-lowest p-5 shadow-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div className="text-label-sm uppercase text-primary">Abonnement Boutique officielle</div>
-        <span className="whitespace-nowrap rounded-full bg-surface-container px-2.5 py-0.5 text-label-sm text-on-surface-variant">Sans engagement</span>
+        <div className="text-label-sm uppercase text-primary">{t('plan.title')}</div>
+        <span className="whitespace-nowrap rounded-full bg-surface-container px-2.5 py-0.5 text-label-sm text-on-surface-variant">{t('plan.noCommitment')}</span>
       </div>
-      <div className="mt-1 flex items-baseline gap-1"><span className="whitespace-nowrap text-display font-extrabold text-on-surface"><OfferCredits op="SHOP" n={plan.price} /></span><span className="text-body-md text-on-surface-variant">/ mois</span></div>
-      <p className="m-0 mt-1 flex items-center gap-1.5 text-label-md text-primary"><Icon name="bolt" size={17} /> {plan.credits} crédits offerts chaque mois</p>
-      {withMethods && <div className="mt-3"><div className="mb-1.5 text-label-sm uppercase text-on-surface-variant">Crédits achetés par</div><PaymentLogos /></div>}
+      <div className="mt-1 flex items-baseline gap-1"><span className="whitespace-nowrap text-display font-extrabold text-on-surface"><OfferCredits op="SHOP" n={plan.price} /></span><span className="text-body-md text-on-surface-variant">{t('plan.perMonthUnit')}</span></div>
+      <p className="m-0 mt-1 flex items-center gap-1.5 text-label-md text-primary"><Icon name="bolt" size={17} /> {t('plan.creditsMonthly', { n: plan.credits })}</p>
+      {withMethods && <div className="mt-3"><div className="mb-1.5 text-label-sm uppercase text-on-surface-variant">{t('plan.boughtWith')}</div><PaymentLogos /></div>}
     </div>
   )
 }
@@ -587,19 +594,20 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
   // The QR tab only once the team has made QR codes for the shop.
   const { data: qd } = useQuery<{ myShopQrCodes: MyShopQr[] }>(MY_SHOP_QR_CODES_QUERY, { fetchPolicy: 'cache-and-network' })
   const qrCodes = qd?.myShopQrCodes ?? []
-  const tabs: [Tab, string, string][] = [['stock', 'inventory_2', 'Stock'], ['aisles', 'category', 'Rayons'], ['featured', 'push_pin', 'Articles phares'], ['profile', 'storefront', 'Profil & infos'], ...(qrCodes.length ? [['qr', 'qr_code_2', 'QR codes'] as [Tab, string, string]] : [])]
+  const t = useT(myShop)
+  const tabs: [Tab, string, string][] = [['stock', 'inventory_2', t('tab.stock')], ['aisles', 'category', t('tab.aisles')], ['featured', 'push_pin', t('tab.featured')], ['profile', 'storefront', t('tab.profile')], ...(qrCodes.length ? [['qr', 'qr_code_2', t('tab.qr')] as [Tab, string, string]] : [])]
 
   return (
     <>
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><h1 className="m-0 text-headline-lg text-on-surface">Ma Boutique officielle</h1><span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified" size={14} fill /> Officielle</span></div>
-          <p className="m-0 mt-1 text-body-md text-on-surface-variant">Organisez vos rayons, vos articles phares et votre stock.</p>
+          <div className="flex flex-wrap items-center gap-2"><h1 className="m-0 text-headline-lg text-on-surface">{t('title')}</h1><span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified" size={14} fill /> {t('manager.official')}</span></div>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('manager.text')}</p>
         </div>
         <div className="grid grid-cols-2 gap-2 md:flex">
-          <button onClick={() => onOpenShop(shop.slug)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-lowest px-4 text-label-md text-on-surface shadow-sm"><Icon name="visibility" size={18} /> Voir ma page</button>
-          <button onClick={() => onNavigate('seller-shop-stats')} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-lowest px-4 text-label-md text-on-surface shadow-sm"><Icon name="monitoring" size={18} /> Statistiques</button>
-          <button onClick={() => onNavigate('seller-shop-promos')} className="col-span-2 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white shadow-sm md:col-span-1"><Icon name="sell" size={18} /> Promotions</button>
+          <button onClick={() => onOpenShop(shop.slug)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-lowest px-4 text-label-md text-on-surface shadow-sm"><Icon name="visibility" size={18} /> {t('manager.viewPage')}</button>
+          <button onClick={() => onNavigate('seller-shop-stats')} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-lowest px-4 text-label-md text-on-surface shadow-sm"><Icon name="monitoring" size={18} /> {t('manager.stats')}</button>
+          <button onClick={() => onNavigate('seller-shop-promos')} className="col-span-2 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white shadow-sm md:col-span-1"><Icon name="sell" size={18} /> {t('manager.promos')}</button>
         </div>
       </div>
 
@@ -609,21 +617,21 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
         <section className="flex flex-col gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm sm:flex-row sm:items-center">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="workspace_premium" size={24} /></span>
           <div className="min-w-0 flex-1">
-            <div className="text-label-lg text-on-surface">Abonnement Boutique officielle</div>
+            <div className="text-label-lg text-on-surface">{t('plan.title')}</div>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-              <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">Actif jusqu’au {fdate(shop.paidUntil!)}</span>
-              <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${daysLeft <= 3 ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}>{daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</span>
+              <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{t('manager.activeUntil', { date: fdate(shop.paidUntil!) })}</span>
+              <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${daysLeft <= 3 ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}>{t('manager.daysLeft', { count: daysLeft })}</span>
             </div>
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Aucun renouvellement automatique : prolongez de {plan.days} jours quand vous le souhaitez.</p>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('manager.noAutoRenew', { days: plan.days })}</p>
           </div>
-          <button onClick={onRenew} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="autorenew" size={18} /> <span>Renouveler (<OfferCredits op="SHOP" n={plan.price} />)</span></button>
+          <button onClick={onRenew} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="autorenew" size={18} /> <span>{t.rich('manager.renew', { price: <OfferCredits op="SHOP" n={plan.price} /> })}</span></button>
         </section>
         <section className="flex items-center gap-3 rounded-2xl bg-surface-lowest p-4 shadow-sm">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-container text-primary">{shop.logoUrl ? <img src={shop.logoUrl} alt="" className="h-full w-full object-cover" /> : <Icon name="storefront" size={26} />}</span>
           <div className="min-w-0 flex-1">
             <div className="truncate text-label-lg text-on-surface">{shop.name}</div>
             <div className="mt-1 grid grid-cols-3 gap-2 text-center">
-              {[[shop.listingsCount, 'Articles'], [shop.followersCount, 'Abonnés'], [shop.reviewsCount ? shop.averageRating.toFixed(1) : '—', `${shop.reviewsCount} avis`]].map(([v, l]) => (
+              {[[shop.listingsCount, t('manager.items')], [shop.followersCount, t('manager.followers')], [shop.reviewsCount ? shop.averageRating.toFixed(1) : '—', t('manager.reviews', { count: shop.reviewsCount })]].map(([v, l]) => (
                 <div key={String(l)} className="rounded-lg bg-surface-container-low px-1 py-1"><div className="text-label-lg text-on-surface">{v}</div><div className="truncate text-[11px] text-on-surface-variant">{l}</div></div>
               ))}
             </div>
@@ -631,7 +639,7 @@ function ShopManager({ shop, plan, categories, onRenew, paidMsg, onNavigate, onO
         </section>
       </div>
       <button onClick={() => { void navigator.clipboard?.writeText(shopUrl(shop.slug)).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) }) }} className="mt-2 flex max-w-full cursor-pointer items-center gap-1.5 border-none bg-transparent p-0 text-left text-body-sm text-on-surface-variant hover:text-primary">
-        <Icon name={copied ? 'check' : 'link'} size={16} className="shrink-0" /> <span className="truncate">{copied ? 'Lien copié' : shopUrl(shop.slug)}</span>
+        <Icon name={copied ? 'check' : 'link'} size={16} className="shrink-0" /> <span className="truncate">{copied ? t('manager.linkCopied') : shopUrl(shop.slug)}</span>
       </button>
 
       <div className="relative mt-5">
@@ -664,6 +672,8 @@ function StockTab({ shop, listings, onChanged, onNavigate }: { shop: MyShopT, li
   const [done, setDone] = useState(false)
   const [setQty] = useMutation(SET_LISTING_QUANTITY_MUTATION)
   const [setAisleOf] = useMutation(SET_LISTING_AISLE_MUTATION)
+  const t = useT(myShop)
+  const tc = useT(common)
   const rows = listings.filter(l => (!q || l.title.toLowerCase().includes(q.toLowerCase())) && (!aisle || (aisle === 'none' ? !l.aisleId : l.aisleId === aisle)))
   const qty = (l: ShopListing) => edits[l.id] ?? l.quantity
   const change = (l: ShopListing, v: number) => { setDone(false); setEdits(e => ({ ...e, [l.id]: Math.min(999, Math.max(1, v)) })) }
@@ -676,18 +686,18 @@ function StockTab({ shop, listings, onChanged, onNavigate }: { shop: MyShopT, li
     } finally { setSaving(false) }
   }
   const status = (n: number) => n <= 1
-    ? <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">Dernier exemplaire</span>
-    : <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{n} en stock</span>
+    ? <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{t('stock.last')}</span>
+    : <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{t('stock.inStock', { n })}</span>
   const stepper = (l: ShopListing) => (
     <div className="flex items-center gap-1">
-      <button onClick={() => change(l, qty(l) - 1)} disabled={qty(l) <= 1} aria-label="Retirer un exemplaire" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container text-on-surface disabled:opacity-40"><Icon name="remove" size={16} /></button>
-      <input type="number" min={1} max={999} value={qty(l)} onChange={e => change(l, Number(e.target.value) || 1)} aria-label="Quantité" className="h-8 w-12 rounded-lg border-none bg-surface-container-low text-center text-label-md text-on-surface outline-none [appearance:textfield]" />
-      <button onClick={() => change(l, qty(l) + 1)} aria-label="Ajouter un exemplaire" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container text-on-surface"><Icon name="add" size={16} /></button>
+      <button onClick={() => change(l, qty(l) - 1)} disabled={qty(l) <= 1} aria-label={t('stock.removeOne')} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container text-on-surface disabled:opacity-40"><Icon name="remove" size={16} /></button>
+      <input type="number" min={1} max={999} value={qty(l)} onChange={e => change(l, Number(e.target.value) || 1)} aria-label={t('stock.quantity')} className="h-8 w-12 rounded-lg border-none bg-surface-container-low text-center text-label-md text-on-surface outline-none [appearance:textfield]" />
+      <button onClick={() => change(l, qty(l) + 1)} aria-label={t('stock.addOne')} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-container text-on-surface"><Icon name="add" size={16} /></button>
     </div>
   )
   const aisleSelect = (l: ShopListing) => (
-    <Select value={l.aisleId ?? ''} onChange={e => void setAisleOf({ variables: { listingId: l.id, aisleId: e.target.value || null } }).then(onChanged)} className="h-9 w-full min-w-0 cursor-pointer rounded-lg border-none bg-surface-container-low px-2 text-label-md text-on-surface outline-none" aria-label="Rayon">
-      <option value="">Sans rayon</option>
+    <Select value={l.aisleId ?? ''} onChange={e => void setAisleOf({ variables: { listingId: l.id, aisleId: e.target.value || null } }).then(onChanged)} className="h-9 w-full min-w-0 cursor-pointer rounded-lg border-none bg-surface-container-low px-2 text-label-md text-on-surface outline-none" aria-label={t('stock.aisle')}>
+      <option value="">{t('stock.noAisle')}</option>
       {shop.aisles.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
     </Select>
   )
@@ -695,29 +705,29 @@ function StockTab({ shop, listings, onChanged, onNavigate }: { shop: MyShopT, li
   return (
     <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface">Inventaire & stock</h2><p className="m-0 text-body-sm text-on-surface-variant">Chaque vente conclue retire les exemplaires vendus ; l’annonce passe « Vendue » à zéro.</p></div>
+        <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface">{t('stock.title')}</h2><p className="m-0 text-body-sm text-on-surface-variant">{t('stock.text')}</p></div>
         <button disabled={!dirty.length || saving} onClick={() => void save()} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-tertiary px-4 text-label-md text-white disabled:cursor-default disabled:opacity-45">
-          <Icon name={done && !dirty.length ? 'check_circle' : 'save'} size={18} /> {saving ? 'Enregistrement…' : done && !dirty.length ? 'Stock enregistré' : `Enregistrer${dirty.length ? ` (${dirty.length})` : ''}`}
+          <Icon name={done && !dirty.length ? 'check_circle' : 'save'} size={18} /> {saving ? tc('saving') : done && !dirty.length ? t('stock.saved') : dirty.length ? t('stock.saveCount', { n: dirty.length }) : tc('save')}
         </button>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_200px]">
-        <label className="flex h-10 items-center gap-2 rounded-lg bg-surface-container-low px-3"><Icon name="search" size={18} className="text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher un article…" className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
+        <label className="flex h-10 items-center gap-2 rounded-lg bg-surface-container-low px-3"><Icon name="search" size={18} className="text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('stock.search')} className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
         <Select value={aisle} onChange={e => setAisle(e.target.value)} className="h-10 cursor-pointer rounded-lg border-none bg-surface-container-low px-3 text-label-md text-on-surface outline-none">
-          <option value="">Tous les rayons</option>
-          <option value="none">Sans rayon</option>
+          <option value="">{t('stock.allAisles')}</option>
+          <option value="none">{t('stock.noAisle')}</option>
           {shop.aisles.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </Select>
       </div>
       {listings.length === 0 ? (
         <div className="mt-4 rounded-xl bg-surface-container-low p-5 text-center">
-          <p className="m-0 text-body-md text-on-surface-variant">Aucune annonce en ligne pour l’instant.</p>
-          <button onClick={() => onNavigate('seller-post')} className="mt-3 inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 text-label-md text-white"><Icon name="add" size={18} /> Déposer une annonce</button>
+          <p className="m-0 text-body-md text-on-surface-variant">{t('stock.empty')}</p>
+          <button onClick={() => onNavigate('seller-post')} className="mt-3 inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-primary px-4 text-label-md text-white"><Icon name="add" size={18} /> {t('stock.post')}</button>
         </div>
       ) : (
         <>
           {/* Desktop table */}
           <table className="mt-3 hidden w-full border-collapse text-left lg:table">
-            <thead><tr className="text-label-sm uppercase text-on-surface-variant">{['Article', 'Rayon', 'Prix', 'Quantité', 'Disponibilité'].map(h => <th key={h} className="whitespace-nowrap border-0 border-b border-solid border-outline-variant px-2 py-2 font-semibold">{h}</th>)}</tr></thead>
+            <thead><tr className="text-label-sm uppercase text-on-surface-variant">{[t('stock.col.item'), t('stock.aisle'), t('stock.col.price'), t('stock.quantity'), t('stock.col.availability')].map(h => <th key={h} className="whitespace-nowrap border-0 border-b border-solid border-outline-variant px-2 py-2 font-semibold">{h}</th>)}</tr></thead>
             <tbody>
               {rows.map(l => (
                 <tr key={l.id} className="border-0 border-b border-solid border-outline-variant/60">
@@ -748,7 +758,7 @@ function StockTab({ shop, listings, onChanged, onNavigate }: { shop: MyShopT, li
               </div>
             ))}
           </div>
-          {rows.length === 0 && <p className="m-0 mt-3 text-center text-body-sm text-on-surface-variant">Aucun article ne correspond.</p>}
+          {rows.length === 0 && <p className="m-0 mt-3 text-center text-body-sm text-on-surface-variant">{t('stock.noMatch')}</p>}
         </>
       )}
     </section>
@@ -764,6 +774,7 @@ function AislesTab({ shop, onChanged }: { shop: MyShopT, onChanged: () => void }
   const [rename] = useMutation(RENAME_SHOP_AISLE_MUTATION)
   const [remove, { loading: deleting }] = useMutation(DELETE_SHOP_AISLE_MUTATION)
   const [reorder] = useMutation(REORDER_SHOP_AISLES_MUTATION)
+  const t = useT(myShop)
   const run = (p: Promise<unknown>) => p.then(() => { setError(''); onChanged() }).catch((e: Error) => setError(e.message))
   const aisles = [...shop.aisles].sort((a, b) => a.position - b.position)
   const move = (i: number, d: number) => {
@@ -774,40 +785,40 @@ function AislesTab({ shop, onChanged }: { shop: MyShopT, onChanged: () => void }
   }
   return (
     <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-      <h2 className="m-0 text-headline-sm text-on-surface">Rayons</h2>
-      <p className="m-0 text-body-sm text-on-surface-variant">Les onglets de votre page boutique. Assignez un rayon à chaque article depuis l’onglet Stock.</p>
+      <h2 className="m-0 text-headline-sm text-on-surface">{t('tab.aisles')}</h2>
+      <p className="m-0 text-body-sm text-on-surface-variant">{t('aisles.text')}</p>
       <form onSubmit={e => { e.preventDefault(); if (name.trim()) void run(create({ variables: { name: name.trim() } })).then(() => setName('')) }} className="mt-3 flex gap-2">
-        <input value={name} onChange={e => setName(e.target.value)} maxLength={40} placeholder="Nouveau rayon (ex : Smartphones)" className="h-11 min-w-0 flex-1 rounded-xl border-none bg-surface-container-low px-3 text-body-md text-on-surface outline-none" />
-        <button disabled={!name.trim() || creating} className="flex h-11 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-45"><Icon name="add" size={18} /> Créer</button>
+        <input value={name} onChange={e => setName(e.target.value)} maxLength={40} placeholder={t('aisles.placeholder')} className="h-11 min-w-0 flex-1 rounded-xl border-none bg-surface-container-low px-3 text-body-md text-on-surface outline-none" />
+        <button disabled={!name.trim() || creating} className="flex h-11 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-45"><Icon name="add" size={18} /> {t('aisles.create')}</button>
       </form>
       {error && <p className="m-0 mt-2 text-body-sm text-primary">{error}</p>}
       <div className="mt-3 flex flex-col gap-2">
-        {aisles.length === 0 && <p className="m-0 rounded-xl bg-surface-container-low p-4 text-center text-body-sm text-on-surface-variant">Aucun rayon : vos articles s’affichent tous ensemble.</p>}
+        {aisles.length === 0 && <p className="m-0 rounded-xl bg-surface-container-low p-4 text-center text-body-sm text-on-surface-variant">{t('aisles.empty')}</p>}
         {aisles.map((a, i) => (
           <div key={a.id} className="flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
             <div className="flex flex-col">
-              <button disabled={i === 0} onClick={() => move(i, -1)} aria-label="Monter" className="flex h-6 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-on-surface-variant disabled:opacity-30"><Icon name="keyboard_arrow_up" size={18} /></button>
-              <button disabled={i === aisles.length - 1} onClick={() => move(i, 1)} aria-label="Descendre" className="flex h-6 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-on-surface-variant disabled:opacity-30"><Icon name="keyboard_arrow_down" size={18} /></button>
+              <button disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('aisles.up')} className="flex h-6 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-on-surface-variant disabled:opacity-30"><Icon name="keyboard_arrow_up" size={18} /></button>
+              <button disabled={i === aisles.length - 1} onClick={() => move(i, 1)} aria-label={t('aisles.down')} className="flex h-6 w-7 cursor-pointer items-center justify-center rounded border-none bg-transparent text-on-surface-variant disabled:opacity-30"><Icon name="keyboard_arrow_down" size={18} /></button>
             </div>
             {editing?.id === a.id ? (
               <form onSubmit={e => { e.preventDefault(); void run(rename({ variables: { id: a.id, name: editing.name.trim() } })).then(() => setEditing(null)) }} className="flex min-w-0 flex-1 gap-2">
                 <input autoFocus value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} maxLength={40} className="h-9 min-w-0 flex-1 rounded-lg border-none bg-surface-lowest px-2 text-body-md text-on-surface outline-none" />
-                <button className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-tertiary text-white" aria-label="Enregistrer"><Icon name="check" size={18} /></button>
+                <button className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-tertiary text-white" aria-label={common.t('save')}><Icon name="check" size={18} /></button>
               </form>
             ) : (
-              <div className="min-w-0 flex-1"><div className="truncate text-label-lg text-on-surface">{a.name}</div><div className="text-body-sm text-on-surface-variant">{a.listingsCount} article{a.listingsCount > 1 ? 's' : ''} en ligne</div></div>
+              <div className="min-w-0 flex-1"><div className="truncate text-label-lg text-on-surface">{a.name}</div><div className="text-body-sm text-on-surface-variant">{t('aisles.online', { count: a.listingsCount })}</div></div>
             )}
             {editing?.id !== a.id && (
               <>
-                <button onClick={() => setEditing({ id: a.id, name: a.name })} aria-label={`Renommer ${a.name}`} className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface"><Icon name="edit" size={17} /></button>
-                <button onClick={() => setRemoving({ id: a.id, name: a.name })} aria-label={`Supprimer ${a.name}`} className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-primary"><Icon name="delete" size={17} /></button>
+                <button onClick={() => setEditing({ id: a.id, name: a.name })} aria-label={t('aisles.renameAria', { name: a.name })} className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface"><Icon name="edit" size={17} /></button>
+                <button onClick={() => setRemoving({ id: a.id, name: a.name })} aria-label={t('aisles.deleteAria', { name: a.name })} className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-primary"><Icon name="delete" size={17} /></button>
               </>
             )}
           </div>
         ))}
       </div>
-      <ConfirmSheet open={!!removing} title={`Supprimer le rayon « ${removing?.name ?? ''} » ?`} confirmLabel={deleting ? 'Suppression…' : 'Supprimer le rayon'} onConfirm={() => removing && void run(remove({ variables: { id: removing.id } })).then(() => setRemoving(null))} onClose={() => setRemoving(null)} loading={deleting}>
-        <p className="m-0 text-body-sm text-on-surface-variant">Ses articles restent en ligne, simplement sans rayon.</p>
+      <ConfirmSheet open={!!removing} title={t('aisles.deleteTitle', { name: removing?.name ?? '' })} confirmLabel={deleting ? t('aisles.deleting') : t('aisles.delete')} onConfirm={() => removing && void run(remove({ variables: { id: removing.id } })).then(() => setRemoving(null))} onClose={() => setRemoving(null)} loading={deleting}>
+        <p className="m-0 text-body-sm text-on-surface-variant">{t('aisles.deleteText')}</p>
       </ConfirmSheet>
     </section>
   )
@@ -818,33 +829,34 @@ function FeaturedTab({ listings, countryCode, onChanged }: { listings: ShopListi
   const [pin, { loading }] = useMutation(SET_LISTING_FEATURED_MUTATION)
   const [error, setError] = useState('')
   const [picking, setPicking] = useState(false)
+  const t = useT(myShop)
   const featured = listings.filter(l => l.featuredAt).sort((a, b) => a.featuredAt!.localeCompare(b.featuredAt!))
   const others = listings.filter(l => !l.featuredAt)
   const toggle = (l: ShopListing, featuredOn: boolean) => void pin({ variables: { listingId: l.id, featured: featuredOn } }).then(() => { setError(''); onChanged() }).catch((e: Error) => setError(e.message))
   return (
     <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface">Articles phares</h2><p className="m-0 text-body-sm text-on-surface-variant">Mis en avant tout en haut de votre page ({featured.length} sur {maxFeatured} épinglés).</p></div>
-        {featured.length < 8 && others.length > 0 && <button onClick={() => setPicking(true)} className="flex h-10 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name="add" size={18} /> Ajouter</button>}
+        <div className="min-w-0"><h2 className="m-0 text-headline-sm text-on-surface">{t('tab.featured')}</h2><p className="m-0 text-body-sm text-on-surface-variant">{t('featured.text', { n: featured.length, max: maxFeatured })}</p></div>
+        {featured.length < 8 && others.length > 0 && <button onClick={() => setPicking(true)} className="flex h-10 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name="add" size={18} /> {t('featured.add')}</button>}
       </div>
       {error && <p className="m-0 mt-2 text-body-sm text-primary">{error}</p>}
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {featured.map(l => (
           <div key={l.id} className="relative overflow-hidden rounded-xl bg-surface-container-low">
             <div className="aspect-square overflow-hidden bg-surface-container">{l.coverImageUrl && <img src={l.coverImageUrl} alt="" className="h-full w-full object-cover" />}</div>
-            <span className="absolute left-2 top-2 whitespace-nowrap rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">En vedette</span>
-            <button disabled={loading} onClick={() => toggle(l, false)} aria-label={`Retirer ${l.title}`} className="absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 text-on-surface"><Icon name="close" size={16} /></button>
-            <div className="p-2"><div className="truncate text-label-md text-on-surface">{l.title}</div><div className="flex items-center justify-between gap-1"><span className="text-label-md text-primary"><Price amount={l.price} /></span><span className="whitespace-nowrap text-[11px] text-on-surface-variant">{l.quantity} dispo</span></div></div>
+            <span className="absolute left-2 top-2 whitespace-nowrap rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{t('featured.badge')}</span>
+            <button disabled={loading} onClick={() => toggle(l, false)} aria-label={t('featured.removeAria', { title: l.title })} className="absolute right-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-surface-lowest/95 text-on-surface"><Icon name="close" size={16} /></button>
+            <div className="p-2"><div className="truncate text-label-md text-on-surface">{l.title}</div><div className="flex items-center justify-between gap-1"><span className="text-label-md text-primary"><Price amount={l.price} /></span><span className="whitespace-nowrap text-[11px] text-on-surface-variant">{t('featured.available', { n: l.quantity })}</span></div></div>
           </div>
         ))}
         {featured.length < 8 && others.length > 0 && (
           <button onClick={() => setPicking(true)} className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-outline-variant bg-transparent text-on-surface-variant">
-            <Icon name="add_circle" size={28} /><span className="text-label-md">Ajouter un article</span><span className="text-body-sm">{8 - featured.length} place{8 - featured.length > 1 ? 's' : ''} restante{8 - featured.length > 1 ? 's' : ''}</span>
+            <Icon name="add_circle" size={28} /><span className="text-label-md">{t('featured.addItem')}</span><span className="text-body-sm">{t('featured.placesLeft', { count: 8 - featured.length })}</span>
           </button>
         )}
       </div>
-      {featured.length === 0 && others.length === 0 && <p className="m-0 mt-3 text-center text-body-sm text-on-surface-variant">Publiez des annonces pour pouvoir les épingler.</p>}
-      <ConfirmSheet open={picking} title="Épingler un article" confirmLabel="Fermer" onConfirm={() => setPicking(false)} onClose={() => setPicking(false)}>
+      {featured.length === 0 && others.length === 0 && <p className="m-0 mt-3 text-center text-body-sm text-on-surface-variant">{t('featured.empty')}</p>}
+      <ConfirmSheet open={picking} title={t('featured.pick')} confirmLabel={common.t('close')} onConfirm={() => setPicking(false)} onClose={() => setPicking(false)}>
         <div className="flex max-h-[55vh] flex-col gap-2 overflow-y-auto">
           {others.map(l => (
             <button key={l.id} disabled={loading} onClick={() => { toggle(l, true); setPicking(false) }} className="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border-none bg-surface-container-low p-2 text-left">
@@ -864,22 +876,23 @@ function ProfileTab({ shop, categories, onSaved }: { shop: MyShopT, categories: 
   const [form, setForm] = useState<Form>(() => formFrom(shop, owner.mainCity))
   const [save, { loading }] = useMutation(UPDATE_SHOP_PROFILE_MUTATION)
   const [msg, setMsg] = useState<{ ok: boolean, text: string } | null>(null)
+  const t = useT(myShop)
   const set = (p: Partial<Form>) => { setMsg(null); setForm(f => ({ ...f, ...p })) }
   const ok = !!form.categoryId && descriptionOk(form.description) && form.hours.every(h => !h || h.open < h.close)
   return (
     <section>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
-          <h2 className="m-0 mb-1 text-headline-sm text-on-surface">Vitrine</h2>
-          <p className="m-0 mb-3 text-body-sm text-on-surface-variant">Nom commercial et numéro {shop.legalIdType} vérifiés : pour les modifier, contactez l’équipe Dilchap.</p>
-          <div className="mb-4 rounded-xl bg-surface-container-low px-3 py-2"><div className="text-label-sm text-on-surface-variant">Nom commercial</div><div className="text-label-lg text-on-surface">{shop.name}</div></div>
+          <h2 className="m-0 mb-1 text-headline-sm text-on-surface">{t('profile.title')}</h2>
+          <p className="m-0 mb-3 text-body-sm text-on-surface-variant">{t('profile.text', { type: shop.legalIdType })}</p>
+          <div className="mb-4 rounded-xl bg-surface-container-low px-3 py-2"><div className="text-label-sm text-on-surface-variant">{t('profile.name')}</div><div className="text-label-lg text-on-surface">{shop.name}</div></div>
           <IdentityFields form={form} set={set} categories={categories} withName={false} />
         </div>
         <ContactFields form={form} set={set} />
       </div>
       {msg && <p className={`m-0 mt-3 flex items-center gap-1.5 rounded-xl px-3 py-2 text-body-sm ${msg.ok ? 'bg-tertiary-soft text-tertiary' : 'bg-primary-fixed text-primary'}`}><Icon name={msg.ok ? 'check_circle' : 'error'} size={17} /> {msg.text}</p>}
-      <button disabled={!ok || loading} onClick={() => void save({ variables: { input: profileInput(form) } }).then(() => { setMsg({ ok: true, text: 'Profil de la boutique enregistré.' }); onSaved() }).catch((e: Error) => setMsg({ ok: false, text: e.message }))} className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-45 lg:ml-auto lg:w-72">
-        <Icon name="save" size={19} /> {loading ? 'Enregistrement…' : 'Enregistrer les modifications'}
+      <button disabled={!ok || loading} onClick={() => void save({ variables: { input: profileInput(form) } }).then(() => { setMsg({ ok: true, text: myShop.t('profile.saved') }); onSaved() }).catch((e: Error) => setMsg({ ok: false, text: e.message }))} className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-45 lg:ml-auto lg:w-72">
+        <Icon name="save" size={19} /> {loading ? common.t('saving') : t('profile.save')}
       </button>
     </section>
   )
@@ -891,6 +904,7 @@ function QrTab({ codes }: { codes: MyShopQr[] }) {
   const client = useApolloClient()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const t = useT(myShop)
   const download = async (key: string, format: 'PNG' | 'SVG' | 'PDF', id?: string) => {
     setBusy(key)
     setError('')
@@ -898,7 +912,7 @@ function QrTab({ codes }: { codes: MyShopQr[] }) {
       const r = await client.query<{ myShopQrDownload: QrFile }>({ query: MY_SHOP_QR_DOWNLOAD_QUERY, variables: { format, id }, fetchPolicy: 'no-cache' })
       if (r.data) saveQrFile(r.data.myShopQrDownload)
     } catch {
-      setError('Téléchargement impossible pour le moment. Réessayez.')
+      setError(myShop.t('qr.downloadError'))
     } finally {
       setBusy(null)
     }
@@ -908,10 +922,10 @@ function QrTab({ codes }: { codes: MyShopQr[] }) {
     <section className="rounded-2xl bg-surface-lowest p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="m-0 text-title-md text-on-surface">Vos QR codes</h2>
-          <p className="m-0 mt-1 text-body-sm text-on-surface-variant">À imprimer et coller en vitrine, sur vos sacs ou vos cartes : un scan ouvre directement votre boutique. Imprimez à 100 % (sans « ajuster à la page »).</p>
+          <h2 className="m-0 text-title-md text-on-surface">{t('qr.title')}</h2>
+          <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('qr.text')}</p>
         </div>
-        <button disabled={!!busy} onClick={() => void download('all', 'PDF')} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-60"><Icon name="picture_as_pdf" size={18} /> {busy === 'all' ? 'Préparation…' : 'Planche A4 (PDF)'}</button>
+        <button disabled={!!busy} onClick={() => void download('all', 'PDF')} className="flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white disabled:opacity-60"><Icon name="picture_as_pdf" size={18} /> {busy === 'all' ? t('qr.preparing') : t('qr.sheet')}</button>
       </div>
       {error && <p className="m-0 mt-3 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}</p>}
       <ul className="m-0 mt-4 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2">
@@ -919,10 +933,10 @@ function QrTab({ codes }: { codes: MyShopQr[] }) {
           <li key={q.id} className="rounded-xl bg-surface-container-low p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-mono text-label-lg tracking-wider text-on-surface">{q.codeSpaced}</span>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${q.state === 'ACTIVE' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}><Icon name={q.state === 'ACTIVE' ? 'check_circle' : 'schedule'} size={14} /> {q.state === 'PENDING' ? (q.activation === 'SCHEDULED' && q.activateAt ? `Actif le ${fdate(q.activateAt)}` : q.launchActive !== false ? 'Actif au lancement' : q.stateLabel) : q.stateLabel}</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm ${q.state === 'ACTIVE' ? 'bg-tertiary-soft text-tertiary' : 'bg-surface-container text-on-surface-variant'}`}><Icon name={q.state === 'ACTIVE' ? 'check_circle' : 'schedule'} size={14} /> {q.state === 'PENDING' ? (q.activation === 'SCHEDULED' && q.activateAt ? t('qr.activeOn', { date: fdate(q.activateAt) }) : q.launchActive !== false ? t('qr.activeAtLaunch') : q.stateLabel) : q.stateLabel}</span>
             </div>
             {q.label && <p className="m-0 mt-1 truncate text-body-sm text-on-surface-variant">{q.label}</p>}
-            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{q.scanCount} scan{q.scanCount > 1 ? 's' : ''}{q.lastScanAt ? ` • dernier le ${fdate(q.lastScanAt)}` : ''}</p>
+            <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{q.lastScanAt ? t('qr.scansLast', { count: q.scanCount, date: fdate(q.lastScanAt) }) : t('qr.scans', { count: q.scanCount })}</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button disabled={!!busy} onClick={() => void download(`png-${q.id}`, 'PNG', q.id)} className={btn}><Icon name="image" size={17} /> {busy === `png-${q.id}` ? '…' : 'PNG'}</button>
               <button disabled={!!busy} onClick={() => void download(`svg-${q.id}`, 'SVG', q.id)} className={btn}><Icon name="download" size={17} /> {busy === `svg-${q.id}` ? '…' : 'SVG'}</button>

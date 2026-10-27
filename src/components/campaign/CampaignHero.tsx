@@ -5,15 +5,18 @@ import { pad2, useCountdown } from '../../lib/useCountdown'
 import { CAMPAIGN_HERO_BADGE as HERO_BADGE, type LiveCampaign } from '../../graphql/campaigns'
 import { richHtml } from '../../lib/richText'
 import { campaignBestDiscount } from '../../lib/campaignDiscount'
+import { fmtDate, useT } from '../../i18n'
+import campaignNs from '../../i18n/ns/campaign'
 
 const DEFAULT_TINT = '#0d4a3a'
-const dateFr = (iso: string, year = false) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) })
+const dateFr = (iso: string, year = false) => fmtDate(iso, { day: 'numeric', month: 'long', ...(year ? { year: 'numeric' } : {}) })
 
 // Its own component: the only thing on the page that ticks every second.
 function HeroCountdown({ endsAt, dark }: { endsAt: string; dark: boolean }) {
+  const t = useT(campaignNs)
   const c = useCountdown(endsAt)
   if (!c || c.ended) return null
-  const cells: [string, number][] = [['Jours', c.days], ['Heures', c.hours], ['Min', c.minutes], ['Sec', c.seconds]]
+  const cells: [string, number][] = [[t('countdown.days'), c.days], [t('countdown.hours'), c.hours], [t('countdown.min'), c.minutes], [t('countdown.sec'), c.seconds]]
   return (
     <div className="flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2.5">
       {cells.map(([label, v], i) => (
@@ -77,6 +80,7 @@ function AnimatedBackdrop() {
 // artwork, image / video / Lottie) when there is one, the generated look
 // otherwise — the campaign colour animated, the items' photos floating.
 export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
+  const t = useT(campaignNs)
   const v = campaign.visuals ?? {}
   const hero = v.hero
   const bgVisual = hero && (v.heroMode ?? 'background') === 'background'
@@ -127,16 +131,16 @@ export default function CampaignHero({ campaign }: { campaign: LiveCampaign }) {
           {campaign.description && <div className={`rich-text line-clamp-4 max-w-xl text-body-md md:text-body-lg lg:line-clamp-none ${dark ? 'text-on-surface-variant' : 'text-white/85 [&_a]:!text-white'}`} dangerouslySetInnerHTML={{ __html: richHtml(campaign.description) }} />}
           <div className={`hidden items-center gap-2 text-label-md lg:flex ${dark ? 'text-on-surface-variant' : 'text-white/85'}`}>
             <Icon name="calendar_month" size={18} className={dark ? 'text-tertiary' : 'text-white'} />
-            Du {dateFr(campaign.startsAt)} au {dateFr(campaign.endsAt, true)}
+            {t('fromTo', { from: dateFr(campaign.startsAt), to: dateFr(campaign.endsAt, true) })}
           </div>
           <div className="w-full lg:w-auto">
-            <p className={`m-0 mb-1.5 text-label-sm uppercase tracking-wider lg:hidden ${dark ? 'text-on-surface-variant' : 'text-white/70'}`}>Fin des offres dans</p>
+            <p className={`m-0 mb-1.5 text-label-sm uppercase tracking-wider lg:hidden ${dark ? 'text-on-surface-variant' : 'text-white/70'}`}>{t('hero.endsIn')}</p>
             <HeroCountdown endsAt={campaign.endsAt} dark={dark} />
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            {campaign.listingsCount > 0 && <span className={chip}><Icon name="inventory_2" size={17} /> {campaign.listingsCount} article{campaign.listingsCount > 1 ? 's' : ''}</span>}
-            {best ? <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-md backdrop-blur-sm ${dark ? 'bg-primary/15 text-primary' : 'bg-primary/25 text-[#ffb4ab]'}`}><Icon name="trending_down" size={17} /> Jusqu’à -{best} %</span> : null}
-            {campaign.sellersCount > 0 && <span className={chip}><Icon name="workspace_premium" size={17} /> {campaign.sellersCount} vendeur{campaign.sellersCount > 1 ? 's' : ''}</span>}
+            {campaign.listingsCount > 0 && <span className={chip}><Icon name="inventory_2" size={17} /> {t('items', { count: campaign.listingsCount, n: String(campaign.listingsCount) })}</span>}
+            {best ? <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-label-md backdrop-blur-sm ${dark ? 'bg-primary/15 text-primary' : 'bg-primary/25 text-[#ffb4ab]'}`}><Icon name="trending_down" size={17} /> {t('upTo', { n: best })}</span> : null}
+            {campaign.sellersCount > 0 && <span className={chip}><Icon name="workspace_premium" size={17} /> {t('sellers', { count: campaign.sellersCount, n: String(campaign.sellersCount) })}</span>}
           </div>
         </div>
 

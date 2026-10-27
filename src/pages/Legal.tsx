@@ -4,12 +4,17 @@ import { CONTENT_PAGE_QUERY, LEGAL_PAGES, type ContentPage } from '../graphql/co
 import { richHtml } from '../lib/richText'
 import { countryVars, useMarketCode } from '../lib/countries'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
+import { fmtDate, useT } from '../i18n'
+import common from '../i18n/ns/common'
+import helpNs from '../i18n/ns/help'
 
 // Legal & help pages (CGU, remise en main propre, FAQ, confidentialité),
 // written by the team in the Backoffice "CMS & Pages légales".
 export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string; onOpenLegal: (slug: string) => void; onNavigate: (p: any) => void }) {
   // The market's version when the pages are « par pays » (else the general
   // one); on a country switch the same page stays shown while it loads.
+  const t = useT(helpNs)
+  const tc = useT(common)
   const market = useMarketCode()
   const { data, previousData, loading } = useQuery<{ contentPage: ContentPage | null }>(CONTENT_PAGE_QUERY, { variables: { slug, ...countryVars(market) } })
   const previous = previousData?.contentPage?.slug === slug ? previousData.contentPage : undefined
@@ -20,7 +25,7 @@ export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string;
 
   return (
     <div className="mx-auto max-w-[960px] px-4 py-6 lg:px-6 lg:py-10">
-      <button onClick={() => onNavigate('home')} className="mb-4 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-body-sm text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={18} /> Accueil</button>
+      <button onClick={() => onNavigate('home')} className="mb-4 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-body-sm text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={18} /> {t('legal.home')}</button>
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
         {LEGAL_PAGES.map((p) => (
           <button key={p.slug} onClick={() => onOpenLegal(p.slug)} className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-none px-3.5 py-2 text-label-md ${p.slug === slug ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface hover:bg-surface-container'}`}>
@@ -36,13 +41,13 @@ export default function Legal({ slug, onOpenLegal, onNavigate }: { slug: string;
       </div>
       <article className="rounded-2xl bg-surface-lowest p-5 shadow-sm lg:p-8">
         <h1 className="m-0 text-headline-lg-mobile text-on-surface lg:text-headline-lg">{page?.title ?? meta.label}</h1>
-        {page?.updatedAt && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Mise à jour le {new Date(page.updatedAt).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</p>}
+        {page?.updatedAt && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('legal.updatedOn', { date: fmtDate(page.updatedAt, { dateStyle: 'long' }) })}</p>}
         {loading && !page ? (
-          <p className="mt-6 text-on-surface-variant">Chargement…</p>
+          <p className="mt-6 text-on-surface-variant">{tc('loading')}</p>
         ) : page?.body?.trim() ? (
           <div className="rich-text selectable legal-content mt-6 text-body-md leading-relaxed text-on-surface [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-headline-sm [&_h3]:mt-4 [&_h3]:text-label-lg [&_p]:my-3" dangerouslySetInnerHTML={{ __html: richHtml(page.body) }} />
         ) : (
-          <p className="mt-6 flex items-center gap-2 rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant"><Icon name="edit_note" size={22} /> Cette page est en cours de rédaction par l'équipe Dilchap.</p>
+          <p className="mt-6 flex items-center gap-2 rounded-xl bg-surface-container-low p-4 text-body-md text-on-surface-variant"><Icon name="edit_note" size={22} /> {t('legal.draft')}</p>
         )}
       </article>
     </div>

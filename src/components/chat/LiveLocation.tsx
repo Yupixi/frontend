@@ -15,20 +15,23 @@ import {
 } from '../../graphql/liveLocation'
 import type { RemoteMeetup } from '../../graphql/messaging'
 import { StaticMap } from './MeetupPoint'
+import { useT } from '../../i18n'
+import common from '../../i18n/ns/common'
+import meetupNs from '../../i18n/ns/meetup'
 
-export const LIVE_SAFETY_HINT = 'Ne partagez votre position qu’avec une personne avec qui vous avez confirmé un rendez-vous dans un lieu public.'
-export const LIVE_FOREGROUND_HINT = 'Le partage fonctionne tant que Dilchap reste ouvert sur votre téléphone : une application web ne peut pas envoyer votre position en arrière-plan, en particulier sur iPhone.'
+export const liveSafetyHint = () => meetupNs.t('live.safetyHint')
+export const liveForegroundHint = () => meetupNs.t('live.foregroundHint')
 
 const useLive = () => useSyncExternalStore(liveStore.subscribe, liveStore.get, liveStore.get)
 
-const errorText = (e: unknown) => (e instanceof Error && e.message.length < 160 ? e.message : 'Une erreur est survenue. Réessayez.')
+const errorText = (e: unknown) => (e instanceof Error && e.message.length < 160 ? e.message : common.t('errorGeneric'))
 
 // Geolocation of the browser, asked only when the member chose to share.
 const GEO_OPTIONS: PositionOptions = { enableHighAccuracy: true, maximumAge: 5_000, timeout: 30_000 }
 const geoError = (e: GeolocationPositionError) =>
   e.code === e.PERMISSION_DENIED
-    ? 'Dilchap n’a pas accès à votre position. Autorisez-la dans les réglages du navigateur pour partager votre position.'
-    : 'Position introuvable pour l’instant. Vérifiez que la localisation de votre téléphone est activée.'
+    ? meetupNs.t('live.geo.denied')
+    : meetupNs.t('live.geo.unavailable')
 
 // The meet-up whose live position can be shared: the latest confirmed one
 // with a point, not yet handed over.
@@ -97,7 +100,8 @@ export function LiveLocationController({ conversationId, meetup, otherName }: { 
         liveStore.set({ state: { ...cur, mine: { ...cur.mine, lat: Math.round(fix.lat * 1e4) / 1e4, lng: Math.round(fix.lng * 1e4) / 1e4, positionAt: data.updateLiveLocation.positionAt } } })
     }).catch((e: unknown) => {
       // « trop souvent »: the next fix will do. Otherwise the sharing ended.
-      if (!/trop souvent/i.test(errorText(e))) { stopWatch(); load() }
+      // Server message (French) compared as is. i18n-ignore
+      if (!/trop souvent/i.test(e instanceof Error && e.message.length < 160 ? e.message : '')) { stopWatch(); load() }
     }).finally(() => { sending.current = false })
   }
 
@@ -120,7 +124,7 @@ export function LiveLocationController({ conversationId, meetup, otherName }: { 
     actions.start = (minutes: number) => {
       const s = liveStore.get().state
       if (!s) return
-      if (!navigator.geolocation) { liveStore.set({ error: 'Ce navigateur ne sait pas partager votre position.' }); return }
+      if (!navigator.geolocation) { liveStore.set({ error: meetupNs.t('live.geo.unsupported') }); return }
       liveStore.set({ busy: true, error: null })
       // The browser asks for the permission now, after the member's choice.
       navigator.geolocation.getCurrentPosition(p => {
@@ -192,12 +196,13 @@ const actions: { start: (minutes: number) => void; stop: () => void } = { start:
 
 // « Partage en cours » in the chat header while I share.
 export function LiveHeaderPill({ onOpen }: { onOpen: () => void }) {
+  const t = useT(meetupNs)
   const live = useLive()
   const until = mySharingUntil(live)
   if (!until) return null
   return (
-    <button type="button" onClick={onOpen} aria-label={`Partage de votre position en cours jusqu’à ${hhmm(until)}`} title="Partage de votre position en cours" className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-none bg-tertiary-soft px-2.5 py-1.5 text-label-sm font-semibold text-tertiary">
-      <span className="live-dot h-2 w-2 shrink-0 rounded-full bg-tertiary" aria-hidden /> <span className="max-[339px]:hidden md:max-xl:hidden">Partage en cours</span><span className="hidden md:max-xl:inline">En direct</span>
+    <button type="button" onClick={onOpen} aria-label={t('live.pill.aria', { time: hhmm(until) })} title={t('live.pill.title')} className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-none bg-tertiary-soft px-2.5 py-1.5 text-label-sm font-semibold text-tertiary">
+      <span className="live-dot h-2 w-2 shrink-0 rounded-full bg-tertiary" aria-hidden /> <span className="max-[339px]:hidden md:max-xl:hidden">{t('live.pill.label')}</span><span className="hidden md:max-xl:inline">{t('live.pill.short')}</span>
     </button>
   )
 }
@@ -209,6 +214,7 @@ const FIT_PAD = 34
 // The meet-up point and the live pins on OpenStreetMap tiles (lazy, no
 // API key), framed to show them all.
 export function LiveMap({ point, label, height = 150, onOpen }: { point: LatLng; label: string; height?: number; onOpen?: () => void }) {
+  const t = useT(meetupNs)
   const live = useLive()
   const box = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(320)
@@ -248,13 +254,13 @@ export function LiveMap({ point, label, height = 150, onOpen }: { point: LatLng;
       ref={box as never}
       type={onOpen ? 'button' : undefined}
       onClick={onOpen}
-      aria-label={onOpen ? `Agrandir la carte : ${label}` : `Carte : ${label}`}
+      aria-label={onOpen ? t('live.map.enlargeAria', { label }) : t('live.map.aria', { label })}
       data-clarity-mask="True"
       className={`relative block w-full overflow-hidden rounded-xl border-none bg-surface-container p-0 ${onOpen ? 'cursor-pointer' : ''}`}
       style={{ height }}
     >
-      {tilesFor(center, z, w, height).map(t => (
-        <img key={t.key} src={t.src} alt="" loading="lazy" decoding="async" draggable={false} className="pointer-events-none absolute h-64 w-64 max-w-none select-none" style={{ left: t.left, top: t.top }} />
+      {tilesFor(center, z, w, height).map(tile => (
+        <img key={tile.key} src={tile.src} alt="" loading="lazy" decoding="async" draggable={false} className="pointer-events-none absolute h-64 w-64 max-w-none select-none" style={{ left: tile.left, top: tile.top }} />
       ))}
       <span className="pointer-events-none absolute -translate-x-1/2 -translate-y-full text-primary drop-shadow-[0_2px_2px_rgba(0,0,0,0.35)]" style={at(point)} aria-hidden>
         <Icon name="location_on" size={32} fill />
@@ -268,7 +274,7 @@ export function LiveMap({ point, label, height = 150, onOpen }: { point: LatLng;
         <span className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-solid border-white bg-sky-500 shadow-md" style={at(mine)} aria-hidden />
       )}
       {onOpen && <span className="pointer-events-none absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-surface-lowest/90 text-on-surface shadow" aria-hidden><Icon name="fullscreen" size={15} /></span>}
-      <span className="pointer-events-none absolute bottom-0 right-0 rounded-tl-md bg-white/85 px-1 text-[9px] leading-4 text-neutral-700">© OpenStreetMap</span>
+      <span className="pointer-events-none absolute bottom-0 right-0 rounded-tl-md bg-white/85 px-1 text-[9px] leading-4 text-neutral-700">© OpenStreetMap{/* i18n-ignore */}</span>
     </Wrapper>
   )
 }
@@ -276,6 +282,7 @@ export function LiveMap({ point, label, height = 150, onOpen }: { point: LatLng;
 // ---- Card panel ---------------------------------------------------------------
 
 function ShareLine({ share, who, point, mine, fix, throttle }: { share: LiveShare; who: string; point: LatLng; mine?: boolean; fix?: LiveSnapshot['myFix']; throttle: LiveState['throttle'] }) {
+  const t = useT(meetupNs)
   const pos = mine && fix ? fix : hasPos(share) ? share : null
   const updated = mine && fix ? new Date(fix.at).toISOString() : share.positionAt
   const delay = Math.max(0, staleIn(updated, throttle ?? DEFAULT_THROTTLE))
@@ -283,15 +290,15 @@ function ShareLine({ share, who, point, mine, fix, throttle }: { share: LiveShar
     <div className="flex min-w-0 items-start gap-2">
       <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${mine ? 'bg-sky-500' : 'bg-on-surface'}`} aria-hidden />
       <div className="min-w-0 flex-1">
-        <div className="text-label-md text-on-surface">{mine ? `Vous partagez votre position jusqu’à ${hhmm(share.expiresAt)}` : `${who} partage sa position jusqu’à ${hhmm(share.expiresAt)}`}</div>
+        <div className="text-label-md text-on-surface">{mine ? t('live.share.mine', { time: hhmm(share.expiresAt) }) : t('live.share.other', { name: who, time: hhmm(share.expiresAt) })}</div>
         {pos ? (
           // Remounted on each new position: the stale animation restarts.
           <div key={updated ?? ''} className="live-stale relative text-body-sm text-on-surface-variant" style={{ animationDelay: `${delay}ms` }}>
-            <span className="live-fresh-text" style={{ animationDelay: `${delay}ms` }}>{distanceLabel(distanceM(pos, point))} · position mise à jour {updated ? agoLabel(updated) : ''}</span>
-            <span className="live-stale-text" style={{ animationDelay: `${delay}ms` }}>{distanceLabel(distanceM(pos, point))} · position non mise à jour</span>
+            <span className="live-fresh-text" style={{ animationDelay: `${delay}ms` }}>{t('live.share.updated', { distance: distanceLabel(distanceM(pos, point)), ago: updated ? agoLabel(updated) : '' })}</span>
+            <span className="live-stale-text" style={{ animationDelay: `${delay}ms` }}>{t('live.share.stale', { distance: distanceLabel(distanceM(pos, point)) })}</span>
           </div>
         ) : (
-          <div className="text-body-sm text-on-surface-variant">En attente de la position…</div>
+          <div className="text-body-sm text-on-surface-variant">{t('live.share.waiting')}</div>
         )}
       </div>
     </div>
@@ -301,12 +308,13 @@ function ShareLine({ share, who, point, mine, fix, throttle }: { share: LiveShar
 // Under the active meet-up card: who shares, distances, the button to
 // share and to stop, and the honest « while Dilchap stays open » note.
 export function LivePanel({ point, otherName, onShare, onOpenMap }: { point: LatLng; otherName: string; onShare: () => void; onOpenMap?: () => void }) {
+  const t = useT(meetupNs)
   const live = useLive()
   const s = live.state
   if (!s) return null
   if (!s.available) {
     if (s.reason === 'TOO_EARLY' && Date.parse(s.window.from) - Date.now() < 86_400_000)
-      return <p className="m-0 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="my_location" size={15} /> Position en direct possible à partir de {hhmm(s.window.from)}</p>
+      return <p className="m-0 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="my_location" size={15} /> {t('live.panel.from', { time: hhmm(s.window.from) })}</p>
     return null
   }
   const mine = s.mine && Date.parse(s.mine.expiresAt) > Date.now() ? s.mine : null
@@ -316,22 +324,22 @@ export function LivePanel({ point, otherName, onShare, onOpenMap }: { point: Lat
       {mine && (
         <div className="flex items-center gap-2 rounded-lg bg-tertiary-soft px-3 py-2 text-tertiary" role="status">
           <span className="live-dot h-2 w-2 shrink-0 rounded-full bg-tertiary" aria-hidden />
-          <span className="min-w-0 flex-1 text-label-md">Partage en cours jusqu’à {hhmm(mine.expiresAt)}</span>
-          <button type="button" disabled={live.busy} onClick={() => actions.stop()} className="shrink-0 cursor-pointer rounded-md border-none bg-surface-lowest px-2.5 py-1 text-label-sm font-semibold text-on-surface disabled:opacity-60">Arrêter</button>
+          <span className="min-w-0 flex-1 text-label-md">{t('live.panel.sharingUntil', { time: hhmm(mine.expiresAt) })}</span>
+          <button type="button" disabled={live.busy} onClick={() => actions.stop()} className="shrink-0 cursor-pointer rounded-md border-none bg-surface-lowest px-2.5 py-1 text-label-sm font-semibold text-on-surface disabled:opacity-60">{t('live.panel.stop')}</button>
         </div>
       )}
       {other && <ShareLine share={other} who={other.name ?? otherName} point={point} throttle={s.throttle} />}
-      {mine && <ShareLine share={mine} who="Vous" point={point} mine fix={live.myFix} throttle={s.throttle} />}
+      {mine && <ShareLine share={mine} who={t('live.panel.you')} point={point} mine fix={live.myFix} throttle={s.throttle} />}
       {(mine || other) && onOpenMap && (
-        <button type="button" onClick={onOpenMap} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container py-2 text-label-md text-on-surface"><Icon name="map" size={16} /> Voir la carte en direct</button>
+        <button type="button" onClick={onOpenMap} className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-surface-container py-2 text-label-md text-on-surface"><Icon name="map" size={16} /> {t('live.panel.openMap')}</button>
       )}
       {!mine && (
         <button type="button" disabled={live.busy} onClick={onShare} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-tertiary py-2 text-label-md text-white disabled:opacity-60">
-          <Icon name="my_location" size={16} /> {live.busy ? 'Un instant…' : 'Partager ma position en direct'}
+          <Icon name="my_location" size={16} /> {live.busy ? t('live.panel.wait') : t('live.panel.share')}
         </button>
       )}
       {live.error && <p className="m-0 text-body-sm text-primary" role="alert">{live.error}</p>}
-      {mine && <p className="m-0 text-[11px] leading-4 text-on-surface-variant">Gardez Dilchap ouvert sur votre téléphone pour que votre position reste à jour.</p>}
+      {mine && <p className="m-0 text-[11px] leading-4 text-on-surface-variant">{t('live.panel.keepOpen')}</p>}
     </div>
   )
 }
@@ -347,6 +355,7 @@ export function useLiveOn(meetupId: string) {
 
 // Consent: the duration, the safety hint, what is shared and the limits.
 export function LiveConsentSheet({ open, onClose, otherName }: { open: boolean; onClose: () => void; otherName: string }) {
+  const t = useT(meetupNs)
   const live = useLive()
   const durations = live.state?.durations ?? [15, 30, 60]
   const [minutes, setMinutes] = useState<number | null>(null)
@@ -356,17 +365,17 @@ export function LiveConsentSheet({ open, onClose, otherName }: { open: boolean; 
   const startedRef = useRef(false)
   useEffect(() => { if (open && startedRef.current && live.state?.mine) { startedRef.current = false; onClose() } }, [open, live.state?.mine, onClose])
   return (
-    <ConfirmSheet open={open} onClose={onClose} title="Partager ma position en direct" confirmLabel="Partager" loading={live.busy} onConfirm={() => { startedRef.current = true; actions.start(chosen) }}>
-      <span className="block">{otherName} verra votre position sur la carte du rendez-vous, mise à jour pendant que vous vous déplacez, jusqu’à <b>{hhmm(new Date(until).toISOString())}</b>. Vous pouvez arrêter à tout moment.</span>
-      <span className="mt-3 block text-label-md text-on-surface">Durée</span>
-      <span role="radiogroup" aria-label="Durée du partage" className="mt-1.5 flex gap-2">
+    <ConfirmSheet open={open} onClose={onClose} title={t('live.panel.share')} confirmLabel={t('live.consent.confirm')} loading={live.busy} onConfirm={() => { startedRef.current = true; actions.start(chosen) }}>
+      <span className="block">{t.rich('live.consent.text', { name: otherName, time: hhmm(new Date(until).toISOString()), b: c => <b>{c}</b> })}</span>
+      <span className="mt-3 block text-label-md text-on-surface">{t('live.consent.duration')}</span>
+      <span role="radiogroup" aria-label={t('live.consent.durationAria')} className="mt-1.5 flex gap-2">
         {durations.map(d => (
-          <button key={d} type="button" role="radio" aria-checked={chosen === d} onClick={() => setMinutes(d)} className={`h-11 flex-1 cursor-pointer rounded-xl border border-solid text-label-lg ${chosen === d ? 'border-tertiary bg-tertiary-soft text-tertiary' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>{d} min</button>
+          <button key={d} type="button" role="radio" aria-checked={chosen === d} onClick={() => setMinutes(d)} className={`h-11 flex-1 cursor-pointer rounded-xl border border-solid text-label-lg ${chosen === d ? 'border-tertiary bg-tertiary-soft text-tertiary' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>{t('live.consent.minutes', { n: d })}</button>
         ))}
       </span>
-      <span className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-body-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100"><Icon name="shield" size={17} className="mt-0.5 shrink-0" /> {LIVE_SAFETY_HINT}</span>
-      <span className="mt-2 flex items-start gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={16} className="mt-0.5 shrink-0" /> {LIVE_FOREGROUND_HINT}</span>
-      <span className="mt-2 block text-body-sm text-on-surface-variant">Votre navigateur va vous demander l’accès à votre position. Seul {otherName} la voit, arrondie à une dizaine de mètres ; elle est effacée dès la fin du partage.</span>
+      <span className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-body-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100"><Icon name="shield" size={17} className="mt-0.5 shrink-0" /> {liveSafetyHint()}</span>
+      <span className="mt-2 flex items-start gap-2 text-body-sm text-on-surface-variant"><Icon name="info" size={16} className="mt-0.5 shrink-0" /> {liveForegroundHint()}</span>
+      <span className="mt-2 block text-body-sm text-on-surface-variant">{t('live.consent.permission', { name: otherName })}</span>
       {live.error && <span className="mt-2 block text-body-sm text-primary" role="alert">{live.error}</span>}
     </ConfirmSheet>
   )
@@ -374,14 +383,15 @@ export function LiveConsentSheet({ open, onClose, otherName }: { open: boolean; 
 
 // The larger map (tap on the card's map or the header pill).
 export function LiveMapSheet({ open, onClose, meetup, otherName, onShare }: { open: boolean; onClose: () => void; meetup: RemoteMeetup; otherName: string; onShare: () => void }) {
+  const t = useT(meetupNs)
   const point = { lat: meetup.lat!, lng: meetup.lng! }
   return (
-    <BottomSheet open={open} onClose={onClose} title="Position en direct" maxHeight="92dvh">
+    <BottomSheet open={open} onClose={onClose} title={t('live.mapSheet.title')} maxHeight="92dvh">
       <div className="flex flex-col gap-3 pb-2">
         <LiveMap point={point} label={meetup.place} height={340} />
         <div className="text-label-lg text-on-surface">{meetup.place}{meetup.address && <span className="block text-body-sm font-normal text-on-surface-variant">{meetup.address}</span>}</div>
         <LivePanel point={point} otherName={otherName} onShare={onShare} />
-        <p className="m-0 text-body-sm text-on-surface-variant">{LIVE_FOREGROUND_HINT}</p>
+        <p className="m-0 text-body-sm text-on-surface-variant">{liveForegroundHint()}</p>
       </div>
     </BottomSheet>
   )
