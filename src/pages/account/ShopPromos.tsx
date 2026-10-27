@@ -23,23 +23,28 @@ import RichTextEditor from '../../components/RichTextEditor'
 import { richHtml } from '../../lib/richText'
 import { plainText } from '../../lib/format'
 import { usePriceVars } from '../../lib/countries'
+import { cfaUnit, fmtDate, useT } from '../../i18n'
+import common from '../../i18n/ns/common'
+import shopPromos from '../../i18n/ns/shopPromos'
 
 type Props = { onNavigate: (p: any) => void; currentUser?: AuthUser | null; onLogout: () => void; onOpenShop: (slug: string) => void }
 type Tab = 'sales' | 'campaigns' | 'bundles' | 'posts'
 
-const fdate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+const fdate = (iso: string) => fmtDate(iso, { day: 'numeric', month: 'short', year: 'numeric' })
 const dayInput = (d: Date) => d.toISOString().slice(0, 10)
 const promoOf = (price: number, pct: number) => Math.round((price * (100 - pct)) / 100)
 const card = 'rounded-2xl bg-surface-lowest p-4 shadow-sm md:p-5'
 const inputCls = 'h-11 w-full min-w-0 rounded-xl border-none bg-surface-container-low px-3 text-body-md text-on-surface outline-none focus:outline focus:outline-2 focus:outline-primary'
 
 function StatePill({ state }: { state: PromoState }) {
+  useT(shopPromos) // re-renders on a language change (the labels are getters)
   const cls = state === 'LIVE' ? 'bg-tertiary-soft text-tertiary' : state === 'SCHEDULED' ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'
   return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${cls}`}>{state === 'LIVE' && <span className="h-1.5 w-1.5 rounded-full bg-current" />}{PROMO_STATE_LABEL[state]}</span>
 }
 
 function EntryPill({ status }: { status: PromoItem['status'] }) {
-  const [cls, label] = status === 'APPROVED' ? ['bg-tertiary-soft text-tertiary', 'Acceptée'] : status === 'REJECTED' ? ['bg-primary-fixed text-primary', 'Refusée'] : status === 'AWAITING_PAYMENT' ? ['bg-amber-100 text-amber-800', 'À régler'] : status === 'WAITLISTED' ? ['bg-amber-100 text-amber-800', 'Liste d’attente'] : ['bg-surface-container text-on-surface-variant', 'En attente']
+  const t = useT(shopPromos)
+  const [cls, label] = status === 'APPROVED' ? ['bg-tertiary-soft text-tertiary', t('entry.APPROVED')] : status === 'REJECTED' ? ['bg-primary-fixed text-primary', t('entry.REJECTED')] : status === 'AWAITING_PAYMENT' ? ['bg-amber-100 text-amber-800', t('entry.AWAITING_PAYMENT')] : status === 'WAITLISTED' ? ['bg-amber-100 text-amber-800', t('entry.WAITLISTED')] : ['bg-surface-container text-on-surface-variant', t('entry.PENDING')]
   return <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${cls}`}>{label}</span>
 }
 
@@ -68,6 +73,7 @@ function ItemPicker({ listings, aisles, picks, onChange, minPercent, priceMode }
   const [q, setQ] = useState('')
   const [aisle, setAisle] = useState('')
   const [bulk, setBulk] = useState(String(minPercent ?? 20))
+  const t = useT(shopPromos)
   const priced = listings.filter(l => l.price != null)
   const rows = priced.filter(l => (!q || l.title.toLowerCase().includes(q.toLowerCase())) && (!aisle || l.aisleId === aisle))
   const on = (id: string) => picks.find(p => p.listingId === id)
@@ -81,30 +87,30 @@ function ItemPicker({ listings, aisles, picks, onChange, minPercent, priceMode }
   }
   return (
     <div>
-      <label className="flex h-11 items-center gap-2 rounded-xl bg-surface-container-low px-3"><Icon name="search" size={18} className="text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher un article…" className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
+      <label className="flex h-11 items-center gap-2 rounded-xl bg-surface-container-low px-3"><Icon name="search" size={18} className="text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('picker.search')} className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
       {aisles.length > 0 && (
         <div className="relative mt-2">
           <div className="flex gap-1.5 overflow-x-auto pb-1 pr-6 [scrollbar-width:none]">
-            {[{ id: '', name: 'Tous les rayons' }, ...aisles].map(a => (
+            {[{ id: '', name: t('picker.allAisles') }, ...aisles].map(a => (
               <button key={a.id || 'all'} type="button" onClick={() => setAisle(a.id)} className={`h-8 shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none px-3 text-label-md ${aisle === a.id ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>{a.name}</button>
             ))}
           </div>
         </div>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
-        <span className="text-label-md text-on-surface">Remise</span>
-        <span className="flex items-center gap-1"><input type="number" min={minPercent ?? 1} max={90} value={bulk} onChange={e => setBulk(e.target.value)} className="h-9 w-16 rounded-lg border-none bg-surface-lowest text-center text-label-lg text-on-surface outline-none" aria-label="Remise en %" /> <span className="text-label-md text-on-surface">%</span></span>
-        <button type="button" onClick={applyAll} disabled={!rows.length} className="ml-auto flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-40"><Icon name="done_all" size={16} /> Appliquer aux {rows.length} articles affichés</button>
+        <span className="text-label-md text-on-surface">{t('picker.discount')}</span>
+        <span className="flex items-center gap-1"><input type="number" min={minPercent ?? 1} max={90} value={bulk} onChange={e => setBulk(e.target.value)} className="h-9 w-16 rounded-lg border-none bg-surface-lowest text-center text-label-lg text-on-surface outline-none" aria-label={t('picker.discountAria')} /> <span className="text-label-md text-on-surface">%</span></span>
+        <button type="button" onClick={applyAll} disabled={!rows.length} className="ml-auto flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white disabled:opacity-40"><Icon name="done_all" size={16} /> {t('picker.applyAll', { n: rows.length })}</button>
       </div>
-      {minPercent ? <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Remise minimale demandée : {minPercent} %.</p> : null}
+      {minPercent ? <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('picker.minPercent', { pct: minPercent })}</p> : null}
       <div className="mt-2 flex max-h-[420px] flex-col gap-1.5 overflow-y-auto pr-1">
-        {rows.length === 0 && <p className="m-0 p-3 text-center text-body-sm text-on-surface-variant">Aucun article en ligne avec un prix.</p>}
+        {rows.length === 0 && <p className="m-0 p-3 text-center text-body-sm text-on-surface-variant">{t('picker.empty')}</p>}
         {rows.map(l => {
           const p = on(l.id)
           const bad = p && minPercent && p.percent < minPercent
           return (
             <div key={l.id} className={`flex items-center gap-3 rounded-xl p-2 ${p ? 'bg-primary-fixed/40' : 'bg-surface-container-low'}`}>
-              <input type="checkbox" checked={!!p} onChange={() => toggle(l)} className="h-5 w-5 shrink-0 cursor-pointer accent-primary" aria-label={`Inclure ${l.title}`} />
+              <input type="checkbox" checked={!!p} onChange={() => toggle(l)} className="h-5 w-5 shrink-0 cursor-pointer accent-primary" aria-label={t('picker.includeAria', { title: l.title })} />
               <Thumb url={l.coverImageUrl} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-label-md text-on-surface">{l.title}</div>
@@ -115,14 +121,14 @@ function ItemPicker({ listings, aisles, picks, onChange, minPercent, priceMode }
               </div>
               {p && priceMode && (
                 <span className="flex shrink-0 items-center gap-1">
-                  <input type="number" min={1} value={priceMode.prices[l.id] ?? String(promoOf(l.price!, p.percent))} onChange={e => priceMode.onPrice(l.id, e.target.value)} className={`h-9 w-24 rounded-lg border-none px-2 text-right text-label-md outline-none ${Number(priceMode.prices[l.id] ?? promoOf(l.price!, p.percent)) >= l.price! ? 'bg-primary-fixed text-primary' : 'bg-surface-lowest text-on-surface'}`} aria-label="Prix promo" />
-                  <span className="text-label-md text-on-surface">F</span>
+                  <input type="number" min={1} value={priceMode.prices[l.id] ?? String(promoOf(l.price!, p.percent))} onChange={e => priceMode.onPrice(l.id, e.target.value)} className={`h-9 w-24 rounded-lg border-none px-2 text-right text-label-md outline-none ${Number(priceMode.prices[l.id] ?? promoOf(l.price!, p.percent)) >= l.price! ? 'bg-primary-fixed text-primary' : 'bg-surface-lowest text-on-surface'}`} aria-label={t('picker.promoPriceAria')} />
+                  <span className="text-label-md text-on-surface">{cfaUnit()}</span>
                 </span>
               )}
               {p && !priceMode && (
                 <span className="flex shrink-0 items-center gap-1">
                   <span className="text-label-md text-on-surface">-</span>
-                  <input type="number" min={1} max={90} value={p.percent} onChange={e => setPct(l.id, Math.min(90, Math.max(1, Number(e.target.value) || 1)))} className={`h-9 w-14 rounded-lg border-none text-center text-label-md outline-none ${bad ? 'bg-primary-fixed text-primary' : 'bg-surface-lowest text-on-surface'}`} aria-label="Remise %" />
+                  <input type="number" min={1} max={90} value={p.percent} onChange={e => setPct(l.id, Math.min(90, Math.max(1, Number(e.target.value) || 1)))} className={`h-9 w-14 rounded-lg border-none text-center text-label-md outline-none ${bad ? 'bg-primary-fixed text-primary' : 'bg-surface-lowest text-on-surface'}`} aria-label={t('picker.percentAria')} />
                   <span className="text-label-md text-on-surface">%</span>
                 </span>
               )}
@@ -130,12 +136,13 @@ function ItemPicker({ listings, aisles, picks, onChange, minPercent, priceMode }
           )
         })}
       </div>
-      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{picks.length} article{picks.length > 1 ? 's' : ''} sélectionné{picks.length > 1 ? 's' : ''}</p>
+      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{t('picker.selected', { count: picks.length })}</p>
     </div>
   )
 }
 
 export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenShop }: Props) {
+  const t = useT(shopPromos)
   const [tab, setTab] = useState<Tab>('sales')
   const [editor, setEditor] = useState<null | 'sale' | 'bundle' | 'post' | { bundle: ShopBundle, reactivate?: boolean } | { post: ShopPost } | { campaign: OpenCampaign, retry?: PromoItem } | { sale: ShopSale, relaunch?: boolean }>(null)
   const { data: shopData } = useQuery<MyShopData>(MY_SHOP_QUERY, { variables: usePriceVars() })
@@ -146,13 +153,13 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
   const listings = ld?.myListings.items ?? []
 
   const layout = (children: React.ReactNode) => (
-    <AccountLayout active="seller-shop-promos" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title="Promotions" onBack={editor ? () => setEditor(null) : () => onNavigate('seller-shop')}>
+    <AccountLayout active="seller-shop-promos" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} title={t('title')} onBack={editor ? () => setEditor(null) : () => onNavigate('seller-shop')}>
       <div className="mx-auto max-w-[1100px] pb-24 lg:pb-8">{children}</div>
     </AccountLayout>
   )
-  if (!shopData || (loading && !data)) return layout(<p className="text-body-md text-on-surface-variant">Chargement…</p>)
+  if (!shopData || (loading && !data)) return layout(<p className="text-body-md text-on-surface-variant">{common.t('loading')}</p>)
   if (!official) return layout(
-    <Empty icon="storefront" title="Réservé aux Boutiques officielles" text="Soldes, offres groupées et annonces aux abonnés sont inclus dans l’abonnement Boutique officielle. Les campagnes Dilchap ont leur propre page, avec les conditions de chacune." action={<div className="mt-2 flex flex-wrap justify-center gap-2"><button onClick={() => onNavigate('seller-shop')} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="storefront" size={18} /> Ma Boutique officielle</button><button onClick={() => onNavigate('seller-campaigns')} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container px-4 text-label-md text-on-surface"><Icon name="campaign" size={18} /> Campagnes Dilchap</button></div>} />,
+    <Empty icon="storefront" title={t('notOfficial.title')} text={t('notOfficial.text')} action={<div className="mt-2 flex flex-wrap justify-center gap-2"><button onClick={() => onNavigate('seller-shop')} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="storefront" size={18} /> {t('notOfficial.myShop')}</button><button onClick={() => onNavigate('seller-campaigns')} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container px-4 text-label-md text-on-surface"><Icon name="campaign" size={18} /> {t('tab.campaigns')}</button></div>} />,
   )
   const d = data!
   const done = () => { setEditor(null); void refetch() }
@@ -166,16 +173,16 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
   if (editor && typeof editor === 'object') return layout(<CampaignJoin campaign={editor.campaign} retry={editor.retry} listings={listings} aisles={shop!.aisles} onDone={done} onCancel={() => setEditor(null)} />)
 
   const tabs: [Tab, string, string, number][] = [
-    ['sales', 'sell', 'Soldes', d.myShopSales.filter(s => s.state !== 'ENDED').length],
-    ['campaigns', 'campaign', 'Campagnes Dilchap', d.openShopCampaigns.length],
-    ['bundles', 'inventory_2', 'Offres groupées', d.myShopBundles.filter(b => b.state !== 'ENDED').length],
-    ['posts', 'forum', 'Annonces aux abonnés', d.myShopPosts.length],
+    ['sales', 'sell', t('tab.sales'), d.myShopSales.filter(s => s.state !== 'ENDED').length],
+    ['campaigns', 'campaign', t('tab.campaigns'), d.openShopCampaigns.length],
+    ['bundles', 'inventory_2', t('tab.bundles'), d.myShopBundles.filter(b => b.state !== 'ENDED').length],
+    ['posts', 'forum', t('tab.posts'), d.myShopPosts.length],
   ]
   const create: Record<Tab, [string, () => void] | null> = {
-    sales: ['Créer des soldes', () => setEditor('sale')],
+    sales: [t('sales.create'), () => setEditor('sale')],
     campaigns: null,
-    bundles: ['Créer une offre groupée', () => setEditor('bundle')],
-    posts: ['Nouvelle annonce', () => setEditor('post')],
+    bundles: [t('bundles.create'), () => setEditor('bundle')],
+    posts: [t('posts.create'), () => setEditor('post')],
   }
   const cta = create[tab]
 
@@ -183,15 +190,15 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
     <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified" size={14} fill /> {shop!.name}</span>
-        <h1 className="m-0 mt-1 text-headline-lg text-on-surface">Promotions de ma boutique</h1>
-        <p className="m-0 mt-1 text-body-md text-on-surface-variant">Soldes, campagnes Dilchap, offres groupées et annonces à vos {formatNumber(d.myShopPostQuota.followers)} abonnés.</p>
+        <h1 className="m-0 mt-1 text-headline-lg text-on-surface">{t('heading')}</h1>
+        <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('intro', { n: formatNumber(d.myShopPostQuota.followers) })}</p>
       </div>
       {cta && <button onClick={cta[1]} className="flex h-12 w-full shrink-0 cursor-pointer md:h-11 md:w-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-lg text-white"><Icon name="add" size={19} /> {cta[0]}</button>}
     </div>
 
     <div className="mt-4 flex items-start gap-3 rounded-2xl bg-surface-container-low p-4">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-lowest text-primary"><Icon name="info" size={19} /></span>
-      <div className="min-w-0"><div className="text-label-lg text-on-surface">Transactions directes<Claim> & zéro commission</Claim></div><p className="m-0 text-body-sm text-on-surface-variant">Vos remises s’affichent directement sur vos annonces. Les règlements se concluent en direct (espèces ou Mobile Money), sans <Claim>frais de plateforme ni </Claim>code promo.</p></div>
+      <div className="min-w-0"><div className="text-label-lg text-on-surface">{t.rich('direct.title', { claim: c => <Claim>{c}</Claim> })}</div><p className="m-0 text-body-sm text-on-surface-variant">{t.rich('direct.text', { claim: c => <Claim>{c}</Claim> })}</p></div>
     </div>
 
     <section className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 md:gap-3">
@@ -200,9 +207,9 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
         const monthSales = d.myShopSales.filter(s => new Date(s.endsAt) >= monthStart)
         const live = new Set([...d.myShopSales.filter(s => s.state === 'LIVE').flatMap(s => s.items.map(i => i.listingId)), ...d.openShopCampaigns.filter(c => c.state === 'LIVE').flatMap(c => c.myItems.filter(i => i.status === 'APPROVED').map(i => i.listingId))]).size
         const stats: [string, string, React.ReactNode, string][] = [
-          ['shopping_bag', 'Ventes en soldes ce mois', formatNumber(monthSales.reduce((t, s) => t + s.salesCount, 0)), 'ventes conclues pendant vos soldes'],
-          ['sell', 'Articles remisés actuellement', formatNumber(live), `sur ${formatNumber(listings.length)} article${listings.length > 1 ? 's' : ''} en ligne`],
-          ['payments', 'Réalisé en soldes ce mois', <Price amount={monthSales.reduce((t, s) => t + s.salesVolume, 0)} />, 'montant des ventes conclues'],
+          ['shopping_bag', t('kpi.sales'), formatNumber(monthSales.reduce((n, s) => n + s.salesCount, 0)), t('kpi.salesSub')],
+          ['sell', t('kpi.discounted'), formatNumber(live), t('kpi.discountedSub', { count: listings.length })],
+          ['payments', t('kpi.volume'), <Price amount={monthSales.reduce((n, s) => n + s.salesVolume, 0)} />, t('kpi.volumeSub')],
         ]
         return stats.map(([icon, label, value, sub]) => (
           <div key={label} className="w-44 min-w-0 shrink-0 rounded-2xl bg-surface-lowest p-3 shadow-sm sm:w-auto sm:p-4">
@@ -238,8 +245,9 @@ export default function ShopPromos({ onNavigate, currentUser, onLogout, onOpenSh
 const DAY_MS = 86_400_000
 const countdown = (s: ShopSale) => {
   const now = Date.now()
-  if (s.state === 'SCHEDULED') { const d = Math.ceil((new Date(s.startsAt).getTime() - now) / DAY_MS); return d <= 1 ? 'Démarre demain' : `Démarre dans ${d} jours` }
-  if (s.state === 'LIVE') { const d = Math.ceil((new Date(s.endsAt).getTime() - now) / DAY_MS); return d <= 1 ? 'Se termine aujourd’hui' : `Se termine dans ${d} jours` }
+  const t = shopPromos.t
+  if (s.state === 'SCHEDULED') { const d = Math.ceil((new Date(s.startsAt).getTime() - now) / DAY_MS); return d <= 1 ? t('countdown.startsTomorrow') : t('countdown.startsIn', { n: d }) }
+  if (s.state === 'LIVE') { const d = Math.ceil((new Date(s.endsAt).getTime() - now) / DAY_MS); return d <= 1 ? t('countdown.endsToday') : t('countdown.endsIn', { n: d }) }
   return null
 }
 const pctOf = (i: PromoItem) => i.discountPercent ?? (i.price && i.promoPrice != null ? Math.round((1 - i.promoPrice / i.price) * 100) : 0)
@@ -251,20 +259,21 @@ function SalesTab({ sales, onCreate, onEdit, onRelaunch, onChanged }: {
   const [filter, setFilter] = useState<'ALL' | PromoState>('ALL')
   const [q, setQ] = useState('')
   const [end, { loading }] = useMutation(END_SHOP_SALE_MUTATION)
-  if (!sales.length) return <Empty icon="sell" title="Aucunes soldes pour l’instant" text="Mettez une sélection d’articles en promotion : prix barré, badge « -20 % » sur vos cartes et section « En promotion » sur votre page." action={<button onClick={onCreate} className="mt-2 flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add" size={18} /> Créer des soldes</button>} />
+  const t = useT(shopPromos)
+  if (!sales.length) return <Empty icon="sell" title={t('sales.emptyTitle')} text={t('sales.emptyText')} action={<button onClick={onCreate} className="mt-2 flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add" size={18} /> {t('sales.create')}</button>} />
   const count = (s: 'ALL' | PromoState) => (s === 'ALL' ? sales.length : sales.filter(x => x.state === s).length)
   const rows = sales.filter(s => (filter === 'ALL' || s.state === filter) && (!q || s.name.toLowerCase().includes(q.toLowerCase()) || s.items.some(i => i.title.toLowerCase().includes(q.toLowerCase()))))
   return (
     <div className="flex flex-col gap-3">
       <section className="flex flex-col gap-2 rounded-2xl bg-surface-lowest p-3 shadow-sm md:flex-row md:items-center">
-        <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-container-low px-3"><Icon name="search" size={18} className="shrink-0 text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une opération par nom ou produit…" className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
+        <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-container-low px-3"><Icon name="search" size={18} className="shrink-0 text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('sales.search')} className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-          {([['ALL', 'Toutes'], ['LIVE', 'En cours'], ['SCHEDULED', 'Programmées'], ['ENDED', 'Terminées']] as const).map(([k, l]) => (
-            <button key={k} onClick={() => setFilter(k)} className={`h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none px-3 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>{l} ({count(k)})</button>
+          {(['ALL', 'LIVE', 'SCHEDULED', 'ENDED'] as const).map(k => (
+            <button key={k} onClick={() => setFilter(k)} className={`h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none px-3 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>{t(`sales.filter.${k}` as const, { n: count(k) })}</button>
           ))}
         </div>
       </section>
-      {rows.length === 0 && <p className="m-0 rounded-2xl bg-surface-lowest p-6 text-center text-body-md text-on-surface-variant shadow-sm">Aucune opération ne correspond.</p>}
+      {rows.length === 0 && <p className="m-0 rounded-2xl bg-surface-lowest p-6 text-center text-body-md text-on-surface-variant shadow-sm">{t('sales.noMatch')}</p>}
       {rows.map(s => {
         const pcts = s.items.map(pctOf)
         const max = pcts.length ? Math.max(...pcts) : 0
@@ -275,27 +284,27 @@ function SalesTab({ sales, onCreate, onEdit, onRelaunch, onChanged }: {
             <div className="flex flex-col gap-4 md:flex-row md:items-start">
               <span className={`hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl md:flex ${s.state === 'LIVE' ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}><Icon name={s.state === 'LIVE' ? 'bolt' : s.state === 'SCHEDULED' ? 'schedule' : 'task_alt'} size={28} /></span>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5"><StatePill state={s.state} /><span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm font-bold text-primary">{uniform ? '' : 'Jusqu’à '}-{max} %</span></div>
+                <div className="flex flex-wrap items-center gap-1.5"><StatePill state={s.state} /><span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm font-bold text-primary">{uniform ? t('pct', { pct: max }) : t('upToPct', { pct: max })}</span></div>
                 {cd && <p className="m-0 mt-1 flex items-center gap-1 text-body-sm text-on-surface-variant"><Icon name="timer" size={15} className="text-primary" /> {cd}</p>}
                 <h3 className="m-0 mt-1 text-headline-sm text-on-surface">{s.name}</h3>
-                <p className="m-0 mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="calendar_month" size={15} /> Du {fdate(s.startsAt)} au {fdate(s.endsAt)}</p>
-                <p className="m-0 mt-0.5 flex min-w-0 items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="sell" size={15} className="shrink-0" /> <span className="truncate">{s.items.length} article{s.items.length > 1 ? 's' : ''} remisé{s.items.length > 1 ? 's' : ''} ({s.items.slice(0, 3).map(i => i.title).join(', ')}{s.items.length > 3 ? '…' : ''})</span></p>
+                <p className="m-0 mt-1 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="calendar_month" size={15} /> {t('fromTo', { from: fdate(s.startsAt), to: fdate(s.endsAt) })}</p>
+                <p className="m-0 mt-0.5 flex min-w-0 items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="sell" size={15} className="shrink-0" /> <span className="truncate">{t('sales.itemsDiscounted', { count: s.items.length, titles: `${s.items.slice(0, 3).map(i => i.title).join(', ')}${s.items.length > 3 ? '…' : ''}` })}</span></p>
               </div>
               <div className="flex flex-col gap-3 md:items-end">
                 {s.state === 'SCHEDULED' ? (
-                  s.notifyFollowers && <div className="text-body-sm md:text-right"><div className="text-label-sm uppercase text-on-surface-variant">Diffusion</div><div className="flex items-center gap-1 text-label-md text-on-surface md:justify-end"><Icon name="notifications_active" size={16} className="text-primary" /> Abonnés prévenus au lancement</div></div>
+                  s.notifyFollowers && <div className="text-body-sm md:text-right"><div className="text-label-sm uppercase text-on-surface-variant">{t('sales.broadcast')}</div><div className="flex items-center gap-1 text-label-md text-on-surface md:justify-end"><Icon name="notifications_active" size={16} className="text-primary" /> {t('sales.notifiedAtLaunch')}</div></div>
                 ) : (
                   <div className="text-body-sm md:text-right">
-                    <div className="text-label-sm uppercase text-on-surface-variant">{s.state === 'LIVE' ? 'Volume réalisé' : 'Bilan final'}</div>
+                    <div className="text-label-sm uppercase text-on-surface-variant">{s.state === 'LIVE' ? t('sales.volume') : t('sales.final')}</div>
                     <div className="text-headline-sm font-extrabold text-on-surface"><Price amount={s.salesVolume} /></div>
-                    <div className="text-tertiary">{s.salesCount} vente{s.salesCount > 1 ? 's' : ''} conclue{s.salesCount > 1 ? 's' : ''} en direct</div>
+                    <div className="text-tertiary">{t('sales.closedDirect', { count: s.salesCount })}</div>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-2 md:flex">
-                  {s.state !== 'ENDED' && <button onClick={() => onEdit(s)} className="flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="edit" size={16} /> Modifier</button>}
-                  {s.state === 'LIVE' && <button onClick={() => setStopping(s)} className="flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-primary-fixed px-3 text-label-md text-primary"><Icon name="stop_circle" size={16} /> Clôturer</button>}
-                  {s.state === 'SCHEDULED' && <button onClick={() => setStopping(s)} className="flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="cancel" size={16} /> Annuler</button>}
-                  {s.state === 'ENDED' && <button onClick={() => onRelaunch(s)} className="col-span-2 flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-primary-fixed px-3 text-label-md text-primary"><Icon name="replay" size={16} /> Relancer</button>}
+                  {s.state !== 'ENDED' && <button onClick={() => onEdit(s)} className="flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="edit" size={16} /> {common.t('edit')}</button>}
+                  {s.state === 'LIVE' && <button onClick={() => setStopping(s)} className="flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-primary-fixed px-3 text-label-md text-primary"><Icon name="stop_circle" size={16} /> {t('sales.close')}</button>}
+                  {s.state === 'SCHEDULED' && <button onClick={() => setStopping(s)} className="flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="cancel" size={16} /> {common.t('cancel')}</button>}
+                  {s.state === 'ENDED' && <button onClick={() => onRelaunch(s)} className="col-span-2 flex h-10 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-xl border-none bg-primary-fixed px-3 text-label-md text-primary"><Icon name="replay" size={16} /> {t('sales.relaunch')}</button>}
                 </div>
               </div>
             </div>
@@ -304,13 +313,13 @@ function SalesTab({ sales, onCreate, onEdit, onRelaunch, onChanged }: {
                 {s.items.slice(0, 4).map(i => <span key={i.entryId} className="h-10 w-10 overflow-hidden rounded-full border-2 border-solid border-surface-lowest bg-surface-container">{i.coverUrl && <img src={i.coverUrl} alt="" className="h-full w-full object-cover" />}</span>)}
                 {s.items.length > 4 && <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-solid border-surface-lowest bg-surface-container text-label-sm text-on-surface">+{s.items.length - 4}</span>}
               </div>
-              <p className="m-0 min-w-0 flex-1 truncate text-body-sm text-on-surface-variant">Prix barrés et badge promo visibles sur vos annonces{s.state === 'LIVE' ? '' : ' pendant la période'}.</p>
+              <p className="m-0 min-w-0 flex-1 truncate text-body-sm text-on-surface-variant">{s.state === 'LIVE' ? t('sales.visibleLive') : t('sales.visiblePeriod')}</p>
             </div>
           </section>
         )
       })}
-      <ConfirmSheet open={!!stopping} title={stopping?.state === 'SCHEDULED' ? 'Annuler ces soldes ?' : 'Clôturer ces soldes ?'} confirmLabel={loading ? '…' : stopping?.state === 'SCHEDULED' ? 'Annuler les soldes' : 'Clôturer maintenant'} onConfirm={() => stopping && void end({ variables: { id: stopping.id } }).then(() => { setStopping(null); onChanged() })} onClose={() => setStopping(null)} loading={loading}>
-        <p className="m-0 text-body-sm text-on-surface-variant">{stopping?.state === 'SCHEDULED' ? 'Elles ne démarreront pas.' : 'Les articles reviennent immédiatement à leur prix habituel.'}</p>
+      <ConfirmSheet open={!!stopping} title={stopping?.state === 'SCHEDULED' ? t('sales.cancelTitle') : t('sales.closeTitle')} confirmLabel={loading ? '…' : stopping?.state === 'SCHEDULED' ? t('sales.cancelConfirm') : t('sales.closeConfirm')} onConfirm={() => stopping && void end({ variables: { id: stopping.id } }).then(() => { setStopping(null); onChanged() })} onClose={() => setStopping(null)} loading={loading}>
+        <p className="m-0 text-body-sm text-on-surface-variant">{stopping?.state === 'SCHEDULED' ? t('sales.cancelText') : t('sales.closeText')}</p>
       </ConfirmSheet>
     </div>
   )
@@ -324,6 +333,8 @@ function SaleEditor({ listings, aisles, onDone, onCancel, followers, sale, relau
   // Editing this sale, or starting a new one from an ended sale ("Relancer").
   sale?: ShopSale, relaunch?: boolean
 }) {
+  const t = useT(shopPromos)
+  const tc = useT(common)
   const today = dayInput(new Date())
   const editing = !!sale && !relaunch
   const [name, setName] = useState(sale ? sale.name : '')
@@ -358,38 +369,38 @@ function SaleEditor({ listings, aisles, onDone, onCancel, followers, sale, relau
   )
   return (
     <>
-      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> Retour aux promotions</button>
-      <h1 className="m-0 text-headline-lg text-on-surface">{editing ? 'Modifier les soldes' : relaunch ? 'Relancer des soldes' : 'Créer des soldes pour ma boutique'}</h1>
-      <p className="m-0 mt-1 text-body-md text-on-surface-variant">Définissez vos réductions et sélectionnez les articles de votre vitrine officielle à remiser (60 jours au maximum).</p>
+      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> {t('backToPromos')}</button>
+      <h1 className="m-0 text-headline-lg text-on-surface">{editing ? t('saleEditor.editTitle') : relaunch ? t('saleEditor.relaunchTitle') : t('saleEditor.createTitle')}</h1>
+      <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('saleEditor.intro')}</p>
       <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <section className={card}>
-            {step(1, 'Informations générales', 'Nommez et cadrez la période de validité de votre offre')}
-            <label className="block"><span className="mb-1.5 block text-label-md text-on-surface">Nom de l’opération <span className="text-primary">*</span></span><input value={name} onChange={e => setName(e.target.value)} maxLength={60} placeholder="Ex : Soldes de rentrée" className={inputCls} /></label>
+            {step(1, t('saleEditor.step1'), t('saleEditor.step1Sub'))}
+            <label className="block"><span className="mb-1.5 block text-label-md text-on-surface">{t('saleEditor.name')} <span className="text-primary">*</span></span><input value={name} onChange={e => setName(e.target.value)} maxLength={60} placeholder={t('saleEditor.namePlaceholder')} className={inputCls} /></label>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div><span className="mb-1.5 block text-label-md text-on-surface">Début <span className="text-primary">*</span></span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={editing ? undefined : today} value={from} onChange={e => setFrom(e.target.value)} className={inputCls} aria-label="Date de début" /><input type="time" value={fromTime} onChange={e => setFromTime(e.target.value)} className={inputCls} aria-label="Heure de début" /></div></div>
-              <div><span className="mb-1.5 block text-label-md text-on-surface">Fin <span className="text-primary">*</span></span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={from} value={to} onChange={e => setTo(e.target.value)} className={inputCls} aria-label="Date de fin" /><input type="time" value={toTime} onChange={e => setToTime(e.target.value)} className={inputCls} aria-label="Heure de fin" /></div></div>
+              <div><span className="mb-1.5 block text-label-md text-on-surface">{t('start')} <span className="text-primary">*</span></span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={editing ? undefined : today} value={from} onChange={e => setFrom(e.target.value)} className={inputCls} aria-label={t('startDate')} /><input type="time" value={fromTime} onChange={e => setFromTime(e.target.value)} className={inputCls} aria-label={t('startTime')} /></div></div>
+              <div><span className="mb-1.5 block text-label-md text-on-surface">{t('end')} <span className="text-primary">*</span></span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={from} value={to} onChange={e => setTo(e.target.value)} className={inputCls} aria-label={t('endDate')} /><input type="time" value={toTime} onChange={e => setToTime(e.target.value)} className={inputCls} aria-label={t('endTime')} /></div></div>
             </div>
           </section>
           <section className={card}>
-            {step(2, 'Réduction & application', 'Choisissez la modalité de calcul du rabais')}
+            {step(2, t('saleEditor.step2'), t('saleEditor.step2Sub'))}
             <div role="radiogroup" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {([['PERCENT', 'Remise en pourcentage (%)', 'Le même pourcentage ou un pourcentage par article'], ['PRICE', 'Prix promotionnel par article', 'Saisie manuelle du prix pour chaque article']] as const).map(([k, t, d]) => (
+              {([['PERCENT', t('saleEditor.modePercent'), t('saleEditor.modePercentSub')], ['PRICE', t('saleEditor.modePrice'), t('saleEditor.modePriceSub')]] as const).map(([k, title, d]) => (
                 <button key={k} type="button" role="radio" aria-checked={mode === k} onClick={() => setMode(k)} className={`flex cursor-pointer items-start gap-2 rounded-xl border-2 border-solid p-3 text-left ${mode === k ? 'border-primary bg-primary-fixed/30' : 'border-transparent bg-surface-container-low'}`}>
                   <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-solid ${mode === k ? 'border-primary' : 'border-outline-variant'}`}>{mode === k && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}</span>
-                  <span className="min-w-0"><span className="block text-label-md text-on-surface">{t}</span><span className="block text-body-sm text-on-surface-variant">{d}</span></span>
+                  <span className="min-w-0"><span className="block text-label-md text-on-surface">{title}</span><span className="block text-body-sm text-on-surface-variant">{d}</span></span>
                 </button>
               ))}
             </div>
           </section>
           <section className={card}>
-            {step(3, 'Sélection des articles', 'Cochez les articles en ligne à inclure dans les soldes')}
+            {step(3, t('saleEditor.step3'), t('saleEditor.step3Sub'))}
             <ItemPicker listings={listings} aisles={aisles} picks={picks} onChange={setPicks} priceMode={mode === 'PRICE' ? { prices, onPrice: (id, v) => setPrices(p => ({ ...p, [id]: v })) } : undefined} />
           </section>
           <section className={card}>
-            {step(4, 'Communication & diffusion', 'Faites savoir à vos abonnés que vos soldes commencent')}
+            {step(4, t('saleEditor.step4'), t('saleEditor.step4Sub'))}
             <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3">
-              <span className="min-w-0 flex-1"><span className="block text-label-lg text-on-surface">Prévenir mes abonnés au lancement</span><span className="text-body-sm text-on-surface-variant">Une notification à vos {formatNumber(followers)} abonné{followers > 1 ? 's' : ''} le {new Date(startIso).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}.</span></span>
+              <span className="min-w-0 flex-1"><span className="block text-label-lg text-on-surface">{t('saleEditor.notify')}</span><span className="text-body-sm text-on-surface-variant">{t('saleEditor.notifyText', { count: followers, date: fmtDate(startIso, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) })}</span></span>
               <input type="checkbox" role="switch" checked={notify} onChange={e => setNotify(e.target.checked)} className="peer sr-only" />
               <span className="relative mt-1 h-6 w-11 shrink-0 rounded-full bg-outline-variant transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5" />
             </label>
@@ -397,25 +408,25 @@ function SaleEditor({ listings, aisles, onDone, onCancel, followers, sale, relau
         </div>
         <aside className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-4">
           <section className={card}>
-            <div className="mb-2 flex items-center justify-between gap-2"><span className="flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="visibility" size={18} className="text-primary" /> Aperçu sur Dilchap</span></div>
+            <div className="mb-2 flex items-center justify-between gap-2"><span className="flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="visibility" size={18} className="text-primary" /> {t('preview.title')}</span></div>
             {first ? (
               <div className="overflow-hidden rounded-xl bg-surface-container-low">
-                <div className="relative aspect-[4/3] overflow-hidden bg-surface-container">{first.coverImageUrl && <img src={first.coverImageUrl} alt="" className="h-full w-full object-cover" />}<span className="absolute left-2 top-2 rounded-md bg-primary px-2 py-0.5 text-label-sm font-bold text-white">-{Math.max(0, Math.round((1 - promo(picks[0]) / (first.price || 1)) * 100))} %</span></div>
+                <div className="relative aspect-[4/3] overflow-hidden bg-surface-container">{first.coverImageUrl && <img src={first.coverImageUrl} alt="" className="h-full w-full object-cover" />}<span className="absolute left-2 top-2 rounded-md bg-primary px-2 py-0.5 text-label-sm font-bold text-white">{t('pct', { pct: Math.max(0, Math.round((1 - promo(picks[0]) / (first.price || 1)) * 100)) })}</span></div>
                 <div className="p-3">
                   <div className="truncate text-label-lg text-on-surface">{first.title}</div>
                   <div className="flex flex-wrap items-baseline gap-2"><span className="text-headline-sm font-extrabold text-primary"><Price amount={promo(picks[0])} /></span><span className="text-body-sm text-outline line-through"><Price amount={first.price} /></span></div>
-                  <div className="text-body-sm text-tertiary">Économisez <Price amount={(first.price ?? 0) - promo(picks[0])} /></div>
+                  <div className="text-body-sm text-tertiary">{t.rich('preview.save', { price: <Price amount={(first.price ?? 0) - promo(picks[0])} /> })}</div>
                 </div>
               </div>
-            ) : <p className="m-0 text-body-sm text-on-surface-variant">Sélectionnez un article pour voir l’aperçu.</p>}
+            ) : <p className="m-0 text-body-sm text-on-surface-variant">{t('preview.empty')}</p>}
           </section>
-          <p className="m-0 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="lightbulb" size={18} className="mt-0.5 shrink-0 text-tertiary" /> L’acheteur voit immédiatement la remise et peut vous contacter pour convenir d’un rendez-vous de remise en main propre.</p>
+          <p className="m-0 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="lightbulb" size={18} className="mt-0.5 shrink-0 text-tertiary" /> {t('saleEditor.tip')}</p>
         </aside>
       </div>
       {error && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {error}</p>}
       <div className="mt-4 flex gap-3 lg:justify-end">
-        <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">Annuler</button>
-        <button disabled={!ok || loading} onClick={submit} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="bolt" size={19} /> <span className="truncate">{loading ? 'Enregistrement…' : editing ? 'Enregistrer les modifications' : 'Activer et programmer les soldes'}</span></button>
+        <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">{tc('cancel')}</button>
+        <button disabled={!ok || loading} onClick={submit} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="bolt" size={19} /> <span className="truncate">{loading ? tc('saving') : editing ? t('saveChanges') : t('saleEditor.submit')}</span></button>
       </div>
     </>
   )
@@ -428,12 +439,13 @@ function SaleEditor({ listings, aisles, onDone, onCancel, followers, sale, relau
 export { feeText }
 
 function DueBox({ c, onPay }: { c: OpenCampaign, onPay: () => void }) {
+  const t = useT(shopPromos)
   if (c.amountDue <= 0) return null
   const n = c.myItems.filter(i => i.status === 'AWAITING_PAYMENT').length
   return (
     <div className="mb-2 flex flex-col gap-2 rounded-xl bg-amber-50 p-3 sm:flex-row sm:items-center dark:bg-amber-500/10">
-      <div className="min-w-0 flex-1 text-body-sm"><div className="text-label-md text-on-surface">À régler : <OfferCredits op="CAMPAIGN" n={c.amountDue} /></div><div className="text-on-surface-variant">{n} article{n > 1 ? 's' : ''} accepté{n > 1 ? 's' : ''}{!c.entryFeePaid && c.entryFee > 0 ? ', participation incluse' : ''}. La remise s’active après le paiement.</div></div>
-      <button onClick={onPay} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="toll" size={18} /> Régler <OfferCredits op="CAMPAIGN" n={c.amountDue} tag={false} /></button>
+      <div className="min-w-0 flex-1 text-body-sm"><div className="text-label-md text-on-surface">{t.rich('due.title', { price: <OfferCredits op="CAMPAIGN" n={c.amountDue} /> })}</div><div className="text-on-surface-variant">{!c.entryFeePaid && c.entryFee > 0 ? t('due.textWithEntry', { count: n }) : t('due.text', { count: n })}</div></div>
+      <button onClick={onPay} className="flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="toll" size={18} /> {t.rich('due.pay', { price: <OfferCredits op="CAMPAIGN" n={c.amountDue} tag={false} /> })}</button>
     </div>
   )
 }
@@ -442,15 +454,16 @@ function DueBox({ c, onPay }: { c: OpenCampaign, onPay: () => void }) {
 // the first few), and the team's own terms.
 export function CampaignConditions({ c }: { c: OpenCampaign }) {
   const [all, setAll] = useState(false)
+  const t = useT(shopPromos)
   const lines = c.sellerConditions
   const shown = all ? lines : lines.slice(0, 4)
   return (
     <div className="mt-3 rounded-xl bg-surface-container-low p-3 text-body-sm">
-      <div className="flex items-center gap-2 text-label-md text-on-surface"><Icon name="checklist" size={18} className="shrink-0 text-primary" /> Conditions de participation</div>
+      <div className="flex items-center gap-2 text-label-md text-on-surface"><Icon name="checklist" size={18} className="shrink-0 text-primary" /> {t('conditions.title')}</div>
       <ul className="m-0 mt-1.5 list-none space-y-1 p-0 text-on-surface-variant">
         {shown.map(l => <li key={l} className="flex items-start gap-1.5"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current" /> <span className="min-w-0">{l}</span></li>)}
       </ul>
-      {lines.length > 4 && <button type="button" onClick={() => setAll(a => !a)} className="mt-1 cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">{all ? 'Voir moins' : `Voir les ${lines.length} conditions`}</button>}
+      {lines.length > 4 && <button type="button" onClick={() => setAll(a => !a)} className="mt-1 cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">{all ? common.t('seeLess') : t('conditions.seeAll', { n: lines.length })}</button>}
       {c.sellerTerms && (all || lines.length <= 4) && <div className="rich-text mt-2 text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(c.sellerTerms) }} />}
     </div>
   )
@@ -459,11 +472,12 @@ export function CampaignConditions({ c }: { c: OpenCampaign }) {
 // « Vous pouvez vous inscrire », or exactly what is missing and the button
 // that gets it (the server decides; this only shows its answer).
 export function Eligibility({ c, onNavigate }: { c: OpenCampaign, onNavigate: (p: any) => void }) {
+  const t = useT(shopPromos)
   if (!c.eligible)
     return (
       <div className="mb-2 rounded-xl bg-primary-fixed/50 p-3 text-body-sm">
         <p className="m-0 flex items-start gap-2 text-on-surface"><Icon name="lock" size={18} className="mt-0.5 shrink-0 text-primary" />
-          <span className="min-w-0">{c.ineligibleMessage && <span className="block">{c.ineligibleMessage}</span>}<b className="font-semibold">Il vous faut : </b>{c.missing.join(' ; ')}.</span>
+          <span className="min-w-0">{c.ineligibleMessage && <span className="block">{c.ineligibleMessage}</span>}{t.rich('eligibility.missing', { list: c.missing.join(t('eligibility.missingSep')), b: ch => <b className="font-semibold">{ch}</b> })}</span>
         </p>
         {c.actions.length > 0 && (
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -484,13 +498,13 @@ export function Eligibility({ c, onNavigate }: { c: OpenCampaign, onNavigate: (p
       </div>
     )
   const left = [
-    c.placesLeft != null ? (c.placesLeft > 0 ? `${c.placesLeft} place${c.placesLeft > 1 ? 's' : ''} restante${c.placesLeft > 1 ? 's' : ''}` : 'Campagne complète : liste d’attente') : '',
-    c.sellerLimitLeft != null ? `vous pouvez inscrire ${c.sellerLimitLeft} annonce${c.sellerLimitLeft > 1 ? 's' : ''}` : '',
+    c.placesLeft != null ? (c.placesLeft > 0 ? t('eligibility.placesLeft', { count: c.placesLeft }) : t('eligibility.full')) : '',
+    c.sellerLimitLeft != null ? t('eligibility.sellerLimit', { count: c.sellerLimitLeft }) : '',
   ].filter(Boolean).join(' · ')
   return (
     <p className="m-0 mb-2 flex items-start gap-2 rounded-xl bg-tertiary-soft px-3 py-2 text-body-sm text-on-surface">
       <Icon name="check_circle" size={18} fill className="mt-0.5 shrink-0 text-tertiary" />
-      <span className="min-w-0"><b className="font-semibold">Vous pouvez vous inscrire</b>{left && <span className="block text-on-surface-variant">{left}</span>}</span>
+      <span className="min-w-0"><b className="font-semibold">{t('eligibility.canJoin')}</b>{left && <span className="block text-on-surface-variant">{left}</span>}</span>
     </p>
   )
 }
@@ -499,61 +513,63 @@ export function Eligibility({ c, onNavigate }: { c: OpenCampaign, onNavigate: (p
 // 1 refusé » — only the non-empty ones (actifs always).
 const countOf = (c: OpenCampaign, s: PromoItem['status']) => c.myItems.filter(i => i.status === s).length
 export function entryCounts(c: OpenCampaign) {
-  const plural = (k: number, one: string, many: string) => `${k} ${k > 1 ? many : one}`
+  const t = shopPromos.t
   const approved = countOf(c, 'APPROVED'), due = countOf(c, 'AWAITING_PAYMENT'), pending = countOf(c, 'PENDING'), waiting = countOf(c, 'WAITLISTED'), rejected = countOf(c, 'REJECTED')
   return [
-    plural(approved, 'actif', 'actifs'),
-    due ? `${due} à régler` : '',
-    pending ? `${pending} en attente de validation` : '',
-    waiting ? `${waiting} en liste d’attente` : '',
-    rejected ? plural(rejected, 'refusé', 'refusés') : '',
+    t('counts.approved', { count: approved }),
+    due ? t('counts.due', { n: due }) : '',
+    pending ? t('counts.pending', { n: pending }) : '',
+    waiting ? t('counts.waitlisted', { n: waiting }) : '',
+    rejected ? t('counts.rejected', { count: rejected }) : '',
   ].filter(Boolean)
 }
 
 // Under « Ma participation »: what happens to the items, by validation mode.
 function participationLine(c: OpenCampaign) {
+  const t = shopPromos.t
   const k = c.myItems.length
-  const items = `${k} article${k > 1 ? 's' : ''} inscrit${k > 1 ? 's' : ''}`
+  const items = t('participation.items', { count: k })
   const waiting = countOf(c, 'WAITLISTED')
-  const list = waiting ? ` ; ${waiting} en liste d’attente prendr${waiting > 1 ? 'ont' : 'a'} les prochaines places libérées` : ''
+  const list = waiting ? t('participation.waitlist', { count: waiting }) : ''
   return c.validation === 'AUTO'
-    ? `${items} : acceptés automatiquement s’ils remplissent les conditions${list}.`
-    : `${items} : vérifiés par l’équipe Dilchap avant d’être mis en avant${list}.`
+    ? t('participation.auto', { items, list })
+    : t('participation.team', { items, list })
 }
 
 export function CampaignsTab({ campaigns, onJoin, onChanged, onNavigate }: { campaigns: OpenCampaign[], onJoin: (c: OpenCampaign, retry?: PromoItem) => void, onChanged: () => void, onNavigate: (p: any) => void }) {
   const [withdraw] = useMutation(WITHDRAW_CAMPAIGN_ENTRY_MUTATION)
   const [openId, setOpenId] = useState<string | null>(() => campaigns.find(c => c.myItems.length)?.id ?? null)
   const [paying, setPaying] = useState<OpenCampaign | null>(null)
-  if (!campaigns.length) return <Empty icon="campaign" title="Aucune campagne ouverte" text="Quand l’équipe Dilchap ouvre une campagne (Black Friday, fêtes…), vous pourrez y inscrire vos articles ici." />
+  const t = useT(shopPromos)
+  if (!campaigns.length) return <Empty icon="campaign" title={t('campaigns.emptyTitle')} text={t('campaigns.emptyText')} />
   const detail = campaigns.find(c => c.id === openId && c.myItems.length)
   const n = (c: OpenCampaign, s: PromoItem['status']) => c.myItems.filter(i => i.status === s).length
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><span className="h-2 w-2 rounded-full bg-primary" /> Campagnes Dilchap ouvertes ({campaigns.length})</h2>
+      <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><span className="h-2 w-2 rounded-full bg-primary" /> {t('campaigns.open', { n: campaigns.length })}</h2>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {campaigns.map(c => (
           <section key={c.id} className={`${card} flex min-w-0 flex-col`}>
-            <div className="flex flex-wrap items-center justify-between gap-2"><span className="whitespace-nowrap rounded-md bg-surface-container px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">Campagne Dilchap</span><span className="flex flex-wrap items-center gap-1.5">{c.earlyAccessUntil && <span className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified" size={13} fill /> Avant-première</span>}<StatePill state={c.state} /></span></div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><span className="whitespace-nowrap rounded-md bg-surface-container px-2 py-0.5 text-label-sm uppercase text-on-surface-variant">{t('campaigns.kind')}</span><span className="flex flex-wrap items-center gap-1.5">{c.earlyAccessUntil && <span className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary"><Icon name="verified" size={13} fill /> {t('campaigns.earlyAccess')}</span>}<StatePill state={c.state} /></span></div>
             <h3 className="m-0 mt-2 text-headline-sm text-on-surface">{c.name}</h3>
-            <p className="m-0 mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="calendar_month" size={15} /> Du {fdate(c.startsAt)} au {fdate(c.endsAt)}</p>
+            <p className="m-0 mt-0.5 flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="calendar_month" size={15} /> {t('fromTo', { from: fdate(c.startsAt), to: fdate(c.endsAt) })}</p>
             <CampaignConditions c={c} />
-            <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">À régler en crédits, seulement pour les articles acceptés.</span>}</span></p>
+            <p className="m-0 mt-2 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(c)}</span>{(c.entryFee > 0 || c.listingFee > 0) && <span className="text-on-surface-variant">{t('campaigns.feeNote')}</span>}</span></p>
             {c.description && <div className="rich-text mt-2 text-body-sm text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(c.description) }} />}
             <div className="mt-auto pt-3">
               <Eligibility c={c} onNavigate={onNavigate} />
               {c.myItems.length > 0 ? (
                 <>
                   <DueBox c={c} onPay={() => setPaying(c)} />
-                  <p className="m-0 mb-2 flex items-center gap-1.5 rounded-xl bg-primary-fixed/40 px-3 py-2 text-body-sm text-on-surface"><Icon name="info" size={16} className="shrink-0 text-primary" /> {c.myItems.length} article{c.myItems.length > 1 ? 's' : ''} inscrit{c.myItems.length > 1 ? 's' : ''} : {entryCounts(c).join(', ')}</p>
+                  <p className="m-0 mb-2 flex items-center gap-1.5 rounded-xl bg-primary-fixed/40 px-3 py-2 text-body-sm text-on-surface"><Icon name="info" size={16} className="shrink-0 text-primary" /> {t('campaigns.entered', { count: c.myItems.length, detail: entryCounts(c).join(', ') })}</p>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <button onClick={() => setOpenId(c.id)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-3 text-label-md text-white"><Icon name="checklist" size={18} /> Gérer mes articles</button>
-                    <button onClick={() => onJoin(c)} disabled={!c.canJoin} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface disabled:cursor-default disabled:opacity-50"><Icon name="add" size={18} /> Inscrire d’autres articles</button>
+                    <button onClick={() => setOpenId(c.id)} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-3 text-label-md text-white"><Icon name="checklist" size={18} /> {t('campaigns.manage')}</button>
+                    <button onClick={() => onJoin(c)} disabled={!c.canJoin} className="flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-surface-container px-3 text-label-md text-on-surface disabled:cursor-default disabled:opacity-50"><Icon name="add" size={18} /> {t('campaigns.addMore')}</button>
                   </div>
                 </>
               ) : (
                 <>
-                  {c.canJoin && <button onClick={() => onJoin(c)} className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary text-label-md text-white"><Icon name="add_circle" size={18} /> {c.placesLeft === 0 && c.waitlist ? 'S’inscrire sur la liste d’attente' : 'S’inscrire'}</button>}
+                  {c.canJoin && <button onClick={() => onJoin(c)} className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary text-label-md text-white"><Icon name="add_circle" size={18} /> {c.placesLeft === 0 && c.waitlist ? t('campaigns.joinWaitlist') : t('campaigns.join')}</button>}
                 </>
               )}
             </div>
@@ -563,13 +579,13 @@ export function CampaignsTab({ campaigns, onJoin, onChanged, onNavigate }: { cam
       {detail && (
         <section className={card}>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="min-w-0"><h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={20} className="text-primary" /> Ma participation : {detail.name}</h2><p className="m-0 text-body-sm text-on-surface-variant">{participationLine(detail)}</p></div>
+            <div className="min-w-0"><h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface"><Icon name="checklist" size={20} className="text-primary" /> {t('participation.title', { name: detail.name })}</h2><p className="m-0 text-body-sm text-on-surface-variant">{participationLine(detail)}</p></div>
             <div className="flex flex-wrap gap-1.5">
-              <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{n(detail, 'APPROVED')} actif{n(detail, 'APPROVED') > 1 ? 's' : ''}</span>
-              {n(detail, 'AWAITING_PAYMENT') > 0 && <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-label-sm text-amber-800">{n(detail, 'AWAITING_PAYMENT')} à régler</span>}
-              {(n(detail, 'PENDING') > 0 || detail.validation !== 'AUTO') && <span className="whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{n(detail, 'PENDING')} en attente de validation</span>}
-              {n(detail, 'WAITLISTED') > 0 && <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-label-sm text-amber-800">{n(detail, 'WAITLISTED')} en liste d’attente</span>}
-              <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{n(detail, 'REJECTED')} refusé{n(detail, 'REJECTED') > 1 ? 's' : ''}</span>
+              <span className="whitespace-nowrap rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{t('counts.approved', { count: n(detail, 'APPROVED') })}</span>
+              {n(detail, 'AWAITING_PAYMENT') > 0 && <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-label-sm text-amber-800">{t('counts.due', { n: n(detail, 'AWAITING_PAYMENT') })}</span>}
+              {(n(detail, 'PENDING') > 0 || detail.validation !== 'AUTO') && <span className="whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{t('counts.pending', { n: n(detail, 'PENDING') })}</span>}
+              {n(detail, 'WAITLISTED') > 0 && <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-label-sm text-amber-800">{t('counts.waitlisted', { n: n(detail, 'WAITLISTED') })}</span>}
+              <span className="whitespace-nowrap rounded-full bg-primary-fixed px-2 py-0.5 text-label-sm text-primary">{t('counts.rejected', { count: n(detail, 'REJECTED') })}</span>
             </div>
           </div>
           <div className="mt-3"><DueBox c={detail} onPay={() => setPaying(detail)} /></div>
@@ -578,23 +594,23 @@ export function CampaignsTab({ campaigns, onJoin, onChanged, onNavigate }: { cam
               <div key={i.entryId} className={`flex flex-col gap-2 rounded-xl p-3 sm:flex-row sm:flex-wrap sm:items-center ${i.status === 'REJECTED' ? 'bg-primary-fixed/30' : 'bg-surface-container-low'}`}>
                 <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
                   <Thumb url={i.coverUrl} />
-                  <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{i.title}</div><div className="flex flex-wrap items-baseline gap-x-2 text-body-sm"><span className="font-bold text-primary"><Price amount={i.promoPrice} /></span><span className="text-outline line-through"><Price amount={i.price} /></span><span className="text-on-surface-variant">-{pctOf(i)} %</span></div></div>
+                  <div className="min-w-0 flex-1"><div className="truncate text-label-md text-on-surface">{i.title}</div><div className="flex flex-wrap items-baseline gap-x-2 text-body-sm"><span className="font-bold text-primary"><Price amount={i.promoPrice} /></span><span className="text-outline line-through"><Price amount={i.price} /></span><span className="text-on-surface-variant">{t('pct', { pct: pctOf(i) })}</span></div></div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 sm:justify-end">
                   <EntryPill status={i.status} />
-                  {i.status === 'REJECTED' && detail.canJoin && <button onClick={() => onJoin(detail, i)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name="replay" size={16} /> Réajuster la remise</button>}
-                  {(i.status === 'PENDING' || i.status === 'WAITLISTED') && <button onClick={() => void withdraw({ variables: { entryId: i.entryId } }).then(onChanged)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface"><Icon name="close" size={16} /> Retirer</button>}
+                  {i.status === 'REJECTED' && detail.canJoin && <button onClick={() => onJoin(detail, i)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary px-3 text-label-md text-white"><Icon name="replay" size={16} /> {t('join.retryTitle')}</button>}
+                  {(i.status === 'PENDING' || i.status === 'WAITLISTED') && <button onClick={() => void withdraw({ variables: { entryId: i.entryId } }).then(onChanged)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface"><Icon name="close" size={16} /> {t('campaigns.withdraw')}</button>}
                 </div>
                 {i.status === 'REJECTED' && i.rejectReason && <p className="m-0 flex basis-full items-start gap-1 text-body-sm text-primary"><Icon name="warning" size={15} className="mt-0.5 shrink-0" /> <span>{i.rejectReason}</span></p>}
               </div>
             ))}
           </div>
-          {detail.canJoin && <button onClick={() => onJoin(detail)} className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add_circle" size={18} /> Inscrire un article supplémentaire</button>}
+          {detail.canJoin && <button onClick={() => onJoin(detail)} className="mt-3 flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add_circle" size={18} /> {t('campaigns.addOne')}</button>}
         </section>
       )}
       <WalletPaySheet
         open={!!paying}
-        title={paying ? `Participation « ${paying.name} »` : ''}
+        title={paying ? t('campaigns.payTitle', { name: paying.name }) : ''}
         amount={paying?.amountDue ?? 0}
         request={paying ? { kind: 'CAMPAIGN_ENTRY', product: paying.id } : null}
         onClose={() => setPaying(null)}
@@ -609,24 +625,26 @@ export function CampaignJoin({ campaign, retry, listings, aisles, onDone, onCanc
   const [picks, setPicks] = useState<Pick[]>(retry ? [{ listingId: retry.listingId, percent: Math.max(campaign.minDiscountPercent ?? 1, pctOf(retry)) }] : [])
   const [error, setError] = useState('')
   const [join, { loading }] = useMutation(JOIN_CAMPAIGN_MUTATION)
+  const t = useT(shopPromos)
+  const tc = useT(common)
   const min = campaign.minDiscountPercent ?? 0
   const ok = picks.length > 0 && picks.every(p => p.percent >= min) && (campaign.sellerLimitLeft == null || picks.length <= campaign.sellerLimitLeft)
   return (
     <>
-      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> Retour aux campagnes</button>
-      <h1 className="m-0 text-headline-lg text-on-surface">{retry ? 'Réajuster la remise' : `Participer à « ${campaign.name} »`}</h1>
-      <p className="m-0 mt-1 text-body-md text-on-surface-variant">Du {fdate(campaign.startsAt)} au {fdate(campaign.endsAt)}. {campaign.validation === 'AUTO' ? 'Vos articles sont acceptés dès l’inscription s’ils remplissent les conditions.' : 'Vos articles sont vérifiés par l’équipe Dilchap avant la campagne.'}{campaign.sellerLimitLeft != null ? ` Vous pouvez inscrire ${campaign.sellerLimitLeft} article${campaign.sellerLimitLeft > 1 ? 's' : ''}.` : ''}{campaign.placesLeft === 0 && campaign.waitlist ? ' La campagne est complète : vos articles iront sur la liste d’attente.' : ''}</p>
+      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> {t('join.back')}</button>
+      <h1 className="m-0 text-headline-lg text-on-surface">{retry ? t('join.retryTitle') : t('join.title', { name: campaign.name })}</h1>
+      <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('fromTo', { from: fdate(campaign.startsAt), to: fdate(campaign.endsAt) })}. {campaign.validation === 'AUTO' ? t('join.auto') : t('join.team')}{campaign.sellerLimitLeft != null ? ` ${t('join.limit', { count: campaign.sellerLimitLeft })}` : ''}{campaign.placesLeft === 0 && campaign.waitlist ? ` ${t('join.full')}` : ''}</p>
       <CampaignConditions c={campaign} />
-      <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-surface-lowest p-3 text-body-sm shadow-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(campaign)}</span>{(campaign.entryFee > 0 || campaign.listingFee > 0) && <span className="text-on-surface-variant">Rien à payer maintenant : vous réglerez uniquement les articles acceptés{campaign.entryFeePaid ? ' (participation déjà réglée)' : ''}.</span>}</span></p>
-      {retry?.rejectReason && <p className="m-0 mt-3 flex items-start gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="warning" size={17} className="shrink-0" /> Motif du refus : {retry.rejectReason}</p>}
+      <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-surface-lowest p-3 text-body-sm shadow-sm"><Icon name="payments" size={18} className="mt-0.5 shrink-0 text-primary" /> <span className="min-w-0"><span className="block text-label-md text-on-surface">{feeText(campaign)}</span>{(campaign.entryFee > 0 || campaign.listingFee > 0) && <span className="text-on-surface-variant">{campaign.entryFeePaid ? t('join.nothingNowPaid') : t('join.nothingNow')}</span>}</span></p>
+      {retry?.rejectReason && <p className="m-0 mt-3 flex items-start gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="warning" size={17} className="shrink-0" /> {t('join.rejectReason', { reason: retry.rejectReason })}</p>}
       <section className={`${card} mt-4`}>
         <ItemPicker listings={listings.filter(l => !already.has(l.id))} aisles={aisles} picks={picks} onChange={setPicks} minPercent={campaign.minDiscountPercent} />
       </section>
-      {campaign.sellerLimitLeft != null && picks.length > campaign.sellerLimitLeft && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {campaign.sellerLimitLeft} article{campaign.sellerLimitLeft > 1 ? 's' : ''} au maximum pour cette campagne.</p>}
+      {campaign.sellerLimitLeft != null && picks.length > campaign.sellerLimitLeft && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {t('join.max', { count: campaign.sellerLimitLeft })}</p>}
       {error && <p className="m-0 mt-3 flex items-start gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} className="mt-0.5 shrink-0" /> <span className="min-w-0">{error}</span></p>}
       <div className="mt-4 flex gap-3 lg:justify-end">
-        <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">Annuler</button>
-        <button disabled={!ok || loading} onClick={() => void join({ variables: { input: { campaignId: campaign.id, items: picks.map(p => ({ listingId: p.listingId, discountPercent: p.percent })) } } }).then(onDone).catch((e: Error) => setError(e.message))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="send" size={19} /> {loading ? 'Envoi…' : `Soumettre ${picks.length} article${picks.length > 1 ? 's' : ''}`}</button>
+        <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">{tc('cancel')}</button>
+        <button disabled={!ok || loading} onClick={() => void join({ variables: { input: { campaignId: campaign.id, items: picks.map(p => ({ listingId: p.listingId, discountPercent: p.percent })) } } }).then(onDone).catch((e: Error) => setError(e.message))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="send" size={19} /> {loading ? t('sending') : t('join.submit', { count: picks.length })}</button>
       </div>
     </>
   )
@@ -644,29 +662,30 @@ function BundlesTab({ bundles, listings, onCreate, onEdit, onChanged }: {
   const [filter, setFilter] = useState<'ALL' | PromoState>('ALL')
   const [q, setQ] = useState('')
   const [confirm, setConfirm] = useState<{ b: ShopBundle, kind: 'stop' | 'delete' } | null>(null)
+  const t = useT(shopPromos)
   const info = (
     <p className="m-0 flex items-start gap-2 rounded-2xl bg-surface-lowest p-4 text-body-sm text-on-surface-variant shadow-sm">
       <Icon name="info" size={18} className="mt-0.5 shrink-0 text-primary" />
-      <span><b className="text-on-surface">Fonctionnement :</b> le paiement s’effectue en direct entre acheteur et vendeur (espèces ou Mobile Money), sans panier ni code promo. La remise d’une offre groupée est appliquée par vous, lors de la conclusion de la vente.</span>
+      <span>{t.rich('bundles.info', { b: c => <b className="text-on-surface">{c}</b> })}</span>
     </p>
   )
-  if (!bundles.length) return <div className="flex flex-col gap-3">{info}<Empty icon="inventory_2" title="Aucune offre groupée" text="Encouragez les achats en plusieurs exemplaires : « 2 achetés = -10 % ». L’encart s’affiche sur vos annonces ayant au moins 2 exemplaires en stock." action={<button onClick={onCreate} className="mt-2 flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add" size={18} /> Créer une offre groupée</button>} /></div>
+  if (!bundles.length) return <div className="flex flex-col gap-3">{info}<Empty icon="inventory_2" title={t('bundles.emptyTitle')} text={t('bundles.emptyText')} action={<button onClick={onCreate} className="mt-2 flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Icon name="add" size={18} /> {t('bundles.create')}</button>} /></div>
   const count = (s: 'ALL' | PromoState) => (s === 'ALL' ? bundles.length : bundles.filter(x => x.state === s).length)
   const rows = bundles.filter(b => (filter === 'ALL' || b.state === filter) && (!q || b.name.toLowerCase().includes(q.toLowerCase())))
-  const scope = (b: ShopBundle) => b.scope === 'ALL' ? 'Toute la boutique' : b.scope === 'AISLE' ? `Rayon ${b.aisleName ?? ''}` : `${b.listingIds.length} article${b.listingIds.length > 1 ? 's' : ''} choisi${b.listingIds.length > 1 ? 's' : ''}`
+  const scope = (b: ShopBundle) => b.scope === 'ALL' ? t('bundles.scopeAll') : b.scope === 'AISLE' ? t('bundles.scopeAisle', { name: b.aisleName ?? '' }) : t('bundles.scopeListings', { count: b.listingIds.length })
   const validity = (b: ShopBundle) => b.state === 'ENDED'
-    ? { icon: 'event_busy', text: b.endsAt && new Date(b.endsAt) < new Date() ? `Clôturée le ${fdate(b.endsAt)}` : 'Arrêtée' }
+    ? { icon: 'event_busy', text: b.endsAt && new Date(b.endsAt) < new Date() ? t('bundles.closedOn', { date: fdate(b.endsAt) }) : t('bundles.stopped') }
     : b.state === 'SCHEDULED'
-      ? { icon: 'event_upcoming', text: `Démarre le ${fdate(b.startsAt!)}${b.endsAt ? ` jusqu’au ${fdate(b.endsAt)}` : ''}` }
-      : b.endsAt ? { icon: 'event', text: `Valable jusqu’au ${fdate(b.endsAt)} (${daysLeft(b.endsAt)} jour${daysLeft(b.endsAt) > 1 ? 's' : ''} restant${daysLeft(b.endsAt) > 1 ? 's' : ''})` } : { icon: 'all_inclusive', text: 'Sans date de fin (active en continu)' }
+      ? { icon: 'event_upcoming', text: b.endsAt ? t('bundles.startsOnUntil', { from: fdate(b.startsAt!), to: fdate(b.endsAt) }) : t('bundles.startsOn', { date: fdate(b.startsAt!) }) }
+      : b.endsAt ? { icon: 'event', text: t('bundles.validUntil', { date: fdate(b.endsAt), count: daysLeft(b.endsAt) }) } : { icon: 'all_inclusive', text: t('bundles.noEnd') }
   const actions = (b: ShopBundle, cls: string) => (
     <div className={`${cls} shrink-0 grid-cols-2 gap-2`}>
       {b.state !== 'ENDED' ? <>
-        <button onClick={() => onEdit(b)} className="flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="edit" size={16} /> Modifier</button>
-        <button onClick={() => setConfirm({ b, kind: 'stop' })} className={`flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none px-3 text-label-md ${b.state === 'LIVE' ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface'}`}><Icon name={b.state === 'LIVE' ? 'stop_circle' : 'cancel'} size={16} /> {b.state === 'LIVE' ? 'Arrêter' : 'Annuler'}</button>
+        <button onClick={() => onEdit(b)} className="flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="edit" size={16} /> {common.t('edit')}</button>
+        <button onClick={() => setConfirm({ b, kind: 'stop' })} className={`flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none px-3 text-label-md ${b.state === 'LIVE' ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface'}`}><Icon name={b.state === 'LIVE' ? 'stop_circle' : 'cancel'} size={16} /> {b.state === 'LIVE' ? t('bundles.stop') : common.t('cancel')}</button>
       </> : <>
-        <button onClick={() => onEdit(b, true)} className="flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="replay" size={16} /> Réactiver</button>
-        <button onClick={() => setConfirm({ b, kind: 'delete' })} className="flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary-fixed px-3 text-label-md text-primary"><Icon name="delete" size={16} /> Supprimer</button>
+        <button onClick={() => onEdit(b, true)} className="flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="replay" size={16} /> {t('bundles.reactivate')}</button>
+        <button onClick={() => setConfirm({ b, kind: 'delete' })} className="flex h-9 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-lg border-none bg-primary-fixed px-3 text-label-md text-primary"><Icon name="delete" size={16} /> {common.t('delete')}</button>
       </>}
     </div>
   )
@@ -675,13 +694,13 @@ function BundlesTab({ bundles, listings, onCreate, onEdit, onChanged }: {
       {info}
       <section className="flex flex-col gap-2 md:flex-row md:items-center">
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-          {([['ALL', 'Toutes'], ['LIVE', 'En cours'], ['SCHEDULED', 'Programmées'], ['ENDED', 'Terminées']] as const).map(([k, l]) => (
-            <button key={k} onClick={() => setFilter(k)} className={`h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none px-3 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm'}`}>{l} ({count(k)})</button>
+          {(['ALL', 'LIVE', 'SCHEDULED', 'ENDED'] as const).map(k => (
+            <button key={k} onClick={() => setFilter(k)} className={`h-10 shrink-0 cursor-pointer whitespace-nowrap rounded-xl border-none px-3 text-label-md ${filter === k ? 'bg-inverse-surface text-white' : 'bg-surface-lowest text-on-surface shadow-sm'}`}>{t(`sales.filter.${k}` as const, { n: count(k) })}</button>
           ))}
         </div>
-        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-lowest px-3 shadow-sm md:ml-auto md:max-w-xs"><Icon name="search" size={18} className="shrink-0 text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une offre…" className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
+        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-lowest px-3 shadow-sm md:ml-auto md:max-w-xs"><Icon name="search" size={18} className="shrink-0 text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('bundles.search')} className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
       </section>
-      {rows.length === 0 && <p className="m-0 rounded-2xl bg-surface-lowest p-6 text-center text-body-md text-on-surface-variant shadow-sm">Aucune offre ne correspond.</p>}
+      {rows.length === 0 && <p className="m-0 rounded-2xl bg-surface-lowest p-6 text-center text-body-md text-on-surface-variant shadow-sm">{t('bundles.noMatch')}</p>}
       {rows.map(b => {
         const v = validity(b)
         const items = b.scope === 'LISTINGS' ? b.listingIds.map(id => listings.find(l => l.id === id)).filter((l): l is ShopListing => !!l) : []
@@ -691,25 +710,25 @@ function BundlesTab({ bundles, listings, onCreate, onEdit, onChanged }: {
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <StatePill state={b.state} />
                 <span className="whitespace-nowrap rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface">{scope(b)}</span>
-                <span className="whitespace-nowrap text-body-sm text-on-surface-variant">{b.listingsCount} article{b.listingsCount > 1 ? 's' : ''} concerné{b.listingsCount > 1 ? 's' : ''}</span>
+                <span className="whitespace-nowrap text-body-sm text-on-surface-variant">{t('bundles.concerned', { count: b.listingsCount })}</span>
               </div>
               {actions(b, 'hidden md:flex')}
             </div>
             <h3 className="m-0 mt-2 text-headline-sm text-on-surface">{b.name}</h3>
             <div className="mt-3 flex flex-wrap gap-2">
-              {b.tiers.map((t, i) => {
+              {b.tiers.map((tier, i) => {
                 const last = i === b.tiers.length - 1 && b.tiers.length > 1
-                return <span key={t.minQty} className={`whitespace-nowrap rounded-xl px-3 py-2 text-label-md ${last ? 'bg-primary-fixed text-primary' : 'bg-surface-container-low text-on-surface'}`}>{t.minQty} achetés{last ? ' ou plus' : ''} : <b className="text-primary">-{t.percent} %</b></span>
+                return <span key={tier.minQty} className={`whitespace-nowrap rounded-xl px-3 py-2 text-label-md ${last ? 'bg-primary-fixed text-primary' : 'bg-surface-container-low text-on-surface'}`}>{t.rich(last ? 'bundles.tierMore' : 'bundles.tier', { n: tier.minQty, pct: tier.percent, b: c => <b className="text-primary">{c}</b> })}</span>
               })}
             </div>
             {items.length > 0 && (
               <>
-                <div className="mt-4 text-label-sm uppercase text-on-surface-variant">Articles inclus dans l’offre</div>
+                <div className="mt-4 text-label-sm uppercase text-on-surface-variant">{t('bundles.included')}</div>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {items.slice(0, 8).map(l => (
                     <div key={l.id} className="flex min-w-0 items-center gap-2 rounded-xl bg-surface-container-low p-2">
                       <Thumb url={l.coverImageUrl} />
-                      <div className="min-w-0"><div className="truncate text-label-md text-on-surface">{l.title}</div><div className="text-body-sm text-on-surface-variant">Stock : {l.quantity}</div></div>
+                      <div className="min-w-0"><div className="truncate text-label-md text-on-surface">{l.title}</div><div className="text-body-sm text-on-surface-variant">{t('bundles.stock', { n: l.quantity })}</div></div>
                     </div>
                   ))}
                 </div>
@@ -720,11 +739,11 @@ function BundlesTab({ bundles, listings, onCreate, onEdit, onChanged }: {
           </section>
         )
       })}
-      <ConfirmSheet open={!!confirm} title={confirm?.kind === 'delete' ? 'Supprimer cette offre groupée ?' : confirm?.b.state === 'LIVE' ? 'Arrêter cette offre groupée ?' : 'Annuler cette offre groupée ?'} confirmLabel={confirm?.kind === 'delete' ? 'Supprimer' : 'Confirmer'} onConfirm={() => {
+      <ConfirmSheet open={!!confirm} title={confirm?.kind === 'delete' ? t('bundles.deleteTitle') : confirm?.b.state === 'LIVE' ? t('bundles.stopTitle') : t('bundles.cancelTitle')} confirmLabel={confirm?.kind === 'delete' ? common.t('delete') : common.t('confirm')} onConfirm={() => {
         if (!confirm) return
         void (confirm.kind === 'delete' ? remove({ variables: { id: confirm.b.id } }) : stop({ variables: { id: confirm.b.id } })).then(() => { setConfirm(null); onChanged() })
       }} onClose={() => setConfirm(null)}>
-        <p className="m-0 text-body-sm text-on-surface-variant">{confirm?.kind === 'delete' ? 'Elle disparaît de votre liste. Les ventes déjà conclues ne changent pas.' : 'L’encart disparaît immédiatement de vos annonces.'}</p>
+        <p className="m-0 text-body-sm text-on-surface-variant">{confirm?.kind === 'delete' ? t('bundles.deleteText') : t('bundles.stopText')}</p>
       </ConfirmSheet>
     </div>
   )
@@ -735,6 +754,8 @@ function BundleEditor({ listings, aisles, onDone, onCancel, bundle, reactivate }
   // Editing this bundle, or reactivating an ended one (same row, new dates).
   bundle?: ShopBundle, reactivate?: boolean
 }) {
+  const t = useT(shopPromos)
+  const tc = useT(common)
   const today = dayInput(new Date())
   const [name, setName] = useState(bundle?.name ?? '')
   const [tiers, setTiers] = useState<BundleTier[]>(bundle?.tiers.map(t => ({ minQty: t.minQty, percent: t.percent })) ?? [{ minQty: 2, percent: 10 }, { minQty: 3, percent: 15 }])
@@ -776,55 +797,55 @@ function BundleEditor({ listings, aisles, onDone, onCancel, bundle, reactivate }
   )
   return (
     <>
-      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> Retour aux offres groupées</button>
-      <h1 className="m-0 text-headline-lg text-on-surface">{bundle && !reactivate ? 'Modifier l’offre groupée' : reactivate ? 'Réactiver l’offre groupée' : 'Créer une offre groupée'}</h1>
-      <p className="m-0 mt-1 text-body-md text-on-surface-variant">Configurez vos remises par palier de quantité. L’encart sera visible sur vos annonces éligibles et vous appliquerez la réduction convenue lors de la conclusion de la vente.</p>
+      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> {t('bundleEditor.back')}</button>
+      <h1 className="m-0 text-headline-lg text-on-surface">{bundle && !reactivate ? t('bundleEditor.editTitle') : reactivate ? t('bundleEditor.reactivateTitle') : t('bundles.create')}</h1>
+      <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('bundleEditor.intro')}</p>
       <div className="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <section className={card}>
-            {step(1, 'Informations générales', 'Intitulé et période de diffusion sur votre boutique')}
-            <label className="block"><span className="mb-1.5 block text-label-md text-on-surface">Nom de l’offre groupée</span><input value={name} onChange={e => setName(e.target.value)} maxLength={60} placeholder="Ex : Offre spéciale High-Tech & Accessoires" className={inputCls} /></label>
-            <label className="mt-3 flex cursor-pointer items-center gap-2 text-label-md text-on-surface"><input type="checkbox" checked={dated} onChange={e => setDated(e.target.checked)} className="h-5 w-5 accent-primary" /> Définir une période (facultatif)</label>
+            {step(1, t('saleEditor.step1'), t('bundleEditor.step1Sub'))}
+            <label className="block"><span className="mb-1.5 block text-label-md text-on-surface">{t('bundleEditor.name')}</span><input value={name} onChange={e => setName(e.target.value)} maxLength={60} placeholder={t('bundleEditor.namePlaceholder')} className={inputCls} /></label>
+            <label className="mt-3 flex cursor-pointer items-center gap-2 text-label-md text-on-surface"><input type="checkbox" checked={dated} onChange={e => setDated(e.target.checked)} className="h-5 w-5 accent-primary" /> {t('bundleEditor.dated')}</label>
             {dated && (
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div><span className="mb-1.5 block text-label-sm uppercase text-on-surface-variant">Début</span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={today} value={from} onChange={e => setFrom(e.target.value)} className={inputCls} aria-label="Date de début" /><input type="time" value={fromTime} onChange={e => setFromTime(e.target.value)} className={inputCls} aria-label="Heure de début" /></div></div>
-                <div><span className="mb-1.5 block text-label-sm uppercase text-on-surface-variant">Fin</span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={from} value={to} onChange={e => setTo(e.target.value)} className={inputCls} aria-label="Date de fin" /><input type="time" value={toTime} onChange={e => setToTime(e.target.value)} className={inputCls} aria-label="Heure de fin" /></div></div>
+                <div><span className="mb-1.5 block text-label-sm uppercase text-on-surface-variant">{t('start')}</span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={today} value={from} onChange={e => setFrom(e.target.value)} className={inputCls} aria-label={t('startDate')} /><input type="time" value={fromTime} onChange={e => setFromTime(e.target.value)} className={inputCls} aria-label={t('startTime')} /></div></div>
+                <div><span className="mb-1.5 block text-label-sm uppercase text-on-surface-variant">{t('end')}</span><div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2"><input type="date" min={from} value={to} onChange={e => setTo(e.target.value)} className={inputCls} aria-label={t('endDate')} /><input type="time" value={toTime} onChange={e => setToTime(e.target.value)} className={inputCls} aria-label={t('endTime')} /></div></div>
               </div>
             )}
           </section>
           <section className={card}>
-            {step(2, 'Paliers de réduction sur quantité', 'Jusqu’à 4 paliers. La remise en % doit augmenter avec le nombre d’articles achetés.')}
+            {step(2, t('bundleEditor.step2'), t('bundleEditor.step2Sub'))}
             <div className="flex flex-col gap-2">
-              {tiers.map((t, i) => (
+              {tiers.map((tier, i) => (
                 <div key={i} className="flex items-center gap-2 rounded-xl bg-surface-container-low p-2.5">
-                  <span className="hidden whitespace-nowrap rounded-md bg-surface-lowest px-2 py-1 text-label-sm text-on-surface-variant sm:inline">Palier {i + 1}</span>
-                  <Select value={String(t.minQty)} onChange={e => setTier(i, { minQty: Number(e.target.value) })} className="h-10 min-w-0 flex-1 cursor-pointer rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface outline-none" aria-label="Quantité">
-                    {Array.from({ length: 9 }, (_, k) => k + 2).map(n => <option key={n} value={n}>{n} achetés{i === tiers.length - 1 && tiers.length > 1 ? ' ou plus' : ''}</option>)}
+                  <span className="hidden whitespace-nowrap rounded-md bg-surface-lowest px-2 py-1 text-label-sm text-on-surface-variant sm:inline">{t('bundleEditor.tier', { n: i + 1 })}</span>
+                  <Select value={String(tier.minQty)} onChange={e => setTier(i, { minQty: Number(e.target.value) })} className="h-10 min-w-0 flex-1 cursor-pointer rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface outline-none" aria-label={t('bundleEditor.quantity')}>
+                    {Array.from({ length: 9 }, (_, k) => k + 2).map(n => <option key={n} value={n}>{i === tiers.length - 1 && tiers.length > 1 ? t('bundleEditor.boughtMore', { n }) : t('bundleEditor.bought', { n })}</option>)}
                   </Select>
-                  <span className="flex items-center gap-1 text-label-md text-on-surface">-<input type="number" min={1} max={80} value={t.percent} onChange={e => setTier(i, { percent: Number(e.target.value) || 1 })} aria-label="Remise %" className="h-10 w-16 rounded-lg border-none bg-surface-lowest text-center text-label-lg outline-none" />%</span>
-                  <button type="button" disabled={tiers.length <= 1} onClick={() => setTiers(ts => ts.filter((_, j) => j !== i))} aria-label="Supprimer le palier" className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-on-surface-variant disabled:opacity-30"><Icon name="delete" size={18} /></button>
+                  <span className="flex items-center gap-1 text-label-md text-on-surface">-<input type="number" min={1} max={80} value={tier.percent} onChange={e => setTier(i, { percent: Number(e.target.value) || 1 })} aria-label={t('picker.percentAria')} className="h-10 w-16 rounded-lg border-none bg-surface-lowest text-center text-label-lg outline-none" />%</span>
+                  <button type="button" disabled={tiers.length <= 1} onClick={() => setTiers(ts => ts.filter((_, j) => j !== i))} aria-label={t('bundleEditor.removeTier')} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-transparent text-on-surface-variant disabled:opacity-30"><Icon name="delete" size={18} /></button>
                 </div>
               ))}
             </div>
-            {tiers.length < 4 && <button type="button" onClick={() => setTiers(ts => [...ts, { minQty: Math.min(10, (Math.max(...ts.map(t => t.minQty)) || 1) + 1), percent: Math.min(80, (Math.max(...ts.map(t => t.percent)) || 0) + 5) }])} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="add_circle" size={18} /> Ajouter un palier ({tiers.length}/4 configurés)</button>}
-            {!tiersOk && <p className="m-0 mt-2 text-body-sm text-primary">La remise doit augmenter avec la quantité (à partir de 2 exemplaires, 80 % au plus).</p>}
+            {tiers.length < 4 && <button type="button" onClick={() => setTiers(ts => [...ts, { minQty: Math.min(10, (Math.max(...ts.map(x => x.minQty)) || 1) + 1), percent: Math.min(80, (Math.max(...ts.map(x => x.percent)) || 0) + 5) }])} className="mt-3 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-primary"><Icon name="add_circle" size={18} /> {t('bundleEditor.addTier', { n: tiers.length })}</button>}
+            {!tiersOk && <p className="m-0 mt-2 text-body-sm text-primary">{t('bundleEditor.tiersError')}</p>}
           </section>
           <section className={card}>
-            {step(3, 'Portée de l’offre', 'Choisissez les annonces qui afficheront l’encart')}
+            {step(3, t('bundleEditor.step3'), t('bundleEditor.step3Sub'))}
             <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-container p-1">
-              {([['ALL', 'Toute la boutique', 'Boutique'], ['AISLE', 'Un rayon', 'Rayon'], ['LISTINGS', 'Des articles choisis', 'Articles']] as const).map(([k, l, short]) => (
+              {([['ALL', t('bundles.scopeAll'), t('bundleEditor.scopeAllShort')], ['AISLE', t('bundleEditor.scopeAisle'), t('bundleEditor.scopeAisleShort')], ['LISTINGS', t('bundleEditor.scopeListings'), t('bundleEditor.scopeListingsShort')]] as const).map(([k, l, short]) => (
                 <button key={k} type="button" onClick={() => setScope(k)} className={`h-10 cursor-pointer whitespace-nowrap rounded-lg border-none px-1 text-label-md ${scope === k ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}><span className="sm:hidden">{short}</span><span className="hidden sm:inline">{l}</span></button>
               ))}
             </div>
-            <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="mt-0.5 shrink-0 text-tertiary" /> Seuls les articles disposant d’au moins 2 exemplaires en stock affichent l’offre groupée ({eligible.length} éligible{eligible.length > 1 ? 's' : ''}).</p>
+            <p className="m-0 mt-3 flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="info" size={17} className="mt-0.5 shrink-0 text-tertiary" /> {t('bundleEditor.eligibleNote', { count: eligible.length })}</p>
             {scope === 'AISLE' && (aisles.length ? (
               <Select value={aisleId} onChange={e => setAisleId(e.target.value)} className={`${inputCls} mt-3 cursor-pointer`}>{aisles.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
-            ) : <p className="m-0 mt-3 text-body-sm text-on-surface-variant">Créez d’abord des rayons dans « Ma Boutique ».</p>)}
+            ) : <p className="m-0 mt-3 text-body-sm text-on-surface-variant">{t('bundleEditor.noAisles')}</p>)}
             {scope === 'LISTINGS' && (
               <>
                 {aisles.length > 0 && (
                   <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-                    {[{ id: '', name: `Tous (${eligible.length} éligibles)` }, ...aisles].map(a => (
+                    {[{ id: '', name: t('bundleEditor.allEligible', { n: eligible.length }) }, ...aisles].map(a => (
                       <button key={a.id || 'all'} type="button" onClick={() => setAisleFilter(a.id)} className={`h-8 shrink-0 cursor-pointer whitespace-nowrap rounded-full border-none px-3 text-label-md ${aisleFilter === a.id ? 'bg-inverse-surface text-white' : 'bg-surface-container-low text-on-surface'}`}>{a.name}</button>
                     ))}
                   </div>
@@ -836,15 +857,15 @@ function BundleEditor({ listings, aisles, onDone, onCancel, bundle, reactivate }
                       <label key={l.id} className={`flex items-center gap-3 rounded-xl p-2 ${ok2 ? 'cursor-pointer bg-surface-container-low' : 'bg-surface-container-low/50 opacity-60'}`}>
                         <input type="checkbox" disabled={!ok2} checked={ids.includes(l.id)} onChange={() => setIds(s => (s.includes(l.id) ? s.filter(x => x !== l.id) : [...s, l.id]))} className="h-5 w-5 shrink-0 accent-primary" />
                         <Thumb url={l.coverImageUrl} />
-                        <span className="min-w-0 flex-1"><span className="block truncate text-label-md text-on-surface">{l.title}</span><span className={`block truncate text-body-sm ${ok2 ? 'text-on-surface-variant' : 'text-primary'}`}><span className="sm:hidden"><Price amount={l.price} /> · </span>{ok2 ? <>Stock : {l.quantity} ex.<span className="hidden sm:inline"> disponibles</span></> : <>Stock insuffisant<span className="hidden sm:inline"> (moins de 2 ex.)</span></>}</span></span>
+                        <span className="min-w-0 flex-1"><span className="block truncate text-label-md text-on-surface">{l.title}</span><span className={`block truncate text-body-sm ${ok2 ? 'text-on-surface-variant' : 'text-primary'}`}><span className="sm:hidden"><Price amount={l.price} /> · </span>{ok2 ? t.rich('bundleEditor.stockOk', { n: l.quantity, wide: c => <span className="hidden sm:inline">{c}</span> }) : t.rich('bundleEditor.stockLow', { wide: c => <span className="hidden sm:inline">{c}</span> })}</span></span>
                         <span className={`hidden shrink-0 text-label-md sm:inline ${ok2 ? 'text-on-surface' : 'text-outline line-through'}`}><Price amount={l.price} /></span>
                       </label>
                     )
                   })}
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2 text-body-sm">
-                  <span className="text-on-surface-variant">{ids.length} article{ids.length > 1 ? 's' : ''} sélectionné{ids.length > 1 ? 's' : ''} sur {eligible.length} éligible{eligible.length > 1 ? 's' : ''}</span>
-                  <button type="button" onClick={() => setIds(eligible.filter(l => !aisleFilter || l.aisleId === aisleFilter).map(l => l.id))} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">Tout cocher</button>
+                  <span className="text-on-surface-variant">{t('bundleEditor.selectedOf', { count: ids.length, eligible: t('bundleEditor.eligibleCount', { count: eligible.length }) })}</span>
+                  <button type="button" onClick={() => setIds(eligible.filter(l => !aisleFilter || l.aisleId === aisleFilter).map(l => l.id))} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">{t('bundleEditor.checkAll')}</button>
                 </div>
               </>
             )}
@@ -852,35 +873,35 @@ function BundleEditor({ listings, aisles, onDone, onCancel, bundle, reactivate }
         </div>
         <aside className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-4">
           <section className={card}>
-            <div className="mb-3 flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="visibility" size={18} className="text-primary" /> Aperçu sur la fiche article</div>
+            <div className="mb-3 flex items-center gap-1.5 text-label-lg text-on-surface"><Icon name="visibility" size={18} className="text-primary" /> {t('bundleEditor.previewTitle')}</div>
             {preview ? (
               <>
                 <div className="aspect-[4/3] max-h-64 w-full overflow-hidden rounded-xl bg-surface-container xl:max-h-none">{preview.coverImageUrl && <img src={preview.coverImageUrl} alt="" className="h-full w-full object-cover" />}</div>
                 <div className="mt-2 truncate text-label-lg text-on-surface">{preview.title}</div>
-                <div className="text-headline-sm font-extrabold text-on-surface"><Price amount={preview.price} /> <span className="text-body-sm font-normal text-on-surface-variant">l’unité</span></div>
+                <div className="text-headline-sm font-extrabold text-on-surface"><Price amount={preview.price} /> <span className="text-body-sm font-normal text-on-surface-variant">{t('bundleEditor.perUnit')}</span></div>
                 <div className="mt-3 rounded-xl bg-primary-fixed/30 p-3">
-                  <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-1 text-label-sm uppercase text-primary"><Icon name="inventory_2" size={16} /> Offre groupée</span>{sorted.length > 0 && <span className="whitespace-nowrap rounded-md bg-primary px-2 py-0.5 text-label-sm text-white">Jusqu’à -{Math.max(...sorted.map(t => t.percent))} %</span>}</div>
+                  <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-1 text-label-sm uppercase text-primary"><Icon name="inventory_2" size={16} /> {t('bundleEditor.bundle')}</span>{sorted.length > 0 && <span className="whitespace-nowrap rounded-md bg-primary px-2 py-0.5 text-label-sm text-white">{t('upToPct', { pct: Math.max(...sorted.map(x => x.percent)) })}</span>}</div>
                   <div className="mt-2 flex flex-col gap-1.5">
-                    {sorted.map((t, i) => (
-                      <div key={t.minQty} className="flex items-center gap-2 rounded-lg bg-surface-lowest px-2.5 py-2 text-body-sm">
-                        <span className="min-w-0 flex-1 truncate text-on-surface">{t.minQty}{i === sorted.length - 1 && sorted.length > 1 ? '+' : ''} achetés</span>
-                        <span className="whitespace-nowrap rounded bg-primary px-1.5 text-label-sm text-white">-{t.percent} %</span>
-                        <span className="whitespace-nowrap text-label-md text-on-surface"><Price amount={promoOf(preview.price ?? 0, t.percent)} />/u</span>
+                    {sorted.map((tier, i) => (
+                      <div key={tier.minQty} className="flex items-center gap-2 rounded-lg bg-surface-lowest px-2.5 py-2 text-body-sm">
+                        <span className="min-w-0 flex-1 truncate text-on-surface">{i === sorted.length - 1 && sorted.length > 1 ? t('bundleEditor.boughtPlus', { n: tier.minQty }) : t('bundleEditor.bought', { n: tier.minQty })}</span>
+                        <span className="whitespace-nowrap rounded bg-primary px-1.5 text-label-sm text-white">{t('pct', { pct: tier.percent })}</span>
+                        <span className="whitespace-nowrap text-label-md text-on-surface">{t.rich('bundleEditor.unitPrice', { price: <Price amount={promoOf(preview.price ?? 0, tier.percent)} /> })}</span>
                       </div>
                     ))}
                   </div>
-                  <p className="m-0 mt-2 text-[11px] text-on-surface-variant">Remise appliquée par le vendeur à la conclusion de la vente.</p>
+                  <p className="m-0 mt-2 text-[11px] text-on-surface-variant">{t('bundleEditor.appliedBySeller')}</p>
                 </div>
               </>
-            ) : <p className="m-0 text-body-sm text-on-surface-variant">Publiez des annonces avec un prix pour voir l’aperçu.</p>}
+            ) : <p className="m-0 text-body-sm text-on-surface-variant">{t('bundleEditor.previewEmpty')}</p>}
           </section>
-          <p className="m-0 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="verified_user" size={18} className="mt-0.5 shrink-0 text-tertiary" /> Paiement direct : vous ajustez le montant total dans la discussion ou au moment de la remise en main propre. Aucun code promo pour l’acheteur.</p>
+          <p className="m-0 flex items-start gap-2 rounded-2xl bg-surface-container-low p-3 text-body-sm text-on-surface-variant"><Icon name="verified_user" size={18} className="mt-0.5 shrink-0 text-tertiary" /> {t('bundleEditor.directPay')}</p>
         </aside>
       </div>
       {error && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {error}</p>}
       <div className="mt-4 flex gap-3 lg:justify-end">
-        <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">Annuler</button>
-        <button disabled={!ok || loading} onClick={submit} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="bolt" size={19} /> <span className="truncate">{loading ? 'Enregistrement…' : bundle && !reactivate ? <>Enregistrer<span className="hidden sm:inline"> les modifications</span></> : 'Activer l’offre groupée'}</span></button>
+        <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">{tc('cancel')}</button>
+        <button disabled={!ok || loading} onClick={submit} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="bolt" size={19} /> <span className="truncate">{loading ? tc('saving') : bundle && !reactivate ? t.rich('bundleEditor.saveChanges', { wide: c => <span className="hidden sm:inline">{c}</span> }) : t('bundleEditor.submit')}</span></button>
       </div>
     </>
   )
@@ -889,10 +910,11 @@ function BundleEditor({ listings, aisles, onDone, onCancel, bundle, reactivate }
 // ─── Posts to followers ───────────────────────────────────────────────────
 
 function QuotaBar({ quota }: { quota: ShopPromos['myShopPostQuota'] }) {
+  const t = useT(shopPromos)
   const left = Math.max(0, quota.limit - quota.used)
   return (
     <div className="mt-2 max-w-md">
-      <div className="flex justify-between gap-2 text-label-sm text-on-surface-variant"><span className="min-w-0 truncate">Quota : <b className="text-on-surface">{left} restante{left > 1 ? 's' : ''}</b> sur {quota.limit} / 7 jours</span><span className="shrink-0 whitespace-nowrap text-primary">{Math.round((quota.used / quota.limit) * 100)} % utilisé</span></div>
+      <div className="flex justify-between gap-2 text-label-sm text-on-surface-variant"><span className="min-w-0 truncate">{t.rich('quota.text', { count: left, limit: quota.limit, b: c => <b className="text-on-surface">{c}</b> })}</span><span className="shrink-0 whitespace-nowrap text-primary">{t('quota.used', { pct: Math.round((quota.used / quota.limit) * 100) })}</span></div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }} /></div>
     </div>
   )
@@ -902,35 +924,36 @@ function PostsTab({ posts, quota, onCreate, onDuplicate, onOpenShop }: {
   posts: ShopPromos['myShopPosts'], quota: ShopPromos['myShopPostQuota'], onCreate: () => void, onDuplicate: (p: ShopPost) => void, onOpenShop: () => void
 }) {
   const [withItems, setWithItems] = useState(false)
+  const t = useT(shopPromos)
   const left = quota.limit - quota.used
   const rows = posts.filter(p => !withItems || p.listings.length > 0)
-  const when = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const when = (iso: string) => fmtDate(iso, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   return (
     <div className="flex flex-col gap-3">
       <section className={`${card} flex flex-col gap-4 border-0 border-l-4 border-solid border-primary md:flex-row md:items-center`}>
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary"><Icon name="notifications_active" size={24} /></span>
         <div className="min-w-0 flex-1">
-          <div className="text-label-lg text-on-surface md:text-headline-sm">{formatNumber(quota.followers)} abonné{quota.followers > 1 ? 's' : ''} recevr{quota.followers > 1 ? 'ont' : 'a'} vos annonces</div>
-          <div className="text-label-md text-primary">{left > 0 ? `${left} annonce${left > 1 ? 's' : ''} possible${left > 1 ? 's' : ''} cette semaine (${quota.limit} maximum)` : `Limite atteinte : prochaine annonce le ${fdate(quota.nextAt!)}`}</div>
-          <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Informez votre communauté de vos nouveautés, arrivages et offres.</p>
+          <div className="text-label-lg text-on-surface md:text-headline-sm">{t('posts.reach', { count: quota.followers })}</div>
+          <div className="text-label-md text-primary">{left > 0 ? t('posts.left', { count: left, limit: quota.limit }) : t('posts.limitReached', { date: fdate(quota.nextAt!) })}</div>
+          <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('posts.intro')}</p>
           <QuotaBar quota={quota} />
         </div>
-        <button disabled={left <= 0} onClick={onCreate} className="flex h-12 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45"><Icon name="add" size={19} /> Nouvelle annonce</button>
+        <button disabled={left <= 0} onClick={onCreate} className="flex h-12 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45"><Icon name="add" size={19} /> {t('posts.create')}</button>
       </section>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface">Historique des annonces <span className="rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{posts.length} publication{posts.length > 1 ? 's' : ''}</span></h2>
+        <h2 className="m-0 flex items-center gap-2 text-headline-sm text-on-surface">{t('posts.history')} <span className="rounded-full bg-surface-container px-2 py-0.5 text-label-sm text-on-surface-variant">{t('posts.count', { count: posts.length })}</span></h2>
         <div className="flex gap-1 rounded-xl bg-surface-container p-1">
-          {([[false, 'Toutes'], [true, 'Avec articles']] as const).map(([v, l]) => <button key={l} onClick={() => setWithItems(v)} className={`h-8 cursor-pointer whitespace-nowrap rounded-lg border-none px-3 text-label-md ${withItems === v ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>{l}</button>)}
+          {([[false, t('posts.filterAll')], [true, t('posts.filterItems')]] as const).map(([v, l]) => <button key={String(v)} onClick={() => setWithItems(v)} className={`h-8 cursor-pointer whitespace-nowrap rounded-lg border-none px-3 text-label-md ${withItems === v ? 'bg-surface-lowest text-on-surface shadow-sm' : 'bg-transparent text-on-surface-variant'}`}>{l}</button>)}
         </div>
       </div>
-      {posts.length === 0 && <Empty icon="forum" title="Aucune annonce envoyée" text="Arrivage, nouvelle collection, promotion : prévenez vos abonnés. L’annonce reste aussi visible dans « Actualités » sur votre page." />}
+      {posts.length === 0 && <Empty icon="forum" title={t('posts.emptyTitle')} text={t('posts.emptyText')} />}
       {rows.map(p => (
         <article key={p.id} className={card}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface-variant"><Icon name="schedule" size={15} /> Envoyée le {when(p.createdAt)}</span>
+            <span className="flex items-center gap-1.5 rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface-variant"><Icon name="schedule" size={15} /> {t('posts.sentOn', { date: when(p.createdAt) })}</span>
             <div className="flex gap-2">
-              <button onClick={onOpenShop} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="visibility" size={16} /> Consulter</button>
-              <button onClick={() => onDuplicate(p)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="content_copy" size={16} /> Dupliquer</button>
+              <button onClick={onOpenShop} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="visibility" size={16} /> {t('posts.view')}</button>
+              <button onClick={() => onDuplicate(p)} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-container px-3 text-label-md text-on-surface"><Icon name="content_copy" size={16} /> {t('posts.duplicate')}</button>
             </div>
           </div>
           <div className="mt-3 flex flex-col gap-4 md:flex-row">
@@ -939,14 +962,14 @@ function PostsTab({ posts, quota, onCreate, onDuplicate, onOpenShop }: {
               <h3 className="m-0 text-headline-sm text-on-surface">{p.title}</h3>
               <p className="m-0 mt-1 line-clamp-2 text-body-md text-on-surface-variant">{plainText(p.body)}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface"><Icon name="group" size={15} /> Envoyée à {formatNumber(p.recipients)} abonné{p.recipients > 1 ? 's' : ''}</span>
-                <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface"><Icon name="visibility" size={15} /> {formatNumber(p.views)} vue{p.views > 1 ? 's' : ''}</span>
+                <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface"><Icon name="group" size={15} /> {t('posts.sentTo', { count: p.recipients, n: formatNumber(p.recipients) })}</span>
+                <span className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-container-low px-2 py-1 text-label-sm text-on-surface"><Icon name="visibility" size={15} /> {t('posts.views', { count: p.views, n: formatNumber(p.views) })}</span>
               </div>
             </div>
           </div>
           {p.listings.length > 0 ? (
             <div className="mt-3 rounded-xl bg-surface-container-low p-3">
-              <div className="text-label-sm uppercase text-on-surface-variant">Articles rattachés à cette annonce ({p.listings.length})</div>
+              <div className="text-label-sm uppercase text-on-surface-variant">{t('posts.attached', { n: p.listings.length })}</div>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {p.listings.map(l => (
                   <div key={l.id} className="flex min-w-0 items-center gap-2 rounded-lg bg-surface-lowest p-2">
@@ -956,10 +979,10 @@ function PostsTab({ posts, quota, onCreate, onDuplicate, onOpenShop }: {
                 ))}
               </div>
             </div>
-          ) : <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-surface-container-low px-3 py-2 text-body-sm italic text-on-surface-variant"><Icon name="info" size={15} /> Aucun article rattaché (annonce informative).</p>}
+          ) : <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-surface-container-low px-3 py-2 text-body-sm italic text-on-surface-variant"><Icon name="info" size={15} /> {t('posts.noItems')}</p>}
         </article>
       ))}
-      <p className="m-0 flex items-start gap-3 rounded-2xl bg-surface-container-low p-4 text-body-sm text-on-surface-variant"><Icon name="verified_user" size={20} className="shrink-0 text-tertiary" /> <span><b className="block text-on-surface">Règle de communication responsable</b>La limite de {quota.limit} annonces par période de 7 jours protège vos abonnés des envois trop fréquents.</span></p>
+      <p className="m-0 flex items-start gap-3 rounded-2xl bg-surface-container-low p-4 text-body-sm text-on-surface-variant"><Icon name="verified_user" size={20} className="shrink-0 text-tertiary" /> <span>{t.rich('posts.rule', { limit: quota.limit, b: c => <b className="block text-on-surface">{c}</b> })}</span></p>
     </div>
   )
 }
@@ -969,6 +992,8 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
   // Duplicate of a previous announcement.
   from?: ShopPost
 }) {
+  const t = useT(shopPromos)
+  const tc = useT(common)
   const [title, setTitle] = useState(from?.title ?? '')
   const [body, setBody] = useState(from?.body ?? '')
   const [imageUrl, setImageUrl] = useState(from?.imageUrl ?? '')
@@ -989,43 +1014,43 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
   }
   return (
     <>
-      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> Retour aux annonces</button>
+      <button onClick={onCancel} className="mb-2 flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-label-md text-on-surface-variant hover:text-primary"><Icon name="arrow_back" size={17} /> {t('postEditor.back')}</button>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <h1 className="m-0 text-headline-lg text-on-surface">Rédiger une annonce pour vos abonnés</h1>
-          <p className="m-0 mt-1 text-body-md text-on-surface-variant">Envoyée en notification à vos abonnés et publiée dans « Actualités » sur votre page boutique.</p>
+          <h1 className="m-0 text-headline-lg text-on-surface">{t('postEditor.title')}</h1>
+          <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('postEditor.intro')}</p>
         </div>
         <div className="flex shrink-0 items-center gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm lg:w-96">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-tertiary-soft text-tertiary"><Icon name="group" size={22} /></span>
-          <div className="min-w-0 flex-1"><div className="text-headline-sm font-extrabold text-on-surface">{formatNumber(quota.followers)} <span className="text-label-sm font-normal text-tertiary">abonné{quota.followers > 1 ? 's' : ''}</span></div><QuotaBar quota={quota} /></div>
+          <div className="min-w-0 flex-1"><div className="text-headline-sm font-extrabold text-on-surface">{t.rich('postEditor.followers', { count: quota.followers, n: formatNumber(quota.followers), small: c => <span className="text-label-sm font-normal text-tertiary">{c}</span> })}</div><QuotaBar quota={quota} /></div>
         </div>
       </div>
       <div className="mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <section className={card}>
-            <label className="block"><span className="mb-1 flex justify-between gap-2 text-label-lg text-on-surface">Titre de l’annonce <span className="text-label-sm font-normal text-on-surface-variant">{title.length} / 80 caractères</span></span><span className="mb-2 block text-body-sm text-on-surface-variant">Affiché en tête de la notification et dans vos actualités.</span><input value={title} onChange={e => setTitle(e.target.value.slice(0, 80))} placeholder="Ex : Nouveaux arrivages High-Tech sous scellé" className={inputCls} /></label>
+            <label className="block"><span className="mb-1 flex justify-between gap-2 text-label-lg text-on-surface">{t('postEditor.titleLabel')} <span className="text-label-sm font-normal text-on-surface-variant">{t('postEditor.titleCount', { n: title.length })}</span></span><span className="mb-2 block text-body-sm text-on-surface-variant">{t('postEditor.titleHelp')}</span><input value={title} onChange={e => setTitle(e.target.value.slice(0, 80))} placeholder={t('postEditor.titlePlaceholder')} className={inputCls} /></label>
           </section>
           <section className={card}>
-            <div><span className="mb-1 block text-label-lg text-on-surface">Message</span><span className="mb-2 block text-body-sm text-on-surface-variant">Détaillez la nouveauté, les conditions ou la période. La notification reprend le texte seul.</span><RichTextEditor compact content={body} onChange={setBody} maxChars={1000} minHeight={140} label="Message" placeholder="Chers abonnés, …" /></div>
+            <div><span className="mb-1 block text-label-lg text-on-surface">{t('postEditor.message')}</span><span className="mb-2 block text-body-sm text-on-surface-variant">{t('postEditor.messageHelp')}</span><RichTextEditor compact content={body} onChange={setBody} maxChars={1000} minHeight={140} label={t('postEditor.message')} placeholder={t('postEditor.messagePlaceholder')} /></div>
           </section>
           <section className={card}>
-            <div className="mb-2 text-label-lg text-on-surface">Photo d’illustration <span className="text-label-sm font-normal text-on-surface-variant">(facultatif)</span></div>
+            <div className="mb-2 text-label-lg text-on-surface">{t.rich('postEditor.photo', { opt: c => <span className="text-label-sm font-normal text-on-surface-variant">{c}</span> })}</div>
             <input ref={input} type="file" accept="image/*" hidden onChange={e => { void pick(e.target.files?.[0]); e.target.value = '' }} />
             {imageUrl ? (
               <div className="flex items-center gap-3 rounded-xl bg-surface-container-low p-2">
                 <img src={imageUrl} alt="" className="h-16 w-24 shrink-0 rounded-lg object-cover" />
-                <span className="min-w-0 flex-1 text-body-sm text-tertiary"><Icon name="check_circle" size={15} /> Photo ajoutée</span>
-                <button type="button" onClick={() => input.current?.click()} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface"><Icon name="swap_horiz" size={16} /> Remplacer</button>
-                <button type="button" onClick={() => setImageUrl('')} aria-label="Retirer la photo" className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface-variant"><Icon name="delete" size={17} /></button>
+                <span className="min-w-0 flex-1 text-body-sm text-tertiary"><Icon name="check_circle" size={15} /> {t('postEditor.photoAdded')}</span>
+                <button type="button" onClick={() => input.current?.click()} className="flex h-9 cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-surface-lowest px-3 text-label-md text-on-surface"><Icon name="swap_horiz" size={16} /> {t('postEditor.replace')}</button>
+                <button type="button" onClick={() => setImageUrl('')} aria-label={t('postEditor.removePhoto')} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface-variant"><Icon name="delete" size={17} /></button>
               </div>
             ) : (
-              <button type="button" disabled={busy} onClick={() => input.current?.click()} className="flex h-24 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-outline-variant bg-transparent text-on-surface-variant"><Icon name={busy ? 'progress_activity' : 'add_photo_alternate'} size={24} className={busy ? 'animate-spin' : ''} /><span className="text-label-md">{busy ? 'Envoi…' : 'Ajouter une photo (format large conseillé)'}</span></button>
+              <button type="button" disabled={busy} onClick={() => input.current?.click()} className="flex h-24 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-outline-variant bg-transparent text-on-surface-variant"><Icon name={busy ? 'progress_activity' : 'add_photo_alternate'} size={24} className={busy ? 'animate-spin' : ''} /><span className="text-label-md">{busy ? t('sending') : t('postEditor.addPhoto')}</span></button>
             )}
           </section>
           <section className={card}>
-            <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><span className="text-label-lg text-on-surface">Associer des articles de votre boutique</span><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${ids.length ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}>{ids.length} / 4 articles</span></div>
-            <p className="m-0 mb-2 text-body-sm text-on-surface-variant">Jusqu’à 4 articles mis en avant sous votre message.</p>
-            <label className="flex h-11 items-center gap-2 rounded-xl bg-surface-container-low px-3"><Icon name="search" size={18} className="text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher un article du catalogue…" className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><span className="text-label-lg text-on-surface">{t('postEditor.items')}</span><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-label-sm ${ids.length ? 'bg-primary-fixed text-primary' : 'bg-surface-container text-on-surface-variant'}`}>{t('postEditor.itemsCount', { n: ids.length })}</span></div>
+            <p className="m-0 mb-2 text-body-sm text-on-surface-variant">{t('postEditor.itemsHelp')}</p>
+            <label className="flex h-11 items-center gap-2 rounded-xl bg-surface-container-low px-3"><Icon name="search" size={18} className="text-outline" /><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('postEditor.itemsSearch')} className="w-full min-w-0 border-none bg-transparent text-body-sm text-on-surface outline-none" /></label>
             <div className="mt-2 flex max-h-80 flex-col gap-1.5 overflow-y-auto pr-1">
               {rows.map(l => {
                 const on = ids.includes(l.id)
@@ -1033,7 +1058,7 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
                   <label key={l.id} className={`flex cursor-pointer items-center gap-2 rounded-xl p-2 ${on ? 'bg-primary-fixed/40' : 'bg-surface-container-low'}`}>
                     <input type="checkbox" checked={on} disabled={!on && ids.length >= 4} onChange={() => setIds(s => (on ? s.filter(x => x !== l.id) : [...s, l.id]))} className="h-5 w-5 shrink-0 accent-primary" />
                     <Thumb url={l.coverImageUrl} />
-                    <span className="min-w-0 flex-1"><span className="block truncate text-label-md text-on-surface">{l.title}</span><span className="text-body-sm text-on-surface-variant"><Price amount={l.price} /> · Stock : {l.quantity} ex.</span></span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-label-md text-on-surface">{l.title}</span><span className="text-body-sm text-on-surface-variant">{t.rich('postEditor.priceStock', { price: <Price amount={l.price} />, n: l.quantity })}</span></span>
                   </label>
                 )
               })}
@@ -1041,22 +1066,22 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
           </section>
         </div>
         <aside className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-4">
-          <div className="flex items-center gap-1.5 text-label-md text-on-surface"><span className="h-2 w-2 rounded-full bg-tertiary" /> Aperçu en direct</div>
+          <div className="flex items-center gap-1.5 text-label-md text-on-surface"><span className="h-2 w-2 rounded-full bg-tertiary" /> {t('postEditor.livePreview')}</div>
           <div>
-            <div className="mb-1.5 flex items-center gap-1 text-label-sm uppercase text-on-surface-variant"><Icon name="notifications" size={15} /> Notification sur téléphone</div>
+            <div className="mb-1.5 flex items-center gap-1 text-label-sm uppercase text-on-surface-variant"><Icon name="notifications" size={15} /> {t('postEditor.phoneNotif')}</div>
             <div className="flex gap-3 rounded-2xl bg-inverse-surface p-3 text-surface">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-label-lg font-bold text-white">D</span>
-              <div className="min-w-0 flex-1"><div className="flex justify-between gap-2 text-label-sm opacity-80"><span className="truncate">Dilchap</span><span className="shrink-0">à l’instant</span></div><div className="truncate text-label-md">{shopName} : {title || 'Titre de l’annonce'}</div><div className="line-clamp-2 text-body-sm opacity-80">{plainText(body) || 'Votre message…'}</div></div>
+              <div className="min-w-0 flex-1"><div className="flex justify-between gap-2 text-label-sm opacity-80"><span className="truncate">{/* i18n-ignore */}Dilchap</span><span className="shrink-0">{t('postEditor.now')}</span></div><div className="truncate text-label-md">{t('postEditor.notifTitle', { shop: shopName, title: title || t('postEditor.titleLabel') })}</div><div className="line-clamp-2 text-body-sm opacity-80">{plainText(body) || t('postEditor.bodyFallback')}</div></div>
             </div>
           </div>
           <div>
-            <div className="mb-1.5 flex items-center gap-1 text-label-sm uppercase text-on-surface-variant"><Icon name="feed" size={15} /> Actualités de la boutique</div>
+            <div className="mb-1.5 flex items-center gap-1 text-label-sm uppercase text-on-surface-variant"><Icon name="feed" size={15} /> {t('postEditor.news')}</div>
             <article className="overflow-hidden rounded-2xl bg-surface-lowest shadow-sm">
               {imageUrl && <img src={imageUrl} alt="" className="max-h-48 w-full object-cover" />}
               <div className="p-4">
-                <div className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="campaign" size={15} className="text-primary" /> {shopName} · à l’instant</div>
-                <h3 className="m-0 mt-1 break-words text-headline-sm text-on-surface">{title || 'Titre de l’annonce'}</h3>
-                {plainText(body) ? <div className="rich-text mt-1 line-clamp-6 break-words text-body-sm text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(body) }} /> : <p className="m-0 mt-1 text-body-sm text-on-surface">Votre message apparaîtra ici.</p>}
+                <div className="flex items-center gap-1.5 text-body-sm text-on-surface-variant"><Icon name="campaign" size={15} className="text-primary" /> {t('postEditor.newsMeta', { shop: shopName })}</div>
+                <h3 className="m-0 mt-1 break-words text-headline-sm text-on-surface">{title || t('postEditor.titleLabel')}</h3>
+                {plainText(body) ? <div className="rich-text mt-1 line-clamp-6 break-words text-body-sm text-on-surface" dangerouslySetInnerHTML={{ __html: richHtml(body) }} /> : <p className="m-0 mt-1 text-body-sm text-on-surface">{t('postEditor.bodyEmpty')}</p>}
                 {chosen.length > 0 && (
                   <div className="mt-3 flex flex-col gap-2">
                     {chosen.map(l => (
@@ -1075,10 +1100,10 @@ function PostEditor({ listings, quota, shopName, onDone, onCancel, from }: {
       {error && <p className="m-0 mt-3 flex items-center gap-1.5 rounded-xl bg-primary-fixed px-3 py-2 text-body-sm text-primary"><Icon name="error" size={17} /> {error}</p>}
       <div className="mt-4 flex flex-col gap-2 lg:items-end">
         <div className="flex w-full gap-3 lg:w-auto">
-          <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">Annuler</button>
-          <button disabled={!ok || loading || busy || quota.used >= quota.limit} onClick={() => void send({ variables: { input: { title: title.trim(), body, imageUrl: imageUrl || undefined, listingIds: ids } } }).then(onDone).catch((e: Error) => setError(e.message))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="send" size={19} /> <span className="truncate">{loading ? 'Envoi…' : `Envoyer à ${formatNumber(quota.followers)} abonné${quota.followers > 1 ? 's' : ''}`}</span></button>
+          <button onClick={onCancel} className="flex h-12 shrink-0 cursor-pointer items-center rounded-xl border-none bg-surface-container px-5 text-label-md text-on-surface">{tc('cancel')}</button>
+          <button disabled={!ok || loading || busy || quota.used >= quota.limit} onClick={() => void send({ variables: { input: { title: title.trim(), body, imageUrl: imageUrl || undefined, listingIds: ids } } }).then(onDone).catch((e: Error) => setError(e.message))} className="flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary px-5 text-label-lg text-white disabled:opacity-45 lg:flex-none"><Icon name="send" size={19} /> <span className="truncate">{loading ? t('sending') : t('postEditor.submit', { count: quota.followers, n: formatNumber(quota.followers) })}</span></button>
         </div>
-        <p className="m-0 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Icon name="info" size={15} className="mt-0.5 shrink-0 text-primary" /> Cet envoi utilise 1 de vos {quota.limit} annonces sur 7 jours. La diffusion est immédiate et irréversible.</p>
+        <p className="m-0 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Icon name="info" size={15} className="mt-0.5 shrink-0 text-primary" /> {t('postEditor.usage', { limit: quota.limit })}</p>
       </div>
     </>
   )

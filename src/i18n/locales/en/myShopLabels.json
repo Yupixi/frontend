@@ -1,0 +1,13 @@
+{
+  "reject.DOC_UNREADABLE": "Unreadable document",
+  "reject.DOC_INVALID": "Invalid document",
+  "reject.NAME_MISMATCH": "Trade name differs from the document",
+  "reject.NUMBER_MISMATCH": "RCCM / tax number differs from the document",
+  "reject.OWNER_MISMATCH": "Manager not linked to the company",
+  "reject.BRAND_MISUSE": "Brand used without permission",
+  "reject.INCOMPLETE": "Incomplete application",
+  "reject.OTHER": "Other reason",
+  "promoState.SCHEDULED": "Scheduled",
+  "promoState.LIVE": "Live",
+  "promoState.ENDED": "Ended"
+}
