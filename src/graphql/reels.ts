@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client'
+import reels from '../i18n/ns/reels'
 
 // « Reels »: short videos of the sellers, each tied to one of their listings
 // (Backend src/modules/reels).
@@ -194,13 +195,14 @@ export const REPORT_REEL_MUTATION = gql`
 // Sent with fetch by lib/reels (batched beacon), not through Apollo.
 export const RECORD_REEL_EVENTS_MUTATION = `mutation RecordReelEvents($events: [ReelEventInput!]!, $sessionId: String) { recordReelEvents(events: $events, sessionId: $sessionId) }`
 
-export const REEL_STATUS_LABEL: Record<ReelStatus, string> = {
-  UPLOADING: 'Envoi en cours',
-  PROCESSING: 'En préparation',
-  FAILED: 'Vidéo illisible',
-  PENDING_REVIEW: 'En vérification',
-  APPROVED: 'En ligne',
-  REJECTED: 'Refusé',
-  REMOVED: 'Retiré',
-  ARCHIVED: 'Supprimé',
+// Getters: read at render, in the current language.
+export const REEL_STATUS_LABEL: Readonly<Record<ReelStatus, string>> = {
+  get UPLOADING() { return reels.t('status.UPLOADING') },
+  get PROCESSING() { return reels.t('status.PROCESSING') },
+  get FAILED() { return reels.t('status.FAILED') },
+  get PENDING_REVIEW() { return reels.t('status.PENDING_REVIEW') },
+  get APPROVED() { return reels.t('status.APPROVED') },
+  get REJECTED() { return reels.t('status.REJECTED') },
+  get REMOVED() { return reels.t('status.REMOVED') },
+  get ARCHIVED() { return reels.t('status.ARCHIVED') },
 }

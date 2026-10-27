@@ -11,6 +11,8 @@ import { requestNavigate } from '../../lib/navigation'
 import {
   requestManageReel, reelEvent, reelPath, reelSource, reelThumb, setDataSaver, setReelsAutoNext, setReelsMuted, useDataSaver, useReelsAutoNext, useReelSettings, useReelsMuted,
 } from '../../lib/reels'
+import { useT } from '../../i18n'
+import reels from '../../i18n/ns/reels'
 
 // The vertical Reels pager (feed, a listing's or a seller's Reels): one Reel
 // per screen, snapped. Only the Reel on screen plays (muted until the
@@ -49,7 +51,8 @@ type Props = ReelActions & {
   onPublish?: () => void
 }
 
-export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onClose, startIndex = 0, onIndexChange, title = 'Reels', emptyText, overlay, onPublish, ...actions }: Props) {
+export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onClose, startIndex = 0, onIndexChange, title = 'Reels' /* i18n-ignore */, emptyText, overlay, onPublish, ...actions }: Props) {
+  const t = useT(reels)
   const scroller = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(startIndex)
   const activeRef = useRef(startIndex)
@@ -147,19 +150,19 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
     <div className={`fixed inset-x-0 top-0 bg-black text-white ${overlay ? 'bottom-0 z-[400]' : 'bottom-[calc(57px+env(safe-area-inset-bottom))] z-[250] md:bottom-0'}`} role={overlay ? 'dialog' : 'region'} aria-label={title}>
       {/* Top bar */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-6 pt-[max(12px,env(safe-area-inset-top))]">
-        <button onClick={onClose} aria-label="Fermer les Reels" className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white">
+        <button onClick={onClose} aria-label={t('feed.closeAria')} className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white">
           <Icon name="arrow_back" size={22} />
         </button>
         <h1 className="m-0 flex-1 text-headline-sm text-white">{title}</h1>
         {onPublish && (
           <button onClick={onPublish} className="pointer-events-auto flex h-10 cursor-pointer items-center gap-1.5 rounded-full border-none bg-primary px-3.5 text-label-md text-white">
-            <Icon name="video_call" size={19} /> <span>Publier</span>
+            <Icon name="video_call" size={19} /> <span>{t('feed.publish')}</span>
           </button>
         )}
-        <button onClick={() => setReelsMuted(!muted)} aria-label={muted ? 'Activer le son' : 'Couper le son'} aria-pressed={!muted} className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white">
+        <button onClick={() => setReelsMuted(!muted)} aria-label={muted ? t('feed.unmute') : t('feed.mute')} aria-pressed={!muted} className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white">
           <Icon name={muted ? 'volume_off' : 'volume_up'} size={21} />
         </button>
-        <button onClick={() => setMenu(true)} aria-label="Options des Reels" className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white">
+        <button onClick={() => setMenu(true)} aria-label={t('feed.options')} className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white">
           <Icon name="more_vert" size={21} />
         </button>
       </div>
@@ -175,10 +178,10 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
         ))}
         {!items.length && (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-            {loading ? <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/20 border-t-white" role="status" aria-label="Chargement" /> : (
+            {loading ? <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/20 border-t-white" role="status" aria-label={t('feed.loading')} /> : (
               <>
                 <Icon name="smart_display" size={44} />
-                <p className="m-0 text-body-lg text-white/85">{emptyText ?? 'Aucun Reel pour le moment. Revenez bientôt !'}</p>
+                <p className="m-0 text-body-lg text-white/85">{emptyText ?? t('feed.empty')}</p>
               </>
             )}
           </div>
@@ -188,27 +191,27 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
       {/* Desktop: previous / next */}
       {items.length > 1 && (
         <div className="absolute right-6 top-1/2 z-20 hidden -translate-y-1/2 flex-col gap-3 lg:flex">
-          <button onClick={() => go(-1)} disabled={active === 0} aria-label="Reel précédent" className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white disabled:opacity-30"><Icon name="arrow_upward" size={22} /></button>
-          <button onClick={() => go(1)} disabled={active >= items.length - 1} aria-label="Reel suivant" className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white disabled:opacity-30"><Icon name="arrow_downward" size={22} /></button>
+          <button onClick={() => go(-1)} disabled={active === 0} aria-label={t('feed.prev')} className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white disabled:opacity-30"><Icon name="arrow_upward" size={22} /></button>
+          <button onClick={() => go(1)} disabled={active >= items.length - 1} aria-label={t('feed.next')} className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border-none bg-white/15 text-white disabled:opacity-30"><Icon name="arrow_downward" size={22} /></button>
         </div>
       )}
 
-      <BottomSheet open={menu} onClose={() => setMenu(false)} title="Options des Reels">
+      <BottomSheet open={menu} onClose={() => setMenu(false)} title={t('feed.options')}>
         <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3 text-on-surface">
           <input type="checkbox" checked={saver} onChange={e => setDataSaver(e.target.checked)} className="mt-1 h-5 w-5 accent-[var(--primary)]" />
           <span>
-            <span className="block text-label-lg">Économie de données</span>
-            <span className="block text-body-sm text-on-surface-variant">Vidéos en qualité réduite (environ 2 fois plus légères), et le Reel suivant n’est pas préchargé. Activée d’office quand votre téléphone économise les données ou que le réseau est lent.</span>
+            <span className="block text-label-lg">{t('feed.dataSaver')}</span>
+            <span className="block text-body-sm text-on-surface-variant">{t('feed.dataSaverHint')}</span>
           </span>
         </label>
         <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl bg-surface-container-low p-3 text-on-surface">
           <input type="checkbox" checked={autoNext} onChange={e => setReelsAutoNext(e.target.checked)} className="mt-1 h-5 w-5 accent-[var(--primary)]" />
           <span>
-            <span className="block text-label-lg">Défilement automatique</span>
-            <span className="block text-body-sm text-on-surface-variant">À la fin d’un Reel, le suivant s’affiche tout seul.</span>
+            <span className="block text-label-lg">{t('feed.autoNext')}</span>
+            <span className="block text-body-sm text-on-surface-variant">{t('feed.autoNextHint')}</span>
           </span>
         </label>
-        <p className="mb-0 mt-3 text-body-sm text-on-surface-variant">Sur ordinateur : flèches ↑ ↓ pour changer de Reel, espace pour la pause, M pour le son.</p>
+        <p className="mb-0 mt-3 text-body-sm text-on-surface-variant">{t('feed.keyboard')}</p>
       </BottomSheet>
     </div>
   )
@@ -217,6 +220,7 @@ export default function ReelFeedView({ items, hasMore, loading, onLoadMore, onCl
 type SlideProps = ReelActions & { reel: Reel; state: 'active' | 'next' | 'idle'; muted: boolean; saver: boolean; viewSeconds: number; boostEnabled: boolean; autoNext: boolean; onEnded: () => boolean }
 
 const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSeconds, boostEnabled, autoNext, onEnded, ...a }: SlideProps) {
+  const t = useT(reels)
   const video = useRef<HTMLVideoElement>(null)
   const bar = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
@@ -289,7 +293,7 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
     const url = `${window.location.origin}${reelPath(reel.id)}`
     reelEvent(reel.id, 'SHARE')
     if (navigator.share) {
-      try { await navigator.share({ title: l?.title ?? 'Reel Dilchap', text: l ? `${l.title} en vidéo sur Dilchap` : undefined, url }) } catch { /* cancelled */ }
+      try { await navigator.share({ title: l?.title ?? t('feed.shareTitle'), text: l ? t('feed.shareText', { title: l.title }) : undefined, url }) } catch { /* cancelled */ }
       return
     }
     await navigator.clipboard?.writeText(url).catch(() => undefined)
@@ -318,13 +322,13 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
               onTimeUpdate={state === 'active' ? onTime : undefined}
               onClick={toggle}
               className="h-full w-full cursor-pointer object-contain"
-              aria-label={l ? `Vidéo : ${l.title}` : 'Vidéo'}
+              aria-label={l ? t('feed.videoAria', { title: l.title }) : t('feed.videoAriaBare')}
             />
           ) : (
             <img src={reelThumb(reel.posterUrl) ?? undefined} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
           )}
           {paused && state === 'active' && (
-            <button onClick={toggle} aria-label="Lecture" className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-black/45 text-white">
+            <button onClick={toggle} aria-label={t('feed.play')} className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-black/45 text-white">
               <Icon name="play_arrow" size={36} fill />
             </button>
           )}
@@ -357,7 +361,7 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
             )}
             {l && (
               <button onClick={openListing} className="pointer-events-auto mt-3 flex h-11 cursor-pointer items-center gap-2 rounded-full border-none bg-white px-4 text-label-lg text-black">
-                <Icon name="sell" size={18} /> Voir l’annonce
+                <Icon name="sell" size={18} /> {t('feed.seeListing')}
               </button>
             )}
           </div>
@@ -365,22 +369,22 @@ const ReelSlide = memo(function ReelSlide({ reel, state, muted, saver, viewSecon
           {/* Actions */}
           <div className="absolute bottom-24 right-2 z-10 flex flex-col items-center gap-4">
             {/* The seller's own Reel: their tools instead of a buyer's. */}
-            {own && <ActionButton label="Statistiques" icon="bar_chart" onClick={() => setSheet('stats')} aria="Statistiques de ce Reel" />}
-            {own && boostEnabled && reel.status === 'APPROVED' && <ActionButton label="Booster" icon="rocket_launch" onClick={() => setSheet('boost')} aria="Booster ce Reel" />}
-            {own && <ActionButton label="Gérer" icon="tune" onClick={() => { requestManageReel(reel.id); requestNavigate('seller-reels') }} aria="Gérer ce Reel dans Mes Reels" />}
+            {own && <ActionButton label={t('feed.stats')} icon="bar_chart" onClick={() => setSheet('stats')} aria={t('feed.statsAria')} />}
+            {own && boostEnabled && reel.status === 'APPROVED' && <ActionButton label={t('feed.boost')} icon="rocket_launch" onClick={() => setSheet('boost')} aria={t('feed.boostAria')} />}
+            {own && <ActionButton label={t('feed.manage')} icon="tune" onClick={() => { requestManageReel(reel.id); requestNavigate('seller-reels') }} aria={t('feed.manageAria')} />}
             {l && !own && (
-              <ActionButton label="Favori" icon="favorite" filled={fav} onClick={() => a.onToggleFavorite(l.id)} pressed={fav} aria={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'} />
+              <ActionButton label={t('feed.favourite')} icon="favorite" filled={fav} onClick={() => a.onToggleFavorite(l.id)} pressed={fav} aria={fav ? t('feed.unfavAria') : t('feed.favAria')} />
             )}
-            {canBuy && <ActionButton label="Contacter" icon="chat" onClick={contact} aria="Contacter le vendeur" />}
-            {canBuy && l?.price != null && <ActionButton label="Offre" icon="sell" onClick={offer} aria="Faire une offre" />}
-            <ActionButton label={shared ? 'Copié' : 'Partager'} icon="share" onClick={() => void share()} aria="Partager ce Reel" />
-            {!own && <ActionButton label="Signaler" icon="flag" onClick={() => (a.isLoggedIn ? setSheet('report') : a.onRequireAuth())} aria="Signaler ce Reel" />}
+            {canBuy && <ActionButton label={t('feed.contact')} icon="chat" onClick={contact} aria={t('feed.contactAria')} />}
+            {canBuy && l?.price != null && <ActionButton label={t('feed.offer')} icon="sell" onClick={offer} aria={t('feed.offerAria')} />}
+            <ActionButton label={shared ? t('feed.copied') : t('feed.share')} icon="share" onClick={() => void share()} aria={t('feed.shareAria')} />
+            {!own && <ActionButton label={t('feed.report')} icon="flag" onClick={() => (a.isLoggedIn ? setSheet('report') : a.onRequireAuth())} aria={t('feed.reportAria')} />}
           </div>
         </div>
       </div>
 
       {sheet === 'offer' && l && (
-        <BottomSheet open onClose={() => setSheet(null)} title="Faire une offre">
+        <BottomSheet open onClose={() => setSheet(null)} title={t('feed.offerAria')}>
           <QuickNegotiation
             listing={{ ...l, negotiable: l.negotiable, seller: { id: l.seller.id, fullName: sellerName, avatarUrl: avatar ?? null } }}
             onSent={(sellerId, listingId) => { setSheet(null); reelEvent(reel.id, 'CONTACT'); a.onContactSeller(sellerId, listingId) }}
@@ -406,6 +410,7 @@ function ActionButton({ label, icon, onClick, filled, pressed, aria }: { label: 
 }
 
 function ReportSheet({ reelId, onClose }: { reelId: string; onClose: () => void }) {
+  const t = useT(reels)
   const reasons = useLists().reportReasons.listing
   const [reason, setReason] = useState('')
   const [message, setMessage] = useState('')
@@ -422,16 +427,16 @@ function ReportSheet({ reelId, onClose }: { reelId: string; onClose: () => void 
     <BottomSheet
       open
       onClose={onClose}
-      title="Signaler ce Reel"
+      title={t('feed.reportAria')}
       footer={done ? undefined : (
         <div className="flex gap-2 border-0 border-t border-solid border-outline-variant px-4 py-3">
-          <button onClick={onClose} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">Annuler</button>
-          <button onClick={send} disabled={loading} className="h-12 flex-[1.4] cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60">{loading ? 'Envoi…' : 'Envoyer le signalement'}</button>
+          <button onClick={onClose} className="h-12 flex-1 cursor-pointer rounded-xl border-none bg-surface-container-high text-label-lg text-on-surface">{t('report.cancel')}</button>
+          <button onClick={send} disabled={loading} className="h-12 flex-[1.4] cursor-pointer rounded-xl border-none bg-primary text-label-lg text-white disabled:opacity-60">{loading ? t('report.sending') : t('report.send')}</button>
         </div>
       )}
     >
       {done ? (
-        <p className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-md text-tertiary"><Icon name="check_circle" size={20} /> Merci : l’équipe Dilchap va examiner ce Reel. Après plusieurs signalements, il est masqué en attendant sa décision.</p>
+        <p className="m-0 flex items-start gap-2 rounded-xl bg-tertiary-soft p-3 text-body-md text-tertiary"><Icon name="check_circle" size={20} /> {t('report.done')}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {reasons.map(r => (
@@ -440,7 +445,7 @@ function ReportSheet({ reelId, onClose }: { reelId: string; onClose: () => void 
               {r}
             </label>
           ))}
-          <textarea value={message} onChange={e => setMessage(e.target.value)} rows={2} maxLength={1000} placeholder="Précisez (facultatif)" className="input mt-1" />
+          <textarea value={message} onChange={e => setMessage(e.target.value)} rows={2} maxLength={1000} placeholder={t('report.detailsPlaceholder')} className="input mt-1" />
           {error && <p className="m-0 text-body-sm text-primary">{error}</p>}
         </div>
       )}

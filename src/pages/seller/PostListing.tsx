@@ -42,11 +42,13 @@ import { ReelEditLink, ReelPostCard, ReelPostUpload, useReelsOffered } from '../
 import { keepNewListingReel, keepPendingReel, newListingReel, pendingReel, type ReelDraft } from '../../lib/reelDrafts'
 import { formatDuration } from '../../lib/reels'
 import { useDebounced } from '../../lib/useDebounced'
+import { cfaUnit, fmtCfa, fmtTime, getLocale, useT } from '../../i18n'
+import post from '../../i18n/ns/post'
 
 const TITLE_MAX = 80
 
 
-const methodLabel = (m: PaymentMethodCode) => (m === 'CASH' ? 'Espèces en main propre' : METHOD_LABELS[m])
+const methodLabel = (m: PaymentMethodCode) => (m === 'CASH' ? post.t('payment.cashInPerson') : METHOD_LABELS[m])
 // New listing: cash and the first two mobile wallets of the country.
 const defaultMethods = (c: Country): string[] => ['CASH', ...c.methods.filter(m => m !== 'CASH').slice(0, 2)]
 const placeDefaults = (c: Country) => ({ countryCode: c.code, currency: c.currency, city: c.mainCity, locationLabel: '', meetupSpot: '', paymentMethods: defaultMethods(c) })
@@ -94,10 +96,11 @@ function loadDraft(): { form: Form, savedAt: string } | null {
 // The opt-in card, rendered when a running campaign fits the listing (the
 // ones this seller cannot join yet show why).
 function CampaignSection({ className, ...props }: { className: string } & React.ComponentProps<typeof CampaignOptIn>) {
+  const t = useT(post)
   return (
     <div className={`empty:hidden ${className}`}>
       <CampaignOptIn {...props} render={(body) => (
-        <Card icon="campaign" title="Campagnes Dilchap" subtitle="Mettez votre article en avant pendant une campagne : les frais sont débités de vos crédits à la publication.">{body}</Card>
+        <Card icon="campaign" title={t('campaigns.title')} subtitle={t('campaigns.subtitle')}>{body}</Card>
       )} />
     </div>
   )
@@ -142,9 +145,6 @@ function FieldError({ show, children }: { show: boolean, children: React.ReactNo
 }
 
 type FieldKey = 'title' | 'category' | 'condition' | 'description' | 'price' | 'city'
-const FIELD_LABELS: Record<FieldKey, string> = {
-  title: 'le titre', category: 'la catégorie', condition: 'l’état de l’objet', description: 'la description', price: 'le prix', city: 'la ville',
-}
 // Mobile wizard step -> required fields it holds, in on-screen order.
 const STEP_FIELDS: Record<number, FieldKey[]> = { 1: ['title', 'category', 'condition', 'description'], 2: ['price'], 3: ['city'] }
 
@@ -158,6 +158,7 @@ const QUICK_PICKS = 6
 // listing goes in the section (its categories only, the first one chosen),
 // in the section's theme.
 export default function PostListing({ onNavigate, currentUser, onLogout, listingId, inSection = false }: { onNavigate: (p: any) => void, currentUser?: AuthUser | null, onLogout: () => void, listingId?: string, inSection?: boolean }) {
+  const t = useT(post)
   // Listing country: the seller's by default, any active one allowed.
   const home = useHomeCountry()
   const countries = useCountries()
@@ -383,9 +384,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   const wordCount = form.description.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
   const priceNum = Number(form.price) || 0
   const steps = [
-    { title: 'Photos & Aperçu', done: photoCount > 0, sub: photoCount ? `${photoCount} photo${photoCount > 1 ? 's' : ''} prête${photoCount > 1 ? 's' : ''}` : 'Ajoutez vos photos' },
-    { title: 'Description & État', done: !!form.title.trim() && !!form.categoryId && wordCount > 3, sub: category ? category.name : 'Catégorie & détails' },
-    { title: 'Prix & Échange', done: (!requiresPrice || priceNum > 0) && !!form.city, sub: priceNum ? `${priceNum.toLocaleString('fr-FR')} F` : 'Prix et rencontre' },
+    { title: t('steps.photos'), done: photoCount > 0, sub: photoCount ? t('steps.photosReady', { count: photoCount, n: String(photoCount) }) : t('steps.addPhotos') },
+    { title: t('steps.description'), done: !!form.title.trim() && !!form.categoryId && wordCount > 3, sub: category ? category.name : t('steps.categoryDetails') },
+    { title: t('steps.price'), done: (!requiresPrice || priceNum > 0) && !!form.city, sub: priceNum ? fmtCfa(priceNum) : t('steps.priceMeet') },
   ]
   // Mobile only: the form becomes a wizard, one card per screen, driven by
   // a sticky Précédent / Suivant bar. Desktop keeps the single long page.
@@ -394,7 +395,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     const at = window.history.state?.wizardStep
     return typeof at === 'number' ? Math.max(0, Math.min(4, at)) : 0
   })
-  const MOBILE_STEPS = ['Photos', 'Détails', 'Prix', 'Rencontre', 'Aperçu']
+  const MOBILE_STEPS = [t('mobile.photos'), t('mobile.details'), t('mobile.price'), t('mobile.meet'), t('mobile.preview')]
   // A job offer (no price) has no "état" either.
   const needsCondition = requiresPrice
   const isMissing: Record<FieldKey, boolean> = {
@@ -477,25 +478,25 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
     setNeedsAge(false)
     lastSubmit.current = submit
     if (submit && missing.length) {
-      setError(`Complétez ${missing.map(k => FIELD_LABELS[k]).join(', ')}.`)
+      setError(t('errors.complete', { fields: missing.map(k => t(`field.${k}` as const)).join(', ') }))
       flagMissing(missing)
       // Mobile: jump back to the first step holding a missing field.
       const at = Number(Object.keys(STEP_FIELDS).find(i => STEP_FIELDS[Number(i)].includes(missing[0])))
       if (at < step) { pendingField.current = missing[0]; window.history.go(at - step) }
       return
     }
-    if (!category) { setError('Choisissez une catégorie.'); return }
+    if (!category) { setError(t('errors.chooseCategory')); return }
     const joining = submit && publishes && campaignChoice
     if (joining) {
       const min = campaignChoice.campaign.minDiscountPercent ?? 1
-      if (campaignChoice.discountPercent < min) { setError(`Campagne « ${campaignChoice.campaign.name} » : remise minimale de ${min} %.`); return }
+      if (campaignChoice.discountPercent < min) { setError(t('errors.minDiscount', { name: campaignChoice.campaign.name, min: String(min) })); return }
     }
     try {
       const input = {
         categoryId: form.categoryId,
         subcategoryId: form.subcategoryId || undefined,
-        title: form.title.trim() || 'Brouillon',
-        description: form.description || '<p>Description à compléter</p>',
+        title: form.title.trim() || t('draft.title'),
+        description: form.description || `<p>${t('draft.description')}</p>`,
         price: requiresPrice && priceNum ? priceNum : undefined,
         originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
         currency: form.currency,
@@ -522,7 +523,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       else {
         const { data } = await createListing({ variables: { input } })
         id = data?.createListing.id
-        if (!id) throw new Error('La création a échoué')
+        if (!id) throw new Error(t('errors.createFailed'))
         created.current = { id }
       }
       if (imageFiles.length && created.current.attached !== imageFiles) {
@@ -543,7 +544,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
           await joinCampaign({ variables: { input: { campaignId: c.id, listingId: id, discountPercent } } })
           campaign = { name: c.name, credits: applyOffer(offers, 'CAMPAIGN', campaignCost(c), form.categoryId).price }
         } catch (err) {
-          campaign = { name: c.name, error: err instanceof Error ? err.message : 'La participation a échoué.' }
+          campaign = { name: c.name, error: err instanceof Error ? err.message : t('errors.joinFailed') }
         }
       }
       // « Mesure d'audience »: a listing sent for publication (new or a
@@ -568,7 +569,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       const refusal = adultSellerError(err)
       setAdultBlocked(needsSellerVerification(refusal))
       if (refusal?.reason === 'CONFIRM_AGE') { setNeedsAge(true); return }
-      const message = err instanceof Error ? err.message : 'L’enregistrement a échoué. Réessayez.'
+      const message = err instanceof Error ? err.message : t('errors.saveFailed')
       // The category isn't open in the listing's country (changed since, or
       // limited by the team meanwhile): pick another one.
       if (/n’est pas disponible/.test(message)) setForm(f => ({ ...f, categoryId: '', subcategoryId: '', attributes: {} }))
@@ -602,14 +603,14 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
   }
 
   const cover = allPhotos[0]?.url
-  const hhmm = savedAt ? new Date(savedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h') : null
+  const hhmm = savedAt ? (getLocale() === 'fr' ? fmtTime(savedAt).replace(':', 'h') : fmtTime(savedAt)) : null
   const active = isEditing ? 'seller-listings' : 'seller-post'
   // Editing keeps "Mes annonces" lit in the desktop sidebar, but like a new
   // listing it's a full-screen wizard on phones: no tab bar over its footer.
-  const shell = { active, hideBottomNav: true, title: isEditing ? "Modifier l'annonce" : undefined }
+  const shell = { active, hideBottomNav: true, title: isEditing ? t('editTitle') : undefined }
 
   if (isEditing && loadingExisting && !prefilled) {
-    return <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}><p className="p-12 text-center text-on-surface-variant">Chargement de l'annonce…</p></AccountLayout>
+    return <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}><p className="p-12 text-center text-on-surface-variant">{t('loadingListing')}</p></AccountLayout>
   }
 
   if (result) {
@@ -617,44 +618,44 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
       <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
         <div className="mx-auto max-w-lg py-10 text-center">
           <span className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-soft text-tertiary"><CheckCircle2 size={40} /></span>
-          <h1 className="m-0 text-headline-lg text-on-surface">{isEditing && !result.fromDraft ? 'Annonce mise à jour !' : result.live ? 'Annonce publiée !' : result.submitted ? 'Annonce envoyée !' : 'Brouillon enregistré'}</h1>
+          <h1 className="m-0 text-headline-lg text-on-surface">{isEditing && !result.fromDraft ? t('done.updated') : result.live ? t('done.published') : result.submitted ? t('done.sent') : t('done.draftSaved')}</h1>
           <p className="m-0 mt-2 text-body-md text-on-surface-variant">
-            {isEditing && !result.fromDraft ? 'Vos modifications sont enregistrées.' : result.live
-              ? 'Elle est déjà visible des acheteurs.'
+            {isEditing && !result.fromDraft ? t('done.updatedText') : result.live
+              ? t('done.liveText')
               : result.submitted
-              ? 'Notre équipe la vérifie : elle sera visible des acheteurs dès son approbation.'
-              : 'Retrouvez-le dans « Mes annonces » pour le compléter et le publier.'}
+              ? t('done.reviewText')
+              : t('done.draftText')}
           </p>
           {result.campaign && ('error' in result.campaign ? (
             <div className="mt-6 flex items-start gap-2 rounded-2xl bg-primary-fixed p-4 text-left text-body-sm text-primary">
               <Icon name="error" size={20} className="shrink-0" />
-              <span>Votre annonce est publiée, mais la participation à « {result.campaign.name} » n’a pas abouti : {result.campaign.error} Vous pouvez la rejoindre depuis <button type="button" onClick={() => onNavigate('seller-campaigns')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Campagnes Dilchap</button>.</span>
+              <span>{t.rich('done.campaignFailed', { name: result.campaign.name, error: result.campaign.error, link: c => <button type="button" onClick={() => onNavigate('seller-campaigns')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">{c}</button> })}</span>
             </div>
           ) : (
             <div className="mt-6 flex items-start gap-2 rounded-2xl bg-tertiary-soft p-4 text-left text-body-sm text-on-surface">
               <Icon name="campaign" size={20} className="shrink-0 text-tertiary" />
-              <span>Inscrite à « {result.campaign.name} »{result.campaign.credits > 0 ? ` — ${result.campaign.credits} crédit${result.campaign.credits > 1 ? 's' : ''} débité${result.campaign.credits > 1 ? 's' : ''}` : ''}. {result.live ? 'Elle apparaît dans la campagne.' : 'Elle apparaîtra dans la campagne dès son approbation (remboursé si elle est refusée).'}</span>
+              <span>{result.campaign.credits > 0 ? t('done.campaignJoinedCredits', { name: result.campaign.name, count: result.campaign.credits, n: String(result.campaign.credits) }) : t('done.campaignJoined', { name: result.campaign.name })} {result.live ? t('done.campaignLive') : t('done.campaignPending')}</span>
             </div>
           ))}
           {result.reel && <ReelPostUpload listing={result.reel.listing} draft={result.reel.draft} live={!!result.live} onNavigate={onNavigate} />}
-          {!result.submitted && reelDraft && publishes && <p className="m-0 mt-6 flex items-start gap-2 rounded-2xl bg-surface-container-low p-4 text-left text-body-sm text-on-surface"><Icon name="smart_display" size={20} className="shrink-0 text-primary" /> La vidéo choisie sera envoyée quand vous publierez l’annonce (gardée jusqu’à la fermeture de Dilchap).</p>}
+          {!result.submitted && reelDraft && publishes && <p className="m-0 mt-6 flex items-start gap-2 rounded-2xl bg-surface-container-low p-4 text-left text-body-sm text-on-surface"><Icon name="smart_display" size={20} className="shrink-0 text-primary" /> {t('done.reelLater')}</p>}
           {result.submitted && (!isEditing || result.fromDraft) && (
             <div className="mt-6 rounded-2xl border border-outline-variant bg-surface-lowest p-5 text-left">
               {boosted ? (
-                <p className="m-0 flex items-center gap-2 text-label-md text-tertiary"><CheckCircle2 size={18} /> {result.live ? 'Boost enregistré — actif dès maintenant.' : "Boost enregistré — actif dès l'approbation."}</p>
+                <p className="m-0 flex items-center gap-2 text-label-md text-tertiary"><CheckCircle2 size={18} /> {result.live ? t('done.boostLive') : t('done.boostPending')}</p>
               ) : (
                 <>
-                  <div className="mb-1 flex items-center gap-2 text-headline-sm text-on-surface"><Rocket size={20} className="text-primary" /> Boostez votre annonce</div>
-                  <p className="m-0 mb-3 text-body-sm text-on-surface-variant">Remontée, En vedette, Turbo ou Urgent, payé en crédits.</p>
-                  <button type="button" onClick={() => setBoostOpen(true)} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Rocket size={17} /> Choisir un boost</button>
+                  <div className="mb-1 flex items-center gap-2 text-headline-sm text-on-surface"><Rocket size={20} className="text-primary" /> {t('done.boostTitle')}</div>
+                  <p className="m-0 mb-3 text-body-sm text-on-surface-variant">{t('done.boostText')}</p>
+                  <button type="button" onClick={() => setBoostOpen(true)} className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-primary px-4 text-label-md text-white"><Rocket size={17} /> {t('done.chooseBoost')}</button>
                   {boostOpen && <BoostPicker open listing={{ id: result.id, title: form.title, status: result.live ? 'APPROVED' : 'PENDING_REVIEW' }} onClose={() => setBoostOpen(false)} onDone={() => setBoosted(true)} />}
                 </>
               )}
             </div>
           )}
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button onClick={() => onNavigate('seller-listings')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-3 text-label-lg text-white">Voir mes annonces</button>
-            {!isEditing && <button onClick={reset} className="cursor-pointer rounded-lg border-[1.5px] border-solid border-on-surface bg-surface-lowest px-5 py-3 text-label-lg text-on-surface">Publier une autre annonce</button>}
+            <button onClick={() => onNavigate('seller-listings')} className="cursor-pointer rounded-lg border-none bg-primary px-5 py-3 text-label-lg text-white">{t('done.seeMine')}</button>
+            {!isEditing && <button onClick={reset} className="cursor-pointer rounded-lg border-[1.5px] border-solid border-on-surface bg-surface-lowest px-5 py-3 text-label-lg text-on-surface">{t('done.postAnother')}</button>}
           </div>
         </div>
       </AccountLayout>
@@ -663,35 +664,35 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
   return (
     <AccountLayout {...shell} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} onBack={shellBack}>
-      <ConfirmSheet open={quitOpen} title="Quitter le dépôt ?" confirmLabel="Quitter" tone="danger" onConfirm={leave} onClose={() => setQuitOpen(false)}>
-        Vos modifications non enregistrées seront perdues.
+      <ConfirmSheet open={quitOpen} title={t('quit.title')} confirmLabel={t('quit.confirm')} tone="danger" onConfirm={leave} onClose={() => setQuitOpen(false)}>
+        {t('quit.text')}
       </ConfirmSheet>
       <div className="mx-auto max-w-[1160px] pb-6">
         {/* Heading */}
         <div className="mb-5 hidden flex-wrap items-end justify-between gap-3 lg:flex">
           <div>
             <div className="mb-1 hidden items-center gap-2 text-label-sm uppercase lg:flex">
-              <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-primary">Création guidée</span>
-              {!isEditing && <span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> Enregistrement auto activé</span>}
+              <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-primary">{t('header.guided')}</span>
+              {!isEditing && <span className="flex items-center gap-1 text-tertiary"><span className="h-1.5 w-1.5 rounded-full bg-tertiary" /> {t('header.autosave')}</span>}
             </div>
-            <h1 className="m-0 hidden text-headline-lg text-on-surface lg:block">{isEditing ? "Modifier l'annonce" : 'Déposer une annonce'}</h1>
-            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant lg:block">Vendez vos articles rapidement{noCommission ? ", sans commission cachée, et recevez l'intégralité de vos gains." : '.'} <HelpLink article="vendre-un-article" className="ml-1 align-middle" /></p>
+            <h1 className="m-0 hidden text-headline-lg text-on-surface lg:block">{isEditing ? t('editTitle') : t('header.post')}</h1>
+            <p className="m-0 mt-1 hidden text-body-md text-on-surface-variant lg:block">{noCommission ? t('header.introNoCommission') : t('header.intro')} <HelpLink article="vendre-un-article" className="ml-1 align-middle" /></p>
           </div>
           {hhmm && !isEditing && (
-            <span className="hidden items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface lg:flex"><Icon name="bookmark" size={17} /> Brouillon sauvegardé ({hhmm})</span>
+            <span className="hidden items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-2 text-label-md text-on-surface lg:flex"><Icon name="bookmark" size={17} /> {t('header.draftSavedAt', { time: hhmm })}</span>
           )}
         </div>
 
         {/* Stepper */}
         <div className="mb-4 lg:hidden">
           <div className="mb-2 flex items-center justify-between text-label-md">
-            <span className="text-on-surface">Étape {step + 1} / {MOBILE_STEPS.length} · <span className="text-primary">{MOBILE_STEPS[step]}</span></span>
-            {hhmm && !isEditing ? <span className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="bookmark" size={14} /> Brouillon enregistré à {hhmm}</span> : step === 0 && <HelpLink article="vendre-un-article" />}
+            <span className="text-on-surface">{t.rich('stepper.step', { n: step + 1, total: MOBILE_STEPS.length, name: MOBILE_STEPS[step], hl: c => <span className="text-primary">{c}</span> })}</span>
+            {hhmm && !isEditing ? <span className="flex items-center gap-1 text-label-sm text-on-surface-variant"><Icon name="bookmark" size={14} /> {t('stepper.draftAt', { time: hhmm })}</span> : step === 0 && <HelpLink article="vendre-un-article" />}
           </div>
           {/* 24px-high hit area around each 6px bar, so past steps are tappable. */}
           <div className="flex gap-1.5">
             {MOBILE_STEPS.map((label, i) => (
-              <button key={label} type="button" aria-label={`Étape ${i + 1} : ${label}`} onClick={() => backTo(i)} disabled={i >= step} className={`flex h-6 flex-1 items-center border-none bg-transparent p-0 ${i < step ? 'cursor-pointer' : 'cursor-default'}`}>
+              <button key={label} type="button" aria-label={t('stepper.stepAria', { n: i + 1, label })} onClick={() => backTo(i)} disabled={i >= step} className={`flex h-6 flex-1 items-center border-none bg-transparent p-0 ${i < step ? 'cursor-pointer' : 'cursor-default'}`}>
                 <span className={`h-1.5 w-full rounded-full ${i <= step ? 'bg-primary' : 'bg-surface-container-high'}`} />
               </button>
             ))}
@@ -712,14 +713,14 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className={`flex min-w-0 flex-col gap-5 ${step === 4 ? 'max-lg:hidden' : ''}`}>
             {/* Photos */}
-            <Card className={only(0)} icon="add_a_photo" title="Photographies de l'article" subtitle={`Jusqu'à ${maxPhotos} photos${noCommission ? ' gratuites' : ''}. Montrez les détails et d'éventuels défauts pour rassurer l'acheteur.`}
-              aside={<span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface-variant">{photoCount} / {maxPhotos} ajoutées</span>}>
+            <Card className={only(0)} icon="add_a_photo" title={t('photos.title')} subtitle={t(noCommission ? 'photos.subtitleFree' : 'photos.subtitle', { n: String(maxPhotos) })}
+              aside={<span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-label-sm text-on-surface-variant">{t('photos.count', { n: String(photoCount), max: String(maxPhotos) })}</span>}>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {allPhotos.map((p, i) => (
                   <div key={p.key} className="relative aspect-square overflow-hidden rounded-xl bg-surface-container-low">
                     <img src={p.url} alt="" className="h-full w-full object-cover" />
-                    {i === 0 && <span className="absolute bottom-1.5 left-1.5 mr-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white">Photo de couverture</span>}
-                    <button onClick={p.remove} className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-black/55 text-white" aria-label="Retirer"><X size={15} /></button>
+                    {i === 0 && <span className="absolute bottom-1.5 left-1.5 mr-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white">{t('photos.cover')}</span>}
+                    <button onClick={p.remove} className="absolute right-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-none bg-black/55 text-white" aria-label={t('photos.remove')}><X size={15} /></button>
                   </div>
                 ))}
                 {photoCount < maxPhotos && (
@@ -730,9 +731,9 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-2 text-center text-body-sm text-on-surface-variant hover:border-primary"
                   >
                     <Upload size={24} className="text-primary" />
-                    <span className="font-semibold text-on-surface lg:hidden">Ajouter</span>
-                    <span className="font-semibold text-on-surface max-lg:hidden">Glisser ou Parcourir</span>
-                    <span className="text-[11px] max-lg:hidden">JPG, PNG, WEBP</span>
+                    <span className="font-semibold text-on-surface lg:hidden">{t('photos.add')}</span>
+                    <span className="font-semibold text-on-surface max-lg:hidden">{t('photos.dropOrBrowse')}</span>
+                    <span className="text-[11px] max-lg:hidden">{/* i18n-ignore */}JPG, PNG, WEBP</span>
                   </button>
                 )}
               </div>
@@ -745,40 +746,40 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 <ReelPostCard countryCode={form.countryCode} adult={listingAdult} title={form.title} value={reelDraft} onChange={setReelDraft}
                   extraCredits={campaignChoice ? applyOffer(offers, 'CAMPAIGN', campaignCost(campaignChoice.campaign), form.categoryId).price : 0}
                   onNavigate={isEditing ? undefined : onNavigate}
-                  render={body => <Card icon="smart_display" title="Reel (facultatif)" subtitle="Ajoutez une courte vidéo de l’article : elle passe dans les Reels de Dilchap, sur l’annonce et sur votre profil.">{body}</Card>} />
+                  render={body => <Card icon="smart_display" title={t('reel.title')} subtitle={t('reel.subtitle')}>{body}</Card>} />
               </div>
             ) : listingId && existingData?.myListing && (
               <div className={`empty:hidden ${only(0)}`}>
                 <ReelEditLink listing={{ id: listingId, title: existingData.myListing.title, coverImageUrl: existingMedia[0]?.url ?? null, countryCode: existingData.myListing.countryCode, status: existingData.myListing.status }} adult={listingAdult} onNavigate={onNavigate}
-                  render={body => <Card icon="smart_display" title="Reel de l’annonce" subtitle="Une courte vidéo de l’article, vérifiée avant sa mise en ligne.">{body}</Card>} />
+                  render={body => <Card icon="smart_display" title={t('reel.editTitle')} subtitle={t('reel.editSubtitle')}>{body}</Card>} />
               </div>
             )}
 
             {/* Infos */}
-            <Card className={only(1)} icon="edit_note" title="Informations sur l'article" subtitle="Donnez un maximum de précisions pour remonter dans les résultats de recherche.">
+            <Card className={only(1)} icon="edit_note" title={t('info.title')} subtitle={t('info.subtitle')}>
               <div className="flex flex-col gap-4">
                 <AssistButton cover={existingMedia.length ? null : imageFiles[0] ?? null} title={form.title} description={form.description} onApply={applySuggestion} />
                 {beforeAssist && (
                   <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-tertiary-soft px-3 py-2 text-body-sm text-tertiary">
-                    <span className="flex min-w-0 flex-1 basis-52 items-center gap-1.5"><Icon name="auto_awesome" size={16} className="shrink-0" /> Proposition de l’IA appliquée : relisez et corrigez si besoin.</span>
-                    <button type="button" onClick={undoAssist} className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-md text-on-surface"><Icon name="undo" size={16} /> Annuler</button>
+                    <span className="flex min-w-0 flex-1 basis-52 items-center gap-1.5"><Icon name="auto_awesome" size={16} className="shrink-0" /> {t('info.aiApplied')}</span>
+                    <button type="button" onClick={undoAssist} className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap border-none bg-transparent p-0 text-label-md text-on-surface"><Icon name="undo" size={16} /> {t('info.undo')}</button>
                   </p>
                 )}
-                <Field label="Titre de l'annonce" required right={<span className="text-body-sm text-on-surface-variant">{form.title.length} / {TITLE_MAX} car.</span>} hint={bad('title') ? undefined : 'Mentionnez la marque, le modèle précis et la particularité majeure.'}>
-                  <input data-field="title" aria-invalid={bad('title')} className={bad('title') ? inputBad : inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ex : iPhone 13 128 Go, bleu, très bon état" />
-                  <FieldError show={bad('title')}>Indiquez un titre.</FieldError>
+                <Field label={t('info.titleLabel')} required right={<span className="text-body-sm text-on-surface-variant">{t('info.titleCount', { n: form.title.length, max: TITLE_MAX })}</span>} hint={bad('title') ? undefined : t('info.titleHint')}>
+                  <input data-field="title" aria-invalid={bad('title')} className={bad('title') ? inputBad : inputCls} maxLength={TITLE_MAX} value={form.title} onChange={e => set('title', e.target.value)} placeholder={t('info.titlePlaceholder')} />
+                  <FieldError show={bad('title')}>{t('info.titleError')}</FieldError>
                 </Field>
 
                 {section && (
                   <p data-testid="post-in-section" className="m-0 flex items-start gap-2 rounded-xl bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">
                     <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-4 text-white">18+</span>
-                    <span>Annonce de la <b className="text-on-surface">Section Adultes</b> : publiée dans la section seulement, après modération.</span>
+                    <span>{t.rich('info.adultSection', { b: c => <b className="text-on-surface">{c}</b> })}</span>
                   </p>
                 )}
                 <div data-field="category">
-                <Field label="Catégorie" required>
+                <Field label={t('info.category')} required>
                   {/* Mobile: category cards, as in the mockup; desktop keeps the select. */}
-                  <div className="mb-2 grid grid-cols-2 gap-2 lg:hidden" role="radiogroup" aria-label="Catégorie">
+                  <div className="mb-2 grid grid-cols-2 gap-2 lg:hidden" role="radiogroup" aria-label={t('info.category')}>
                     {categories.map(c => {
                       const on = c.id === form.categoryId
                       return (
@@ -794,13 +795,13 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                     <div className="relative max-lg:hidden">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-primary">{category ? <CategoryIcon icon={category.icon} size={20} /> : <Tag size={18} />}</span>
                       <Select className={`${bad('category') ? inputBad : inputCls} pl-10`} value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategoryId: '', attributes: {} }))}>
-                        <option value="">Choisir une catégorie…</option>
+                        <option value="">{t('info.chooseCategory')}</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </Select>
                     </div>
                     <div className={category ? '' : 'max-lg:hidden'}>
                       <Select className={inputCls} value={form.subcategoryId} disabled={!category} onChange={e => set('subcategoryId', e.target.value)}>
-                        <option value="">{category ? 'Sous-catégorie…' : '—'}</option>
+                        <option value="">{category ? t('info.subcategory') : '—'}</option>
                         {category?.subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </Select>
                     </div>
@@ -810,13 +811,13 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                       <CategoryIcon icon={category.icon} size={15} /> {category.name}{subcategory && <> › <b className="text-primary">{subcategory.name}</b></>}
                     </span>
                   )}
-                  <FieldError show={bad('category')}>Choisissez une catégorie.</FieldError>
+                  <FieldError show={bad('category')}>{t('info.categoryError')}</FieldError>
                 </Field>
                 </div>
 
                 {needsCondition && <div data-field="condition">
-                  <span className="mb-1.5 block text-label-md text-on-surface">État de l'objet <span className="text-primary">*</span></span>
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4" role="radiogroup" aria-label="État de l'objet">
+                  <span className="mb-1.5 block text-label-md text-on-surface">{t('info.condition')} <span className="text-primary">*</span></span>
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4" role="radiogroup" aria-label={t('info.condition')}>
                     {lists.conditions.map(c => {
                       const on = form.condition === c.value
                       return (
@@ -827,14 +828,14 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                       )
                     })}
                   </div>
-                  <FieldError show={bad('condition')}>Précisez l’état de l’objet.</FieldError>
+                  <FieldError show={bad('condition')}>{t('info.conditionError')}</FieldError>
                 </div>}
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Marque"><input className={inputCls} value={form.brand} onChange={e => set('brand', e.target.value)} placeholder="Ex : Olympus" /></Field>
-                  <Field label="Modèle précis"><input className={inputCls} value={form.modelName} onChange={e => set('modelName', e.target.value)} placeholder="Ex : OM-1 Black/Chrome" /></Field>
+                  <Field label={t('info.brand')}><input className={inputCls} value={form.brand} onChange={e => set('brand', e.target.value)} placeholder={t('info.brandPlaceholder')} /></Field>
+                  <Field label={t('info.model')}><input className={inputCls} value={form.modelName} onChange={e => set('modelName', e.target.value)} placeholder={t('info.modelPlaceholder')} /></Field>
                   {category && SIZED_CATEGORIES.includes(category.slug) && (
-                    <Field label="Taille"><input className={inputCls} value={form.size} onChange={e => set('size', e.target.value)} placeholder="Ex : M, 38, 43" /></Field>
+                    <Field label={t('info.size')}><input className={inputCls} value={form.size} onChange={e => set('size', e.target.value)} placeholder={t('info.sizePlaceholder')} /></Field>
                   )}
                   {category?.attributes.map(a => (
                     <Field key={a.key} label={a.label} required={a.required}>
@@ -852,13 +853,13 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
 
                 <div data-field="description">
                   <span className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-label-md text-on-surface">
-                    <span>Description complète <span className="text-primary">*</span></span>
-                    <span className="flex items-center gap-1 text-body-sm text-tertiary"><Lightbulb size={14} /> Conseil : une description détaillée (20 mots et plus) rassure les acheteurs</span>
+                    <span>{t('info.description')} <span className="text-primary">*</span></span>
+                    <span className="flex items-center gap-1 text-body-sm text-tertiary"><Lightbulb size={14} /> {t('info.descriptionTip')}</span>
                   </span>
                   <div className={bad('description') ? 'rounded-xl outline outline-[1.5px] outline-primary' : ''}>
-                    <RichTextEditor key={editorKey} content={form.description} onChange={v => set('description', v)} placeholder="État esthétique, fonctionnement, accessoires fournis, raison de la vente…" />
+                    <RichTextEditor key={editorKey} content={form.description} onChange={v => set('description', v)} placeholder={t('info.descriptionPlaceholder')} />
                   </div>
-                  <FieldError show={bad('description')}>Décrivez votre article.</FieldError>
+                  <FieldError show={bad('description')}>{t('info.descriptionError')}</FieldError>
                 </div>
                 <ListingAdvicePanel title={form.title} description={form.description} price={requiresPrice ? priceNum || null : null} currency={form.currency}
                   categoryId={form.categoryId} subcategoryId={form.subcategoryId} photoCount={photoCount} listingId={listingId}
@@ -867,20 +868,20 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             </Card>
 
             {/* Price */}
-            <Card className={only(2)} icon="sell" title="Fixation du prix & Recommandation Dilchap" subtitle={noCommission ? 'Fixez votre prix en toute liberté. Vente 100% sans commission entre particuliers.' : 'Fixez votre prix en toute liberté.'}>
+            <Card className={only(2)} icon="sell" title={t('price.title')} subtitle={noCommission ? t('price.subtitleNoCommission') : t('price.subtitle')}>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Field label={`Votre prix de vente (${form.currency === 'XOF' || form.currency === 'XAF' ? 'F' : form.currency})`} required={requiresPrice}>
+                  <Field label={t('price.label', { unit: form.currency === 'XOF' || form.currency === 'XAF' ? cfaUnit() : form.currency })} required={requiresPrice}>
                     <div data-field="price" className={`flex items-center rounded-xl border bg-surface-container-low px-4 ${bad('price') ? 'border-[1.5px] border-primary' : 'border-outline-variant'}`}>
                       <input type="number" min={0} disabled={!requiresPrice} aria-invalid={bad('price')} className="w-full min-w-0 border-none bg-transparent py-3 text-[40px] font-extrabold leading-none text-primary outline-none" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0" />
-                      <span className="text-headline-sm text-on-surface-variant">F</span>
+                      <span className="text-headline-sm text-on-surface-variant">{cfaUnit()}</span>
                     </div>
-                    <FieldError show={bad('price')}>Indiquez un prix.</FieldError>
+                    <FieldError show={bad('price')}>{t('price.error')}</FieldError>
                   </Field>
-                  <Claim><p className="m-0 mt-2 flex items-center gap-1 text-body-sm font-semibold text-tertiary"><CheckCircle2 size={14} /> 0 F de commission : 100% du montant vous revient.</p></Claim>
+                  <Claim><p className="m-0 mt-2 flex items-center gap-1 text-body-sm font-semibold text-tertiary"><CheckCircle2 size={14} /> {t('price.noCommission', { zero: fmtCfa(0) })}</p></Claim>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Field label="Prix neuf (optionnel)"><input type="number" min={0} className={inputCls} value={form.originalPrice} onChange={e => set('originalPrice', e.target.value)} placeholder="Barré sur l'annonce" /></Field>
-                    <Field label="Pays">
+                    <Field label={t('price.original')}><input type="number" min={0} className={inputCls} value={form.originalPrice} onChange={e => set('originalPrice', e.target.value)} placeholder={t('price.originalPlaceholder')} /></Field>
+                    <Field label={t('price.country')}>
                       <Select className={inputCls} value={form.countryCode} onChange={e => changeCountry(e.target.value)}>
                         {!countries.some(c => c.code === form.countryCode) && <option value={form.countryCode}>{country.name}</option>}
                         {countries.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
@@ -890,8 +891,8 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                 </div>
                 <div className="rounded-xl bg-surface-container-low p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-label-sm uppercase text-on-surface-variant">Fourchette recommandée</span>
-                    {range && <span className="text-label-sm text-tertiary">Prix conseillé (<Price amount={range.median} currency={form.currency} />)</span>}
+                    <span className="text-label-sm uppercase text-on-surface-variant">{t('price.range')}</span>
+                    {range && <span className="text-label-sm text-tertiary">{t.rich('price.advised', { price: <Price amount={range.median} currency={form.currency} /> })}</span>}
                   </div>
                   {range ? (
                     <>
@@ -902,11 +903,11 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                             style={{ left: `${Math.max(0, Math.min(100, ((priceNum - range.low * 0.5) / (range.high * 1.5 - range.low * 0.5)) * 100))}%` }} />
                         )}
                       </div>
-                      <div className="mt-2 flex justify-between text-[11px] text-on-surface-variant"><span>Vente express</span><span className="text-tertiary">Prix conseillé</span><span>Prix haut</span></div>
-                      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">Basé sur {range.sampleSize} annonces {range.scope === 'SIMILAR' ? 'semblables' : 'de la même sous-catégorie'} en ligne.</p>
+                      <div className="mt-2 flex justify-between text-[11px] text-on-surface-variant"><span>{t('price.express')}</span><span className="text-tertiary">{t('price.advisedShort')}</span><span>{t('price.high')}</span></div>
+                      <p className="m-0 mt-2 text-body-sm text-on-surface-variant">{t(range.scope === 'SIMILAR' ? 'price.basedSimilar' : 'price.basedSubcategory', { n: String(range.sampleSize) })}</p>
                     </>
                   ) : (
-                    <p className="m-0 mt-2 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Info size={15} className="mt-0.5 shrink-0" /> {form.categoryId ? (form.subcategoryId || form.title.trim() ? 'Pas encore assez d’annonces comparables pour conseiller un prix.' : 'Choisissez la sous-catégorie ou écrivez le titre pour voir les prix d’annonces semblables.') : 'Choisissez une catégorie pour voir les prix constatés.'}</p>
+                    <p className="m-0 mt-2 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Info size={15} className="mt-0.5 shrink-0" /> {form.categoryId ? (form.subcategoryId || form.title.trim() ? t('price.notEnough') : t('price.chooseSub')) : t('price.chooseCategory')}</p>
                   )}
                 </div>
               </div>
@@ -916,26 +917,26 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <label className="mt-4 flex cursor-pointer flex-wrap items-start gap-3 rounded-xl bg-surface-container-low p-4">
                 <input type="checkbox" checked={form.negotiable} onChange={e => set('negotiable', e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--primary)]" />
                 <span className="min-w-[12rem] flex-1">
-                  <span className="block text-label-md text-on-surface">Accepter les propositions de prix dans le chat</span>
-                  <span className="text-body-sm text-on-surface-variant">Autoriser les acheteurs à vous faire une proposition de négociation raisonnable.</span>
+                  <span className="block text-label-md text-on-surface">{t('price.negotiable')}</span>
+                  <span className="text-body-sm text-on-surface-variant">{t('price.negotiableHint')}</span>
                 </span>
                 {form.negotiable && (
                   <span className="flex basis-full items-center gap-2 pl-8 text-body-sm text-on-surface-variant sm:basis-auto sm:pl-0">
-                    <span className="whitespace-nowrap">Prix plancher :</span>
-                    <input type="number" min={0} value={form.minOfferPrice} onChange={e => set('minOfferPrice', e.target.value)} className="w-24 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1.5 text-label-md text-on-surface outline-none" placeholder="Optionnel" />
+                    <span className="whitespace-nowrap">{t('price.floor')}</span>
+                    <input type="number" min={0} value={form.minOfferPrice} onChange={e => set('minOfferPrice', e.target.value)} className="w-24 rounded-lg border border-outline-variant bg-surface-lowest px-2 py-1.5 text-label-md text-on-surface outline-none" placeholder={t('price.optional')} />
                   </span>
                 )}
               </label>
 
               <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-surface-container-low p-4">
                 <span className="min-w-[12rem] flex-1">
-                  <span className="block text-label-md text-on-surface">Exemplaires disponibles</span>
-                  <span className="text-body-sm text-on-surface-variant">Plusieurs articles identiques ? Chaque vente conclue en retire du stock.</span>
+                  <span className="block text-label-md text-on-surface">{t('qty.label')}</span>
+                  <span className="text-body-sm text-on-surface-variant">{t('qty.hint')}</span>
                 </span>
                 <span className="flex items-center gap-1">
-                  <button type="button" aria-label="Retirer un exemplaire" disabled={Number(form.quantity) <= 1} onClick={() => set('quantity', String(Math.max(1, (Number(form.quantity) || 1) - 1)))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={18} /></button>
-                  <input type="number" min={1} max={999} value={form.quantity} onChange={e => set('quantity', e.target.value)} aria-label="Exemplaires disponibles" className="h-10 w-16 rounded-lg border border-outline-variant bg-surface-lowest text-center text-label-lg text-on-surface outline-none [appearance:textfield]" />
-                  <button type="button" aria-label="Ajouter un exemplaire" onClick={() => set('quantity', String(Math.min(999, (Number(form.quantity) || 1) + 1)))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface"><Icon name="add" size={18} /></button>
+                  <button type="button" aria-label={t('qty.remove')} disabled={Number(form.quantity) <= 1} onClick={() => set('quantity', String(Math.max(1, (Number(form.quantity) || 1) - 1)))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface disabled:opacity-40"><Icon name="remove" size={18} /></button>
+                  <input type="number" min={1} max={999} value={form.quantity} onChange={e => set('quantity', e.target.value)} aria-label={t('qty.label')} className="h-10 w-16 rounded-lg border border-outline-variant bg-surface-lowest text-center text-label-lg text-on-surface outline-none [appearance:textfield]" />
+                  <button type="button" aria-label={t('qty.add')} onClick={() => set('quantity', String(Math.min(999, (Number(form.quantity) || 1) + 1)))} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border-none bg-surface-lowest text-on-surface"><Icon name="add" size={18} /></button>
                 </span>
               </div>
             </Card>
@@ -946,14 +947,14 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             )}
 
             {/* Exchange */}
-            <Card className={only(3)} icon="handshake" title="Modalités d'échange et de rencontre" subtitle="Aucun transporteur obligatoire : convenez directement du lieu de remise et du mode de règlement avec l'acheteur.">
+            <Card className={only(3)} icon="handshake" title={t('exchange.title')} subtitle={t('exchange.subtitle')}>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Ville & Commune" required>
+                <Field label={t('exchange.city')} required>
                   <div className="relative"><Icon name="location_city" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input data-field="city" aria-invalid={bad('city')} className={`${bad('city') ? inputBad : inputCls} pl-10`} value={form.city} onChange={e => set('city', e.target.value)} placeholder={country.mainCity} list="post-listing-cities" /><datalist id="post-listing-cities">{lists.cities.map(c => <option key={c} value={c} />)}</datalist></div>
-                  <FieldError show={bad('city')}>Indiquez la ville.</FieldError>
+                  <FieldError show={bad('city')}>{t('exchange.cityError')}</FieldError>
                 </Field>
-                <Field label="Quartier">
-                  <div className="relative"><MapPin size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.locationLabel} onChange={e => set('locationLabel', e.target.value)} placeholder={lists.communes[0] ? `Ex : ${lists.communes[0]}` : 'Quartier, repère'} /></div>
+                <Field label={t('exchange.district')}>
+                  <div className="relative"><MapPin size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.locationLabel} onChange={e => set('locationLabel', e.target.value)} placeholder={lists.communes[0] ? t('exchange.example', { x: lists.communes[0] }) : t('exchange.districtPlaceholder')} /></div>
                   {inMainCity && lists.communes.length > 0 && (
                     <span className="mt-2 flex flex-wrap gap-1.5">
                       {lists.communes.slice(0, QUICK_PICKS).map(z => {
@@ -964,12 +965,12 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
                   )}
                 </Field>
                 <div className="sm:col-span-2">
-                  <Field label="Lieu de rendez-vous suggéré" hint="Un lieu public et fréquenté : centre commercial, station-service…">
-                    <div className="relative"><Icon name="storefront" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.meetupSpot} onChange={e => set('meetupSpot', e.target.value)} placeholder={lists.meetupSpots[0] ? `Ex : ${lists.meetupSpots[0].name}` : 'Ex : centre commercial, station-service…'} /></div>
+                  <Field label={t('exchange.spot')} hint={t('exchange.spotHint')}>
+                    <div className="relative"><Icon name="storefront" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" /><input className={`${inputCls} pl-10`} value={form.meetupSpot} onChange={e => set('meetupSpot', e.target.value)} placeholder={lists.meetupSpots[0] ? t('exchange.example', { x: lists.meetupSpots[0].name }) : t('exchange.spotPlaceholder')} /></div>
                   </Field>
                   {inMainCity && lists.meetupSpots.length > 0 && (
                     <div className="mt-2 rounded-xl bg-tertiary-soft/60 p-3">
-                      <span className="mb-2 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={14} /> Lieux publics et fréquentés</span>
+                      <span className="mb-2 flex items-center gap-1.5 text-label-sm uppercase text-tertiary"><ShieldCheck size={14} /> {t('exchange.publicSpots')}</span>
                       <span className="flex flex-wrap gap-1.5">
                         {lists.meetupSpots.slice(0, QUICK_PICKS).map(s => s.name).map(p => (
                           <button key={p} type="button" aria-pressed={form.meetupSpot === p} onClick={() => set('meetupSpot', form.meetupSpot === p ? '' : p)} className={`flex h-9 min-w-0 max-w-full cursor-pointer items-center gap-1 rounded-lg border border-solid px-2.5 text-label-md ${form.meetupSpot === p ? 'border-on-surface bg-on-surface text-surface-lowest' : 'border-outline-variant bg-surface-lowest text-on-surface'}`}>
@@ -983,7 +984,7 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               </div>
 
               <div className="mt-4">
-                <span className="mb-1.5 block text-label-md text-on-surface">Moyens de règlement acceptés lors de la rencontre</span>
+                <span className="mb-1.5 block text-label-md text-on-surface">{t('exchange.payments')}</span>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {/* Cash first, then the country's mobile wallets. */}
                   {[...new Set<PaymentMethodCode>(['CASH', ...country.methods])].map(m => {
@@ -1002,26 +1003,26 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
               <div className="mt-4 flex flex-col gap-2 rounded-xl bg-surface-container-low p-4">
                 <label className="flex cursor-pointer items-start gap-3">
                   <input type="checkbox" checked readOnly className="mt-1 h-4 w-4 accent-[var(--primary)]" />
-                  <span><span className="block text-label-md text-on-surface">Prêt à échanger par le chat intégré de Dilchap</span><span className="text-body-sm text-on-surface-variant">Recevez instantanément les messages et propositions des acheteurs.</span></span>
+                  <span><span className="block text-label-md text-on-surface">{t('exchange.chat')}</span><span className="text-body-sm text-on-surface-variant">{t('exchange.chatHint')}</span></span>
                 </label>
                 <label className="flex cursor-pointer items-start gap-3">
                   <input type="checkbox" checked={form.deliveryAvailable} onChange={e => set('deliveryAvailable', e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--primary)]" />
-                  <span><span className="flex items-center gap-1 text-label-md text-on-surface"><Truck size={15} /> Livraison possible</span><span className="text-body-sm text-on-surface-variant">En plus de la remise en main propre, à convenir avec l'acheteur.</span></span>
+                  <span><span className="flex items-center gap-1 text-label-md text-on-surface"><Truck size={15} /> {t('exchange.delivery')}</span><span className="text-body-sm text-on-surface-variant">{t('exchange.deliveryHint')}</span></span>
                 </label>
               </div>
             </Card>
 
-            {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Faire vérifier mon identité</button></>}</p>}
-            {needsAge && <div className="hidden lg:block"><AdultGate compact reason="CONFIRM" countryCode={form.countryCode} onNavigate={onNavigate} confirmTitle="Confirmez votre âge pour publier" confirmText="La section Adultes est ouverte aux membres qui ont 18 ans ou plus. Une seule fois : votre réponse est gardée sur votre compte." confirmLabel={lastSubmit.current ? 'Confirmer et publier' : 'Confirmer et enregistrer'} onConfirmed={() => { setNeedsAge(false); void save(lastSubmit.current) }} /></div>}
-            {needsVerify && <div className="hidden lg:block"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat, et la publication reprend toute seule." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
+            {error && <p className="m-0 hidden rounded-xl bg-primary-fixed p-3 text-body-sm text-primary lg:block">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">{t('verifyIdentity')}</button></>}</p>}
+            {needsAge && <div className="hidden lg:block"><AdultGate compact reason="CONFIRM" countryCode={form.countryCode} onNavigate={onNavigate} confirmTitle={t('age.title')} confirmText={t('age.text')} confirmLabel={lastSubmit.current ? t('age.confirmPublish') : t('age.confirmSave')} onConfirmed={() => { setNeedsAge(false); void save(lastSubmit.current) }} /></div>}
+            {needsVerify && <div className="hidden lg:block"><AccountVerifyPanel intro={t('verify.introDesktop')} onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
             <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
               {publishes ? (
                 <button disabled={busy} onClick={() => void save(false)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-surface-container-high px-5 py-3 text-label-lg text-on-surface hover:bg-surface-container-highest disabled:opacity-60">
-                  <Icon name="save" size={19} /> Sauvegarder en brouillon
+                  <Icon name="save" size={19} /> {t('actions.saveDraft')}
                 </button>
               ) : <span />}
               <button disabled={busy} onClick={() => void save(publishes)} className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-primary px-8 py-3.5 text-headline-sm text-white hover:bg-primary-dark disabled:opacity-60">
-                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {!publishes ? 'Enregistrer les modifications' : 'Publier mon annonce'}
+                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {!publishes ? t('actions.saveChanges') : t('actions.publish')}
               </button>
             </div>
           </div>
@@ -1031,54 +1032,54 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
             {/* Nothing to earn on a priceless category (job offers). */}
             {requiresPrice && <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <div className="flex items-center justify-between">
-                <span className="text-label-sm uppercase text-on-surface-variant">Vos gains réels</span>
-                <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">100% pour vous</span>
+                <span className="text-label-sm uppercase text-on-surface-variant">{t('earnings.title')}</span>
+                <span className="rounded-full bg-tertiary-soft px-2 py-0.5 text-label-sm text-tertiary">{t('earnings.all')}</span>
               </div>
               <div className="mt-3 rounded-xl bg-tertiary-soft p-3">
-                <div className="text-body-sm text-on-surface-variant">Montant net perçu lors de la vente :</div>
+                <div className="text-body-sm text-on-surface-variant">{t('earnings.net')}</div>
                 <div className="flex items-center justify-between">
                   <span className="text-headline-lg font-extrabold text-tertiary"><Price amount={priceNum} currency={form.currency} /></span>
-                  <Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><CheckCircle2 size={13} /> Zéro frais</span></Claim>
+                  <Claim><span className="flex items-center gap-1 text-label-sm text-tertiary"><CheckCircle2 size={13} /> {t('earnings.zeroFees')}</span></Claim>
                 </div>
               </div>
               <dl className="m-0 mt-3 flex flex-col gap-2 text-body-sm">
-                <div className="flex justify-between"><dt className="text-on-surface-variant">Prix de vente affiché</dt><dd className="m-0 font-semibold text-on-surface"><Price amount={priceNum} currency={form.currency} /></dd></div>
-                <Claim><div className="flex justify-between"><dt className="text-on-surface-variant">Commission Dilchap</dt><dd className="m-0 font-semibold text-tertiary">0 F (gratuit)</dd></div>
-                <div className="flex justify-between"><dt className="text-on-surface-variant">Frais de mise en relation</dt><dd className="m-0 font-semibold text-on-surface">0 F</dd></div></Claim>
+                <div className="flex justify-between"><dt className="text-on-surface-variant">{t('earnings.price')}</dt><dd className="m-0 font-semibold text-on-surface"><Price amount={priceNum} currency={form.currency} /></dd></div>
+                <Claim><div className="flex justify-between"><dt className="text-on-surface-variant">{t('earnings.commission')}</dt><dd className="m-0 font-semibold text-tertiary">{t('earnings.free', { zero: fmtCfa(0) })}</dd></div>
+                <div className="flex justify-between"><dt className="text-on-surface-variant">{t('earnings.connectionFee')}</dt><dd className="m-0 font-semibold text-on-surface">{fmtCfa(0)}</dd></div></Claim>
               </dl>
-              <p className="m-0 mt-3 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Handshake size={15} className="mt-0.5 shrink-0 text-primary" /> Paiement direct de la main à la main ou par mobile money entre particuliers.</p>
+              <p className="m-0 mt-3 flex items-start gap-1.5 text-body-sm text-on-surface-variant"><Handshake size={15} className="mt-0.5 shrink-0 text-primary" /> {t('earnings.direct')}</p>
             </div>}
 
             <div className="rounded-2xl border border-outline-variant bg-surface-lowest p-4">
               <div className="mb-2 flex items-center justify-between text-label-sm uppercase">
-                <span className="text-on-surface-variant">Aperçu en ligne</span><span className="text-primary">Vue acheteur</span>
+                <span className="text-on-surface-variant">{t('preview.title')}</span><span className="text-primary">{t('preview.buyerView')}</span>
               </div>
               <div className="overflow-hidden rounded-xl border border-outline-variant">
                 <div className="relative aspect-[4/3] overflow-hidden bg-surface-container-low">
                   {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-outline"><Icon name="image" size={40} /></div>}
                   {form.condition && <span className="absolute left-2 top-2 rounded-md bg-tertiary px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{form.condition}</span>}
-                  {reelDraft && publishes && reelsOffered && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white"><Icon name="smart_display" size={12} /> Reel{reelDraft.duration ? ` · ${formatDuration(Math.max(0, reelDraft.range[1] - reelDraft.range[0]))}` : ''}</span>}
+                  {reelDraft && publishes && reelsOffered && <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white"><Icon name="smart_display" size={12} /> {/* i18n-ignore */}Reel{reelDraft.duration ? ` · ${formatDuration(Math.max(0, reelDraft.range[1] - reelDraft.range[0]))}` : ''}</span>}
                   {form.city && <span className="absolute right-2 top-2 flex items-center gap-0.5 rounded-md bg-surface-lowest/95 px-1.5 py-0.5 text-[10px] font-semibold text-on-surface"><MapPin size={11} /> {form.city}</span>}
                 </div>
                 <div className="p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-label-sm uppercase text-on-surface-variant">{form.brand || category?.name || 'Marque'}</span>
+                    <span className="truncate text-label-sm uppercase text-on-surface-variant">{form.brand || category?.name || t('preview.brand')}</span>
                     {requiresPrice && <span className="shrink-0 text-headline-sm font-extrabold text-primary"><Price amount={priceNum} currency={form.currency} /></span>}
                   </div>
-                  <div className="truncate text-label-md text-on-surface">{form.title || 'Titre de votre annonce'}</div>
-                  <div className="mt-1 flex items-center gap-1 text-body-sm text-on-surface-variant"><ShieldCheck size={13} className="text-tertiary" /> {currentUser?.fullName ?? 'Vous'} • Particulier</div>
-                  <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-label-md text-white"><MessageSquare size={15} /> Contacter / Chat direct</div>
+                  <div className="truncate text-label-md text-on-surface">{form.title || t('preview.listingTitle')}</div>
+                  <div className="mt-1 flex items-center gap-1 text-body-sm text-on-surface-variant"><ShieldCheck size={13} className="text-tertiary" /> {t('preview.seller', { name: currentUser?.fullName ?? t('preview.you') })}</div>
+                  <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-label-md text-white"><MessageSquare size={15} /> {t('preview.contact')}</div>
                 </div>
               </div>
             </div>
 
             <div className="hidden rounded-2xl border border-outline-variant bg-surface-lowest p-4 lg:block">
-              <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="verified" size={18} className="text-primary" /> Les engagements Dilchap</div>
+              <div className="mb-2 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="verified" size={18} className="text-primary" /> {t('commitments.title')}</div>
               <ul className="m-0 flex list-none flex-col gap-2 p-0 text-body-sm text-on-surface-variant">
                 {[
-                  ...(noCommission ? [{ icon: <Percent size={15} />, text: 'Plateforme 100% sans commission ni intermédiaire sur le paiement.' }] : []),
-                  { icon: <MessageSquare size={15} />, text: 'Messagerie instantanée pour poser vos questions et négocier.' },
-                  { icon: <Wallet size={15} />, text: 'Remise locale en main propre pour vérifier l’article avant de payer.' },
+                  ...(noCommission ? [{ icon: <Percent size={15} />, text: t('commitments.noCommission') }] : []),
+                  { icon: <MessageSquare size={15} />, text: t('commitments.chat') },
+                  { icon: <Wallet size={15} />, text: t('commitments.handover') },
                 ].map(e => <li key={e.text} className="flex items-start gap-2"><span className="mt-0.5 text-tertiary">{e.icon}</span> {e.text}</li>)}
               </ul>
             </div>
@@ -1088,27 +1089,27 @@ export default function PostListing({ onNavigate, currentUser, onLogout, listing
         {/* Mobile wizard bar: the wizard has no account tabs, so it sits at the very bottom */}
         <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))] lg:hidden" />
         <div className="fixed inset-x-0 bottom-0 z-40 border-0 border-t border-solid border-outline-variant bg-surface-lowest px-4 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5 lg:hidden">
-          {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">Faire vérifier mon identité</button></>}</p>}
-          {needsAge && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AdultGate compact reason="CONFIRM" countryCode={form.countryCode} onNavigate={onNavigate} confirmTitle="Confirmez votre âge pour publier" confirmText="La section Adultes est ouverte aux membres qui ont 18 ans ou plus. Une seule fois : votre réponse est gardée sur votre compte." confirmLabel={lastSubmit.current ? 'Confirmer et publier' : 'Confirmer et enregistrer'} onConfirmed={() => { setNeedsAge(false); void save(lastSubmit.current) }} /></div>}
-          {needsVerify && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AccountVerifyPanel intro="Votre annonce est enregistrée. Pour la publier, confirmez votre compte : par SMS, c’est immédiat." onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
+          {error && <p className="m-0 mb-2 rounded-lg bg-primary-fixed px-3 py-2 text-body-sm text-primary">{error}{adultBlocked && <> <button type="button" onClick={() => onNavigate('seller-kyc')} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary underline">{t('verifyIdentity')}</button></>}</p>}
+          {needsAge && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AdultGate compact reason="CONFIRM" countryCode={form.countryCode} onNavigate={onNavigate} confirmTitle={t('age.title')} confirmText={t('age.text')} confirmLabel={lastSubmit.current ? t('age.confirmPublish') : t('age.confirmSave')} onConfirmed={() => { setNeedsAge(false); void save(lastSubmit.current) }} /></div>}
+          {needsVerify && <div className="mb-2 max-h-[55vh] overflow-y-auto lg:hidden"><AccountVerifyPanel intro={t('verify.introMobile')} onVerified={() => { setNeedsVerify(false); void save(lastSubmit.current) }} /></div>}
           <div className="flex items-center gap-2">
             {step > 0 ? (
-              <button type="button" onClick={() => backTo(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label="Étape précédente">
+              <button type="button" onClick={() => backTo(step - 1)} className="flex h-12 cursor-pointer items-center gap-1 rounded-xl border-none bg-surface-container-high px-4 text-label-lg text-on-surface" aria-label={t('actions.prevStep')}>
                 <Icon name="arrow_back" size={20} />
               </button>
             ) : publishes && form.categoryId && (
               // A server draft needs a category; until then the local auto-save covers it.
               <button type="button" disabled={busy} onClick={() => void save(false)} className="flex h-12 cursor-pointer items-center gap-1.5 rounded-xl border-none bg-surface-container-high px-4 text-label-md text-on-surface disabled:opacity-60">
-                <Icon name="save" size={19} /> Brouillon
+                <Icon name="save" size={19} /> {t('actions.draft')}
               </button>
             )}
             {step < MOBILE_STEPS.length - 1 ? (
               <button type="button" onClick={next} className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border-none bg-primary text-label-lg text-white hover:bg-primary-dark">
-                Suivant · {MOBILE_STEPS[step + 1]} <Icon name="arrow_forward" size={20} />
+                {t('actions.next', { step: MOBILE_STEPS[step + 1] })} <Icon name="arrow_forward" size={20} />
               </button>
             ) : (
               <button type="button" disabled={busy} onClick={() => void save(publishes)} className="flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-primary text-label-lg text-white hover:bg-primary-dark disabled:opacity-60">
-                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {!publishes ? 'Enregistrer' : 'Publier mon annonce'}
+                {busy ? <Loader2 size={20} className="animate-spin" /> : <Rocket size={20} />} {!publishes ? t('actions.save') : t('actions.publish')}
               </button>
             )}
           </div>

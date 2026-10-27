@@ -1,0 +1,20 @@
+{
+  "placeholder": "Rédigez votre description ici...",
+  "linkPrompt": "Adresse du lien (https://…) — vide pour le retirer",
+  "linkInvalid": "Lien invalide : utilisez une adresse https://…",
+  "bold": "Gras",
+  "italic": "Italique",
+  "underline": "Souligné",
+  "strike": "Barré",
+  "h1": "Titre 1",
+  "h2": "Titre 2",
+  "h3": "Titre 3",
+  "bulletList": "Liste à puces",
+  "orderedList": "Liste numérotée",
+  "alignLeft": "Aligné à gauche",
+  "alignCenter": "Centré",
+  "alignRight": "Aligné à droite",
+  "link": "Lien",
+  "undo": "Annuler",
+  "redo": "Refaire"
+}

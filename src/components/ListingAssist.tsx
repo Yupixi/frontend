@@ -10,6 +10,8 @@ import {
 } from '../graphql/listingAssist'
 import { WALLET_BALANCE_QUERY, type WalletBalance } from '../graphql/payments'
 import { usePriceVars } from '../lib/countries'
+import { useT } from '../i18n'
+import post from '../i18n/ns/post'
 
 const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
 
@@ -54,6 +56,7 @@ export function AssistButton({ cover, title, description, onApply }: {
   description: string
   onApply: (s: ListingDraftSuggestion) => void
 }) {
+  const t = useT(post)
   const { data } = useQuery<ListingAssistOffer>(LISTING_ASSIST_AVAILABLE_QUERY, { variables: usePriceVars(), fetchPolicy: 'cache-and-network' })
   // Price less the live offer (« Offres & gratuités »), as the server takes it.
   const quote = useOfferPrice('AI_ASSIST', data?.listingAssistPrice ?? 0)
@@ -78,7 +81,7 @@ export function AssistButton({ cover, title, description, onApply }: {
       const res = await assist({ variables: { input: { photo, title: title.trim() || undefined, description: plain(description) || undefined } } })
       if (res.data) onApply(res.data.assistListing)
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : 'L’assistant est indisponible pour le moment.')
+      setError(e instanceof Error && e.message ? e.message : post.t('assist.unavailable'))
     }
     if (cost) void refetch()
   }
@@ -88,21 +91,21 @@ export function AssistButton({ cover, title, description, onApply }: {
     <div className="rounded-xl bg-gradient-to-r from-primary-fixed/60 to-surface-container-low p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="m-0 min-w-0 flex-1 basis-56 text-body-sm text-on-surface">
-          <b>Pas d’inspiration ?</b> L’IA propose un titre, une description, la catégorie et l’état {cover ? 'à partir de votre première photo' : 'à partir de vos premiers mots'}. Vous relisez avant de publier.
+          {t.rich(cover ? 'assist.introPhoto' : 'assist.introWords', { b: c => <b>{c}</b> })}
         </p>
         <button type="button" disabled={busy || !canRun} onClick={() => void run()}
           className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-none bg-on-surface px-3.5 py-2.5 text-label-md text-surface-lowest disabled:cursor-default disabled:opacity-50">
-          <Icon name={busy ? 'progress_activity' : 'auto_awesome'} size={17} className={busy ? 'animate-spin' : ''} /> {busy ? 'Rédaction…' : 'Rédiger avec l’IA'}
+          <Icon name={busy ? 'progress_activity' : 'auto_awesome'} size={17} className={busy ? 'animate-spin' : ''} /> {busy ? t('assist.writing') : t('assist.button')}
           {!busy && (cost > 0 || !!quote?.percent) && <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-label-sm">{quote?.percent ? <><s className="opacity-70">{quote.base}</s> {cost > 0 ? creditsLabel(cost) : offerLabel(100)}</> : creditsLabel(cost)}</span>}
         </button>
       </div>
       {cost > 0 && balance != null && (
         <p className="m-0 mt-1 text-body-sm text-on-surface-variant">
-          {missing ? <>Solde : {creditsLabel(balance)}. <button type="button" onClick={() => setTopUp(true)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">Acheter des crédits</button></>
-            : <>Solde : {creditsLabel(balance)} • remboursé si l’IA ne propose rien.</>}
+          {missing ? t.rich('assist.balanceShort', { balance: creditsLabel(balance), link: c => <button type="button" onClick={() => setTopUp(true)} className="cursor-pointer border-none bg-transparent p-0 text-label-md text-primary">{c}</button> })
+            : t('assist.balanceOk', { balance: creditsLabel(balance) })}
         </p>
       )}
-      {!canRun && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Ajoutez d’abord une photo ou quelques mots.</p>}
+      {!canRun && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('assist.needInput')}</p>}
       {error && <p role="alert" className="m-0 mt-1 text-body-sm text-primary">{error}</p>}
       <BuyCreditsSheet open={topUp} suggested={missing || undefined} onClose={() => setTopUp(false)} onDone={() => { setTopUp(false); void refetch() }} />
     </div>
@@ -110,9 +113,9 @@ export function AssistButton({ cover, title, description, onApply }: {
 }
 
 const LEVEL = {
-  BLOCKING: { icon: 'block', cls: 'bg-primary-fixed text-primary', label: 'À corriger' },
-  WARNING: { icon: 'warning', cls: 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200', label: 'Vérification manuelle' },
-  TIP: { icon: 'lightbulb', cls: 'bg-surface-container-low text-on-surface-variant', label: 'Conseil' },
+  BLOCKING: { icon: 'block', cls: 'bg-primary-fixed text-primary', label: 'assist.level.BLOCKING' },
+  WARNING: { icon: 'warning', cls: 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200', label: 'assist.level.WARNING' },
+  TIP: { icon: 'lightbulb', cls: 'bg-surface-container-low text-on-surface-variant', label: 'assist.level.TIP' },
 } as const
 
 // Live advice while writing: the same rules the moderation applies
@@ -123,11 +126,12 @@ export function ListingAdvicePanel({ title, description, price, currency, catego
   // What the item is and where: its price is compared with the same kind.
   countryCode?: string; brand?: string; modelName?: string; city?: string
 }) {
+  const t = useT(post)
   const [fetchAdvice, { data }] = useLazyQuery<{ listingAdvice: ListingAdvice[] }>(LISTING_ADVICE_QUERY, { fetchPolicy: 'network-only' })
   const text = plain(description)
   useEffect(() => {
     if (!title.trim() && !text) return
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       void fetchAdvice({ variables: { input: {
         title: title.slice(0, 200), description: text.slice(0, 10000), price: price || undefined, currency,
         categoryId: categoryId || undefined, subcategoryId: subcategoryId || undefined, photoCount, listingId,
@@ -135,21 +139,21 @@ export function ListingAdvicePanel({ title, description, price, currency, catego
         modelName: modelName?.trim().slice(0, 120) || undefined, city: city?.trim().slice(0, 120) || undefined,
       } } }).catch(() => undefined)
     }, 700)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [title, text, price, currency, categoryId, subcategoryId, photoCount, listingId, countryCode, brand, modelName, city, fetchAdvice])
 
   const items = (title.trim() || text) ? data?.listingAdvice ?? [] : []
   if (!items.length) return null
   return (
     <div className="rounded-xl border border-solid border-outline-variant p-3" aria-live="polite">
-      <p className="m-0 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="lightbulb" size={17} className="text-primary" /> Avant de publier</p>
+      <p className="m-0 flex items-center gap-1.5 text-label-md text-on-surface"><Icon name="lightbulb" size={17} className="text-primary" /> {t('assist.beforePosting')}</p>
       <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0">
         {items.map((a) => {
           const l = LEVEL[a.level as keyof typeof LEVEL] ?? LEVEL.TIP
           return (
             <li key={a.code} className={`flex items-start gap-2 rounded-lg px-2.5 py-2 text-body-sm ${l.cls}`}>
               <Icon name={l.icon} size={16} className="mt-0.5 shrink-0" />
-              <span className="min-w-0"><b>{l.label} :</b> {a.message}</span>
+              <span className="min-w-0"><b>{t('assist.levelLabel', { label: t(l.label) })}</b> {a.message}</span>
             </li>
           )
         })}

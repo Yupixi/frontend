@@ -1,6 +1,7 @@
 import { GRAPHQL_URL, refreshAccessToken } from './apollo'
 import { getAccessToken } from './auth'
 import { localeHeaders } from '../i18n/headers'
+import reels from '../i18n/ns/reels'
 
 // Sending a Reel's video: 1 Mo pieces in order, each one retried, so a cut
 // mobile connection (very common on 3G) never starts the whole file over —
@@ -16,7 +17,7 @@ export class ReelUploadError extends Error {}
 
 const wait = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
   const t = window.setTimeout(resolve, ms)
-  signal?.addEventListener('abort', () => { window.clearTimeout(t); reject(new DOMException('Annulé', 'AbortError')) }, { once: true })
+  signal?.addEventListener('abort', () => { window.clearTimeout(t); reject(new DOMException('Annulé', 'AbortError') /* i18n-ignore: never shown */) }, { once: true })
 })
 
 // Back online (or a while later): next attempt.
@@ -25,7 +26,7 @@ const online = (ms: number, signal?: AbortSignal) => navigator.onLine
   : new Promise<void>((resolve, reject) => {
     const go = () => { window.removeEventListener('online', go); resolve() }
     window.addEventListener('online', go)
-    signal?.addEventListener('abort', () => { window.removeEventListener('online', go); reject(new DOMException('Annulé', 'AbortError')) }, { once: true })
+    signal?.addEventListener('abort', () => { window.removeEventListener('online', go); reject(new DOMException('Annulé', 'AbortError') /* i18n-ignore: never shown */) }, { once: true })
   })
 
 type Answer = { status: number; body: { received?: number; message?: string | string[] } | null }
@@ -46,7 +47,7 @@ function sendChunk(url: string, chunk: Blob, token: string | null, onProgress: (
     xhr.ontimeout = () => reject(new TypeError('timeout'))
     xhr.timeout = 120_000
     signal?.addEventListener('abort', () => xhr.abort(), { once: true })
-    xhr.onabort = () => reject(new DOMException('Annulé', 'AbortError'))
+    xhr.onabort = () => reject(new DOMException('Annulé', 'AbortError') /* i18n-ignore: never shown */)
     const form = new FormData()
     form.append('chunk', chunk, 'chunk')
     xhr.send(form)
@@ -78,7 +79,7 @@ export async function sendReelFile(file: Blob, o: { uploadPath: string; chunkByt
       answer = await sendChunk(`${API}${o.uploadPath}/chunk?offset=${offset}`, chunk, getAccessToken(), loaded => o.onProgress(Math.min(1, (offset + loaded) / file.size)), o.signal)
     } catch (e) {
       if ((e as DOMException).name === 'AbortError') throw e
-      if (++failures > RETRIES) throw new ReelUploadError('La connexion est trop instable : l’envoi s’est arrêté. Réessayez plus tard, il reprendra où il en était.')
+      if (++failures > RETRIES) throw new ReelUploadError(reels.t('upload.unstable'))
       await online(Math.min(30_000, 1500 * 2 ** failures), o.signal)
       const have = await receivedBytes(o.uploadPath, o.signal)
       if (have != null) offset = have
@@ -93,10 +94,10 @@ export async function sendReelFile(file: Blob, o: { uploadPath: string; chunkByt
     // Already received (the answer was lost) or out of order: resume there.
     if (answer.status === 409 && typeof answer.body?.received === 'number') { offset = answer.body.received; continue }
     if (answer.status === 401 && failures++ < RETRIES) { await refreshAccessToken().catch(() => null); continue }
-    if (answer.status === 429) throw new ReelUploadError('Trop d’envois en peu de temps : réessayez dans quelques minutes.')
-    if (answer.status === 413) throw new ReelUploadError(messageOf(answer.body, 'Vidéo trop lourde.'))
+    if (answer.status === 429) throw new ReelUploadError(reels.t('upload.tooMany'))
+    if (answer.status === 413) throw new ReelUploadError(messageOf(answer.body, reels.t('upload.tooHeavyShort')))
     if (answer.status >= 500 && ++failures <= RETRIES) { await wait(Math.min(30_000, 2000 * 2 ** failures), o.signal); continue }
-    throw new ReelUploadError(messageOf(answer.body, 'L’envoi de la vidéo a échoué.'))
+    throw new ReelUploadError(messageOf(answer.body, reels.t('upload.failed')))
   }
   o.onProgress(1)
 }
@@ -163,7 +164,7 @@ export async function compressVideo(file: File, o: { start: number; end: number;
     video.onended = () => { if (recorder.state !== 'inactive') recorder.stop() }
     await done
     cancelAnimationFrame(raf)
-    if (o.signal?.aborted) throw new DOMException('Annulé', 'AbortError')
+    if (o.signal?.aborted) throw new DOMException('Annulé', 'AbortError') /* i18n-ignore: never shown */
     const blob = new Blob(parts, { type: type.split(';')[0] })
     // Not worth it (already light), or nothing recorded.
     return blob.size > 50_000 && blob.size < file.size * 0.8 ? blob : null

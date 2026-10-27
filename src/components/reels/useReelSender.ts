@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation } from '@apollo/client/react'
 import { DELETE_REEL_MUTATION, FINISH_REEL_MUTATION, MY_REELS_QUERY, START_REEL_MUTATION, type MyReel } from '../../graphql/reels'
+import reels from '../../i18n/ns/reels'
 import { dropPendingReel, keepPendingReel, pendingReel, sendReelDraft, type PendingReel, type ReelDraft, type SendPhase } from '../../lib/reelDrafts'
 
 type Listing = PendingReel['listing']
@@ -57,7 +58,7 @@ export function useReelSender(listing: Listing, maxSizeMb: number) {
       setState('done')
     } catch (e) {
       if ((e as DOMException).name === 'AbortError') return
-      const message = (e as Error).message || 'L’envoi a échoué.'
+      const message = (e as Error).message || reels.t('upload.sendFailed')
       // The upload is gone on the server (dropped after a day): start over.
       if (/introuvable/i.test(message)) kept.started = null
       keepPendingReel({ ...kept, error: message })

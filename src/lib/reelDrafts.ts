@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { ReelUploadError, canCompress, compressVideo, sendReelFile } from './reelUpload'
+import reels from '../i18n/ns/reels'
 
 // A Reel chosen before its listing exists (« Déposer une annonce ») or not
 // sent yet (upload failed, « Plus tard »): the video stays in this tab's
@@ -86,9 +87,9 @@ export async function sendReelDraft(o: {
       const small = await compressVideo(d.file, { start: d.range[0], end: d.range[1], onProgress: o.onProgress, signal: o.signal })
       if (small) { blob = small; trim = { trimStart: null, trimEnd: null } }
     }
-    if (blob.size > o.maxSizeMb * MB) throw new ReelUploadError(`Vidéo trop lourde (${Math.ceil(blob.size / MB)} Mo, ${o.maxSizeMb} Mo au maximum) : raccourcissez-la ou filmez en qualité normale.`)
+    if (blob.size > o.maxSizeMb * MB) throw new ReelUploadError(reels.t('upload.tooHeavy', { size: String(Math.ceil(blob.size / MB)), max: String(o.maxSizeMb) }))
     const r = await o.start({ listingId: o.listingId, caption: o.caption?.trim().slice(0, 300) || null, size: blob.size, durationSec: Math.round(kept * 10) / 10, ...trim })
-    if (!r) throw new ReelUploadError('L’envoi n’a pas pu commencer.')
+    if (!r) throw new ReelUploadError(reels.t('upload.couldNotStart'))
     s = { ...r, blob }
     o.onStarted(s)
   }

@@ -12,6 +12,8 @@ import { formatNumber } from '../../lib/format'
 import { formatDuration, reelThumb, takeManagedReel, takeNewReelRequest, useReelSettings } from '../../lib/reels'
 import { usePendingReels } from '../../lib/reelDrafts'
 import { ReelBoostSheet, ReelStatsSheet } from '../../components/reels/ReelOwnerSheets'
+import { fmtDate, useT } from '../../i18n'
+import reelsNs from '../../i18n/ns/reels'
 
 const ReelComposer = lazy(() => import('../../components/reels/ReelComposer'))
 
@@ -34,6 +36,7 @@ const MB = 1024 * 1024
 // « Mes Reels »: the seller's videos, their status (preparation, check,
 // online, refused with the reason), their statistics and boosts.
 export default function MyReels({ onNavigate, onSelectListing, currentUser, onLogout }: Props) {
+  const t = useT(reelsNs)
   const settings = useReelSettings(currentUser?.countryCode)
   const { data, loading, refetch } = useQuery<{ myReels: MyReel[] }>(MY_REELS_QUERY, { fetchPolicy: 'cache-and-network' })
   const reels = data?.myReels ?? []
@@ -67,33 +70,33 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
     return { id: l.id, title: l.title, status: l.status, coverImageUrl: l.coverImageUrl ?? null, countryCode: currentUser?.countryCode }
   }
 
-  const totals = reels.reduce((t, r) => ({
-    views: t.views + r.viewsCount, clicks: t.clicks + (r.clicksCount ?? 0), contacts: t.contacts + (r.contactsCount ?? 0), live: t.live + (r.status === 'APPROVED' ? 1 : 0),
+  const totals = reels.reduce((s, r) => ({
+    views: s.views + r.viewsCount, clicks: s.clicks + (r.clicksCount ?? 0), contacts: s.contacts + (r.contactsCount ?? 0), live: s.live + (r.status === 'APPROVED' ? 1 : 0),
   }), { views: 0, clicks: 0, contacts: 0, live: 0 })
 
   return (
-    <AccountLayout active="seller-reels" title="Mes Reels" onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
+    <AccountLayout active="seller-reels" title={t('myReels')} onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout}>
       <div className="mx-auto max-w-5xl px-4 py-4 lg:px-0 lg:py-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="m-0 hidden text-headline-lg text-on-surface lg:block">Mes Reels</h1>
-            <p className="m-0 mt-1 max-w-2xl text-body-md text-on-surface-variant">Des vidéos courtes de vos articles, montrées dans les Reels de Dilchap, sur l’annonce et sur votre profil.</p>
+            <h1 className="m-0 hidden text-headline-lg text-on-surface lg:block">{t('myReels')}</h1>
+            <p className="m-0 mt-1 max-w-2xl text-body-md text-on-surface-variant">{t('mine.intro')}</p>
           </div>
           {settings.enabled && (
             <button onClick={() => setPick(true)} className="flex h-11 cursor-pointer items-center gap-2 rounded-xl border-none bg-primary px-4 text-label-lg text-white max-sm:w-full max-sm:justify-center">
-              <Icon name="video_call" size={20} /> Nouveau Reel
+              <Icon name="video_call" size={20} /> {t('mine.new')}
             </button>
           )}
         </div>
-        {!settings.enabled && <p className="m-0 mt-4 rounded-xl bg-surface-container-low p-3 text-body-md text-on-surface">Les Reels ne sont pas disponibles dans votre pays pour le moment.</p>}
+        {!settings.enabled && <p className="m-0 mt-4 rounded-xl bg-surface-container-low p-3 text-body-md text-on-surface">{t('mine.unavailable')}</p>}
 
         {unsent.length > 0 && (
           <ul data-testid="unsent-reels" className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
             {unsent.map(p => (
               <li key={p.listing.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-100 p-3 text-amber-900">
                 <Icon name="upload" size={22} className="shrink-0" />
-                <span className="min-w-0 flex-1 basis-48 text-body-sm"><b>Vidéo pas encore envoyée</b> pour « {p.listing.title} »{p.error ? ` : ${p.error}` : '.'} Elle est gardée jusqu’à la fermeture de Dilchap.</span>
-                <button onClick={() => setComposeFor({ id: p.listing.id, title: p.listing.title, status: 'APPROVED', coverImageUrl: p.listing.coverImageUrl ?? null, countryCode: p.listing.countryCode })} className="h-11 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-lg text-white max-sm:w-full">Reprendre l’envoi</button>
+                <span className="min-w-0 flex-1 basis-48 text-body-sm">{t.rich(p.error ? 'mine.unsentError' : 'mine.unsent', { title: p.listing.title, error: p.error, b: c => <b>{c}</b> })}</span>
+                <button onClick={() => setComposeFor({ id: p.listing.id, title: p.listing.title, status: 'APPROVED', coverImageUrl: p.listing.coverImageUrl ?? null, countryCode: p.listing.countryCode })} className="h-11 cursor-pointer rounded-xl border-none bg-primary px-4 text-label-lg text-white max-sm:w-full">{t('edit.resume')}</button>
               </li>
             ))}
           </ul>
@@ -101,7 +104,7 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
 
         {reels.length > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {[['En ligne', totals.live], ['Vues', totals.views], ['Clics vers l’annonce', totals.clicks], ['Contacts', totals.contacts]].map(([label, n]) => (
+            {[[t('mine.totalLive'), totals.live], [t('stats.views'), totals.views], [t('stats.clicks'), totals.clicks], [t('stats.contacts'), totals.contacts]].map(([label, n]) => (
               <div key={label} className="rounded-xl bg-surface-lowest p-3 shadow-sm">
                 <p className="m-0 text-body-sm text-on-surface-variant">{label}</p>
                 <p className="m-0 mt-0.5 text-headline-md text-on-surface">{formatNumber(Number(n))}</p>
@@ -115,40 +118,40 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
         ) : !reels.length && settings.enabled ? (
           <div className="mt-6 rounded-2xl bg-surface-lowest p-6 text-center shadow-sm">
             <Icon name="smart_display" size={40} className="text-primary" />
-            <p className="m-0 mt-2 text-headline-sm text-on-surface">Aucun Reel pour l’instant</p>
-            <p className="m-0 mt-1 text-body-md text-on-surface-variant">Une vidéo de 20 à 30 secondes suffit : l’article en main, sous tous ses angles.</p>
-            <div className="mt-3 flex justify-center"><HelpLink article="publier-un-reel" label="Comment publier un Reel ?" /></div>
+            <p className="m-0 mt-2 text-headline-sm text-on-surface">{t('mine.emptyTitle')}</p>
+            <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('mine.emptyText')}</p>
+            <div className="mt-3 flex justify-center"><HelpLink article="publier-un-reel" label={t('post.howTo')} /></div>
           </div>
         ) : (
           <ul className="m-0 mt-5 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2">
             {reels.map(r => (
               <li key={r.id} id={`reel-${r.id}`} className={`flex gap-3 rounded-2xl bg-surface-lowest p-3 shadow-sm ${focus === r.id ? 'ring-2 ring-primary' : ''}`}>
-                <button onClick={() => r.videoUrl && setWatch(r)} disabled={!r.videoUrl} aria-label="Regarder" className="relative h-36 w-[81px] shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-neutral-900 p-0 disabled:cursor-default">
+                <button onClick={() => r.videoUrl && setWatch(r)} disabled={!r.videoUrl} aria-label={t('mine.watch')} className="relative h-36 w-[81px] shrink-0 cursor-pointer overflow-hidden rounded-xl border-none bg-neutral-900 p-0 disabled:cursor-default">
                   {r.posterUrl ? <img src={reelThumb(r.posterUrl) ?? undefined} alt="" loading="lazy" className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-white/60"><Icon name={r.status === 'FAILED' ? 'error' : 'smart_display'} size={26} /></span>}
                   {r.durationSec > 0 && <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] font-semibold text-white">{formatDuration(r.durationSec)}</span>}
                 </button>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <span className={`rounded-full px-2 py-0.5 text-label-sm ${TONE[r.status]}`}>{REEL_STATUS_LABEL[r.status]}</span>
-                    {r.boost?.active && <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-label-sm text-white"><Icon name="rocket_launch" size={13} /> Boosté</span>}
+                    {r.boost?.active && <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-label-sm text-white"><Icon name="rocket_launch" size={13} /> {t('mine.boosted')}</span>}
                   </div>
-                  <button onClick={() => r.listingId && onSelectListing(r.listingId)} className="mt-1.5 line-clamp-2 cursor-pointer border-none bg-transparent p-0 text-left text-label-lg text-on-surface hover:text-primary">{r.listing?.title ?? 'Annonce supprimée'}</button>
+                  <button onClick={() => r.listingId && onSelectListing(r.listingId)} className="mt-1.5 line-clamp-2 cursor-pointer border-none bg-transparent p-0 text-left text-label-lg text-on-surface hover:text-primary">{r.listing?.title ?? t('mine.deletedListing')}</button>
                   {r.statusReason && ['REJECTED', 'REMOVED', 'FAILED'].includes(r.status) && <p className="m-0 mt-1 text-body-sm text-primary">{r.statusReason}</p>}
-                  {r.status === 'PROCESSING' && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Préparation de la vidéo pour les petits réseaux…</p>}
-                  {r.status === 'PENDING_REVIEW' && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">Vérification par l’équipe Dilchap, en général dans la journée.{r.listing?.status === 'PENDING_REVIEW' ? ' Visible dès que l’annonce et le Reel sont validés.' : ''}</p>}
-                  {r.status === 'APPROVED' && r.listing?.status !== 'APPROVED' && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{r.listing?.status === 'PENDING_REVIEW' ? 'Validé : visible dès que l’annonce est validée.' : 'Masqué tant que l’annonce n’est pas en ligne.'}</p>}
+                  {r.status === 'PROCESSING' && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{t('mine.processing')}</p>}
+                  {r.status === 'PENDING_REVIEW' && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{r.listing?.status === 'PENDING_REVIEW' ? t('mine.reviewListing') : t('mine.review')}</p>}
+                  {r.status === 'APPROVED' && r.listing?.status !== 'APPROVED' && <p className="m-0 mt-1 text-body-sm text-on-surface-variant">{r.listing?.status === 'PENDING_REVIEW' ? t('mine.approvedPending') : t('mine.hidden')}</p>}
                   {r.status === 'APPROVED' && (
                     <p className="m-0 mt-1.5 text-body-sm text-on-surface-variant">
-                      {formatNumber(r.viewsCount)} vue{r.viewsCount > 1 ? 's' : ''} · {formatNumber(r.clicksCount ?? 0)} clic{(r.clicksCount ?? 0) > 1 ? 's' : ''} · {formatNumber(r.contactsCount ?? 0)} contact{(r.contactsCount ?? 0) > 1 ? 's' : ''}
+                      {t('mine.views', { count: r.viewsCount, n: formatNumber(r.viewsCount) })} · {t('mine.clicks', { count: r.clicksCount ?? 0, n: formatNumber(r.clicksCount ?? 0) })} · {t('mine.contacts', { count: r.contactsCount ?? 0, n: formatNumber(r.contactsCount ?? 0) })}
                     </p>
                   )}
-                  {r.boost?.active && <p className="m-0 mt-1 text-body-sm text-on-surface">Boost : {formatNumber(r.boost.views)} / {formatNumber(r.boost.viewsGoal)} vues · jusqu’au {new Date(r.boost.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
-                  {!r.boost?.active && r.listingBoost?.active && <p className="m-0 mt-1 flex items-start gap-1 text-body-sm text-tertiary"><Icon name="star" size={15} fill className="mt-0.5 shrink-0" /> <span>Mis en avant grâce au boost « {r.listingBoost.formula} » de l’annonce, jusqu’au {new Date(r.listingBoost.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {formatNumber(r.listingBoost.views)} / {formatNumber(r.listingBoost.viewsGoal)} vues</span></p>}
+                  {r.boost?.active && <p className="m-0 mt-1 text-body-sm text-on-surface">{t('mine.boostLine', { views: formatNumber(r.boost.views), goal: formatNumber(r.boost.viewsGoal), until: fmtDate(r.boost.expiresAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })}</p>}
+                  {!r.boost?.active && r.listingBoost?.active && <p className="m-0 mt-1 flex items-start gap-1 text-body-sm text-tertiary"><Icon name="star" size={15} fill className="mt-0.5 shrink-0" /> <span>{t('mine.viaListing', { formula: r.listingBoost.formula, until: fmtDate(r.listingBoost.expiresAt, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), views: formatNumber(r.listingBoost.views), goal: formatNumber(r.listingBoost.viewsGoal) })}</span></p>}
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {r.status === 'APPROVED' && <button onClick={() => setStatsFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-surface-container-low px-2.5 text-label-md text-on-surface"><Icon name="bar_chart" size={16} /> Statistiques</button>}
-                    {retryFor(r) && <button onClick={() => setComposeFor(retryFor(r))} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-2.5 text-label-md text-white"><Icon name="video_call" size={16} /> Publier une autre vidéo</button>}
-                    {r.canBoost && settings.boostEnabled && <button onClick={() => setBoostFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-2.5 text-label-md text-white"><Icon name="rocket_launch" size={16} /> Booster</button>}
-                    {r.status !== 'ARCHIVED' && <button onClick={() => setDeleteFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-transparent px-2 text-label-md text-on-surface-variant hover:text-primary"><Icon name="delete" size={16} /> Supprimer</button>}
+                    {r.status === 'APPROVED' && <button onClick={() => setStatsFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-surface-container-low px-2.5 text-label-md text-on-surface"><Icon name="bar_chart" size={16} /> {t('mine.stats')}</button>}
+                    {retryFor(r) && <button onClick={() => setComposeFor(retryFor(r))} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-2.5 text-label-md text-white"><Icon name="video_call" size={16} /> {t('mine.another')}</button>}
+                    {r.canBoost && settings.boostEnabled && <button onClick={() => setBoostFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-primary px-2.5 text-label-md text-white"><Icon name="rocket_launch" size={16} /> {t('feed.boost')}</button>}
+                    {r.status !== 'ARCHIVED' && <button onClick={() => setDeleteFor(r)} className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border-none bg-transparent px-2 text-label-md text-on-surface-variant hover:text-primary"><Icon name="delete" size={16} /> {t('mine.delete')}</button>}
                   </div>
                 </div>
               </li>
@@ -158,9 +161,9 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
       </div>
 
       {/* Which listing */}
-      <BottomSheet open={pick} onClose={() => setPick(false)} title="Pour quelle annonce ?">
+      <BottomSheet open={pick} onClose={() => setPick(false)} title={t('mine.whichListing')}>
         {!live.length ? (
-          <p className="m-0 text-body-md text-on-surface-variant">Un Reel accompagne une annonce en ligne ou en vérification. Publiez d’abord une annonce (vous pouvez joindre la vidéo en la déposant), puis ajoutez-lui une vidéo.</p>
+          <p className="m-0 text-body-md text-on-surface-variant">{t('mine.noLive')}</p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {live.map(l => (
@@ -169,7 +172,7 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
                   {l.coverImageUrl ? <img src={l.coverImageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" /> : <span className="h-12 w-12 shrink-0 rounded-lg bg-surface-container" />}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-label-lg text-on-surface">{l.title}</span>
-                    {l.status === 'PENDING_REVIEW' && <span className="block text-body-sm text-on-surface-variant">En vérification</span>}
+                    {l.status === 'PENDING_REVIEW' && <span className="block text-body-sm text-on-surface-variant">{t('status.PENDING_REVIEW')}</span>}
                   </span>
                   <Icon name="chevron_right" size={20} className="text-on-surface-variant" />
                 </button>
@@ -186,13 +189,13 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
       )}
 
       {/* Watch one's own Reel (any status) */}
-      <BottomSheet open={!!watch} onClose={() => setWatch(null)} title="Aperçu" maxHeight="92vh">
+      <BottomSheet open={!!watch} onClose={() => setWatch(null)} title={t('mine.preview')} maxHeight="92vh">
         {watch?.videoUrl && (
           <div className="mx-auto aspect-[9/16] max-h-[70vh] overflow-hidden rounded-2xl bg-black">
             <video src={watch.videoUrl} poster={watch.posterUrl ?? undefined} controls playsInline autoPlay muted className="h-full w-full object-contain" />
           </div>
         )}
-        {watch && (watch.videoBytes ?? 0) > 0 && <p className="m-0 mt-2 text-center text-body-sm text-on-surface-variant">Vidéo servie : {((watch.videoBytes ?? 0) / MB).toFixed(1)} Mo ({((watch.videoLowBytes ?? 0) / MB).toFixed(1)} Mo en économie de données)</p>}
+        {watch && (watch.videoBytes ?? 0) > 0 && <p className="m-0 mt-2 text-center text-body-sm text-on-surface-variant">{t('mine.served', { size: ((watch.videoBytes ?? 0) / MB).toFixed(1), low: ((watch.videoLowBytes ?? 0) / MB).toFixed(1) })}</p>}
       </BottomSheet>
 
       {statsFor && <ReelStatsSheet reelId={statsFor.id} onClose={() => setStatsFor(null)} />}
@@ -200,14 +203,14 @@ export default function MyReels({ onNavigate, onSelectListing, currentUser, onLo
 
       <ConfirmSheet
         open={!!deleteFor}
-        title="Supprimer ce Reel ?"
-        confirmLabel="Supprimer"
+        title={t('mine.deleteTitle')}
+        confirmLabel={t('mine.delete')}
         tone="danger"
         loading={removing}
         onClose={() => setDeleteFor(null)}
         onConfirm={() => { if (deleteFor) void remove({ variables: { id: deleteFor.id } }).then(() => { setDeleteFor(null); void refetch() }) }}
       >
-        <p className="m-0 text-body-md text-on-surface">La vidéo disparaît du fil, de l’annonce et de votre profil. Ses statistiques restent dans votre historique.</p>
+        <p className="m-0 text-body-md text-on-surface">{t('mine.deleteText')}</p>
       </ConfirmSheet>
     </AccountLayout>
   )
