@@ -357,7 +357,7 @@ export default function Layout({
             {onLocationChange && isMobile && (
               <LocationPill location={location} onChange={onLocationChange} compact />
             )}
-            <button onClick={openSearchOverlay} data-tour="search" className={`${iconBtn} lg:hidden`} title={tc('search')}>
+            <button onClick={openSearchOverlay} data-tour="search" className={`${iconBtn} header-search lg:hidden`} title={tc('search')}>
               <Search size={21} />
             </button>
 

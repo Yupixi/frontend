@@ -968,3 +968,17 @@ input, textarea, [contenteditable='true'], .ProseMirror {
   height: max(100%, 44px);
   transform: translate(-50%, -50%);
 }
+
+/* Phones, home page: the header's magnifier folds away while the home
+   search bar is on screen (lib/homeHeader, data-home-search on <html>)
+   and unfolds once that bar is under the header. */
+.header-search {
+  transition: width 0.18s ease, opacity 0.18s ease, visibility 0.18s;
+}
+:root[data-home-search] .header-search {
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  pointer-events: none;
+}
