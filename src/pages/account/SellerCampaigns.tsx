@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import { AccountLayout } from './AccountLayout'
 import HelpLink from '../../components/HelpLink'
+import SellerHuntCard from '../../components/hunt/SellerHuntCard'
 import { CampaignJoin, CampaignsTab } from './ShopPromos'
 import { MY_SHOP_LISTINGS_QUERY, OPEN_CAMPAIGNS_QUERY, type OpenCampaign, type PromoItem, type ShopListing } from '../../graphql/shops'
 import type { AuthUser } from '../../graphql/auth'
@@ -32,6 +33,7 @@ export default function SellerCampaigns({ onNavigate, currentUser, onLogout }: P
     <h1 className="m-0 text-headline-lg text-on-surface">{t('seller.title')}</h1>
     <p className="m-0 mt-1 text-body-md text-on-surface-variant">{t('seller.intro')} <HelpLink article="promotions-et-campagnes" className="ml-1 align-middle" /></p>
     <div className="mt-4">
+      <SellerHuntCard />
       {data ? <CampaignsTab campaigns={data.openShopCampaigns} onJoin={(campaign, retry) => setJoining({ campaign, retry })} onChanged={() => void refetch()} onNavigate={onNavigate} /> : <div className="h-48 animate-pulse rounded-2xl bg-surface-container" />}
     </div>
   </>)

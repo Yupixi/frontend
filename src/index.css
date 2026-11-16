@@ -1090,3 +1090,5 @@ input, textarea, [contenteditable='true'], .ProseMirror {
 @keyframes hunt-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes hunt-confetti { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(260px) rotate(540deg); } }
 @keyframes hunt-open { to { transform: translateY(-6px) rotate(-18deg); } }
+
+.hunt-seller { background: linear-gradient(135deg, #C8102E, #0F6B3A); box-shadow: 0 4px 16px rgba(200, 16, 46, 0.2); }

@@ -53,5 +53,16 @@
   "gift.loginTitle": "Un cadeau !",
   "gift.login": "Connectez-vous pour attraper ce cadeau et participer à la chasse au trésor.",
   "gift.loginCta": "Se connecter",
-  "gift.close": "Fermer"
+  "gift.close": "Fermer",
+  "seller.title": "{{name}}",
+  "seller.in": "Vos annonces inscrites à « {{campaign}} » cachent des cadeaux : elles attirent les chasseurs chez vous.",
+  "seller.out": "Inscrivez vos annonces à « {{campaign}} » pour y cacher des cadeaux et attirer les chasseurs.",
+  "seller.voucher": "Bon offert aux chasseurs",
+  "seller.voucherHint": "Réduction que vous accordez à qui trouve un cadeau sur vos annonces. Il vous la rappellera dans la discussion.",
+  "seller.none": "Aucun",
+  "seller.save": "Enregistrer",
+  "seller.saved": "Bon enregistré.",
+  "seller.finders_one": "{{n}} cadeau trouvé sur vos annonces",
+  "seller.finders_other": "{{n}} cadeaux trouvés sur vos annonces",
+  "seller.noFinders": "Personne pour l’instant."
 }

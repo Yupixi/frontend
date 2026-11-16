@@ -53,5 +53,16 @@
   "gift.loginTitle": "A gift!",
   "gift.login": "Sign in to catch this gift and join the treasure hunt.",
   "gift.loginCta": "Sign in",
-  "gift.close": "Close"
+  "gift.close": "Close",
+  "seller.title": "{{name}}",
+  "seller.in": "Your listings entered in “{{campaign}}” hide gifts: they bring hunters to you.",
+  "seller.out": "Enter your listings in “{{campaign}}” to hide gifts on them and bring hunters to you.",
+  "seller.voucher": "Voucher for hunters",
+  "seller.voucherHint": "Discount you grant to whoever finds a gift on your listings. They will remind you in the chat.",
+  "seller.none": "None",
+  "seller.save": "Save",
+  "seller.saved": "Voucher saved.",
+  "seller.finders_one": "{{n}} gift found on your listings",
+  "seller.finders_other": "{{n}} gifts found on your listings",
+  "seller.noFinders": "Nobody yet."
 }
