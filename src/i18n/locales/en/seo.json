@@ -51,5 +51,6 @@
   "market.local": "in {{city}} and {{inCountry}}",
   "market.titleLocal": "{{brand}}: classifieds {{local}}",
   "market.titleCountry": "{{brand}}: classifieds {{inCountry}}",
-  "market.description": "Classifieds {{local}}. {{description}}"
+  "market.description": "Classifieds {{local}}. {{description}}",
+  "page.treasure-hunt": "Treasure hunt"
 }

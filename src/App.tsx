@@ -46,6 +46,7 @@ const SellerProfile = lazyPage(() => import('./pages/SellerProfile'))
 const Categories = lazyPage(() => import('./pages/Categories'))
 const Auth = lazyPage(() => import('./pages/Auth'))
 const FlashOffers = lazyPage(() => import('./pages/FlashOffers'))
+const TreasureHunt = lazyPage(() => import('./pages/TreasureHunt'))
 const Orders = lazyPage(() => import('./pages/seller/Orders'))
 const Wallet = lazyPage(() => import('./pages/seller/Wallet'))
 const SellerReviews = lazyPage(() => import('./pages/seller/Reviews'))
@@ -93,7 +94,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-qr' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home' | 'reels' | 'seller-reels'
+  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home' | 'reels' | 'seller-reels' | 'treasure-hunt'
 
 // Pages of the « Section Adultes » space (/adultes…): every other page is
 // the general marketplace's (or the account's).
@@ -158,7 +159,7 @@ const savedNav = loadNavState()
 // PWA manifest shortcuts (long-press the home screen icon) launch with
 // `?shortcut=<page>` — a real page, not session-restore, takes priority.
 const SHORTCUT_PAGES: Page[] = [
-  'seller-post', 'buyer-messages', 'flash-offers', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'seller-badge', 'seller-qr', 'seller-campaigns', 'support', 'shops',
+  'seller-post', 'buyer-messages', 'flash-offers', 'treasure-hunt', 'seller-kyc', 'seller-shop', 'seller-shop-promos', 'seller-badge', 'seller-qr', 'seller-campaigns', 'support', 'shops',
   // Notification targets.
   'seller-disputes', 'buyer-disputes', 'buyer-notifications', 'seller-listings', 'seller-reels', 'seller-orders', 'buyer-purchases', 'seller-wallet', 'seller-premium', 'seller-dashboard', 'buyer-dashboard',
 ]
@@ -1059,6 +1060,8 @@ export default function App() {
         return <Help slug={helpSlug} onOpenArticle={openHelp} onNavigate={navigate} />
       case 'reels':
         return <ReelsPage key={reelId} startId={reelId || null} city={marketLocation?.city} onClose={() => (navSeq > 0 && window.history.length > 1 ? window.history.back() : navigate('home'))} onOpenListing={selectListing} onOpenSeller={(id, shop) => (shop ? openShop(shop) : selectSeller(id))} onContactSeller={contactSellerFrom} onToggleFavorite={id => void toggleFavorite(id)} favorites={favorites} currentUserId={currentUser?.id} isLoggedIn={isLoggedIn && !currentUser?.isGuest} onRequireAuth={() => navigate('auth')} onPublish={() => { requestNewReel(); navigate('seller-reels') }} />
+      case 'treasure-hunt':
+        return <TreasureHunt onNavigate={navigate} onOpenCampaign={openCampaign} onSelectListing={selectListing} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       case 'flash-offers':
         return <FlashOffers key={campaignSlug} campaignSlug={campaignSlug} onOpenCampaign={openCampaign} onNavigate={navigate} onSelectListing={selectListing} favorites={favorites} onToggleFavorite={toggleFavorite} onContactSeller={contactSellerFrom} isLoggedIn={isLoggedIn && !currentUser?.isGuest} />
       default:

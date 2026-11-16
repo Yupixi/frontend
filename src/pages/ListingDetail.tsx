@@ -1,4 +1,5 @@
 import { noteInterest } from '../lib/interests'
+import TreasureGift from '../components/hunt/TreasureGift'
 import AnimatedIcon from '../components/AnimatedIcon'
 import SupportAboutButton from '../components/SupportAboutButton'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
@@ -443,6 +444,7 @@ export default function ListingDetail({ listingId, onNavigate, onSelectListing, 
 
   return (
     <div className="pb-24 lg:pb-8">
+      {!isOwner && <TreasureGift listingId={listing.id} loggedIn={!!currentUser && !currentUser.isGuest} onLogin={() => onNavigate('auth')} onOpenHunt={() => onNavigate('treasure-hunt')} />}
       {viewer !== null && images.length > 0 && <ImageLightbox images={images} start={viewer} alt={listing.title} onClose={() => setViewer(null)} onIndexChange={i => showImage(i, false)} />}
       {isOwner && <BoostSheet open={boostOpen} onClose={() => setBoostOpen(false)} listing={listing} />}
       {isOwner && <ListingQrSheet listing={qrOpen ? { id: listing.id, title: listing.title } : null} onClose={() => setQrOpen(false)} />}

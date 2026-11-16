@@ -46,7 +46,7 @@ import { replayTours } from '../lib/tourControl'
 import { useSite } from '../lib/site'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
-import { FetesBanner, FetesGarland, FetesHat, FetesRoot } from './fetes/Fetes'
+import { FetesBanner, FetesGarland, FetesHat, FetesRoot, HuntPill } from './fetes/Fetes'
 import ManageCookies from './ManageCookies'
 import { spaceCategories, useAdultModeOn, useAdultSpace } from '../lib/adultMode'
 import AdultModeBar from './AdultModeBar'
@@ -60,7 +60,7 @@ type Page =
   | 'seller-dashboard' | 'seller-post' | 'seller-edit' | 'seller-listings' | 'seller-stats' | 'seller-premium'
   | 'seller-orders' | 'seller-wallet' | 'seller-reviews' | 'seller-disputes' | 'seller-handover' | 'seller-kyc' | 'seller-shop' | 'seller-shop-stats' | 'seller-shop-promos' | 'seller-badge' | 'seller-qr' | 'seller-campaigns' | 'support'
   | 'buyer-purchases' | 'buyer-receipts' | 'buyer-handover' | 'buyer-receipt' | 'buyer-dispute-new' | 'buyer-disputes'
-  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home' | 'reels' | 'seller-reels'
+  | 'legal' | 'shop' | 'shops' | 'help' | 'adult-home' | 'reels' | 'seller-reels' | 'treasure-hunt'
 
 
 type LayoutProps = {
@@ -367,6 +367,7 @@ export default function Layout({
               <Search size={21} />
             </button>
 
+            {!adultMode && <HuntPill loggedIn={!!currentUser && !currentUser.isGuest} onOpen={() => onNavigate('treasure-hunt')} />}
             {reels && (
               <button onClick={() => requestOpenReels()} title={t('header.reelsTitle')} className="hidden cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border-none bg-surface-container-low px-3 py-2.5 text-label-lg text-on-surface transition-colors hover:bg-surface-container lg:flex">
                 <Icon name="smart_display" size={19} className="text-primary" />

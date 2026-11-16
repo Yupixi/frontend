@@ -4,6 +4,7 @@ import { useT } from '../../i18n'
 import fetesNs from '../../i18n/ns/fetes'
 import { requestOpenLink } from '../../lib/navigation'
 import { useFetes, type Fetes } from '../../lib/fetes'
+import { useHunt, useMyHunt } from '../../lib/treasureHunt'
 
 // « Thème des fêtes » (Backoffice › CMS › Fêtes). Everything here is CSS
 // animation (index.css « .fetes-* »): no React state ticks, no timers, and
@@ -133,4 +134,21 @@ export function FetesFrame() {
   const f = useFetes()
   if (!f?.cardRibbons) return null
   return <span aria-hidden className="fetes-frame pointer-events-none absolute inset-0 z-[1]" />
+}
+
+// « Chasse au trésor » counter in the header (gift 3/10), while a hunt runs.
+export function HuntPill({ loggedIn, onOpen }: { loggedIn: boolean; onOpen: () => void }) {
+  const t = useT(fetesNs)
+  const { hunt } = useHunt()
+  const { mine } = useMyHunt(loggedIn && !!hunt)
+  if (!hunt) return null
+  const total = hunt.giftsToWin
+  const found = mine?.found ?? 0
+  return (
+    <button type="button" onClick={onOpen} title={t('pill.label', { found, total })} aria-label={t('pill.label', { found, total })}
+      className="hunt-pill flex shrink-0 cursor-pointer items-center gap-1 rounded-full border-none px-2.5 py-1.5 text-label-md font-bold text-white lg:px-3 lg:py-2">
+      <Icon name="redeem" size={17} className="hunt-pill-icon" />
+      <span>{loggedIn && mine ? `${found}/${total}` : t('pill.short')}</span>
+    </button>
+  )
 }
