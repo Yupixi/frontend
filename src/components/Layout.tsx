@@ -46,6 +46,7 @@ import { replayTours } from '../lib/tourControl'
 import { useSite } from '../lib/site'
 import { needsConsent, reopenConsent, useAnalyticsState } from '../lib/analytics'
 import OfferBanner from './OfferBanner'
+import { FetesBanner, FetesGarland, FetesHat, FetesRoot } from './fetes/Fetes'
 import ManageCookies from './ManageCookies'
 import { spaceCategories, useAdultModeOn, useAdultSpace } from '../lib/adultMode'
 import AdultModeBar from './AdultModeBar'
@@ -294,6 +295,10 @@ export default function Layout({
         </button>
       )}
 
+      {/* « Thème des fêtes » (BO › CMS › Fêtes). */}
+      {!adultMode && <FetesBanner />}
+      <FetesRoot />
+
       {/* « Offres & gratuités » set in the back-office. */}
       <OfferBanner />
 
@@ -325,8 +330,9 @@ export default function Layout({
 
         {/* Main row */}
         <div className="flex h-16 items-center gap-3 px-4 lg:h-20 lg:gap-6 lg:px-12">
-          <button onClick={() => onNavigate('home')} className="flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label={adultSpace ? t('header.homeAdult') : t('header.home')}>
+          <button onClick={() => onNavigate('home')} className="relative flex shrink-0 cursor-pointer items-center gap-3 border-none bg-transparent p-0" aria-label={adultSpace ? t('header.homeAdult') : t('header.home')}>
             <Logo size={isMobile ? 'sm' : 'md'} />
+            <FetesHat />
           </button>
 
           {/* Desktop search — opens the overlay (suggestions, recent
@@ -621,6 +627,7 @@ export default function Layout({
             </button>
           ))}
         </nav>
+        {!adultMode && <FetesGarland />}
       </header>
 
       {/* Main Content View */}
