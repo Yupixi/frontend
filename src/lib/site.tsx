@@ -87,7 +87,7 @@ function setMeta(attr: 'name' | 'property', key: string, value: string) {
 // Read at each call (seo namespace, `page.<id>`), in the visitor's language.
 const PAGE_IDS = new Set([
   'search', 'reels', 'seller-reels', 'flash-offers', 'listing-detail', 'seller-profile',
-  'categories', 'auth', 'legal', 'shop', 'shops', 'help',
+  'categories', 'auth', 'legal', 'shop', 'shops', 'help', 'treasure-hunt',
   'buyer-dashboard', 'buyer-favorites', 'buyer-messages', 'buyer-notifications',
   'buyer-history', 'buyer-settings', 'buyer-purchases', 'buyer-receipts', 'buyer-receipt',
   'buyer-handover', 'buyer-dispute-new', 'buyer-disputes',

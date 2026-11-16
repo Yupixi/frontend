@@ -982,3 +982,113 @@ input, textarea, [contenteditable='true'], .ProseMirror {
   overflow: hidden;
   pointer-events: none;
 }
+
+/* ── « Thème des fêtes » (components/fetes/Fetes.tsx) ─────────────────────
+   Palette in --fetes-a/b/c, intensity in html[data-fetes]. Transform and
+   opacity only (compositor), never layout. « Reduce motion » freezes it. */
+.fetes-banner {
+  background: linear-gradient(110deg, var(--fetes-a, #E11D2E) 0%, var(--fetes-b, #15924B) 45%, var(--fetes-a, #E11D2E) 90%);
+  background-size: 220% 100%;
+}
+.fetes-flake {
+  position: absolute; top: -12px; border-radius: 9999px;
+  /* Visible on the light pages too: white core, icy rim. */
+  background: radial-gradient(circle at 40% 35%, #fff 0 45%, #cfe2f5 75%, #a9c8e8 100%);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9), 0 0 2px rgba(80, 120, 170, 0.45);
+}
+.fetes-bulb {
+  position: relative; top: 5px; width: 7px; height: 11px; border-radius: 50% 50% 45% 45%;
+  background: var(--fetes-a, #E11D2E);
+}
+.fetes-bulb-1 { background: var(--fetes-b, #15924B); }
+.fetes-bulb-2 { background: var(--fetes-c, #F5B301); }
+.fetes-frame { box-shadow: inset 0 0 0 3px var(--fetes-a, #E11D2E), inset 0 0 14px rgba(245, 179, 1, 0.55); }
+@media (prefers-reduced-motion: no-preference) {
+  .fetes-banner { animation: fetes-flow 8s linear infinite; }
+  .fetes-flake { animation-name: fetes-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+  .fetes-bulb { animation: fetes-blink 1.5s steps(1, end) infinite; }
+  .fetes-shimmer { background: linear-gradient(90deg, #fff 40%, var(--fetes-c, #F5B301) 50%, #fff 60%) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; animation: fetes-flow 4s linear infinite; }
+  .fetes-gift { animation: fetes-wiggle 2.4s ease-in-out infinite; }
+  .fetes-cta { animation: fetes-pulse 1.8s ease-in-out infinite; }
+  .fetes-sparkles { background-image: radial-gradient(circle, rgba(255,255,255,.9) 1px, transparent 1.5px); background-size: 36px 28px; animation: fetes-twinkle 2.2s ease-in-out infinite; }
+  .fetes-frame { animation: fetes-frame 2s steps(1, end) infinite; }
+  .fetes-hat { animation: fetes-tilt 3s ease-in-out infinite; transform-origin: 30% 90%; }
+  html[data-fetes='soft'] .fetes-bulb { animation-duration: 3s; }
+  html[data-fetes='soft'] .fetes-cta, html[data-fetes='soft'] .fetes-sparkles { animation: none; }
+  html[data-fetes='strong'] .fetes-bulb { animation-duration: 0.8s; }
+  html[data-fetes='strong'] .fetes-cta { animation-duration: 1s; }
+}
+@keyframes fetes-fall {
+  from { transform: translate3d(0, -20px, 0); }
+  to { transform: translate3d(var(--drift, 0px), 105vh, 0); }
+}
+@keyframes fetes-blink {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px currentColor); }
+  50% { opacity: 0.25; filter: none; }
+}
+@keyframes fetes-flow { from { background-position: 0% 0; } to { background-position: 220% 0; } }
+@keyframes fetes-wiggle { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-14deg) scale(1.1); } 20% { transform: rotate(12deg); } 30% { transform: rotate(0); } }
+@keyframes fetes-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes fetes-twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.55; } }
+@keyframes fetes-frame { 0%, 100% { box-shadow: inset 0 0 0 3px var(--fetes-a, #E11D2E), inset 0 0 14px rgba(245, 179, 1, 0.55); } 50% { box-shadow: inset 0 0 0 3px var(--fetes-c, #F5B301), inset 0 0 18px rgba(21, 146, 75, 0.5); } }
+@keyframes fetes-tilt { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+
+/* ── « Chasse au trésor » (pages/TreasureHunt.tsx, components/hunt) ────── */
+.hunt-hero { background: radial-gradient(120% 90% at 85% 10%, #F5B30155 0%, transparent 55%), linear-gradient(135deg, #8E0E1A 0%, #C8102E 45%, #0F6B3A 100%); }
+.hunt-stars { background-image: radial-gradient(circle, rgba(255,255,255,.85) 1px, transparent 1.6px), radial-gradient(circle, rgba(255,230,140,.8) 1.2px, transparent 1.8px); background-size: 48px 40px, 90px 76px; background-position: 0 0, 20px 30px; }
+.hunt-float { color: rgba(255, 255, 255, 0.35); }
+.hunt-float-0 { left: 6%; top: 18%; }
+.hunt-float-1 { left: 46%; top: 8%; }
+.hunt-float-2 { right: 8%; bottom: 14%; }
+.hunt-float-3 { left: 30%; bottom: 10%; }
+.hunt-float-4 { right: 34%; top: 40%; }
+.hunt-bar { background: linear-gradient(90deg, #F5B301, #FFE27A, #F5B301); background-size: 200% 100%; }
+.hunt-today, .hunt-door-today { background: linear-gradient(135deg, #C8102E, #8E0E1A); }
+.hunt-door-locked { background: linear-gradient(135deg, #0F6B3A, #0B4F2B); }
+.hunt-wins, .hunt-won { background: linear-gradient(135deg, #FFF3C4, #FFD54A); }
+.hunt-pill { background: linear-gradient(135deg, var(--fetes-a, #E11D2E), #8E0E1A); box-shadow: 0 2px 10px rgba(225, 29, 46, 0.35); }
+.hunt-gift { background: rgba(255, 255, 255, 0.92); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); padding: 6px; }
+.hunt-gift-gold { background: radial-gradient(circle, #FFF7D6 0%, #FFE27A 70%); box-shadow: 0 0 0 3px #F5B301, 0 0 26px rgba(245, 179, 1, 0.8); }
+.hunt-confetti { position: absolute; top: 0; width: 8px; height: 12px; border-radius: 2px; background: #E11D2E; opacity: 0; }
+.hunt-confetti-1 { background: #15924B; }
+.hunt-confetti-2 { background: #F5B301; }
+.hunt-confetti-3 { background: #3B82F6; }
+@media (prefers-reduced-motion: no-preference) {
+  .hunt-stars { animation: fetes-twinkle 3s ease-in-out infinite; }
+  .hunt-float { animation: hunt-float 6s ease-in-out infinite; }
+  .hunt-float-1 { animation-delay: -1.5s; }
+  .hunt-float-2 { animation-delay: -3s; }
+  .hunt-float-3 { animation-delay: -4.5s; }
+  .hunt-float-4 { animation-delay: -2s; }
+  .hunt-title { animation: hunt-glow-text 3s ease-in-out infinite; }
+  .hunt-cta { animation: fetes-pulse 1.8s ease-in-out infinite; }
+  .hunt-chest { animation: hunt-bob 3.2s ease-in-out infinite; }
+  .hunt-lid { animation: hunt-lid 3.2s ease-in-out infinite; transform-origin: 28px 82px; transform-box: view-box; }
+  .hunt-glow { animation: hunt-pulse-glow 2.4s ease-in-out infinite; transform-origin: 100px 78px; transform-box: view-box; }
+  .hunt-sparkle { animation: hunt-spark 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .hunt-sparkle-2 { animation-delay: -0.8s; }
+  .hunt-bar { animation: fetes-flow 2.5s linear infinite; }
+  .hunt-door-today { animation: hunt-door 1.6s ease-in-out infinite; }
+  .hunt-pill-icon { animation: fetes-wiggle 2.4s ease-in-out infinite; }
+  .hunt-gift { animation: hunt-peek 2.6s ease-in-out infinite; }
+  .hunt-gift-gold { animation: hunt-peek 2s ease-in-out infinite, hunt-gold 1.2s ease-in-out infinite; }
+  .hunt-pop { animation: hunt-pop 0.45s cubic-bezier(.2, 1.4, .4, 1) both; }
+  .hunt-confetti { animation: hunt-confetti 1.6s ease-out forwards; }
+  .hunt-lid-open { animation: hunt-open 0.6s ease-out forwards; transform-box: view-box; transform-origin: 32px 25px; }
+  .hunt-prize { transition: transform .25s; }
+  .hunt-prize:hover { transform: translateY(-3px) rotate(-0.5deg); }
+}
+@keyframes hunt-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-14px) rotate(6deg); } }
+@keyframes hunt-glow-text { 0%, 100% { text-shadow: 0 0 0 rgba(255, 226, 122, 0); } 50% { text-shadow: 0 0 18px rgba(255, 226, 122, 0.85); } }
+@keyframes hunt-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes hunt-lid { 0%, 70%, 100% { transform: rotate(0); } 80% { transform: rotate(-10deg); } 90% { transform: rotate(-4deg); } }
+@keyframes hunt-pulse-glow { 0%, 100% { transform: scale(0.85); opacity: 0.6; } 50% { transform: scale(1.1); opacity: 1; } }
+@keyframes hunt-spark { 0%, 100% { transform: scale(0.4); opacity: 0.2; } 50% { transform: scale(1.2); opacity: 1; } }
+@keyframes hunt-door { 0%, 100% { box-shadow: 0 0 0 0 rgba(245, 179, 1, 0.7); } 50% { box-shadow: 0 0 0 6px rgba(245, 179, 1, 0); } }
+@keyframes hunt-peek { 0%, 100% { scale: 1; rotate: 0deg; } 15% { scale: 1.12; rotate: -12deg; } 30% { scale: 1; rotate: 10deg; } 45% { rotate: 0deg; } }
+@keyframes hunt-gold { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+@keyframes hunt-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes hunt-confetti { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(260px) rotate(540deg); } }
+@keyframes hunt-open { to { transform: translateY(-6px) rotate(-18deg); } }
+
+.hunt-seller { background: linear-gradient(135deg, #C8102E, #0F6B3A); box-shadow: 0 4px 16px rgba(200, 16, 46, 0.2); }

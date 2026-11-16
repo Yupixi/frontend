@@ -51,5 +51,6 @@
   "market.local": "à {{city}} et {{inCountry}}",
   "market.titleLocal": "{{brand}} : petites annonces {{local}}",
   "market.titleCountry": "{{brand}} : petites annonces {{inCountry}}",
-  "market.description": "Petites annonces {{local}}. {{description}}"
+  "market.description": "Petites annonces {{local}}. {{description}}",
+  "page.treasure-hunt": "Chasse au trésor"
 }

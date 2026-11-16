@@ -1,0 +1,5 @@
+{
+  "banner.hide": "Masquer le bandeau des fêtes",
+  "pill.label": "Chasse au trésor : {{found}} sur {{total}} cadeaux",
+  "pill.short": "Chasse"
+}

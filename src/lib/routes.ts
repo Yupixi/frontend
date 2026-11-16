@@ -5,7 +5,7 @@
 
 export type RoutePage =
   | 'home' | 'listing-detail' | 'seller-profile' | 'shop' | 'shops' | 'categories'
-  | 'search' | 'flash-offers' | 'legal' | 'auth' | 'help' | 'reels'
+  | 'search' | 'flash-offers' | 'legal' | 'auth' | 'help' | 'reels' | 'treasure-hunt'
   // « Section Adultes »: its own home page (/adultes).
   | 'adult-home'
 
@@ -92,6 +92,7 @@ export function pathFor(page: string, s: Omit<Route, 'page'> & { searchTerm?: st
     case 'auth': return '/connexion'
     case 'help': return s.helpSlug ? `/aide/${enc(s.helpSlug)}` : '/aide'
     case 'reels': return s.reelId ? `/reel/${enc(s.reelId)}` : '/reels'
+    case 'treasure-hunt': return '/chasse-au-tresor'
     default: return '/compte'
   }
 }
@@ -125,6 +126,7 @@ export function parsePath(pathname: string): Route | null {
   if (head === 'aide') return { page: 'help', helpSlug: key ?? '' }
   if (head === 'compte') return { page: 'account' }
   if (head === 'reels' && !key) return { page: 'reels' }
+  if (head === 'chasse-au-tresor' && !key) return { page: 'treasure-hunt' }
   if (head === 'reel' && key && UUID.test(key)) return { page: 'reels', reelId: UUID.exec(key)![1] }
   return null
 }

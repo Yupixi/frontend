@@ -6,6 +6,7 @@ import Price from './Price'
 import BottomSheet from './BottomSheet'
 import type { PromoBadge, RemoteListing } from '../graphql/listings'
 import PromoPill from './PromoPill'
+import { FetesFrame } from './fetes/Fetes'
 import { useImpressionRef } from '../lib/impressions'
 import { useAdultSpace } from '../lib/adultMode'
 import { entryDiscountPercent as discountPct } from '../lib/campaignDiscount'
@@ -256,6 +257,8 @@ const CardView = memo(function CardView({ listing, onSelect, onToggleFav, isFav,
           ) : (
             <div className="flex h-full w-full items-center justify-center text-outline"><Tag size={40} /></div>
           )}
+
+          {listing.activeCampaignDiscount && <FetesFrame />}
 
           {/* Top of the photo: the one pill (why it is placed here: a paid
               formula, a campaign, a recent bump). Bottom: one neutral

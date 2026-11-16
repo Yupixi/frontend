@@ -41,6 +41,7 @@ call Call
 campaign Brodcast
 cancel CloseCircle
 category Category
+celebration MagicStar
 chair Lamp
 chat Message
 chat_bubble Message
@@ -80,6 +81,7 @@ draft Document
 edit Edit2
 edit_note NoteText
 email Sms
+emoji_events Cup
 error InfoCircle*
 event Calendar
 event_available CalendarTick
